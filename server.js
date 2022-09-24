@@ -6,13 +6,28 @@ import {createServer as createViteServer} from 'vite';
 import dotenv from 'dotenv';
 // import fetch from 'node-fetch';
 
+import {AiClient} from './ai/ai-client.js';
+import {DatabaseClient} from './database/database-client.js';
+import {StorageClient} from './storage/storage-client.js';
+import {routes} from './routes/routes.js';
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 dotenv.config();
 
 //
 
+class Ctx {
+  constructor() {
+    this.aiClient = new AiClient();
+    this.databaseClient = new DatabaseClient();
+    this.storageClient = new StorageClient();
+  }
+}
+
+//
+
 async function createServer() {
-  const app = express()
+  const app = express();
 
   // Create Vite server in middleware mode and configure the app type as
   // 'custom', disabling Vite's own HTML serving logic so parent server
@@ -20,11 +35,20 @@ async function createServer() {
   const vite = await createViteServer({
     server: { middlewareMode: true },
     appType: 'custom'
-  })
+  });
 
   // use vite's connect instance as middleware
   // if you use your own express router (express.Router()), you should use router.use
-  app.use(vite.middlewares)
+  app.use(vite.middlewares);
+
+  const ctx = new Ctx();
+
+  for (const route of routes(ctx)) {
+    const {methods, path, handler} = route;
+    for (const method of methods) {
+      app[method](path, handler);
+    }
+  }
 
   app.use('*', async (req, res, next) => {
     const url = req.originalUrl
