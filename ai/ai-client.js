@@ -192,3 +192,9 @@ export function makeGenerateFn() {
     return await openaiRequest(openAiKey, prompt, stop/*, needsRepetition*/);
   };
 }
+
+export class AiClient {
+  constructor() {
+    this.generate = makeGenerateFn();
+  }
+};
