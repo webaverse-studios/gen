@@ -1,7 +1,5 @@
 import React from 'react';
 
-import {makeGenerateFn} from '../../ai/generate.js';
-
 export const App = ({
   router,
 }) => {
