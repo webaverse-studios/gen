@@ -12,7 +12,7 @@ export const App = ({
     </div>
   );
 };
-App.getRouteProps = async (url) => {
+App.getRouteProps = async (url, ctx) => {
   return {
     url,
     text: 'lol',
