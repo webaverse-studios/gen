@@ -1,30 +1,33 @@
-// import {useRouter} from 'next/router'
 import uuidByString from 'uuid-by-string';
+import {File} from 'web3.storage';
 
 import styles from '../../styles/Character.module.css'
 import {Ctx} from '../../context.js';
 import {capitalize, capitalizeAllWords} from '../../utils.js';
+import {generateCharacterImage} from '../../generators/image/character.js';
 
 const Character = ({
   // url,
-  id,
-  character,
+  // id,
+  name,
   bio,
+  imgUrl,
 }) => {
   return (
     <div className={styles.character}>
-      <div className={styles.name}>{character}</div>
+      <div className={styles.name}>{name}</div>
       <div className={styles.bio}>{bio}</div>
+      <img src={imgUrl} className={styles.img} />
     </div>
   );
 };
 Character.getInitialProps = async ctx => {
   const {req} = ctx;
   const match = req.url.match(/^\/characters\/([^\/]*)/);
-  let character = match ? match[1] : '';
-  character = decodeURIComponent(character);
-  character = character.replace(/_/g, ' ');
-  character = capitalizeAllWords(character);
+  let name = match ? match[1] : '';
+  name = decodeURIComponent(name);
+  name = name.replace(/_/g, ' ');
+  name = capitalizeAllWords(name);
   
   const prompt = `\
 Generate 50 RPG characters.
@@ -49,10 +52,11 @@ Scillia's mentor. 15/F beast tamer. She is quite famous. She is known for releas
 ## Academy Engineer
 She is an engineer. 17/F engineer. She is new on the street. She has a strong moral compass and it the voice of reason in the group.
 
-# ${character}
+# ${name}
 ##`;
 
   const c = new Ctx();
+
   let bio = '';
   const numTries = 5;
   for (let i = 0; i < numTries; i++) {
@@ -75,11 +79,20 @@ She is an engineer. 17/F engineer. She is new on the street. She has a strong mo
     throw new Error('too many retries');
   }
 
+  const imgArrayBuffer = await generateCharacterImage({
+    name,
+    bio,
+  });
+  const file = new File([imgArrayBuffer], `${name}.png`);
+  const hash = await c.storageClient.uploadFile(file);
+  const imgUrl = c.storageClient.getUrl(hash, file.name);
+
   return {
     // url: req.url,
-    id: uuidByString(character),
-    character,
+    id: uuidByString(name),
+    name,
     bio,
+    imgUrl,
   };
 };
 
