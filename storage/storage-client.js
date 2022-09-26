@@ -11,12 +11,15 @@ export class StorageClient {
     });
   }
   async uploadFile(file) {
-    // XXX
+    return await this.client.put([file]);
   }
-  async uploadFiles(file) {
-    // XXX
+  async uploadFiles(files) {
+    return await this.client.put(files);
   }
   async downloadFile(hash) {
     // XXX
+  }
+  getUrl(hash, name) {
+    return `https://w3s.link/ipfs/${hash}/${name}`;
   }
 }
