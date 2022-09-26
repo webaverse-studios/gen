@@ -32,7 +32,7 @@ Setting.getInitialProps = async ctx => {
   
   const c = new Ctx();
   const prompt = `\
-Generate 50 anime RPG video game settings.
+Generate 50 anime RPG video game locations.
 
 # Nihon City
 A solarpunk city based loosely on a Tokyo, Japan. It is the main city of Zone 0 along the street, which makes it extremely busy. It contains the Citadel, a massive structure which serves as a school for AIs. The scenery is lush and turns neon at night. It is a technological utopia.
