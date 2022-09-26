@@ -6,7 +6,7 @@ export default function Home() {
   return (
     <div className={styles.container}>
       <Head>
-        <title>Create Next App</title>
+        <title>Lore Engine</title>
         <meta name="description" content="Lore engine" />
         {/* <link rel="icon" href="/favicon.ico" /> */}
       </Head>
