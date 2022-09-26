@@ -5,6 +5,7 @@ import styles from '../../styles/Character.module.css'
 import {Ctx} from '../../context.js';
 import {capitalize, capitalizeAllWords} from '../../utils.js';
 import {generateCharacterImage} from '../../generators/image/character.js';
+import {ensureUrl} from '../../utils.js';
 
 const Character = ({
   // url,
@@ -81,11 +82,12 @@ She is an engineer. 17/F engineer. She is new on the street. She has a strong mo
 
   const imgArrayBuffer = await generateCharacterImage({
     name,
-    bio,
+    description: bio,
   });
   const file = new File([imgArrayBuffer], `${name}.png`);
   const hash = await c.storageClient.uploadFile(file);
   const imgUrl = c.storageClient.getUrl(hash, file.name);
+  await ensureUrl(imgUrl);
 
   return {
     // url: req.url,
