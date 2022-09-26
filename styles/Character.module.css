@@ -1,0 +1,7 @@
+.character {
+}
+.character .name {
+}
+.character .bio {
+  white-space: pre-wrap;
+}
