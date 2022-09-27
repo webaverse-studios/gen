@@ -2,7 +2,7 @@ import uuidByString from 'uuid-by-string';
 import {File} from 'web3.storage';
 import Markdown from 'marked-react';
 
-import styles from '../../styles/Character.module.css'
+import styles from '../../styles/Setting.module.css'
 import {Ctx} from '../../context.js';
 import {capitalize, capitalizeAllWords} from '../../utils.js';
 import {generateSettingImage} from '../../generators/image/setting.js';
