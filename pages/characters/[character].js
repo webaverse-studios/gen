@@ -9,14 +9,9 @@ import {generateCharacterImage} from '../../generators/image/character.js';
 import {ensureUrl} from '../../utils.js';
 
 const Character = ({
-  // url,
-  // id,
   title,
   content,
 }) => {
-  /* content = content.replace(/\!\[(.*?)\]\((.*?)\)/g, (match, p1, p2) => {
-    return `<img src="${decodeURI(p2)}" alt="${p1}" >`;
-  }); */
   return (
     <div className={styles.character}>
       <div className={styles.name}>{title}</div>
