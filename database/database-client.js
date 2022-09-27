@@ -1,3 +1,4 @@
+import uuidByString from 'uuid-by-string';
 import weaviate from 'weaviate-client';
 
 export class DatabaseClient {
@@ -11,10 +12,79 @@ export class DatabaseClient {
       host: 'weaviate-server.webaverse.com',
     });
   }
-  async getByName(schema, name) {
-    // XXX
+  async getByName(title) {
+    // const id = uuidByString(title);
+    const result = await this.client.graphql
+      .get()
+      .withClassName('Content')
+      .withFields('title content type')
+      .withWhere({
+        operator: 'Equal',
+        path: [
+          'title',
+       ],
+        valueString: title,
+      })
+      .do()
+      /* .then(res => {
+        console.log(res)
+      })
+      .catch(err => {
+        console.error(err)
+      }); */
+    // console.log('got result', [title, result.data.Get.Content[0]]);
+    return result?.data?.Get?.Content?.[0];
   }
-  async setByName(schema, name, value) {
-    // XXX
+  async setByName(title, content) {
+    const _formatData = (title, content) => {
+      if (typeof content === 'string') {
+        const match = title.match(/^([^\/]+)\/[\s\S]*/);
+        if (match) {
+          const type = match[1];
+          // const v = j[k];
+          // value.type = type;
+          // const match = k.match(/^([^\/]+)/);
+          // const type = match?.[1] ?? '';
+          // v.type = type;
+          return {
+            class: 'Content',
+            id: uuidByString(title),
+            properties: {
+              title,
+              content,
+              type,
+            },
+          };
+        } else {
+          return null;
+        }
+      } else {
+        return null;
+      }
+    };
+    const _uploadDatas = async datas => {
+      const batcher = this.client.batch.objectsBatcher();
+      for (const data of datas) {
+        batcher.withObject(data);
+      }
+      const result = await batcher.do();
+      let ok = true;
+      for (const item of result) {
+        if (item.result.errors) {
+          console.warn(item.result.errors);
+          ok = false;
+        }
+      }
+      return ok;
+    };
+
+    const data = _formatData(title, content);
+    if (!data) {
+      throw new Error('invalid data');
+    }
+    const ok = await _uploadDatas([data]);
+    if (!ok) {
+      throw new Error('failed to upload data');
+    }
   }
 }

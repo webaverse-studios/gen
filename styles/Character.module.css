@@ -5,3 +5,6 @@
 .character .bio {
   white-space: pre-wrap;
 }
+.character .markdown img {
+  display: block;
+}

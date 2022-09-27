@@ -1,5 +1,6 @@
 import uuidByString from 'uuid-by-string';
 import {File} from 'web3.storage';
+import Markdown from 'marked-react';
 
 import styles from '../../styles/Character.module.css'
 import {Ctx} from '../../context.js';
@@ -10,15 +11,18 @@ import {ensureUrl} from '../../utils.js';
 const Character = ({
   // url,
   // id,
-  name,
-  bio,
-  imgUrl,
+  title,
+  content,
 }) => {
+  /* content = content.replace(/\!\[(.*?)\]\((.*?)\)/g, (match, p1, p2) => {
+    return `<img src="${decodeURI(p2)}" alt="${p1}" >`;
+  }); */
   return (
     <div className={styles.character}>
-      <div className={styles.name}>{name}</div>
-      <div className={styles.bio}>{bio}</div>
-      <img src={imgUrl} className={styles.img} />
+      <div className={styles.name}>{title}</div>
+      <div className={styles.markdown}>
+        <Markdown gfm baseURL="">{content}</Markdown>
+      </div>
     </div>
   );
 };
@@ -29,8 +33,20 @@ Character.getInitialProps = async ctx => {
   name = decodeURIComponent(name);
   name = name.replace(/_/g, ' ');
   name = capitalizeAllWords(name);
-  
-  const prompt = `\
+
+  const c = new Ctx();
+  const title = `characters/${name}`;
+  const id = uuidByString(title);
+  const query = await c.databaseClient.getByName(title);
+  if (query) {
+    const {content} = query;
+    return {
+      id,
+      title,
+      content,
+    };
+  } else {
+    const prompt = `\
 Generate 50 RPG characters.
 
 # Scillia Doge
@@ -56,46 +72,51 @@ She is an engineer. 17/F engineer. She is new on the street. She has a strong mo
 # ${name}
 ##`;
 
-  const c = new Ctx();
-
-  let bio = '';
-  const numTries = 5;
-  for (let i = 0; i < numTries; i++) {
-    bio = await c.aiClient.generate(prompt, '# ');
-    bio = bio.trim();
-    const bioLines = bio.split(/\n+/);
-    if (bioLines.length >= 2) {
-      bioLines[0] = bioLines[0]
-        .replace(/^"(.+)"$/, '$1')
-        .replace(/^'(.+)'$/, '$1');
-      bioLines[0] = capitalizeAllWords(bioLines[0]);
-      bioLines[1] = capitalize(bioLines[1]);
-      bio = bioLines.join('\n');
-      break;
-    } else {
-      bio = '';
+    let bio = '';
+    const numTries = 5;
+    for (let i = 0; i < numTries; i++) {
+      bio = await c.aiClient.generate(prompt, '# ');
+      bio = bio.trim();
+      const bioLines = bio.split(/\n+/);
+      if (bioLines.length >= 2) {
+        bioLines[0] = bioLines[0]
+          .replace(/^"(.+)"$/, '$1')
+          .replace(/^'(.+)'$/, '$1');
+        bioLines[0] = capitalizeAllWords(bioLines[0]);
+        bioLines[1] = capitalize(bioLines[1]);
+        bio = bioLines.join('\n');
+        break;
+      } else {
+        bio = '';
+      }
     }
-  }
-  if (!bio) {
-    throw new Error('too many retries');
-  }
+    if (!bio) {
+      throw new Error('too many retries');
+    }
 
-  const imgArrayBuffer = await generateCharacterImage({
-    name,
-    description: bio,
-  });
-  const file = new File([imgArrayBuffer], `${name}.png`);
-  const hash = await c.storageClient.uploadFile(file);
-  const imgUrl = c.storageClient.getUrl(hash, file.name);
-  await ensureUrl(imgUrl);
+    const imgArrayBuffer = await generateCharacterImage({
+      name,
+      description: bio,
+    });
+    const file = new File([imgArrayBuffer], `${name}.png`);
+    const hash = await c.storageClient.uploadFile(file);
+    const imgUrl = c.storageClient.getUrl(hash, file.name);
+    await ensureUrl(imgUrl);
 
-  return {
-    // url: req.url,
-    id: uuidByString(name),
-    name,
-    bio,
-    imgUrl,
-  };
+    const content = `\
+# ${name}
+## ${bio}
+![](${encodeURI(imgUrl)})
+`;
+
+    await c.databaseClient.setByName(title, content);
+    
+    return {
+      id,
+      title,
+      content,
+    };
+  }
 };
 
 export default Character;
