@@ -5,3 +5,6 @@
 .setting .description {
   white-space: pre-wrap;
 }
+.setting .markdown img {
+  display: block;
+}
