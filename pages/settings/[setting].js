@@ -1,24 +1,23 @@
 import uuidByString from 'uuid-by-string';
 import {File} from 'web3.storage';
+import Markdown from 'marked-react';
 
-import styles from '../../styles/Setting.module.css'
+import styles from '../../styles/Character.module.css'
 import {Ctx} from '../../context.js';
 import {capitalize, capitalizeAllWords} from '../../utils.js';
-import {generateSettingsImage} from '../../generators/image/setting.js';
+import {generateSettingImage} from '../../generators/image/setting.js';
 import {ensureUrl} from '../../utils.js';
 
 const Setting = ({
-  // url,
-  // id,
-  name,
-  description,
-  imgUrl,
+  title,
+  content,
 }) => {
   return (
     <div className={styles.setting}>
-      <div className={styles.name}>{name}</div>
-      <div className={styles.description}>{description}</div>
-      <img src={imgUrl} className={styles.img} />
+      <div className={styles.name}>{title}</div>
+      <div className={styles.markdown}>
+        <Markdown gfm baseURL="">{content}</Markdown>
+      </div>
     </div>
   );
 };
@@ -29,9 +28,20 @@ Setting.getInitialProps = async ctx => {
   name = decodeURIComponent(name);
   name = name.replace(/_/g, ' ');
   name = capitalizeAllWords(name);
-  
+
   const c = new Ctx();
-  const prompt = `\
+  const title = `settings/${name}`;
+  const id = uuidByString(title);
+  const query = await c.databaseClient.getByName(title);
+  if (query) {
+    const {content} = query;
+    return {
+      id,
+      title,
+      content,
+    };
+  } else {
+    const prompt = `\
 Generate 50 anime RPG video game locations.
 
 # Nihon City
@@ -40,40 +50,47 @@ A solarpunk city based loosely on a Tokyo, Japan. It is the main city of Zone 0 
 # ${name}
 `;
 
-  let description = '';
-  const numTries = 5;
-  for (let i = 0; i < numTries; i++) {
-    description = await c.aiClient.generate(prompt, '# ');
-    description = description.trim();
-    const descriptionLines = description.split(/\n+/);
-    if (descriptionLines.length >= 1) {
-      descriptionLines[0] = capitalize(descriptionLines[0]);
-      description = descriptionLines.join('\n');
-      break;
-    } else {
-      description = '';
+    let description = '';
+    const numTries = 5;
+    for (let i = 0; i < numTries; i++) {
+      description = await c.aiClient.generate(prompt, '# ');
+      description = description.trim();
+      const descriptionLines = description.split(/\n+/);
+      if (descriptionLines.length >= 1) {
+        descriptionLines[0] = capitalize(descriptionLines[0]);
+        description = descriptionLines.join('\n');
+        break;
+      } else {
+        description = '';
+      }
     }
-  }
-  if (!description) {
-    throw new Error('too many retries');
-  }
+    if (!description) {
+      throw new Error('too many retries');
+    }
 
-  const imgArrayBuffer = await generateSettingsImage({
-    name,
-    description,
-  });
-  const file = new File([imgArrayBuffer], `${name}.png`);
-  const hash = await c.storageClient.uploadFile(file);
-  const imgUrl = c.storageClient.getUrl(hash, file.name);
-  await ensureUrl(imgUrl);
-  
-  return {
-    // url: req.url,
-    id: uuidByString(name),
-    name,
-    description,
-    imgUrl,
-  };
+    const imgArrayBuffer = await generateSettingImage({
+      name,
+      description,
+    });
+    const file = new File([imgArrayBuffer], `${name}.png`);
+    const hash = await c.storageClient.uploadFile(file);
+    const imgUrl = c.storageClient.getUrl(hash, file.name);
+    await ensureUrl(imgUrl);
+
+    const content = `\
+# ${name}
+${description}
+![](${encodeURI(imgUrl)})
+`;
+
+    await c.databaseClient.setByName(title, content);
+    
+    return {
+      id,
+      title,
+      content,
+    };
+  }
 };
 
 export default Setting;
