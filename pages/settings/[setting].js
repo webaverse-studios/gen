@@ -1,11 +1,11 @@
 import uuidByString from 'uuid-by-string';
-import {File} from 'web3.storage';
+// import {File} from 'web3.storage';
 import Markdown from 'marked-react';
 
 import styles from '../../styles/Setting.module.css'
 import {Ctx} from '../../context.js';
-import {ensureUrl, cleanName} from '../../utils.js';
-import {generateSettingImage} from '../../generators/image/setting.js';
+import {capitalize, cleanName} from '../../utils.js';
+// import {generateSettingImage} from '../../generators/image/setting.js';
 
 const Setting = ({
   title,
@@ -66,14 +66,15 @@ A solarpunk city based loosely on a Tokyo, Japan. It is the main city of Zone 0 
       throw new Error('too many retries');
     }
 
-    const imgArrayBuffer = await generateSettingImage({
-      name,
-      description,
-    });
-    const file = new File([imgArrayBuffer], `${name}.png`);
-    const hash = await c.storageClient.uploadFile(file);
-    const imgUrl = c.storageClient.getUrl(hash, file.name);
-    await ensureUrl(imgUrl);
+    // const imgArrayBuffer = await generateSettingImage({
+    //   name,
+    //   description,
+    // });
+    // const file = new File([imgArrayBuffer], `${name}.png`);
+    // const hash = await c.storageClient.uploadFile(file);
+    const imgUrl = `/api/settings/${name}/images/main.png`;
+    // const imgUrl = c.storageClient.getUrl(hash, file.name);
+    // await ensureUrl(imgUrl);
 
     const content = `\
 # ${name}

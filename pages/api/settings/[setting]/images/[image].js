@@ -47,9 +47,13 @@ SettingImage.getInitialProps = async ctx => {
     } else {
       const settingQuery = await c.databaseClient.getByName('Content', settingTitle);
       if (settingQuery) {
-        const {
+        let {
           content: description,
         } = settingQuery;
+
+        description = description.replace(/^[\s\S]*?\n/, ''); // skip name
+
+        console.log('generate setting image for ', {description});
 
         const imgArrayBuffer = await generateSettingImage({
           name: settingName,

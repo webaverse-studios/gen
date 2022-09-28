@@ -51,10 +51,14 @@ CharacterImage.getInitialProps = async ctx => {
           content: bio,
         } = characterQuery;
 
-        const imgArrayBuffer = await generateCharacterImage({
+        bio = bio.replace(/^[\s\S]*?\n[\s\S]*?\n/, ''); // skip name, class
+        console.log('generate character image for ', {bio});
+
+        let imgArrayBuffer = await generateCharacterImage({
           name: characterName,
           description: bio,
         });
+
         const file = new File([imgArrayBuffer], imageName);
         const hash = await c.storageClient.uploadFile(file);
         const imgUrl = c.storageClient.getUrl(hash, file.name);
