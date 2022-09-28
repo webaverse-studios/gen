@@ -20,3 +20,8 @@ export const ensureUrl = async url => {
   }
   throw new Error(`invalid status code: ${res.status}`);
 };
+export const cleanName = name => {
+  name = name.replace(/_/g, ' ');
+  name = capitalizeAllWords(name);
+  return name;
+};
