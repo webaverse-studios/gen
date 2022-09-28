@@ -47,7 +47,7 @@ CharacterImage.getInitialProps = async ctx => {
     } else {
       const characterQuery = await c.databaseClient.getByName('Content', characterTitle);
       if (characterQuery) {
-        const {
+        let {
           content: bio,
         } = characterQuery;
 
