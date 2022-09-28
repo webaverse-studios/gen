@@ -52,7 +52,7 @@ CharacterImage.getInitialProps = async ctx => {
         } = characterQuery;
 
         bio = bio.replace(/^[\s\S]*?\n[\s\S]*?\n/, ''); // skip name, class
-        console.log('generate character image for ', {bio});
+        console.log('generate character image for', {bio});
 
         let imgArrayBuffer = await generateCharacterImage({
           name: characterName,

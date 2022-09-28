@@ -53,7 +53,7 @@ SettingImage.getInitialProps = async ctx => {
 
         description = description.replace(/^[\s\S]*?\n/, ''); // skip name
 
-        console.log('generate setting image for ', {description});
+        console.log('generate setting image for', {description});
 
         const imgArrayBuffer = await generateSettingImage({
           name: settingName,
