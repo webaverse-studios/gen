@@ -20,7 +20,6 @@ const CharacterImage = async (req, res) => {
 CharacterImage.getInitialProps = async ctx => {
   const {req} = ctx;
   
-  console.log('got character image url', req.url);
   const match = req.url.match(/^\/api\/characters\/([^\/]*)\/images\/([^\/]*\.png)$/);
   if (match) {
     let characterName = match[1];
