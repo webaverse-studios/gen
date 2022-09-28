@@ -12,11 +12,11 @@ export class DatabaseClient {
       host: 'weaviate-server.webaverse.com',
     });
   }
-  async getByName(title) {
+  async getByName(className, title) {
     // const id = uuidByString(title);
     const result = await this.client.graphql
       .get()
-      .withClassName('Content')
+      .withClassName(className)
       .withFields('title content type')
       .withWhere({
         operator: 'Equal',
@@ -35,7 +35,7 @@ export class DatabaseClient {
     // console.log('got result', [title, result.data.Get.Content[0]]);
     return result?.data?.Get?.Content?.[0];
   }
-  async setByName(title, content) {
+  async setByName(className, title, content) {
     const _formatData = (title, content) => {
       if (typeof content === 'string') {
         const match = title.match(/^([^\/]+)\/[\s\S]*/);
@@ -47,7 +47,7 @@ export class DatabaseClient {
           // const type = match?.[1] ?? '';
           // v.type = type;
           return {
-            class: 'Content',
+            class: className,
             id: uuidByString(title),
             properties: {
               title,
