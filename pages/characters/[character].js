@@ -1,12 +1,12 @@
 import uuidByString from 'uuid-by-string';
-import {File} from 'web3.storage';
+// import {File} from 'web3.storage';
 import Markdown from 'marked-react';
 
 import styles from '../../styles/Character.module.css'
 import {Ctx} from '../../context.js';
 import {cleanName} from '../../utils.js';
-import {generateCharacterImage} from '../../generators/image/character.js';
-import {ensureUrl} from '../../utils.js';
+// import {generateCharacterImage} from '../../generators/image/character.js';
+import {capitalize, capitalizeAllWords} from '../../utils.js';
 
 const Character = ({
   title,
@@ -88,14 +88,15 @@ She is an engineer. 17/F engineer. She is new on the street. She has a strong mo
       throw new Error('too many retries');
     }
 
-    const imgArrayBuffer = await generateCharacterImage({
-      name,
-      description: bio,
-    });
-    const file = new File([imgArrayBuffer], `${name}.png`);
-    const hash = await c.storageClient.uploadFile(file);
-    const imgUrl = c.storageClient.getUrl(hash, file.name);
-    await ensureUrl(imgUrl);
+    // const imgArrayBuffer = await generateCharacterImage({
+    //   name,
+    //   description: bio,
+    // });
+    // const file = new File([imgArrayBuffer], `${name}.png`);
+    // const hash = await c.storageClient.uploadFile(file);
+    const imgUrl = `/api/characters/${name}/images/main.png`;
+    // const imgUrl = c.storageClient.getUrl(hash, file.name);
+    // await ensureUrl(imgUrl);
 
     const content = `\
 # ${name}
