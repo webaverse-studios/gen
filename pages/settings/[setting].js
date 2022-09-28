@@ -6,7 +6,7 @@ import styles from '../../styles/Setting.module.css'
 import {Ctx} from '../../context.js';
 import {capitalize, capitalizeAllWords} from '../../utils.js';
 import {generateSettingImage} from '../../generators/image/setting.js';
-import {ensureUrl} from '../../utils.js';
+import {ensureUrl, cleanName} from '../../utils.js';
 
 const Setting = ({
   title,
@@ -26,13 +26,12 @@ Setting.getInitialProps = async ctx => {
   const match = req.url.match(/^\/settings\/([^\/]*)/);
   let name = match ? match[1] : '';
   name = decodeURIComponent(name);
-  name = name.replace(/_/g, ' ');
-  name = capitalizeAllWords(name);
+  name = cleanName(name);
 
   const c = new Ctx();
   const title = `settings/${name}`;
   const id = uuidByString(title);
-  const query = await c.databaseClient.getByName(title);
+  const query = await c.databaseClient.getByName('Content', title);
   if (query) {
     const {content} = query;
     return {
@@ -83,7 +82,7 @@ ${description}
 ![](${encodeURI(imgUrl)})
 `;
 
-    await c.databaseClient.setByName(title, content);
+    await c.databaseClient.setByName('Content', title, content);
     
     return {
       id,

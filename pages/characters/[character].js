@@ -4,7 +4,7 @@ import Markdown from 'marked-react';
 
 import styles from '../../styles/Character.module.css'
 import {Ctx} from '../../context.js';
-import {capitalize, capitalizeAllWords} from '../../utils.js';
+import {cleanName} from '../../utils.js';
 import {generateCharacterImage} from '../../generators/image/character.js';
 import {ensureUrl} from '../../utils.js';
 
@@ -26,13 +26,12 @@ Character.getInitialProps = async ctx => {
   const match = req.url.match(/^\/characters\/([^\/]*)/);
   let name = match ? match[1] : '';
   name = decodeURIComponent(name);
-  name = name.replace(/_/g, ' ');
-  name = capitalizeAllWords(name);
+  name = cleanName(name);
 
   const c = new Ctx();
   const title = `characters/${name}`;
   const id = uuidByString(title);
-  const query = await c.databaseClient.getByName(title);
+  const query = await c.databaseClient.getByName('Content', title);
   if (query) {
     const {content} = query;
     return {
@@ -104,7 +103,7 @@ She is an engineer. 17/F engineer. She is new on the street. She has a strong mo
 ![](${encodeURI(imgUrl)})
 `;
 
-    await c.databaseClient.setByName(title, content);
+    await c.databaseClient.setByName('Content', title, content);
     
     return {
       id,
