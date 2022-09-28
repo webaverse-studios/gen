@@ -4,9 +4,8 @@ import Markdown from 'marked-react';
 
 import styles from '../../styles/Setting.module.css'
 import {Ctx} from '../../context.js';
-import {capitalize, capitalizeAllWords} from '../../utils.js';
-import {generateSettingImage} from '../../generators/image/setting.js';
 import {ensureUrl, cleanName} from '../../utils.js';
+import {generateSettingImage} from '../../generators/image/setting.js';
 
 const Setting = ({
   title,
