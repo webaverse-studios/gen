@@ -20,9 +20,9 @@ const encoding = 'hex';
 
 //
 
-const _getFileHash = file => {
+const _getFileHash = async file => {
   const hash = crypto.createHash('sha3-256');
-  const ab = file.arrayBuffer();
+  const ab = await file.arrayBuffer();
   const uint8Array = new Uint8Array(ab);
   hash.update(uint8Array);
   return hash.digest(encoding);
@@ -66,7 +66,7 @@ export class StorageClient {
     const {name} = file;
 
     // console.log('upload file 1');
-    const hash = _getFileHash(file);
+    const hash = await _getFileHash(file);
     // console.log('upload file 2', {hash});
 
     const ab = await file.arrayBuffer();
@@ -94,7 +94,7 @@ export class StorageClient {
   }
   async uploadFiles(files) {
     const hashes = await Promise.all(files.map(async file => {
-      const hash = _getFileHash(file);
+      const hash = await _getFileHash(file);
       return hash;
     }));
     const metaHash = _hashHashes(hashes);
