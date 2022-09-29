@@ -1,4 +1,4 @@
-import stream from 'stream';
+// import stream from 'stream';
 import crypto from 'crypto';
 // import {Web3Storage} from 'web3.storage';
 import {
@@ -25,19 +25,6 @@ const _getFileHash = file => {
   const uint8Array = new Uint8Array(ab);
   hash.update(uint8Array);
   return hash.digest(encoding);
-  /* return await new Promise((accept, reject) => {
-    const hash = crypto.createHash('sha3-256');
-    hash.on('readable', () => {
-      const data = hash.read();
-      if (data) {
-        accept(data.toString(encoding));
-      }
-    });
-    hash.on('error', reject);
-
-    const rs = stream.Readable.fromWeb(file.stream());
-    rs.pipe(hash);
-  }); */
 };
 // hash the list of hashes, merkle style
 const _hashHashes = hashes => {
@@ -77,28 +64,28 @@ export class StorageClient {
   async uploadFile(file) {
     const {name} = file;
 
-    console.log('upload file 1');
-    // get the sha3 hash digest of the file
+    // console.log('upload file 1');
     const hash = _getFileHash(file);
-    console.log('upload file 2', {hash});
+    // console.log('upload file 2', {hash});
 
     const ab = await file.arrayBuffer();
 
-    console.log('put object 1', {
-      Bucket: bucketName,
-      Key: `${hash}/${name}`,
-      Body: ab,
-    });
+    // console.log('put object 1', {
+    //   Bucket: bucketName,
+    //   Key: `${hash}/${name}`,
+    //   Body: ab,
+    // });
     const command = new PutObjectCommand({
       Bucket: bucketName,
       Key: `${hash}/${name}`,
       // Body: file,
       Body: ab,
     });
-    console.log('put object 2');
+    // console.log('put object 2');
+
     // wait for the command to complete
     const result = await this.client.send(command);
-    console.log('upload result', result);
+    // console.log('upload result', result);
 
     return hash;
   }
@@ -112,26 +99,24 @@ export class StorageClient {
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       const {name} = file;
-      // const hash = hashes[i];
 
       const ab = await file.arrayBuffer();
       
-      console.log('put objects 1', {
-        Bucket: bucketName,
-        Key: `${metaHash}/${name}`,
-        Body: ab,
-      });
+      // console.log('put objects 1', {
+      //   Bucket: bucketName,
+      //   Key: `${metaHash}/${name}`,
+      //   Body: ab,
+      // });
       const command = new PutObjectCommand({
         Bucket: bucketName,
         Key: `${metaHash}/${name}`,
-        // Body: file,
         Body: ab,
       });
-      console.log('put objects 2');
+      // console.log('put objects 2');
 
       // wait for the command to complete
       const result = await this.client.send(command);
-      console.log('uploads result', result);
+      // console.log('uploads result', result);
     }
 
     // return await this.client.put(files);
