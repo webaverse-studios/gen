@@ -1,0 +1,10 @@
+.item {
+}
+.item .name {
+}
+.item .bio {
+  white-space: pre-wrap;
+}
+.item .markdown img {
+  display: block;
+}
