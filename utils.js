@@ -14,11 +14,10 @@ export const ensureUrl = async url => {
       if (res.status === 408) {
         continue;
       } else {
-        break;
+        throw new Error(`invalid status code: ${res.status}`);
       }
     }
   }
-  throw new Error(`invalid status code: ${res.status}`);
 };
 export const cleanName = name => {
   name = name.replace(/_/g, ' ');
