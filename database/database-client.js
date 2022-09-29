@@ -32,8 +32,8 @@ export class DatabaseClient {
       .catch(err => {
         console.error(err)
       }); */
-    // console.log('got result', [title, result.data.Get.Content[0]]);
-    return result?.data?.Get?.Content?.[0];
+    // console.log('got result', JSON.stringify({className, title, result}, null, 2));
+    return result?.data?.Get?.[className]?.[0];
   }
   async setByName(className, title, content) {
     const _formatData = (title, content) => {

@@ -35,6 +35,7 @@ CharacterImage.getInitialProps = async ctx => {
     const c = new Ctx();
     // const id = uuidByString(imageTitle);
     const imageQuery = await c.databaseClient.getByName('IpfsData', imageTitle);
+    // console.log('check image query', {imageTitle, imageQuery});
     if (imageQuery) {
       const {
         content: ipfsHash,
@@ -52,7 +53,7 @@ CharacterImage.getInitialProps = async ctx => {
         } = characterQuery;
 
         bio = bio.replace(/^[\s\S]*?\n[\s\S]*?\n/, ''); // skip name, class
-        console.log('generate character image for', {bio});
+        // console.log('generate character image for', {bio});
 
         let imgArrayBuffer = await generateCharacterImage({
           name: characterName,
@@ -64,12 +65,13 @@ CharacterImage.getInitialProps = async ctx => {
         });
         file.name = imageName;
         const hash = await c.storageClient.uploadFile(file);
+
+        // console.log('set ipfs data', {imageTitle, imgUrl});
+        await c.databaseClient.setByName('IpfsData', imageTitle, hash);
+
         const imgUrl = c.storageClient.getUrl(hash, file.name);
-
-        await c.databaseClient.setByName('IpfsData', imageTitle, imgUrl);
-
-        console.log('ensure image url', {imgUrl});
-        await ensureUrl(imgUrl);
+        // console.log('ensure image url', {imgUrl});
+        // await ensureUrl(imgUrl);
 
         return {
           imgUrl,
