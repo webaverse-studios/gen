@@ -64,10 +64,10 @@ ItemImage.getInitialProps = async ctx => {
         });
         file.name = imageName;
         const hash = await c.storageClient.uploadFile(file);
+        
+        await c.databaseClient.setByName('IpfsData', imageTitle, hash);
+        
         const imgUrl = c.storageClient.getUrl(hash, file.name);
-
-        await c.databaseClient.setByName('IpfsData', imageTitle, imgUrl);
-
         await ensureUrl(imgUrl);
 
         return {
