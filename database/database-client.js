@@ -22,7 +22,7 @@ export class DatabaseClient {
         operator: 'Equal',
         path: [
           'title',
-       ],
+        ],
         valueString: title,
       })
       .do()
