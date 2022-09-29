@@ -1,6 +1,7 @@
 // import stream from 'stream';
 import crypto from 'crypto';
 // import {Web3Storage} from 'web3.storage';
+import mime from 'mime-types';
 import {
   S3Client,
   // GetObjectCommand,
@@ -75,11 +76,13 @@ export class StorageClient {
     //   Key: `${hash}/${name}`,
     //   Body: ab,
     // });
+    const contentType = mime.lookup(name);
     const command = new PutObjectCommand({
       Bucket: bucketName,
       Key: `${hash}/${name}`,
       // Body: file,
       Body: ab,
+      ContentType: contentType,
     });
     // console.log('put object 2');
 
@@ -107,10 +110,12 @@ export class StorageClient {
       //   Key: `${metaHash}/${name}`,
       //   Body: ab,
       // });
+      const contentType = mime.lookup(name);
       const command = new PutObjectCommand({
         Bucket: bucketName,
         Key: `${metaHash}/${name}`,
         Body: ab,
+        ContentType: contentType,
       });
       // console.log('put objects 2');
 
