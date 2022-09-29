@@ -42,7 +42,14 @@ const schemas = [
           "string"
         ],
         "description": "IPFS hash",
-        "name": "hash"
+        "name": "content"
+      },
+      {
+        "dataType": [
+          "string"
+        ],
+        "description": "Type of content",
+        "name": "type"
       },
     ],
   },
