@@ -81,4 +81,4 @@ ItemImage.getInitialProps = async ctx => {
     return null;
   }
 };
-export default SettingImage;
+export default ItemImage;
