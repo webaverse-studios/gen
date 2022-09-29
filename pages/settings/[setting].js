@@ -51,7 +51,7 @@ A solarpunk city based loosely on a Tokyo, Japan. It is the main city of Zone 0 
     let description = '';
     const numTries = 5;
     for (let i = 0; i < numTries; i++) {
-      description = await c.aiClient.generate(prompt, '# ');
+      description = await c.aiClient.generate(prompt, '\n\n');
       description = description.trim();
       const descriptionLines = description.split(/\n+/);
       if (descriptionLines.length >= 1) {

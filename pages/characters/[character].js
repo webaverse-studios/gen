@@ -69,7 +69,7 @@ She is an engineer. 17/F engineer. She is new on the street. She has a strong mo
     let bio = '';
     const numTries = 5;
     for (let i = 0; i < numTries; i++) {
-      bio = await c.aiClient.generate(prompt, '# ');
+      bio = await c.aiClient.generate(prompt, '\n\n');
       bio = bio.trim();
       const bioLines = bio.split(/\n+/);
       if (bioLines.length >= 2) {
