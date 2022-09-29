@@ -1,5 +1,5 @@
 // import uuidByString from 'uuid-by-string';
-import {File} from 'web3.storage';
+// import {File} from 'web3.storage';
 
 import {Ctx} from '../../../../../context.js';
 import {cleanName} from '../../../../../utils.js';
@@ -59,7 +59,10 @@ SettingImage.getInitialProps = async ctx => {
           name: settingName,
           description,
         });
-        const file = new File([imgArrayBuffer], imageName);
+        const file = new Blob([imgArrayBuffer], {
+          type: 'image/png',
+        });
+        file.name = imageName;
         const hash = await c.storageClient.uploadFile(file);
         const imgUrl = c.storageClient.getUrl(hash, file.name);
 
