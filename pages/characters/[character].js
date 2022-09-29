@@ -74,8 +74,8 @@ She is an engineer. 17/F engineer. She is new on the street. She has a strong mo
       const bioLines = bio.split(/\n+/);
       if (bioLines.length >= 2) {
         bioLines[0] = bioLines[0]
-          .replace(/^"(.+)"$/, '$1')
-          .replace(/^'(.+)'$/, '$1');
+          .replace(/^[^a-zA-Z]+/, '')
+          .replace(/[^a-zA-Z]+$/, '');
         bioLines[0] = capitalizeAllWords(bioLines[0]);
         bioLines[1] = capitalize(bioLines[1]);
         bio = bioLines.join('\n');
