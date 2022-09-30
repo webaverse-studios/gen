@@ -1,6 +1,6 @@
-import {DatasetEngine} from '../../datasets/datasets.js';
-import characters from '../../datasets/characters.js';
-import {Ctx} from '../../context.js';
+import {DatasetEngine} from '../../../datasets/datasets.js';
+import characters from '../../../datasets/characters.js';
+import {Ctx} from '../../../context.js';
 
 export default (req, res) => {
   (async () => {

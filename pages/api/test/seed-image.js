@@ -1,5 +1,5 @@
 // import {createCanvas, loadImage} from 'canvas';
-import {createSeedImage} from '../../canvas/seed-image.js';
+import {createSeedImage} from '../../../canvas/seed-image.js';
 
 /* character = this.#makeSeededMethod({
   seedArgs: [512, 512, 64, 128, 1, 256],
