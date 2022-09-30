@@ -48,31 +48,36 @@ SettingImage.getInitialProps = async ctx => {
       const settingQuery = await c.databaseClient.getByName('Content', settingTitle);
       if (settingQuery) {
         let {
-          content: description,
+          content,
         } = settingQuery;
 
-        description = description.replace(/^[\s\S]*?\n/, ''); // skip name
+        const match = content.match(/\#\# ([\s\S]*?)\n/);
+        if (match) {
+          const description = match[1];
 
-        // console.log('generate setting image for', {description});
+          console.log('generate setting image for', {description});
+          let imgArrayBuffer = await generateSettingImage({
+            name: settingName,
+            description,
+          });
+        
+          const file = new Blob([imgArrayBuffer], {
+            type: 'image/png',
+          });
+          file.name = imageName;
+          const hash = await c.storageClient.uploadFile(file);
 
-        const imgArrayBuffer = await generateSettingImage({
-          name: settingName,
-          description,
-        });
-        const file = new Blob([imgArrayBuffer], {
-          type: 'image/png',
-        });
-        file.name = imageName;
-        const hash = await c.storageClient.uploadFile(file);
+          await c.databaseClient.setByName('IpfsData', imageTitle, hash);
 
-        await c.databaseClient.setByName('IpfsData', imageTitle, hash);
+          const imgUrl = c.storageClient.getUrl(hash, file.name);
+          // await ensureUrl(imgUrl);
 
-        const imgUrl = c.storageClient.getUrl(hash, file.name);
-        // await ensureUrl(imgUrl);
-
-        return {
-          imgUrl,
-        };
+          return {
+            imgUrl,
+          };
+        } else {
+          return null;
+        }
       } else {
         return null;
       }

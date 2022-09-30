@@ -49,33 +49,38 @@ CharacterImage.getInitialProps = async ctx => {
       const characterQuery = await c.databaseClient.getByName('Content', characterTitle);
       if (characterQuery) {
         let {
-          content: bio,
+          content,
         } = characterQuery;
 
-        bio = bio.replace(/^[\s\S]*?\n[\s\S]*?\n/, ''); // skip name, class
-        // console.log('generate character image for', {bio});
+        const match = content.match(/\#\# ([\s\S]*?)\n/);
+        if (match) {
+          const description = match[1];
 
-        let imgArrayBuffer = await generateCharacterImage({
-          name: characterName,
-          description: bio,
-        });
+          console.log('generate character image for', {description});
+          let imgArrayBuffer = await generateCharacterImage({
+            name: characterName,
+            description,
+          });
 
-        const file = new Blob([imgArrayBuffer], {
-          type: 'image/png',
-        });
-        file.name = imageName;
-        const hash = await c.storageClient.uploadFile(file);
+          const file = new Blob([imgArrayBuffer], {
+            type: 'image/png',
+          });
+          file.name = imageName;
+          const hash = await c.storageClient.uploadFile(file);
 
-        // console.log('set ipfs data', {imageTitle, imgUrl});
-        await c.databaseClient.setByName('IpfsData', imageTitle, hash);
+          // console.log('set ipfs data', {imageTitle, imgUrl});
+          await c.databaseClient.setByName('IpfsData', imageTitle, hash);
 
-        const imgUrl = c.storageClient.getUrl(hash, file.name);
-        // console.log('ensure image url', {imgUrl});
-        // await ensureUrl(imgUrl);
+          const imgUrl = c.storageClient.getUrl(hash, file.name);
+          // console.log('ensure image url', {imgUrl});
+          // await ensureUrl(imgUrl);
 
-        return {
-          imgUrl,
-        };
+          return {
+            imgUrl,
+          };
+        } else {
+          return null;
+        }
       } else {
         return null;
       }

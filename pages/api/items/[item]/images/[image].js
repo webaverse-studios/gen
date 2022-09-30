@@ -48,31 +48,37 @@ ItemImage.getInitialProps = async ctx => {
       const itemQuery = await c.databaseClient.getByName('Content', itemTitle);
       if (itemQuery) {
         let {
-          content: description,
+          content,
         } = itemQuery;
 
-        description = description.replace(/^[\s\S]*?\n/, ''); // skip name
+        const match = content.match(/\#\# ([\s\S]*?)\n/);
+        if (match) {
+          const description = match[1];
 
-        // console.log('generate item image for', {description});
+          console.log('generate item image for', {description});
+          let imgArrayBuffer = await generateItemImage({
+            name: itemName,
+            description,
+          });
+          console.log('output item image', {itemName, imgArrayBuffer});
 
-        const imgArrayBuffer = await generateItemImage({
-          name: itemName,
-          description,
-        });
-        const file = new Blob([imgArrayBuffer], {
-          type: 'image/png',
-        });
-        file.name = imageName;
-        const hash = await c.storageClient.uploadFile(file);
-        
-        await c.databaseClient.setByName('IpfsData', imageTitle, hash);
-        
-        const imgUrl = c.storageClient.getUrl(hash, file.name);
-        await ensureUrl(imgUrl);
+          const file = new Blob([imgArrayBuffer], {
+            type: 'image/png',
+          });
+          file.name = imageName;
+          const hash = await c.storageClient.uploadFile(file);
+          
+          await c.databaseClient.setByName('IpfsData', imageTitle, hash);
+          
+          const imgUrl = c.storageClient.getUrl(hash, file.name);
+          await ensureUrl(imgUrl);
 
-        return {
-          imgUrl,
-        };
+          return {
+            imgUrl,
+          };
+        } else {
+          return null;
+        }
       } else {
         return null;
       }
