@@ -32,7 +32,7 @@ export const parseItems = s => {
       }
     } else {
       if (line) {
-        const attributeMatch = line.match(/^([a-zA-Z0-9]+?:|[#>]) (.*)$/);
+        const attributeMatch = line.match(/^([a-zA-Z0-9]+?:|[#]+) (.*)$/);
         let attributeName, attributeValue;
         if (attributeMatch) {
             attributeName = attributeMatch[1];
@@ -65,6 +65,13 @@ export const parseDataset = s => {
     items,
   };
 
+};
+
+export const formatItem = item => {
+  return Object.keys(item.attributes).map(attributeName => {
+    const attributeValue = item.attributes[attributeName];
+    return `${attributeName} ${attributeValue}`;
+  }).join('\n');
 };
 
 //
@@ -180,7 +187,7 @@ ${localItems.map(item =>
 ).join('\n\n')}
 
 # ${name}
->`;
+##`;
 
     return prompt;
   }
@@ -220,11 +227,12 @@ export class DatasetEngine {
       // attributeNames = Object.keys(item0.attributes);
 
       const prompt = this.dataset.generateItemPrompt(name);
-      let response = await this.aiClient.generate(prompt, '\n\n');
+      const result = await this.aiClient.generate(prompt, '\n\n');
       // response = response.trim();
       
-      const responseString = `# ${name}\n>${response}`;
-      const parsedResponse = parseItems(responseString)[0] ?? null;
+      const response = `##${result}`;
+      const fullResponse = `# ${name}\n${response}`;
+      const parsedResponse = parseItems(fullResponse)[0] ?? null;
       
       return {
         prompt,
