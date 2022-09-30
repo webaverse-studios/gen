@@ -5,6 +5,8 @@ import Markdown from 'marked-react';
 import styles from '../../styles/Character.module.css'
 import {Ctx} from '../../context.js';
 import {cleanName} from '../../utils.js';
+import {DatasetEngine} from '../../datasets/datasets.js';
+import datasets from '../../datasets/data.js';
 // import {generateCharacterImage} from '../../generators/image/character.js';
 import {capitalize, capitalizeAllWords} from '../../utils.js';
 
@@ -40,37 +42,31 @@ Character.getInitialProps = async ctx => {
       content,
     };
   } else {
-    const prompt = `\
-Generate 50 RPG characters.
-
-# Scillia Doge
-## Drop Hunter
-Her nickname is Scilly or SLY. 13/F drop hunter. She is an adventurer, swordfighter and fan of potions.
-
-# Drake Silkbourne
-## Neural hacker
-His nickname is DRK. 15/M hacker. Loves guns. Likes plotting new hacks. He has the best equipment and is always ready for a fight.
-
-# Anemone Sikl
-## Lisk Witch
-A witch studying to make the best potions. 13/F. She is exceptionally skilled and sells her potions on the black market, but she is very shy.
-
-# Hyacinth Flowers
-## Beast Tamer
-Scillia's mentor. 15/F beast tamer. She is quite famous. She is known for releasing beasts on her enemies when she get angry.
-
-# Juniper Heartwood
-## Academy Engineer
-She is an engineer. 17/F engineer. She is new on the street. She has a strong moral compass and it the voice of reason in the group.
-
-# ${name}
-##`;
+    // const prompt = dataset.generatePrompt(name, attributeName);
+    
+    // console.log('got prompt', {prompt});
+    
+    // const response = await datasetEngine.generateItemAttribute(name, attributeName);
+    // const result = `${prompt}${attributeName ? ' ' : ''}${response}`;
+    // console.log('got response', {prompt, response, result});
+    
 
     let bio = '';
     const numTries = 5;
     for (let i = 0; i < numTries; i++) {
-      bio = await c.aiClient.generate(prompt, '\n\n');
-      bio = bio.trim();
+      const c = new Ctx();
+      const dataset = datasets.characters;
+      // console.log('got datasets', [datasets, dataset])
+      const datasetEngine = new DatasetEngine({
+        dataset,
+        aiClient: c.aiClient,
+      });
+
+      // bio = await c.aiClient.generate(prompt, '\n\n');
+      // bio = bio.trim();
+      bio = await datasetEngine.generateItemAttribute(name, '');
+      // console.log('got bio', {bio});
+      
       const bioLines = bio.split(/\n+/);
       if (bioLines.length >= 2) {
         bioLines[0] = bioLines[0]
