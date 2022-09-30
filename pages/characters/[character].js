@@ -5,10 +5,10 @@ import Markdown from 'marked-react';
 import styles from '../../styles/Character.module.css'
 import {Ctx} from '../../context.js';
 import {cleanName} from '../../utils.js';
-import {DatasetEngine} from '../../datasets/datasets.js';
-import datasets from '../../datasets/data.js';
 // import {generateCharacterImage} from '../../generators/image/character.js';
 import {capitalize, capitalizeAllWords} from '../../utils.js';
+import {DatasetEngine, formatItem} from '../../datasets/datasets.js';
+import datasets from '../../datasets/data.js';
 
 const Character = ({
   title,
@@ -46,34 +46,35 @@ Character.getInitialProps = async ctx => {
     // const numTries = 5;
     // for (let i = 0; i < numTries; i++) {
 
-      const c = new Ctx();
-      const dataset = datasets.characters;
-      const datasetEngine = new DatasetEngine({
-        dataset,
-        aiClient: c.aiClient,
-      });
+    const c = new Ctx();
+    const dataset = datasets.characters;
+    const datasetEngine = new DatasetEngine({
+      dataset,
+      aiClient: c.aiClient,
+    });
 
-      const {
-        response,
-      } = await datasetEngine.generateItemDescription(name);
-      // console.log('try generate', {name, response});
-      const bio = response;
+    const {
+      response,
+      parsedResponse: item,
+    } = await datasetEngine.generateItem(name);
+    // console.log('try generate', {name, response});
+    // const bio = response;
 
-      // const {
-      //   prompt,
-      //   response: bio,
-      // } = await datasetEngine.generateItemAttribute('characters', attributeName, description);
+    // const {
+    //   prompt,
+    //   response: bio,
+    // } = await datasetEngine.generateItemAttribute('characters', attributeName, description);
 
     // }
-    if (!bio) {
-      throw new Error('too many retries');
-    }
+    // if (!bio) {
+    //   throw new Error('too many retries');
+    // }
 
     const imgUrl = `/api/characters/${name}/images/main.png`;
 
     const content = `\
 # ${name}
-${bio}
+${formatItem(item)}
 ![](${encodeURI(imgUrl)})
 `;
 

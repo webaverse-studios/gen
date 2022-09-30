@@ -6,6 +6,8 @@ import styles from '../../styles/Setting.module.css'
 import {Ctx} from '../../context.js';
 import {capitalize, cleanName} from '../../utils.js';
 // import {generateSettingImage} from '../../generators/image/setting.js';
+import {DatasetEngine, formatItem} from '../../datasets/datasets.js';
+import datasets from '../../datasets/data.js';
 
 const Setting = ({
   title,
@@ -39,7 +41,7 @@ Setting.getInitialProps = async ctx => {
       content,
     };
   } else {
-    const prompt = `\
+    /* const prompt = `\
 Generate 50 anime RPG video game locations.
 
 # Nihon City
@@ -64,7 +66,19 @@ A solarpunk city based loosely on a Tokyo, Japan. It is the main city of Zone 0 
     }
     if (!description) {
       throw new Error('too many retries');
-    }
+    } */
+
+    const c = new Ctx();
+    const dataset = datasets.settings;
+    const datasetEngine = new DatasetEngine({
+      dataset,
+      aiClient: c.aiClient,
+    });
+
+    const {
+      response,
+      parsedResponse: item,
+    } = await datasetEngine.generateItem(name);
 
     // const imgArrayBuffer = await generateSettingImage({
     //   name,
@@ -78,7 +92,7 @@ A solarpunk city based loosely on a Tokyo, Japan. It is the main city of Zone 0 
 
     const content = `\
 # ${name}
-${description}
+${formatItem(item)}
 ![](${encodeURI(imgUrl)})
 `;
 
