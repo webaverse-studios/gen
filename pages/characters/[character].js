@@ -42,61 +42,38 @@ Character.getInitialProps = async ctx => {
       content,
     };
   } else {
-    // const prompt = dataset.generatePrompt(name, attributeName);
-    
-    // console.log('got prompt', {prompt});
-    
-    // const response = await datasetEngine.generateItemAttribute(name, attributeName);
-    // const result = `${prompt}${attributeName ? ' ' : ''}${response}`;
-    // console.log('got response', {prompt, response, result});
-    
+    // let bio = '';
+    // const numTries = 5;
+    // for (let i = 0; i < numTries; i++) {
 
-    let bio = '';
-    const numTries = 5;
-    for (let i = 0; i < numTries; i++) {
       const c = new Ctx();
       const dataset = datasets.characters;
-      // console.log('got datasets', [datasets, dataset])
       const datasetEngine = new DatasetEngine({
         dataset,
         aiClient: c.aiClient,
       });
 
-      // bio = await c.aiClient.generate(prompt, '\n\n');
-      // bio = bio.trim();
-      bio = await datasetEngine.generateItemAttribute(name, '');
-      // console.log('got bio', {bio});
-      
-      const bioLines = bio.split(/\n+/);
-      if (bioLines.length >= 2) {
-        bioLines[0] = bioLines[0]
-          .replace(/^[^a-zA-Z]+/, '')
-          .replace(/[^a-zA-Z]+$/, '');
-        bioLines[0] = capitalizeAllWords(bioLines[0]);
-        bioLines[1] = capitalize(bioLines[1]);
-        bio = bioLines.join('\n');
-        break;
-      } else {
-        bio = '';
-      }
-    }
+      const {
+        response,
+      } = await datasetEngine.generateItemDescription(name);
+      // console.log('try generate', {name, response});
+      const bio = response;
+
+      // const {
+      //   prompt,
+      //   response: bio,
+      // } = await datasetEngine.generateItemAttribute('characters', attributeName, description);
+
+    // }
     if (!bio) {
       throw new Error('too many retries');
     }
 
-    // const imgArrayBuffer = await generateCharacterImage({
-    //   name,
-    //   description: bio,
-    // });
-    // const file = new File([imgArrayBuffer], `${name}.png`);
-    // const hash = await c.storageClient.uploadFile(file);
     const imgUrl = `/api/characters/${name}/images/main.png`;
-    // const imgUrl = c.storageClient.getUrl(hash, file.name);
-    // await ensureUrl(imgUrl);
 
     const content = `\
 # ${name}
-## ${bio}
+${bio}
 ![](${encodeURI(imgUrl)})
 `;
 
