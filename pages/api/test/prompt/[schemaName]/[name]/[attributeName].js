@@ -24,7 +24,7 @@ export default async (req, res) => {
 
     const dataset = datasets[schemaName];
     if (dataset) {
-      const prompt = dataset.generatePrompt(name, attributeName);
+      const prompt = dataset[attributeName !== '' ? 'generateAttributePrompt' : 'generateDescriptionPrompt'](name, attributeName);
 
       const c = new Ctx();
       const datasetEngine = new DatasetEngine({
