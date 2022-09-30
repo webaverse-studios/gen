@@ -53,7 +53,7 @@ ItemImage.getInitialProps = async ctx => {
 
         description = description.replace(/^[\s\S]*?\n/, ''); // skip name
 
-        console.log('generate item image for', {description});
+        // console.log('generate item image for', {description});
 
         const imgArrayBuffer = await generateItemImage({
           name: itemName,
