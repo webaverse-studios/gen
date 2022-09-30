@@ -16,12 +16,6 @@ export default async (req, res) => {
       attributeName = '';
     }
 
-    // console.log('generate prompt', {
-    //   schemaName,
-    //   name,
-    //   attributeName,
-    // });
-
     const dataset = datasets[schemaName];
     if (dataset) {
       const c = new Ctx();
@@ -35,16 +29,11 @@ export default async (req, res) => {
           prompt,
           response,
         } = await datasetEngine.generateItemDescription(name);
-        // console.log('generate description', {
-        //   prompt,
-        //   response,
-        // });
         const result = `${prompt}${response}`;
         res.send(result);
 
       } else {
         const {
-          // prompt: descriptionPrompt,
           response: description,
         } = await datasetEngine.generateItemDescription(name);
 
