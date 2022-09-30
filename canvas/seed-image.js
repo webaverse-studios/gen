@@ -2,7 +2,15 @@ import {createCanvas, loadImage} from 'canvas';
 import materialColors from './material-colors.json';
 import ColorScheme from './color-scheme.js';
 
+//
+
 const baseColors = Object.keys(materialColors).map(k => materialColors[k][400].slice(1));
+
+//
+
+const rng = () => (Math.random() * 2) - 1;
+
+//
 
 export const createSeedImage = (
   w, // width
