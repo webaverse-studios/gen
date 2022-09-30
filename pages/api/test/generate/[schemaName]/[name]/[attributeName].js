@@ -16,28 +16,46 @@ export default async (req, res) => {
       attributeName = '';
     }
 
-    console.log('generate prompt', {
-      schemaName,
-      name,
-      attributeName,
-    });
+    // console.log('generate prompt', {
+    //   schemaName,
+    //   name,
+    //   attributeName,
+    // });
 
     const dataset = datasets[schemaName];
     if (dataset) {
-      const prompt = dataset.generatePrompt(name, attributeName);
-
       const c = new Ctx();
       const datasetEngine = new DatasetEngine({
         dataset,
         aiClient: c.aiClient,
       });
-      // console.log('got prompt', {prompt});
-      
-      const response = await datasetEngine.generateItemAttribute(name, attributeName);
-      const result = `${prompt}${attributeName ? ' ' : ''}${response}`;
-      console.log('got response', {prompt, response, result});
-      
-      res.send(result);
+
+      if (attributeName === '') {
+        const {
+          prompt,
+          response,
+        } = await datasetEngine.generateItemDescription(name);
+        // console.log('generate description', {
+        //   prompt,
+        //   response,
+        // });
+        const result = `${prompt}${response}`;
+        res.send(result);
+
+      } else {
+        const {
+          // prompt: descriptionPrompt,
+          response: description,
+        } = await datasetEngine.generateItemDescription(name);
+
+        const {
+          prompt,
+          response,
+        } = await datasetEngine.generateItemAttribute(name, attributeName, description);
+        const result = `${prompt} ${response}`;
+        
+        res.send(result);
+      }
     } else {
       res.send(404);
     }

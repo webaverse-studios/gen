@@ -104,35 +104,26 @@ export class Dataset {
 
     return `\
 # ${item.name}
-${attributeName !== '' ?
-  `${attributeName} ${item.attributes[attributeName]}\n`
-: ''}${item.attributes[''] ?? '?'}`;
+${[
+  item.attributes[''] ?? '?',
+  attributeName !== '' ?
+    `${attributeName} ${item.attributes[attributeName]}`
+  : '',
+].filter(l => !!l).join('\n')}`;
   }
-  generatePrompt(name, attributeName) {
-    if (typeof name !== 'string') {
-      throw new Error('name is required');
-    }
-    if (typeof attributeName !== 'string') {
-      throw new Error('attributeName is required');
-    }
-    
+  #getRngItems(name, attributeName) {
     const rng = new Alea(name);
 
     const candidateItems = this.items.filter(item => !!item.attributes[attributeName]);
-    /* console.log('got candidate items', JSON.stringify({
-      items: this.items,
-      candidateItems,
-      attributeName,
-    }, null, 2)); */
     const localItems = [];
     for (let i = 0; i < this.n && candidateItems.length > 0; i++) {
       const index = Math.floor(rng() * candidateItems.length);
       localItems.push(candidateItems[index]);
       candidateItems.splice(index, 1);
     }
-
-    // console.log('got local items', {localItems});
-    
+    return localItems;
+  }
+  #getPrompt(name, attributeName, localItems, description) {
     return `\
 ${this.prefix}
 
@@ -141,7 +132,31 @@ ${localItems.map(item =>
 ).join('\n\n')}
 
 # ${name}
-${attributeName}`;
+${description ? `${description}\n` : ''}${attributeName}`;
+  }
+  generateDescriptionPrompt(name) {
+    if (typeof name !== 'string') {
+      throw new Error('name is required');
+    }
+    
+    const attributeName = '';
+    const localItems = this.#getRngItems(name, attributeName);
+
+    const prompt = this.#getPrompt(name, attributeName, localItems, '');
+    return prompt;
+  }
+  generateAttributePrompt(name, attributeName, description) {
+    if (typeof name !== 'string') {
+      throw new Error('name is required');
+    }
+    if (typeof attributeName !== 'string') {
+      throw new Error('attributeName is required');
+    }
+    
+    const localItems = this.#getRngItems(name, attributeName);
+
+    const prompt = this.#getPrompt(name, attributeName, localItems, description);
+    return prompt;
   }
 }
 
@@ -155,10 +170,22 @@ export class DatasetEngine {
     this.dataset = dataset;
     this.aiClient = aiClient;
   }
-  async generateItemAttribute(name, attributeName) {
-    const prompt = this.dataset.generatePrompt(name, attributeName);
+  async generateItemDescription(name) {
+    const prompt = this.dataset.generateDescriptionPrompt(name);
     let response = await this.aiClient.generate(prompt, '\n\n');
     response = response.trim();
-    return response;
+    return {
+      prompt,
+      response,
+    };
+  }
+  async generateItemAttribute(name, attributeName, description) {
+    const prompt = this.dataset.generateAttributePrompt(name, attributeName, description);
+    let response = await this.aiClient.generate(prompt, '\n\n');
+    response = response.trim();
+    return {
+      prompt,
+      response,
+    };
   }
 }
