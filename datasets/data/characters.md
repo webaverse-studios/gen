@@ -5,7 +5,7 @@ Class: Drop Hunter
 Her nickname is Scilly or SLY. 13/F drop hunter. She is an adventurer, swordfighter and fan of potions.
 
 # Drake Silkbourne
-Class: Neural hacker
+Class: Neural Hacker
 His nickname is DRK. 15/M hacker. Loves guns. Likes plotting new hacks. He has the best equipment and is always ready for a fight.
 
 # Anemone Sikl
