@@ -33,7 +33,7 @@ export default async (req, res) => {
       });
       // console.log('got prompt', {prompt});
       
-      const response = await datasetEngine.generateItemAttribute('Annie Masuki', attributeName);
+      const response = await datasetEngine.generateItemAttribute(name, attributeName);
       const result = `${prompt}${attributeName ? ' ' : ''}${response}`;
       console.log('got response', {prompt, response, result});
       
