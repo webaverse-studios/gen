@@ -26,7 +26,7 @@ She is an engineer. 17/F engineer. She is new on the street. She has a strong mo
 `
   ],
   parse: s => {
-    const match = s.match(/^# (.*)\n## Class: (.*)\n(.*)$/);
+    const match = s.match(/^# (.*)\n## Class: (.*)\n(.*)/);
     if (match) {
       const [_, name, className, bio] = match;
       return {
