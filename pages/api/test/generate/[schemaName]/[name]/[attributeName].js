@@ -1,6 +1,7 @@
 import {DatasetEngine} from '../../../../../../datasets/datasets.js';
 import {Ctx} from '../../../../../../context.js';
 import datasets from '../../../../../../datasets/data.js';
+import {capitalizeAllWords} from '../../../../../../utils.js';
 
 export default async (req, res) => {
   // match /api/:schemaName/:name/:attributeName with regex
@@ -8,7 +9,8 @@ export default async (req, res) => {
   if (match) {
     // decode the match
     const schemaName = decodeURIComponent(match[1]);
-    const name = decodeURIComponent(match[2]);
+    let name = decodeURIComponent(match[2]);
+    name = capitalizeAllWords(name);
     let attributeName = decodeURIComponent(match[3]);
     if (attributeName === 'description') {
       attributeName = '';
