@@ -104,11 +104,9 @@ export class Dataset {
 
     return `\
 # ${item.name}
-${item.attributes[''] ?
-  `${attributeName ? (`${attributeName} `) : ''}${item.attributes[attributeName]}`
-:
-  '?'
-}`
+${attributeName !== '' ?
+  `${attributeName} ${item.attributes[attributeName]}\n`
+: ''}${item.attributes[''] ?? '?'}`;
   }
   generatePrompt(name, attributeName) {
     if (typeof name !== 'string') {
