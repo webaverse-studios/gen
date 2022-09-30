@@ -68,6 +68,8 @@ map = this.#makeUnseededMethod({
   },
 }) */
 
+// /api/seed-image?args=[512, 512, 64, 128, 1, 256]
+
 /*
 // character: [512, 512, 64, 128, 1, 256]
 // backpack: [512, 512, 64, 128, 1, 256]
