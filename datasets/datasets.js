@@ -2,10 +2,8 @@ import Alea from 'alea';
 
 //
 
-export const parseDataset = s => {
+export const parseItems = s => {
   const lines = s.split('\n');
-
-  const prefix = lines.splice(0, 2).join('\n').trim();
 
   const items = [];
   let currentName = '';
@@ -34,7 +32,7 @@ export const parseDataset = s => {
       }
     } else {
       if (line) {
-        const attributeMatch = line.match(/^([a-zA-Z0-9]+?:) (.*)$/);
+        const attributeMatch = line.match(/^([a-zA-Z0-9]+?:|[#>]) (.*)$/);
         let attributeName, attributeValue;
         if (attributeMatch) {
             attributeName = attributeMatch[1];
@@ -52,6 +50,15 @@ export const parseDataset = s => {
   if (currentName) {
     _flushObject();
   }
+  return items;
+};
+export const parseDataset = s => {
+  const lines = s.split('\n');
+
+  const prefix = lines.splice(0, 2).join('\n').trim();
+
+  const suffix = lines.join('\n');
+  const items = parseItems(suffix);
 
   return {
     prefix,
@@ -88,7 +95,7 @@ export class Dataset {
       return parsedItem;
     });
   } */
-  #formatItem(item, attributeName) {
+  #formatItem(item) {
     const formatAttributes = item => {
       const keys = Object.keys(item);
       let s = '';
@@ -104,17 +111,15 @@ export class Dataset {
 
     return `\
 # ${item.name}
-${[
-  item.attributes[''] ?? '?',
-  attributeName !== '' ?
-    `${attributeName} ${item.attributes[attributeName]}`
-  : '',
-].filter(l => !!l).join('\n')}`;
+${Object.keys(item.attributes).map(attributeName => {
+  const attributeValue = item.attributes[attributeName];
+  return `${attributeName} ${item.attributes[attributeName]}`;
+}).join('\n')}`;
   }
-  #getRngItems(name, attributeName) {
+  #getRngItems(name) {
     const rng = new Alea(name);
 
-    const candidateItems = this.items.filter(item => !!item.attributes[attributeName]);
+    const candidateItems = this.items.slice();
     const localItems = [];
     for (let i = 0; i < this.n && candidateItems.length > 0; i++) {
       const index = Math.floor(rng() * candidateItems.length);
@@ -123,18 +128,18 @@ ${[
     }
     return localItems;
   }
-  #getPrompt(name, attributeName, localItems, description) {
+  /* #getPrompt(name, localItems, description) {
     return `\
 ${this.prefix}
 
 ${localItems.map(item =>
-  this.#formatItem(item, attributeName)
+  this.#formatItem(item)
 ).join('\n\n')}
 
 # ${name}
 ${description ? `${description}\n` : ''}${attributeName}`;
-  }
-  generateDescriptionPrompt(name) {
+  } */
+  /* generateDescriptionPrompt(name) {
     if (typeof name !== 'string') {
       throw new Error('name is required');
     }
@@ -157,6 +162,27 @@ ${description ? `${description}\n` : ''}${attributeName}`;
 
     const prompt = this.#getPrompt(name, attributeName, localItems, description);
     return prompt;
+  } */
+  generateItemPrompt(name) {
+    if (typeof name !== 'string') {
+      throw new Error('name is required');
+    }
+    
+    const localItems = this.#getRngItems(name);
+
+    // const prompt = this.#getPrompt(name, attributeName, localItems, '');
+
+    const prompt = `\
+${this.prefix}
+
+${localItems.map(item =>
+  this.#formatItem(item)
+).join('\n\n')}
+
+# ${name}
+>`;
+
+    return prompt;
   }
 }
 
@@ -170,7 +196,7 @@ export class DatasetEngine {
     this.dataset = dataset;
     this.aiClient = aiClient;
   }
-  async generateItemDescription(name) {
+  /* async generateItemDescription(name) {
     const prompt = this.dataset.generateDescriptionPrompt(name);
     let response = await this.aiClient.generate(prompt, '\n\n');
     response = response.trim();
@@ -187,5 +213,26 @@ export class DatasetEngine {
       prompt,
       response,
     };
+  } */
+  async generateItem(name) {
+    if (this.dataset.items.length > 0) {
+      const item0 = this.dataset.items[0];
+      // attributeNames = Object.keys(item0.attributes);
+
+      const prompt = this.dataset.generateItemPrompt(name);
+      let response = await this.aiClient.generate(prompt, '\n\n');
+      // response = response.trim();
+      
+      const responseString = `# ${name}\n>${response}`;
+      const parsedResponse = parseItems(responseString)[0] ?? null;
+      
+      return {
+        prompt,
+        response,
+        parsedResponse,
+      };
+    } else {
+      throw new Error(`dataset has no items: ${this.dataset}`);
+    }
   }
 }
