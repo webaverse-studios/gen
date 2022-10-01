@@ -25,7 +25,7 @@ export default async (req, res) => {
       settingsMd,
       itemsMd,
     ]) {
-      const match = md.match(/^(.*)\n\n([\s\S]*)$/);
+      const match = md.match(/^([\s\S]*?)\n\n([\s\S]*)$/);
       if (match) {
         const prefix = match[1];
         md = match[2];
