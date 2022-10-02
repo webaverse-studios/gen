@@ -24,3 +24,6 @@ export const cleanName = name => {
   name = capitalizeAllWords(name);
   return name;
 };
+export const isAllCaps = name => {
+  return !/[A-Z]/.test(name) || /^(?:[A-Z]+)$/.test(name);
+};
