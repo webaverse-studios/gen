@@ -73,8 +73,6 @@ export default async (req, res) => {
       matchesMd,
     ] = await mdsPromise;
 
-    console.log('got matches', matchesMd);
-
     for (let {
       type,
       md,
