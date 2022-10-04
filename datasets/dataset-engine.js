@@ -161,7 +161,7 @@ export class DatasetEngine {
     const {
       nameKey,
       descriptionKey,
-      attributeKeys,
+      // attributeKeys,
     } = this.dataset;
 
     if (!name) {
