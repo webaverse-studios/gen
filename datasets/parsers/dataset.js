@@ -18,7 +18,7 @@ export const formatItemText = (item, ignoreKeys = []) => {
   }
   return s;
 };
-export const formatItemJson = item => {
+export const formatTrainingItem = item => {
   const {
     [nameKeySymbol]: nameKey,
     [descriptionKeySymbol]: descriptionKey,
@@ -100,8 +100,7 @@ export const parseDatasetSpec = mdSpec => {
               // console.log('got banter split', {currentAttributeName, currentAttributeValue});
               const itemAttributesClone = {...itemAttributes};
               itemAttributesClone[currentAttributeName] = itemLine;
-              const formattedItem = formatItemJson(itemAttributesClone);
-              items.push(formattedItem);
+              items.push(itemAttributesClone);
             } else {
               if (currentAttributeValue) {
                 currentAttributeValue += '\n';
@@ -117,8 +116,7 @@ export const parseDatasetSpec = mdSpec => {
         _flushAttribute();
       }
 
-      const formattedItem = formatItemJson(itemAttributes);
-      items.push(formattedItem);
+      items.push(itemAttributes);
     }
   } else {
     throw new Error('had no prefix: ' + JSON.stringify(md));

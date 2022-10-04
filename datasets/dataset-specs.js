@@ -1,4 +1,7 @@
-import {parseDatasetSpec} from './parsers/dataset.js'; 
+import {
+  parseDatasetSpec,
+  formatTrainingItem,
+} from './parsers/dataset.js';
 
 //
 
@@ -64,7 +67,8 @@ export const getTrainingItems = async () => {
   const itemsArray = await Promise.all(mdSpecs.map(async mdSpec => {
     const mdText = await fetchText(mdSpec.url);
     mdSpec.md = mdText;
-    const items = parseDatasetSpec(mdSpec);
+    let items = parseDatasetSpec(mdSpec);
+    items = items.map(item => formatTrainingItem(item));
     return items;
   }));
   return itemsArray.flat();
