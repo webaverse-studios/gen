@@ -3,7 +3,9 @@ import settingsMd from '../../datasets/data/settings.md';
 import itemsMd from '../../datasets/data/items.md';
 import cutscenesMd from '../../datasets/data/cutscenes.md';
 import chatsMd from '../../datasets/data/chats.md';
+import scriptsMd from '../../datasets/data/scripts.md';
 import bantersMd from '../../datasets/data/banters.md';
+import matchesMd from '../../datasets/data/matches.md';
 import {capitalizeAllWords, isAllCaps} from '../../utils.js';
 
 const _hasNewline = s => s.indexOf('\n') !== -1;
@@ -21,9 +23,15 @@ const _formatItemText = (item, ignoreKeys = []) => {
   }
   return s;
 };
-const _formatItemJson = item => {
-  const prompt = `Type: ${item['Type']}\nName: ${item['Name']}\nDescription: ${item['Description']})`;
-  const completion = _formatItemText(item, ['Type', 'Name', 'Description']);
+const _formatItemJson = (item, {
+  nameKey,
+  descriptionKey,
+}) => {
+  const prompt = `Type: ${item['Type']}\n\
+${item[nameKey] ? `${nameKey}: ${item[nameKey]}\n` : ''}\
+${item[descriptionKey] ? `${descriptionKey}: ${item[descriptionKey]}\n` : ''}\
+`;
+  const completion = _formatItemText(item, ['Type', nameKey, descriptionKey]);
   return {
     prompt,
     completion,
@@ -36,6 +44,8 @@ export default async (req, res) => {
     for (let {
       type,
       md,
+      nameKey = 'Name',
+      descriptionKey = 'Description',
       groupKey = null,
     } of [
       {
@@ -59,11 +69,26 @@ export default async (req, res) => {
         md: chatsMd,
       },
       {
+        type: 'Script',
+        md: scriptsMd,
+      },
+      {
         type: 'Banter',
         md: bantersMd,
         groupKey: 'Banters',
       },
+      {
+        type: 'Match',
+        md: matchesMd,
+        nameKey: 'Candidate assets',
+        descriptionKey: 'Match string',
+      },
     ]) {
+      const _formatItemJson2 = item => _formatItemJson(item, {
+        nameKey,
+        descriptionKey,
+      });
+      
       const match = md.match(/^([\s\S]*?)\n\n([\s\S]*)$/);
       if (match) {
         const prefix = match[1];
@@ -108,7 +133,8 @@ export default async (req, res) => {
                   // console.log('got banter split', {currentAttributeName, currentAttributeValue});
                   const itemAttributesClone = {...itemAttributes};
                   itemAttributesClone[currentAttributeName] = itemLine;
-                  items.push(itemAttributesClone);
+                  const formattedItem = _formatItemJson2(itemAttributesClone);
+                  items.push(formattedItem);
                 } else {
                   if (currentAttributeValue) {
                     currentAttributeValue += '\n';
@@ -124,7 +150,8 @@ export default async (req, res) => {
             _flushAttribute();
           }
 
-          items.push(itemAttributes);
+          const formattedItem = _formatItemJson2(itemAttributes);
+          items.push(formattedItem);
         }
 
         /* const response = await fetch(md);
@@ -141,7 +168,7 @@ export default async (req, res) => {
     //   items.map(item => _formatItemText(item)).join('\n\n')
     // );
     res.send(
-      items.map(item => JSON.stringify(_formatItemJson(item))).join('\n')
+      items.map(item => JSON.stringify(item)).join('\n')
     );
   } catch(err) {
     res.status(500).send(err.stack);
