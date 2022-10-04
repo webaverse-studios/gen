@@ -1,0 +1,1 @@
+export const model = `davinci:ft-webaverse-2022-10-02-22-14-18`;
