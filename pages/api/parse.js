@@ -8,7 +8,7 @@ import bantersMd from '../../datasets/data/banters.md';
 import matchesMd from '../../datasets/data/matches.md'; */
 import {capitalizeAllWords, isAllCaps} from '../../utils.js';
 
-const datasetBasePath = `https://webaverse.github.io/lore/datasets/`;
+const datasetBasePath = `https://webaverse.github.io/lore/datasets/data/`;
 const mdUrls = [
   'characters.md',
   'settings.md',
