@@ -44,8 +44,8 @@ const mdSpecs = [
     url: 'lore.md',
   },
   {
-    type: 'banter',
-    url: 'banters.md',
+    type: 'battle-banter',
+    url: 'battle-banters.md',
     groupKey: 'Banters',
   },
   {
