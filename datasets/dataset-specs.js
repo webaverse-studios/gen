@@ -20,36 +20,36 @@ const fetchText = async u => {
 const datasetBasePath = `https://webaverse.github.io/lore/datasets/data/`;
 const mdSpecs = [
   {
-    type: 'Character',
+    type: 'character',
     url: 'characters.md',
   },
   {
-    type: 'Setting',
+    type: 'setting',
     url: 'settings.md',
   },
   {
-    type: 'Item',
+    type: 'item',
     url: 'items.md',
   },
   {
-    type: 'Cutscene',
+    type: 'cutscene',
     url: 'cutscenes.md',
   },
   {
-    type: 'Chat',
+    type: 'chat',
     url: 'chats.md',
   },
   {
-    type: 'Lore',
+    type: 'lore',
     url: 'lore.md',
   },
   {
-    type: 'Banter',
+    type: 'banter',
     url: 'banters.md',
     groupKey: 'Banters',
   },
   {
-    type: 'Match',
+    type: 'match',
     url: 'matches.md',
     nameKey: 'Candidate assets',
     descriptionKey: 'Match string',
