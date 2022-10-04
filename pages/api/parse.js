@@ -1,12 +1,23 @@
-import charactersMd from '../../datasets/data/characters.md';
+import path from 'path';
+/* import charactersMd from '../../datasets/data/characters.md';
 import settingsMd from '../../datasets/data/settings.md';
 import itemsMd from '../../datasets/data/items.md';
 import cutscenesMd from '../../datasets/data/cutscenes.md';
 import chatsMd from '../../datasets/data/chats.md';
-import scriptsMd from '../../datasets/data/scripts.md';
 import bantersMd from '../../datasets/data/banters.md';
-import matchesMd from '../../datasets/data/matches.md';
+import matchesMd from '../../datasets/data/matches.md'; */
 import {capitalizeAllWords, isAllCaps} from '../../utils.js';
+
+const datasetBasePath = `https://webaverse.github.io/lore/datasets/`;
+const mdUrls = [
+  'characters.md',
+  'settings.md',
+  'items.md',
+  'cutscenes.md',
+  'chats.md',
+  'banters.md',
+  'matches.md',
+].map(mdUrl => `${datasetBasePath}${mdUrl}`);
 
 const _hasNewline = s => s.indexOf('\n') !== -1;
 
@@ -38,9 +49,32 @@ ${item[descriptionKey] ? `${descriptionKey}: ${item[descriptionKey]}\n` : ''}\
   };
 };
 
+const fetchText = async u => {
+  const res = await fetch(u);
+  if (res.ok) {
+    const text = await res.text();
+    return text;
+  } else {
+    throw new Error(`fetch error ${res.status} ${res.statusText} ${u}`);
+  }
+};
+const mdsPromise = Promise.all(mdUrls.map(mdUrl => fetchText(mdUrl)));
+
 export default async (req, res) => {
   let items = [];
   try {
+    const [
+      charactersMd,
+      settingsMd,
+      itemsMd,
+      cutscenesMd,
+      chatsMd,
+      bantersMd,
+      matchesMd,
+    ] = await mdsPromise;
+
+    console.log('got matches', matchesMd);
+
     for (let {
       type,
       md,
@@ -67,10 +101,6 @@ export default async (req, res) => {
       {
         type: 'Chat',
         md: chatsMd,
-      },
-      {
-        type: 'Script',
-        md: scriptsMd,
       },
       {
         type: 'Banter',
