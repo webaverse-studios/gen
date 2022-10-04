@@ -24,7 +24,7 @@ export const formatItemJson = item => {
     [descriptionKeySymbol]: descriptionKey,
   } = item;
 
-  const prompt = `Type: ${item[typeSymbol]}\n\
+  const prompt = `@Type: ${item[typeSymbol]}\n\
 ${item[nameKey] ? `${nameKey}: ${item[nameKey]}\n` : ''}\
 ${item[descriptionKey] ? `${descriptionKey}: ${item[descriptionKey]}\n` : ''}\
 `;
