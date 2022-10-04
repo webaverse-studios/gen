@@ -59,13 +59,10 @@ export const parseDatasetSpec = mdSpec => {
     const prefix = match[1];
     md = match[2];
 
-    // console.log('prefix', prefix);
-
     const r = /([\s\S]+?)(?:\n\n|$)/g;
     let match2;
     while (match2 = r.exec(md)) {
       const itemString = match2[1];
-      // console.log('itemString', itemString);
 
       const itemAttributes = {};
       let currentAttributeName = '';
