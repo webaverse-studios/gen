@@ -1,6 +1,6 @@
 import {
   parseDatasetSpecItems,
-  formatTrainingItem,
+  formatTrainingItemCandidates,
 } from './dataset-parser.js';
 
 //
@@ -51,8 +51,8 @@ const mdSpecs = [
   {
     type: 'match',
     url: 'matches.md',
-    nameKey: 'Candidate assets',
-    descriptionKey: 'Match string',
+    nameKey: 'Match string',
+    descriptionKey: 'Candidate assets',
   },
 ].map(mdSpec => {
   return {
@@ -75,7 +75,7 @@ export const getTrainingItems = async () => {
   const datasetSpecs = await getDatasetSpecs();
   const itemsArray = await Promise.all(datasetSpecs.map(async datasetSpec => {
     let items = parseDatasetSpecItems(datasetSpec);
-    items = items.map(item => formatTrainingItem(item));
+    items = items.map(item => formatTrainingItemCandidates(item)).flat();
     return items;
   }));
   return itemsArray.flat();

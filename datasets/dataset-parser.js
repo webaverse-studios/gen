@@ -19,7 +19,7 @@ export const formatItemText = (item, ignoreKeys = []) => {
   }
   return s;
 };
-export const formatTrainingItem = item => {
+/* export const formatTrainingItem = item => {
   const {
     [nameKeySymbol]: nameKey,
     [descriptionKeySymbol]: descriptionKey,
@@ -38,6 +38,69 @@ ${item[descriptionKey] ? `@@${descriptionKey}:\n${item[descriptionKey]}\n` : ''}
     prompt,
     completion,
   };
+}; */
+export const formatTrainingItemCandidates = item => {
+  const {
+    [nameKeySymbol]: nameKey,
+    [descriptionKeySymbol]: descriptionKey,
+  } = item;
+
+  const _getNameCompletion = () => {
+    if (item[nameKey]) {
+      const prompt = `@Type: ${item[typeSymbol]}\n${item[nameKey]}:`
+      const completion = `\n${item[nameKey]}\n\n`;
+      return [
+        {
+          prompt,
+          completion,
+        },
+      ];
+    } else {
+      return [];
+    }
+  };
+  const _getDescriptionCompletion = () => {
+    if (item[nameKey] && item[descriptionKey]) {
+      const prompt = `@Type: ${item[typeSymbol]}\n\
+@@${nameKey}:\n${item[nameKey]}\n\
+@@${descriptionKey}:\
+`;
+      const completion = `\n${item[descriptionKey]}\n\n`;
+      return [
+        {
+          prompt,
+          completion,
+        },
+      ];
+    } else {
+      return [];
+    }
+  };
+  const _getAttributeCompletions = () => {
+    const basePrompt = `@Type: ${item[typeSymbol]}\n\
+${item[nameKey] ? `@@${nameKey}:\n${item[nameKey]}\n` : ''}\
+${item[descriptionKey] ? `@@${descriptionKey}:\n${item[descriptionKey]}\n` : ''}\
+`;
+    /* const ignoreKeys = [
+      nameKey,
+      descriptionKey,
+    ];
+    const completion = formatItemText(item, ignoreKeys); */
+    const formattedItems = [];
+    for (const k in item) {
+      const prompt = `${basePrompt}@@${k}:`;
+      const completion = `\n${item[k]}\n\n`;
+      const formattedItem = {
+        prompt,
+        completion,
+      };
+      formattedItems.push(formattedItem);
+    }
+    return formattedItems;
+  };
+  return _getNameCompletion()
+    .concat(_getDescriptionCompletion())
+    .concat(_getAttributeCompletions());
 };
 export const parseDatasetSpecItems = mdSpec => {
   let {
