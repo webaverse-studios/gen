@@ -5,7 +5,7 @@ const nameKeySymbol = Symbol('nameKey');
 const descriptionKeySymbol = Symbol('descriptionKey');
 
 const _hasNewline = s => s.indexOf('\n') !== -1;
-const _formatItemText = (item) => {
+export const formatItemText = item => {
   let s = '';
   for (const k in item) {
     const v = item[k];
@@ -26,7 +26,7 @@ export const formatItemJson = item => {
 ${item[nameKey] ? `${nameKey}: ${item[nameKey]}\n` : ''}\
 ${item[descriptionKey] ? `${descriptionKey}: ${item[descriptionKey]}\n` : ''}\
 `;
-  const completion = _formatItemText(item);
+  const completion = formatItemText(item);
   return {
     prompt,
     completion,
