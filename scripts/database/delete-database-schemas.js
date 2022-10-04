@@ -1,5 +1,5 @@
-const weaviate = require('weaviate-client');
-const schemas = require('../schemas/schemas.js');
+import weaviate from 'weaviate-client';
+import schemas from '../../schemas/schemas.js';
 
 const client = weaviate.client({
   scheme: 'http',
