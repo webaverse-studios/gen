@@ -12,7 +12,7 @@ export const formatItemText = item => {
     if (s) {
       s += '\n';
     }
-    s += `${capitalizeAllWords(k)}: ${_hasNewline(v) ? '\n' : ''}${v}`;
+    s += `${k}: ${_hasNewline(v) ? '\n' : ''}${v}`;
   }
   return s;
 };
