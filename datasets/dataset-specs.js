@@ -60,7 +60,7 @@ const mdSpecs = [
 
 //
 
-export const itemsPromise = (async () => {
+export const getTrainingItems = async () => {
   const itemsArray = await Promise.all(mdSpecs.map(async mdSpec => {
     const mdText = await fetchText(mdSpec.url);
     mdSpec.md = mdText;
@@ -68,4 +68,4 @@ export const itemsPromise = (async () => {
     return items;
   }));
   return itemsArray.flat();
-})();
+};
