@@ -47,7 +47,7 @@ export const formatTrainingItemCandidates = item => {
 
   const _getNameCompletion = () => {
     if (item[nameKey]) {
-      const prompt = `@Type: ${item[typeSymbol]}\n${item[nameKey]}:`
+      const prompt = `@Type: ${item[typeSymbol]}\n@@${nameKey}:`
       const completion = `\n${item[nameKey]}\n\n`;
       return [
         {
@@ -81,20 +81,22 @@ export const formatTrainingItemCandidates = item => {
 ${item[nameKey] ? `@@${nameKey}:\n${item[nameKey]}\n` : ''}\
 ${item[descriptionKey] ? `@@${descriptionKey}:\n${item[descriptionKey]}\n` : ''}\
 `;
-    /* const ignoreKeys = [
+    const ignoreKeys = [
       nameKey,
       descriptionKey,
     ];
-    const completion = formatItemText(item, ignoreKeys); */
+    // const completion = formatItemText(item, ignoreKeys); */
     const formattedItems = [];
     for (const k in item) {
-      const prompt = `${basePrompt}@@${k}:`;
-      const completion = `\n${item[k]}\n\n`;
-      const formattedItem = {
-        prompt,
-        completion,
-      };
-      formattedItems.push(formattedItem);
+      if (!ignoreKeys.includes(k)) {
+        const prompt = `${basePrompt}@@${k}:`;
+        const completion = `\n${item[k]}\n\n`;
+        const formattedItem = {
+          prompt,
+          completion,
+        };
+        formattedItems.push(formattedItem);
+      }
     }
     return formattedItems;
   };
