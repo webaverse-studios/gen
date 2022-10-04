@@ -1,10 +1,10 @@
-import {capitalizeAllWords, isAllCaps} from '../../utils.js';
+import {isAllCaps} from '../utils.js';
 
 const typeSymbol = Symbol('type');
 const nameKeySymbol = Symbol('nameKey');
 const descriptionKeySymbol = Symbol('descriptionKey');
 
-const _hasNewline = s => s.indexOf('\n') !== -1;
+// const _hasNewline = s => s.indexOf('\n') !== -1;
 export const formatItemText = (item, ignoreKeys = []) => {
   let s = '';
   for (const k in item) {
@@ -13,7 +13,8 @@ export const formatItemText = (item, ignoreKeys = []) => {
       if (s) {
         s += '\n';
       }
-      s += `${k}: ${_hasNewline(v) ? '\n' : ''}${v}`;
+      // s += `@@${k}: ${_hasNewline(v) ? '\n' : ''}${v}`;
+      s += `@@${k}:\n${v}`;
     }
   }
   return s;
@@ -24,9 +25,9 @@ export const formatTrainingItem = item => {
     [descriptionKeySymbol]: descriptionKey,
   } = item;
 
-  const prompt = `@ Type: ${item[typeSymbol]}\n\
-${item[nameKey] ? `${nameKey}: ${item[nameKey]}\n` : ''}\
-${item[descriptionKey] ? `${descriptionKey}: ${item[descriptionKey]}\n` : ''}\
+  const prompt = `@Type: ${item[typeSymbol]}\n\
+${item[nameKey] ? `@@${nameKey}:\n${item[nameKey]}\n` : ''}\
+${item[descriptionKey] ? `@@${descriptionKey}:\n${item[descriptionKey]}\n` : ''}\
 `;
   const ignoreKeys = [
     nameKey,
@@ -38,7 +39,7 @@ ${item[descriptionKey] ? `${descriptionKey}: ${item[descriptionKey]}\n` : ''}\
     completion,
   };
 };
-export const parseDatasetSpec = mdSpec => {
+export const parseDatasetSpecItems = mdSpec => {
   let {
     type,
     md,
@@ -83,13 +84,13 @@ export const parseDatasetSpec = mdSpec => {
       for (let i = 0; i < itemLines.length; i++) {
         const itemLine = itemLines[i];
 
-        const match3 = itemLine.match(/^([\s\S]+?):(?: )?(.*)(?:\n|$)/);
+        const match3 = itemLine.match(/^(@+[\s\S]+?):(?: )?(.*)(?:\n|$)/);
         if (match3 && !isAllCaps(match3[1])) {
           if (currentAttributeName) {
             _flushAttribute();
           }
 
-          currentAttributeName = match3[1];
+          currentAttributeName = match3[1].replace(/^@+/, '');
           currentAttributeValue = match3[2];
         } else {
           if (currentAttributeName) {
