@@ -37,6 +37,10 @@ const mdSpecs = [
     url: 'chats.md',
   },
   {
+    type: 'Lore',
+    url: 'lore.md',
+  },
+  {
     type: 'Banter',
     url: 'banters.md',
     groupKey: 'Banters',
