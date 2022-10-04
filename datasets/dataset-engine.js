@@ -1,8 +1,13 @@
-import Alea from 'alea';
+// import Alea from 'alea';
+import {
+  formatDatasetNamePrompt,
+  formatDatasetDescriptionPrompt,
+  formatDatasetAttributePrompts,
+} from './dataset-parser.js';
 
 //
 
-export const parseItems = s => {
+/* export const parseItems = s => {
   const lines = s.split('\n');
 
   const items = [];
@@ -140,7 +145,7 @@ ${localItems.map(item =>
 
     return prompt;
   }
-}
+} */
 
 //
 
@@ -152,8 +157,30 @@ export class DatasetEngine {
     this.dataset = dataset;
     this.aiClient = aiClient;
   }
-  async generateItem(name) {
-    if (this.dataset.items.length > 0) {
+  async generateItem(name, description) {
+    const {
+      nameKey,
+      descriptionKey,
+      attributeKeys,
+    } = this.dataset;
+
+    if (!name) {
+      const namePrompt = formatDatasetNamePrompt(this.dataset);
+      // console.log('got name prompt', {namePrompt});
+      name = await this.aiClient.generate(namePrompt, '\n\n');
+    }
+    if (!description) {
+      const descriptionPrompt = formatDatasetDescriptionPrompt(this.dataset, name);
+      // console.log('got description prompt', {descriptionPrompt});
+      description = await this.aiClient.generate(descriptionPrompt, '\n\n');
+    }
+
+    return {
+      [nameKey]: name,
+      [descriptionKey]: description,
+    };
+
+    /* if (this.dataset.items.length > 0) {
       const item0 = this.dataset.items[0];
 
       const prompt = this.dataset.generateItemPrompt(name);
@@ -170,6 +197,6 @@ export class DatasetEngine {
       };
     } else {
       throw new Error(`dataset has no items: ${this.dataset}`);
-    }
+    } */
   }
 }

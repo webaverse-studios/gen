@@ -39,6 +39,19 @@ ${item[descriptionKey] ? `@@${descriptionKey}:\n${item[descriptionKey]}\n` : ''}
     completion,
   };
 }; */
+export const getItemNameKey = item => item[nameKeySymbol];
+export const getItemDescriptionKey = item => item[descriptionKeySymbol];
+export const getItemAttributeKeys = item => {
+  const {
+    [nameKeySymbol]: nameKey,
+    [descriptionKeySymbol]: descriptionKey,
+  } = item;
+  const ignoreKeys = [
+    nameKey,
+    descriptionKey,
+  ];
+  return Object.keys(item).filter(k => !ignoreKeys.includes(k));
+};
 export const formatTrainingItemCandidates = item => {
   const {
     [nameKeySymbol]: nameKey,
@@ -81,14 +94,12 @@ export const formatTrainingItemCandidates = item => {
 ${item[nameKey] ? `@@${nameKey}:\n${item[nameKey]}\n` : ''}\
 ${item[descriptionKey] ? `@@${descriptionKey}:\n${item[descriptionKey]}\n` : ''}\
 `;
-    const ignoreKeys = [
-      nameKey,
-      descriptionKey,
-    ];
     // const completion = formatItemText(item, ignoreKeys); */
     const formattedItems = [];
-    for (const k in item) {
-      if (!ignoreKeys.includes(k)) {
+    const itemAttributeKeys = getItemAttributeKeys(item);
+    for (const k of itemAttributeKeys) {
+    // for (const k in item) {
+      // if (!ignoreKeys.includes(k)) {
         const prompt = `${basePrompt}@@${k}:`;
         const completion = `\n${item[k]}\n\n`;
         const formattedItem = {
@@ -96,7 +107,7 @@ ${item[descriptionKey] ? `@@${descriptionKey}:\n${item[descriptionKey]}\n` : ''}
           completion,
         };
         formattedItems.push(formattedItem);
-      }
+      // }
     }
     return formattedItems;
   };
@@ -104,7 +115,51 @@ ${item[descriptionKey] ? `@@${descriptionKey}:\n${item[descriptionKey]}\n` : ''}
     .concat(_getDescriptionCompletion())
     .concat(_getAttributeCompletions());
 };
-export const parseDatasetSpecItems = mdSpec => {
+export const formatDatasetNamePrompt = dataset => {
+  const {
+    type,
+    nameKey,
+  } = dataset;
+  const prompt = `@Type: ${type}\n@@${nameKey}:`;
+  return prompt;
+};
+export const formatDatasetDescriptionPrompt = (dataset, name) => {
+  const {
+    type,
+    nameKey,
+    descriptionKey,
+  } = dataset;
+  const prompt = `@Type: ${type}\n\
+@@${nameKey}:\n\
+${name}\n\
+@@${descriptionKey}:`;
+  return prompt;
+};
+export const formatDatasetAttributePrompts = (dataset, name, description) => {
+  const {
+    type,
+    nameKey,
+    descriptionKey,
+    attributeKeys,
+  } = dataset;
+  
+  const basePrompt = `@Type: ${type}\n\
+@@${nameKey}:\n\
+${name}\n\
+@@${descriptionKey}:\n\
+${description}\n\
+`;
+  return attributeKeys.map(key => {
+    const prompt = `${basePrompt}@@${key}:`;
+    return {
+      key,
+      prompt,
+    };
+  });
+};
+export const parseDatasetSpecItems = (mdSpec, {
+  count = Infinity,
+} = {}) => {
   let {
     type,
     md,
@@ -117,6 +172,12 @@ export const parseDatasetSpecItems = mdSpec => {
   }
   if (!md) {
     throw new Error('md is required')
+  }
+  if (!nameKey) {
+    throw new Error('nameKey is required')
+  }
+  if (!descriptionKey) {
+    throw new Error('descriptionKey is required')
   }
 
   const items = [];
@@ -160,10 +221,12 @@ export const parseDatasetSpecItems = mdSpec => {
         } else {
           if (currentAttributeName) {
             if (currentAttributeName === groupKey) {
-              // console.log('got banter split', {currentAttributeName, currentAttributeValue});
               const itemAttributesClone = {...itemAttributes};
               itemAttributesClone[currentAttributeName] = itemLine;
               items.push(itemAttributesClone);
+              if (items.length >= count) {
+                return items;
+              }
             } else {
               if (currentAttributeValue) {
                 currentAttributeValue += '\n';
@@ -180,6 +243,9 @@ export const parseDatasetSpecItems = mdSpec => {
       }
 
       items.push(itemAttributes);
+      if (items.length >= count) {
+        return items;
+      }
     }
   } else {
     throw new Error('had no prefix: ' + JSON.stringify(md));

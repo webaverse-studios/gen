@@ -1,6 +1,9 @@
 import {
   parseDatasetSpecItems,
   formatTrainingItemCandidates,
+  getItemNameKey,
+  getItemDescriptionKey,
+  getItemAttributeKeys,
 } from './dataset-parser.js';
 
 //
@@ -56,19 +59,34 @@ const mdSpecs = [
   },
 ].map(mdSpec => {
   return {
+    nameKey: 'Name',
+    descriptionKey: 'Description',
     ...mdSpec,
     url: `${datasetBasePath}${mdSpec.url}`,
+    md: '',
+    attributeKeys: [],
   };
 });
 
 //
 
 export const getDatasetSpecs = async () => {
-  return await Promise.all(mdSpecs.map(async mdSpec => {
+  const datasetSpecs = await Promise.all(mdSpecs.map(async mdSpec => {
     const mdText = await fetchText(mdSpec.url);
     mdSpec.md = mdText;
     return mdSpec;
   }));
+  for (let i = 0; i < datasetSpecs.length; i++) {
+    const datasetSpec = datasetSpecs[i];
+    const item0 = parseDatasetSpecItems(datasetSpec, {
+      count: 1,
+    })[0];
+
+    datasetSpec.nameKey = getItemNameKey(item0);
+    datasetSpec.descriptionKey = getItemDescriptionKey(item0);
+    datasetSpec.attributeKeys = getItemAttributeKeys(item0);
+  }
+  return datasetSpecs;
 };
 
 export const getTrainingItems = async () => {
