@@ -70,6 +70,13 @@ const parseDatasetSpec = mdSpec => {
     descriptionKey = 'Description',
     groupKey = null,
   } = mdSpec;
+  if (!type) {
+    throw new Error('type is required')
+  }
+  if (!md) {
+    throw new Error('md is required')
+  }
+
   const items = [];
 
   const _formatItemJson2 = item => _formatItemJson(item, {
