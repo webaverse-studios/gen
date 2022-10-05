@@ -34,35 +34,14 @@ export const formatItemText = item => {
         s += '\n';
       }
       if (k === nameKey) {
-        s += `@${k}: ${v}`;
+        s += `## ${k}: ${v}`;
       } else {
-        // s += `@@${k}: ${_hasNewline(v) ? '\n' : ''}${v}`;
-        s += `@@${k}:\n${v}`;
+        s += `## ${k}:\n${v}`;
       }
     // }
   }
   return s;
 };
-/* export const formatTrainingItem = item => {
-  const {
-    [nameKeySymbol]: nameKey,
-    [descriptionKeySymbol]: descriptionKey,
-  } = item;
-
-  const prompt = `@Type: ${item[typeSymbol]}\n\
-${item[nameKey] ? `@@${nameKey}:\n${item[nameKey]}\n` : ''}\
-${item[descriptionKey] ? `@@${descriptionKey}:\n${item[descriptionKey]}\n` : ''}\
-`;
-  const ignoreKeys = [
-    nameKey,
-    descriptionKey,
-  ];
-  const completion = formatItemText(item, ignoreKeys);
-  return {
-    prompt,
-    completion,
-  };
-}; */
 export const getItemNameKey = item => item[nameKeySymbol];
 export const getItemDescriptionKey = item => item[descriptionKeySymbol];
 export const getItemAttributeKeys = item => {
@@ -84,7 +63,7 @@ export const formatTrainingItemCandidates = item => {
 
   const _getNameCompletion = () => {
     if (item[nameKey]) {
-      const prompt = `@Type: ${item[typeSymbol]}\n@@${nameKey}:`
+      const prompt = `@Type: ${item[typeSymbol]}\n## ${nameKey}:`
       const completion = `\n${item[nameKey]}\n\n`;
       return [
         {
@@ -99,8 +78,8 @@ export const formatTrainingItemCandidates = item => {
   const _getDescriptionCompletion = () => {
     if (item[nameKey] && item[descriptionKey]) {
       const prompt = `@Type: ${item[typeSymbol]}\n\
-@@${nameKey}:\n${item[nameKey]}\n\
-@@${descriptionKey}:\
+## ${nameKey}:\n${item[nameKey]}\n\
+## ${descriptionKey}:\
 `;
       const completion = `\n${item[descriptionKey]}\n\n`;
       return [
@@ -115,8 +94,8 @@ export const formatTrainingItemCandidates = item => {
   };
   const _getAttributeCompletions = () => {
     const basePrompt = `@Type: ${item[typeSymbol]}\n\
-${item[nameKey] ? `@@${nameKey}:\n${item[nameKey]}\n` : ''}\
-${item[descriptionKey] ? `@@${descriptionKey}:\n${item[descriptionKey]}\n` : ''}\
+${item[nameKey] ? `## ${nameKey}:\n${item[nameKey]}\n` : ''}\
+${item[descriptionKey] ? `## ${descriptionKey}:\n${item[descriptionKey]}\n` : ''}\
 `;
     // const completion = formatItemText(item, ignoreKeys); */
     const formattedItems = [];
@@ -124,7 +103,7 @@ ${item[descriptionKey] ? `@@${descriptionKey}:\n${item[descriptionKey]}\n` : ''}
     for (const k of itemAttributeKeys) {
     // for (const k in item) {
       // if (!ignoreKeys.includes(k)) {
-        const prompt = `${basePrompt}@@${k}:`;
+        const prompt = `${basePrompt}## ${k}:`;
         const completion = `\n${item[k]}\n\n`;
         const formattedItem = {
           prompt,
@@ -144,7 +123,7 @@ export const formatDatasetNamePrompt = dataset => {
     type,
     nameKey,
   } = dataset;
-  const prompt = `@Type: ${type}\n@@${nameKey}:`;
+  const prompt = `@Type: ${type}\n## ${nameKey}:`;
   return prompt;
 };
 export const formatDatasetDescriptionPrompt = (dataset, name) => {
@@ -154,9 +133,9 @@ export const formatDatasetDescriptionPrompt = (dataset, name) => {
     descriptionKey,
   } = dataset;
   const prompt = `@Type: ${type}\n\
-@@${nameKey}:\n\
+## ${nameKey}:\n\
 ${name}\n\
-@@${descriptionKey}:`;
+## ${descriptionKey}:`;
   return prompt;
 };
 export const formatDatasetAttributePrompts = (dataset, name, description) => {
@@ -168,13 +147,13 @@ export const formatDatasetAttributePrompts = (dataset, name, description) => {
   } = dataset;
   
   const basePrompt = `@Type: ${type}\n\
-@@${nameKey}:\n\
+## ${nameKey}:\n\
 ${name}\n\
-@@${descriptionKey}:\n\
+## ${descriptionKey}:\n\
 ${description}\n\
 `;
   return attributeKeys.map(key => {
-    const prompt = `${basePrompt}@@${key}:`;
+    const prompt = `${basePrompt}## ${key}:`;
     return {
       key,
       prompt,
@@ -234,13 +213,13 @@ export const parseDatasetSpecItems = (mdSpec, {
       for (let i = 0; i < itemLines.length; i++) {
         const itemLine = itemLines[i];
 
-        const match3 = itemLine.match(/^(@+[\s\S]+?):(?: )?(.*)(?:\n|$)/);
+        const match3 = itemLine.match(/^(#+ [\s\S]+?):(?: )?(.*)(?:\n|$)/);
         if (match3 && !isAllCaps(match3[1])) {
           if (currentAttributeName) {
             _flushAttribute();
           }
 
-          currentAttributeName = match3[1].replace(/^@+/, '');
+          currentAttributeName = match3[1].replace(/^#+ /, '');
           currentAttributeValue = match3[2];
         } else {
           if (currentAttributeName) {

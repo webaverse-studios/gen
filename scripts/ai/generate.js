@@ -24,7 +24,7 @@ const [type, name, description] = args._;
 
 //
 
-const _run = async (type, name, description) => {
+const generateItem = async (type, name, description) => {
   const datasetSpecs = await getDatasetSpecs();
   const datasetSpec = datasetSpecs.find(ds => ds.type === type);
   if (datasetSpec) {
@@ -34,19 +34,23 @@ const _run = async (type, name, description) => {
       aiClient: ctx.aiClient,
     });
     const generatedItem = await datasetEngine.generateItem(name, description);
-
-    if (args.t) {
-      const itemText = formatItemText(generatedItem);
-      console.log(itemText);
-    } else if (args.s) {
-      ctx.databaseClient.setByName('Content', name, );
-    } else {
-      const itemJson = formatItemJson(generatedItem);
-      console.log(JSON.stringify(itemJson, null, 2));
-    }
+    return generatedItem;
   } else {
-    console.warn('unknown dataset:', type);
-    process.exit(1);
+    throw new Error('unknown dataset: ' + type);
+  }
+};
+const _run = async (type, name, description) => {
+  const generatedItem = await generateItem(type, name, description);
+  
+  if (args.t) {
+    const itemText = formatItemText(generatedItem);
+    console.log(itemText);
+  } else if (args.s) {
+    const ctx = new Ctx();
+    ctx.databaseClient.setByName('Content', name, );
+  } else {
+    const itemJson = formatItemJson(generatedItem);
+    console.log(JSON.stringify(itemJson, null, 2));
   }
 };
 _run(type, name, description);
