@@ -1,4 +1,5 @@
 .character {
+  max-width: 100vw;
 }
 .character .name {
 }
@@ -7,4 +8,7 @@
 }
 .character .markdown img {
   display: block;
+}
+.character pre {
+  white-space: pre-wrap;
 }
