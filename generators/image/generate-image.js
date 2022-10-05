@@ -9,9 +9,9 @@ export const generateImage = ({
 } = {}) => {
   const s = `${prefix} ${description}`;
   const u = `${stableDiffusionUrl}/image?s=${encodeURIComponent(s)}&model=${modelName}`;
-  console.log('generate image url 1', {u});
+  // console.log('generate image url 1', {u});
   const res = await fetch(u);
-  console.log('generate image url 2', {u, status: res.status});
+  // console.log('generate image url 2', {u, status: res.status});
   if (res.ok) {
     const arrayBuffer = await res.arrayBuffer();
     if (arrayBuffer.byteLength > 0) {
