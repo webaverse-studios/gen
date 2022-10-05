@@ -214,12 +214,8 @@ export const parseDatasetSpec = md => {
     if (itemKeys.length >= 4) {
       const [typeKey, nameKey, descriptionKey] = itemKeys;
       const type = item0[typeKey];
-      // const ignoreKeys = [typeKey, nameKey, descriptionKey];
-      // let attributeKeys = itemKeys.filter(k => !ignoreKeys.includes(k));
       const attributeKeys = itemKeys;
-      // console.log('got attribute keys', {attributeKeys});
       const groupKey = attributeKeys.find(k => k.endsWith('*')) ?? null;
-      // attributeKeys = attributeKeys.filter(k => !k.endsWith('*'));
       return {
         type,
         prefix,
