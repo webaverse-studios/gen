@@ -1,5 +1,20 @@
-// import {createCanvas, loadImage} from 'canvas';
 import {createSeedImage} from '../../../canvas/seed-image.js';
+
+// /api/seed-image?args=[512, 512, 64, 128, 1, 256]
+
+/*
+// character: [512, 512, 64, 128, 1, 256]
+// backpack: [512, 512, 64, 128, 1, 256]
+// sword: [512, 512, 32, 128, 1, 256]
+// rifle: [512, 512, 128, 64, 1, 256]
+// pistol: [512, 512, 64, 64, 1, 256]
+// potion: [512, 512, 64, 64, 1, 256]
+// chestArmor: [512, 512, 64, 128, 1, 256]
+// legArmor: [512, 512, 64, 128, 1, 256]
+// helmet: [512, 512, 64, 64, 1, 256]
+// location: [512, 512, 64, 64, 1, 256]
+// map: [512, 512, 64, 64, 1, 256]
+*/
 
 /* character = this.#makeSeededMethod({
   seedArgs: [512, 512, 64, 128, 1, 256],
@@ -67,22 +82,6 @@ map = this.#makeUnseededMethod({
     return `anime style map page side render, without text, ${highlightString} on ${artPlatformsStrings.item}, ${name}`;
   },
 }) */
-
-// /api/seed-image?args=[512, 512, 64, 128, 1, 256]
-
-/*
-// character: [512, 512, 64, 128, 1, 256]
-// backpack: [512, 512, 64, 128, 1, 256]
-// sword: [512, 512, 32, 128, 1, 256]
-// rifle: [512, 512, 128, 64, 1, 256]
-// pistol: [512, 512, 64, 64, 1, 256]
-// potion: [512, 512, 64, 64, 1, 256]
-// chestArmor: [512, 512, 64, 128, 1, 256]
-// legArmor: [512, 512, 64, 128, 1, 256]
-// helmet: [512, 512, 64, 64, 1, 256]
-// location: [512, 512, 64, 64, 1, 256]
-// map: [512, 512, 64, 64, 1, 256]
-*/
 
 const CanvasImage = async (req, res) => {
   const {args} = req.query;
