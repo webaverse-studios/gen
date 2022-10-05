@@ -6,6 +6,10 @@ import {
   getDatasetSpecs,
 } from '../../datasets/dataset-specs.js';
 import {DatasetEngine} from '../../datasets/dataset-engine.js';
+import {
+  formatItemJson,
+  formatItemText,
+} from '../../datasets/dataset-parser.js';
 import {Ctx} from '../../context.js';
 
 //
@@ -33,11 +37,17 @@ const _run = async (type, name, description) => {
       aiClient: ctx.aiClient,
     });
     const generatedItem = await datasetEngine.generateItem(name, description);
-    console.log(JSON.stringify(generatedItem, null, 2));
-    /* const response = await ctx.aiClient.generate(`\
-@Type: ${type}
-`, '\n\n');
-    console.log('got response', response); */
+    // console.log(JSON.stringify(generatedItem, null, 2));
+
+    if (args.t) {
+      const itemText = formatItemText(generatedItem);
+      console.log(itemText);
+    } else if (args.s) {
+      ctx.databaseClient.setByName('Content', name, );
+    } else {
+      const itemJson = formatItemJson(generatedItem);
+      console.log(JSON.stringify(itemJson, null, 2));
+    }
   } else {
     console.warn('unknown dataset:', type);
     process.exit(1);

@@ -9,7 +9,6 @@ export const formatItemJson = item => {
     [nameKeySymbol]: nameKey,
     [descriptionKeySymbol]: descriptionKey,
   } = item;
-  console.log('got item', item, {nameKey, descriptionKey});
   return {
     [nameKey]: item[nameKey],
     [descriptionKey]: item[descriptionKey],
