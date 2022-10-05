@@ -1,6 +1,17 @@
 import {Ctx} from '../../../../../context.js';
 import {cleanName} from '../../../../../utils.js';
-import {generateCharacterImage} from '../../../../../generators/image/character.js';
+import {generateImage} from '../../../../../media/images/image-generator.js';
+import {parseDatasetItems} from '../../../../../datasets/dataset-parser.js';
+
+//
+
+const generateCharacterImage = generateImage({
+  modelName: null,
+  suffix: 'anime style video game character concept',
+  seed: [512, 512, 64, 128, 1, 256],
+});
+
+//
 
 const CharacterImage = async (req, res) => {
   const props = await CharacterImage.getInitialProps({req});
@@ -46,7 +57,17 @@ CharacterImage.getInitialProps = async ctx => {
           content,
         } = characterQuery;
 
-        const match = content.match(/\#\# ([\s\S]*?)\n/);
+        const contentJson = parseDatasetItems({
+          content,
+        })[0] ?? null;
+        if (contentJson) {
+          // const imgArrayBuffer = await generateCharacterImage();
+          return null;
+        } else {
+          return null;
+        }
+
+        /* const match = content.match(/\#\# ([\s\S]*?)\n/);
         if (match) {
           const description = match[1];
 
@@ -71,7 +92,7 @@ CharacterImage.getInitialProps = async ctx => {
           };
         } else {
           return null;
-        }
+        } */
       } else {
         return null;
       }
