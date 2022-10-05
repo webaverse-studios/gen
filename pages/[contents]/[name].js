@@ -18,11 +18,15 @@ const ContentObject = ({
   const formatImages = md => {
     const r = /\!\[([^\]]*)\]\(([^\)]*)\)/g;
     md = md.replace(r, (all, title, url) => {
-      const match = title.match(/^([\s\S]*?)(\|?[\s\S]*?)$/);
+      const match = title.match(/^([\s\S]*?)(\|[\s\S]*?)?$/);
       if (match) {
         title = match[1].trim();
-        url = match[2].trim();
-        return `![${title}](/api/images/${type}s/${encodeURIComponent(url)}.png)`;
+        url = match[2] ? match[2].trim() : title;
+        if (url) {
+          return `![${title}](/api/images/${type}s/${encodeURIComponent(url)}.png)`;
+        } else {
+          return null;
+        }
       } else {
         return all;
       }
@@ -61,12 +65,6 @@ ContentObject.getInitialProps = async ctx => {
     };
   } else {
     const c = new Ctx();
-    /* const dataset = datasets.characters;
-    const datasetEngine = new DatasetEngine({
-      dataset,
-      aiClient: c.aiClient,
-    }); */
-
     const [
       datasetSpecs,
       generatedItem,
@@ -75,6 +73,7 @@ ContentObject.getInitialProps = async ctx => {
       generateItem(type, name),
     ]);
     const datasetSpec = datasetSpecs.find(ds => ds.type === type);
+    // console.log('got datset spec', {datasetSpec});
     const itemText = formatItemText(generatedItem, datasetSpec);
 
     // const imgUrl = `/api/characters/${name}/images/main.png`;
