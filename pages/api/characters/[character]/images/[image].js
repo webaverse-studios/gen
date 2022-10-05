@@ -1,10 +1,6 @@
-// import uuidByString from 'uuid-by-string';
-// import {File} from 'web3.storage';
-
 import {Ctx} from '../../../../../context.js';
 import {cleanName} from '../../../../../utils.js';
 import {generateCharacterImage} from '../../../../../generators/image/character.js';
-import {ensureUrl} from '../../../../../utils.js';
 
 const CharacterImage = async (req, res) => {
   const props = await CharacterImage.getInitialProps({req});
@@ -33,9 +29,7 @@ CharacterImage.getInitialProps = async ctx => {
     const imageTitle = `characters/${characterName}/images/${imageName}`;
 
     const c = new Ctx();
-    // const id = uuidByString(imageTitle);
     const imageQuery = await c.databaseClient.getByName('IpfsData', imageTitle);
-    // console.log('check image query', {imageTitle, imageQuery});
     if (imageQuery) {
       const {
         content: ipfsHash,
@@ -68,12 +62,9 @@ CharacterImage.getInitialProps = async ctx => {
           file.name = imageName;
           const hash = await c.storageClient.uploadFile(file);
 
-          // console.log('set ipfs data', {imageTitle, imgUrl});
           await c.databaseClient.setByName('IpfsData', imageTitle, hash);
 
           const imgUrl = c.storageClient.getUrl(hash, file.name);
-          // console.log('ensure image url', {imgUrl});
-          // await ensureUrl(imgUrl);
 
           return {
             imgUrl,
