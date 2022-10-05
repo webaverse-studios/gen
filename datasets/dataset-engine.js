@@ -5,6 +5,12 @@ import {
   formatDatasetAttributePrompts,
 } from './dataset-parser.js';
 
+const stops = [
+  '\n\n',
+  '@Type',
+  '\n#'
+];
+
 export class DatasetEngine {
   constructor({
     dataset,
@@ -23,13 +29,13 @@ export class DatasetEngine {
     if (!name) {
       const namePrompt = formatDatasetNamePrompt(this.dataset);
       // console.log('got name prompt', {namePrompt});
-      name = await this.aiClient.generate(namePrompt, ['\n\n', '@@']);
+      name = await this.aiClient.generate(namePrompt, stops);
       name = name.trim();
     }
     if (!description) {
       const descriptionPrompt = formatDatasetDescriptionPrompt(this.dataset, name);
       // console.log('got description prompt', {descriptionPrompt});
-      description = await this.aiClient.generate(descriptionPrompt, ['\n\n', '@@']);
+      description = await this.aiClient.generate(descriptionPrompt, stops);
       description = description.trim();
     }
 
@@ -43,7 +49,7 @@ export class DatasetEngine {
         key: attributeName,
         prompt: attributePrompt,
       } = attributePromptSpec;
-      let attributeValue = await this.aiClient.generate(attributePrompt, ['\n\n', '@@']);
+      let attributeValue = await this.aiClient.generate(attributePrompt, stops);
       attributeValue = attributeValue.trim();
       attributes[attributeName] = attributeValue;
     }));
