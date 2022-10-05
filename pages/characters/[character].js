@@ -10,7 +10,7 @@ import {generateItem} from '../../datasets/dataset-generator.js';
 import {formatItemText} from '../../datasets/dataset-parser.js';
 import {getDatasetSpecs} from '../../datasets/dataset-specs.js';
 
-const Character = ({
+const ContentObject = ({
   title,
   content,
 }) => {
@@ -23,15 +23,16 @@ const Character = ({
     </div>
   );
 };
-Character.getInitialProps = async ctx => {
+ContentObject.getInitialProps = async ctx => {
   const {req} = ctx;
-  const match = req.url.match(/^\/characters\/([^\/]*)/);
-  let name = match ? match[1] : '';
+  const match = req.url.match(/^\/([^\/]*)\/([^\/]*)/);
+  let type = match ? match[1].replace(/s$/, '') : '';
+  let name = match ? match[2] : '';
   name = decodeURIComponent(name);
   name = cleanName(name);
 
   const c = new Ctx();
-  const title = `characters/${name}`;
+  const title = `${type}/${name}`;
   const id = uuidByString(title);
   const query = await c.databaseClient.getByName('Content', title);
   if (query) {
@@ -54,9 +55,9 @@ Character.getInitialProps = async ctx => {
       generatedItem,
     ] = await Promise.all([
       getDatasetSpecs(),
-      generateItem('character', name),
+      generateItem(type, name),
     ]);
-    const datasetSpec = datasetSpecs.find(ds => ds.type === 'character');
+    const datasetSpec = datasetSpecs.find(ds => ds.type === type);
     const itemText = formatItemText(generatedItem, datasetSpec);
 
     // const imgUrl = `/api/characters/${name}/images/main.png`;
@@ -75,5 +76,4 @@ ${itemText}
     };
   }
 };
-
-export default Character;
+export default ContentObject;
