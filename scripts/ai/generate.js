@@ -2,7 +2,6 @@ import path from 'path';
 import dotenv from 'dotenv';
 import minimist from 'minimist';
 import {
-  formatItemJson,
   formatItemText,
 } from '../../datasets/dataset-parser.js';
 import {generateItem} from '../../datasets/dataset-generator.js';
@@ -32,8 +31,7 @@ const _run = async (type, name, description) => {
     const content = formatItemText(generatedItem);
     await ctx.databaseClient.setByName('Content', title, content);
   } else {
-    const itemJson = formatItemJson(generatedItem);
-    console.log(JSON.stringify(itemJson, null, 2));
+    console.log(JSON.stringify(generatedItem, null, 2));
   }
 };
 _run(type, name, description);
