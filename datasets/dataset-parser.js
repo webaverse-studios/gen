@@ -209,32 +209,28 @@ export const parseDatasetSpec = md => {
     const datasetItems = parseDatasetItems(itemsMd, {
       count: 1,
     });
-    // if (datasetItems.length === 1) {
-      const item0 = datasetItems[0];
-      const itemKeys = Object.keys(item0);
-      if (itemKeys.length >= 4) {
-        const [typeKey, nameKey, descriptionKey] = itemKeys;
-        const type = item0[typeKey];
-        // const ignoreKeys = [typeKey, nameKey, descriptionKey];
-        // let attributeKeys = itemKeys.filter(k => !ignoreKeys.includes(k));
-        const attributeKeys = itemKeys;
-        // console.log('got attribute keys', {attributeKeys});
-        const groupKey = attributeKeys.find(k => k.endsWith('*')) ?? null;
-        // attributeKeys = attributeKeys.filter(k => !k.endsWith('*'));
-        return {
-          type,
-          prefix,
-          nameKey,
-          descriptionKey,
-          attributeKeys,
-          groupKey,
-        };
-      } else {
-        throw new Error('invalid dataset item keys: ' + JSON.stringify(itemKeys, null, 2));
-      }
-    // } else {
-    //   throw new Error('expected 1 dataset spec item, got ' + datasetItems.length);
-    // }
+    const item0 = datasetItems[0];
+    const itemKeys = Object.keys(item0);
+    if (itemKeys.length >= 4) {
+      const [typeKey, nameKey, descriptionKey] = itemKeys;
+      const type = item0[typeKey];
+      // const ignoreKeys = [typeKey, nameKey, descriptionKey];
+      // let attributeKeys = itemKeys.filter(k => !ignoreKeys.includes(k));
+      const attributeKeys = itemKeys;
+      // console.log('got attribute keys', {attributeKeys});
+      const groupKey = attributeKeys.find(k => k.endsWith('*')) ?? null;
+      // attributeKeys = attributeKeys.filter(k => !k.endsWith('*'));
+      return {
+        type,
+        prefix,
+        nameKey,
+        descriptionKey,
+        attributeKeys,
+        groupKey,
+      };
+    } else {
+      throw new Error('invalid dataset item keys: ' + JSON.stringify(itemKeys, null, 2));
+    }
   } else {
     throw new Error('had no prefix: ' + JSON.stringify(md));
   }
