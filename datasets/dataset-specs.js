@@ -74,16 +74,6 @@ export const getDatasetSpecs = () => {
         const datasetSpec = parseDatasetSpec(mdText);
         return datasetSpec;
       }));
-      /* for (let i = 0; i < datasetSpecs.length; i++) {
-        const datasetSpec = datasetSpecs[i];
-        const item0 = parseDatasetItems(datasetSpec, {
-          count: 1,
-        })[0];
-    
-        datasetSpec.nameKey = getItemNameKey(item0);
-        datasetSpec.descriptionKey = getItemDescriptionKey(item0);
-        datasetSpec.attributeKeys = getItemAttributeKeys(item0);
-      } */
       return datasetSpecs;
     })();
   }
