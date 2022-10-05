@@ -1,6 +1,7 @@
 // import {capitalizeAllWords, isAllCaps} from '../../utils.js';
 import path from 'path';
 import dotenv from 'dotenv';
+import minimist from 'minimist';
 import {
   getDatasetSpecs,
 } from '../../datasets/dataset-specs.js';
@@ -14,9 +15,11 @@ dotenv.config({
   path: path.join(path.dirname(baseUrl), '..', '..', '.env.local'),
 });
 
-const type = process.argv[2] ?? '';
-const name = process.argv[3] ?? '';
-const description = process.argv[4] ?? '';
+const args = minimist(process.argv.slice(2));
+// const type = process.argv[2] ?? '';
+// const name = process.argv[3] ?? '';
+// const description = process.argv[4] ?? '';
+const [type, name, description] = args._;
 
 //
 
