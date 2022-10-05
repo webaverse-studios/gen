@@ -168,11 +168,13 @@ export class DatasetEngine {
       const namePrompt = formatDatasetNamePrompt(this.dataset);
       // console.log('got name prompt', {namePrompt});
       name = await this.aiClient.generate(namePrompt, ['\n\n', '@@']);
+      name = name.trim();
     }
     if (!description) {
       const descriptionPrompt = formatDatasetDescriptionPrompt(this.dataset, name);
       // console.log('got description prompt', {descriptionPrompt});
       description = await this.aiClient.generate(descriptionPrompt, ['\n\n', '@@']);
+      description = description.trim();
     }
 
     const attributes = {};
@@ -182,14 +184,15 @@ export class DatasetEngine {
       [nameKey]: name,
       [descriptionKey]: description,
     }; */
-    for (let i = 0; i < attributePrompts.length; i++) {
+    await Promise.all(attributePrompts.map(async attributePromptSpec => {
       const {
         key: attributeName,
         prompt: attributePrompt,
-      } = attributePrompts[i];
-      const attributeValue = await this.aiClient.generate(attributePrompt, ['\n\n', '@@']);
+      } = attributePromptSpec;
+      let attributeValue = await this.aiClient.generate(attributePrompt, ['\n\n', '@@']);
+      attributeValue = attributeValue.trim();
       attributes[attributeName] = attributeValue;
-    }
+    }));
 
     return {
       [nameKey]: name,
