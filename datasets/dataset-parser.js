@@ -214,12 +214,13 @@ export const parseDatasetSpec = md => {
     if (itemKeys.length >= 4) {
       const [
         typeKey,
-        imagePrompt,
+        imagePromptKey,
         nameKey,
         descriptionKey,
         ...attributeKeys
       ] = itemKeys;
       const type = item0[typeKey];
+      const imagePrompt = item0[imagePromptKey];
       // const attributeKeys = itemKeys.slice(2);
       const groupKey = attributeKeys.find(k => k.endsWith('*')) ?? null;
       return {

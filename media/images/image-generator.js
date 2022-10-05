@@ -19,9 +19,9 @@ export const generateImage = ({
   seed,
 }) => async description => {
   if (!seed) {
-    const s = `${description} ${suffix}`;
+    const s = `${description}, ${suffix}`;
     const u = `${stableDiffusionUrl}/image?s=${encodeURIComponent(s)}${modelName ? `&model=${modelName}` : ''}`;
-    // console.log('generate image url 1', {u});
+    console.log('generate image url 1', {u});
     const res = await fetch(u);
     // console.log('generate image url 2', {u, status: res.status});
     if (res.ok) {
