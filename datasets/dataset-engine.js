@@ -33,13 +33,11 @@ export class DatasetEngine {
       description = description.trim();
     }
 
-    const attributes = {};
-    const attributePrompts = formatDatasetAttributePrompts(this.dataset, name, description);
-    /* console.log('got prompts', attributePrompts);
-    return {
+    const attributes = {
       [nameKey]: name,
       [descriptionKey]: description,
-    }; */
+    };
+    const attributePrompts = formatDatasetAttributePrompts(this.dataset, name, description);
     await Promise.all(attributePrompts.map(async attributePromptSpec => {
       const {
         key: attributeName,
