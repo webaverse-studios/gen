@@ -14,8 +14,7 @@ const ContentObject = ({
   content,
 }) => {
   const formatImages = md => {
-    const r = /\!\[([^\]]*)\]\(([^\)]*)\)/g;
-    md = md.replace(r, (all, title, url) => {
+    md = md.replace(/\!\[([^\]]*?)\]\(([^\)]*?)\)/g, (all, title, url) => {
       const match = title.match(/^([\s\S]*?)(\|[\s\S]*?)?$/);
       if (match) {
         title = match[1].trim();
