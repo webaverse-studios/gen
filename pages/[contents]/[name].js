@@ -11,9 +11,25 @@ import {formatItemText} from '../../datasets/dataset-parser.js';
 import {getDatasetSpecs} from '../../datasets/dataset-specs.js';
 
 const ContentObject = ({
+  type,
   title,
   content,
 }) => {
+  const formatImages = md => {
+    const r = /\!\[([^\]]*)\]\(([^\)]*)\)/g;
+    md = md.replace(r, (all, title, url) => {
+      const match = title.match(/^([\s\S]*?)(\|[\s\S]*?)?$/);
+      if (match) {
+        title = match[1].trim();
+        url = match[2].trim();
+        return `![${title}](/api/images/${type}s/${encodeURIComponent(url)}.png)`;
+      } else {
+        return all;
+      }
+    });
+    return md;
+  };
+  content = formatImages(content);
   return (
     <div className={styles.character}>
       <div className={styles.name}>{title}</div>
@@ -38,6 +54,7 @@ ContentObject.getInitialProps = async ctx => {
   if (query) {
     const {content} = query;
     return {
+      type,
       id,
       title,
       content,
@@ -70,6 +87,7 @@ ${itemText}
     await c.databaseClient.setByName('Content', title, content);
     
     return {
+      type,
       id,
       title,
       content,
