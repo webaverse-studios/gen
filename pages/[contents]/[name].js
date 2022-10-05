@@ -32,7 +32,7 @@ const ContentObject = ({
       if (q) {
         return all;
       }
-      return `[${title}](${encodeURIComponent(url)})`;
+      return `[${title}](${encodeURI(url)})`;
     });
     return md;
   };
