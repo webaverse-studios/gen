@@ -41,7 +41,7 @@ const ContentObject = ({
     <div className={styles.character}>
       <div className={styles.name}>{title}</div>
       <div className={styles.markdown}>
-        <Markdown gfm baseURL="">{content}</Markdown>
+        <Markdown gfm>{content}</Markdown>
       </div>
     </div>
   );
