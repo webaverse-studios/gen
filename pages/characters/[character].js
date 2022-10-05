@@ -8,6 +8,7 @@ import {cleanName} from '../../utils.js';
 // import datasets from '../../datasets/data.js';
 import {generateItem} from '../../datasets/dataset-generator.js';
 import {formatItemText} from '../../datasets/dataset-parser.js';
+import {getDatasetSpecs} from '../../datasets/dataset-specs.js';
 
 const Character = ({
   title,
@@ -48,8 +49,15 @@ Character.getInitialProps = async ctx => {
       aiClient: c.aiClient,
     }); */
 
-    const generatedItem = await generateItem('character', name);
-    const itemText = formatItemText(generatedItem);
+    const [
+      datasetSpecs,
+      generatedItem,
+    ] = await Promise.all([
+      getDatasetSpecs(),
+      generateItem('character', name),
+    ]);
+    const datasetSpec = datasetSpecs.find(ds => ds.type === 'character');
+    const itemText = formatItemText(generatedItem, datasetSpec);
 
     // const imgUrl = `/api/characters/${name}/images/main.png`;
 
