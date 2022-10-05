@@ -1,12 +1,9 @@
 import uuidByString from 'uuid-by-string';
-// import {File} from 'web3.storage';
 import Markdown from 'marked-react';
 
 import styles from '../../styles/Character.module.css'
 import {Ctx} from '../../context.js';
 import {cleanName} from '../../utils.js';
-// import {generateCharacterImage} from '../../generators/image/character.js';
-import {capitalize, capitalizeAllWords} from '../../utils.js';
 import {DatasetEngine, formatItem} from '../../datasets/datasets.js';
 import datasets from '../../datasets/data.js';
 
