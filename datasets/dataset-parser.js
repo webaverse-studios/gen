@@ -1,49 +1,22 @@
-// import {isAllCaps} from '../utils.js';
-
-// const typeSymbol = Symbol('type');
-// const nameKeySymbol = Symbol('nameKey');
-// const descriptionKeySymbol = Symbol('descriptionKey');
-
-// const _hasNewline = s => s.indexOf('\n') !== -1;
 export const formatItemText = (item, datasetSpec) => {
   const {
     nameKey,
-    // descriptionKey,
   } = datasetSpec;
-  // const ignoreKeys = [
-  //   nameKey,
-  //   descriptionKey,
-  // ];
 
   let s = '';
   for (const k in item) {
-    // if (!ignoreKeys.includes(k)) {
-      const v = item[k];
-      if (s) {
-        s += '\n';
-      }
-      if (k === nameKey) {
-        s += `## ${k}: ${v}`;
-      } else {
-        s += `## ${k}:\n${v}`;
-      }
-    // }
+    const v = item[k];
+    if (s) {
+      s += '\n';
+    }
+    if (k === nameKey) {
+      s += `## ${k}: ${v}`;
+    } else {
+      s += `## ${k}:\n${v}`;
+    }
   }
   return s;
 };
-/* export const getItemNameKey = item => item[nameKeySymbol];
-export const getItemDescriptionKey = item => item[descriptionKeySymbol];
-export const getItemAttributeKeys = item => {
-  const {
-    [nameKeySymbol]: nameKey,
-    [descriptionKeySymbol]: descriptionKey,
-  } = item;
-  const ignoreKeys = [
-    nameKey,
-    descriptionKey,
-  ];
-  return Object.keys(item).filter(k => !ignoreKeys.includes(k));
-}; */
 export const formatTrainingItemCandidates = (item, datasetSpec) => {
   const {
     type,
