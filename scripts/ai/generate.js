@@ -28,7 +28,9 @@ const _run = async (type, name, description) => {
     console.log(itemText);
   } else if (args.s) {
     const ctx = new Ctx();
-    ctx.databaseClient.setByName('Content', name, );
+    const title = `${type}s/${name}`;
+    const content = formatItemText(generatedItem);
+    await ctx.databaseClient.setByName('Content', title, content);
   } else {
     const itemJson = formatItemJson(generatedItem);
     console.log(JSON.stringify(itemJson, null, 2));
