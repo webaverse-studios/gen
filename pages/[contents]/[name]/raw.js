@@ -17,7 +17,7 @@ const ContentObjectRaw = ({
   if (!error) {
     return (
       <div className={styles.character}>
-        <pre>{error}</pre>
+        <pre>{text}</pre>
       </div>
     );
   } else {
