@@ -1,11 +1,9 @@
 import uuidByString from 'uuid-by-string';
 import Markdown from 'marked-react';
 
-import styles from '../../styles/Character.module.css'
+import styles from '../../styles/Character.module.css'; // XXX make this based on the type
 import {Ctx} from '../../context.js';
 import {cleanName} from '../../utils.js';
-// import {DatasetEngine, formatItem} from '../../datasets/datasets.js';
-// import datasets from '../../datasets/data.js';
 import {generateItem} from '../../datasets/dataset-generator.js';
 import {formatItemText} from '../../datasets/dataset-parser.js';
 import {getDatasetSpecs} from '../../datasets/dataset-specs.js';

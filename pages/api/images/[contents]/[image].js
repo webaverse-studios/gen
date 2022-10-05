@@ -7,7 +7,7 @@ import {generateImage} from '../../../../media/images/image-generator.js';
 
 const generateCharacterImage = generateImage({
   modelName: null,
-  suffix: 'anime style video game character concept',
+  suffix: 'anime style video game character concept, full body',
   // seed: [512, 512, 64, 128, 1, 256],
 });
 
@@ -51,7 +51,7 @@ CharacterImage.getInitialProps = async ctx => {
         imgUrl,
       };
     } else {
-      let imgArrayBuffer = await generateCharacterImage(description);
+      let imgArrayBuffer = await generateCharacterImage(description); // XXX make this based on the type
 
       const file = new Blob([imgArrayBuffer], {
         type: 'image/png',
