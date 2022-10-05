@@ -1,26 +1,15 @@
 // import {isAllCaps} from '../utils.js';
 
-const typeSymbol = Symbol('type');
-const nameKeySymbol = Symbol('nameKey');
-const descriptionKeySymbol = Symbol('descriptionKey');
+// const typeSymbol = Symbol('type');
+// const nameKeySymbol = Symbol('nameKey');
+// const descriptionKeySymbol = Symbol('descriptionKey');
 
-export const formatItemJson = item => {
-  const {
-    [nameKeySymbol]: nameKey,
-    [descriptionKeySymbol]: descriptionKey,
-  } = item;
-  return {
-    [nameKey]: item[nameKey],
-    [descriptionKey]: item[descriptionKey],
-    ...item,
-  };
-};
 // const _hasNewline = s => s.indexOf('\n') !== -1;
-export const formatItemText = item => {
+export const formatItemText = (item, datasetSpec) => {
   const {
-    [nameKeySymbol]: nameKey,
-    [descriptionKeySymbol]: descriptionKey,
-  } = item;
+    nameKey,
+    // descriptionKey,
+  } = datasetSpec;
   // const ignoreKeys = [
   //   nameKey,
   //   descriptionKey,
@@ -42,7 +31,7 @@ export const formatItemText = item => {
   }
   return s;
 };
-export const getItemNameKey = item => item[nameKeySymbol];
+/* export const getItemNameKey = item => item[nameKeySymbol];
 export const getItemDescriptionKey = item => item[descriptionKeySymbol];
 export const getItemAttributeKeys = item => {
   const {
@@ -54,16 +43,17 @@ export const getItemAttributeKeys = item => {
     descriptionKey,
   ];
   return Object.keys(item).filter(k => !ignoreKeys.includes(k));
-};
-export const formatTrainingItemCandidates = item => {
+}; */
+export const formatTrainingItemCandidates = (item, datasetSpec) => {
   const {
-    [nameKeySymbol]: nameKey,
-    [descriptionKeySymbol]: descriptionKey,
-  } = item;
+    type,
+    nameKey,
+    descriptionKey,
+  } = datasetSpec;
 
   const _getNameCompletion = () => {
     if (item[nameKey]) {
-      const prompt = `@Type: ${item[typeSymbol]}\n## ${nameKey}:`
+      const prompt = `@Type: ${type}\n## ${nameKey}:`
       const completion = `\n${item[nameKey]}\n\n`;
       return [
         {
@@ -77,7 +67,7 @@ export const formatTrainingItemCandidates = item => {
   };
   const _getDescriptionCompletion = () => {
     if (item[nameKey] && item[descriptionKey]) {
-      const prompt = `@Type: ${item[typeSymbol]}\n\
+      const prompt = `@Type: ${type}\n\
 ## ${nameKey}:\n${item[nameKey]}\n\
 ## ${descriptionKey}:\
 `;
@@ -93,24 +83,18 @@ export const formatTrainingItemCandidates = item => {
     }
   };
   const _getAttributeCompletions = () => {
-    const basePrompt = `@Type: ${item[typeSymbol]}\n\
-${item[nameKey] ? `## ${nameKey}:\n${item[nameKey]}\n` : ''}\
-${item[descriptionKey] ? `## ${descriptionKey}:\n${item[descriptionKey]}\n` : ''}\
-`;
+    const basePrompt = `@Type: ${type}\n`;
     // const completion = formatItemText(item, ignoreKeys); */
     const formattedItems = [];
-    const itemAttributeKeys = getItemAttributeKeys(item);
+    const itemAttributeKeys = Object.keys(item);
     for (const k of itemAttributeKeys) {
-    // for (const k in item) {
-      // if (!ignoreKeys.includes(k)) {
-        const prompt = `${basePrompt}## ${k}:`;
-        const completion = `\n${item[k]}\n\n`;
-        const formattedItem = {
-          prompt,
-          completion,
-        };
-        formattedItems.push(formattedItem);
-      // }
+      const prompt = `${basePrompt}## ${k}:`;
+      const completion = `\n${item[k]}\n\n`;
+      const formattedItem = {
+        prompt,
+        completion,
+      };
+      formattedItems.push(formattedItem);
     }
     return formattedItems;
   };
@@ -118,33 +102,33 @@ ${item[descriptionKey] ? `## ${descriptionKey}:\n${item[descriptionKey]}\n` : ''
     .concat(_getDescriptionCompletion())
     .concat(_getAttributeCompletions());
 };
-export const formatDatasetNamePrompt = dataset => {
+export const formatDatasetNamePrompt = datasetSpec => {
   const {
     type,
     nameKey,
-  } = dataset;
+  } = datasetSpec;
   const prompt = `@Type: ${type}\n## ${nameKey}:`;
   return prompt;
 };
-export const formatDatasetDescriptionPrompt = (dataset, name) => {
+export const formatDatasetDescriptionPrompt = (datasetSpec, name) => {
   const {
     type,
     nameKey,
     descriptionKey,
-  } = dataset;
+  } = datasetSpec;
   const prompt = `@Type: ${type}\n\
 ## ${nameKey}:\n\
 ${name}\n\
 ## ${descriptionKey}:`;
   return prompt;
 };
-export const formatDatasetAttributePrompts = (dataset, name, description) => {
+export const formatDatasetAttributePrompts = (datasetSpec, name, description) => {
   const {
     type,
     nameKey,
     descriptionKey,
     attributeKeys,
-  } = dataset;
+  } = datasetSpec;
   
   const basePrompt = `@Type: ${type}\n\
 ## ${nameKey}:\n\
@@ -190,11 +174,6 @@ export const parseDatasetItems = (md, datasetSpec, {
       currentAttributeValue = '';
       currentAttributeAsterisk = false;
     };
-
-    // initialize with type
-    itemAttributes[typeSymbol] = type;
-    itemAttributes[nameKeySymbol] = nameKey;
-    itemAttributes[descriptionKeySymbol] = descriptionKey;
 
     const itemLines = itemString.split('\n');
     for (let i = 0; i < itemLines.length; i++) {
@@ -249,8 +228,6 @@ export const parseDatasetSpec = md => {
   if (match) {
     const prefix = match[1];
     const itemsMd = match[2];
-
-    console.log('parse dataset spec', {prefix, itemsMd});
 
     const datasetItems = parseDatasetItems(itemsMd, {
       count: 1,

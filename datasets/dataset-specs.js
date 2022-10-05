@@ -96,7 +96,7 @@ export const getTrainingItems = async () => {
     const mdText = await fetchText(datasetDataUrl);
     const datasetSpec = datasetSpecs[index];
     let items = parseDatasetItems(mdText, datasetSpec);
-    items = items.map(item => formatTrainingItemCandidates(item)).flat();
+    items = items.map(item => formatTrainingItemCandidates(item, datasetSpec)).flat();
     return items;
   }));
   return itemsArray.flat();
