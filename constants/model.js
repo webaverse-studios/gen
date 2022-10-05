@@ -1,1 +1,1 @@
-export const model = `davinci:ft-webaverse-2022-10-05-03-19-27`;
+export const model = `davinci:ft-webaverse-2022-10-05-14-49-30`;
