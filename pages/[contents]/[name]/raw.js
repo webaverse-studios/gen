@@ -34,7 +34,7 @@ ContentObjectRaw.getInitialProps = async ctx => {
 
   const c = new Ctx();
   const title = `${type}/${name}`;
-  const id = uuidByString(title);
+  // const id = uuidByString(title);
   const query = await c.databaseClient.getByName('Content', title);
   if (query) {
     const {content: text} = query;
