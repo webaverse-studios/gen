@@ -125,9 +125,9 @@ export const parseDatasetItems = (md, datasetSpec, {
   count = Infinity,
 } = {}) => {
   const {
-    type,
-    nameKey,
-    descriptionKey,
+    // type,
+    // nameKey,
+    // descriptionKey,
     groupKey,
   } = datasetSpec;
 
