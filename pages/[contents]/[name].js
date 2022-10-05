@@ -28,6 +28,12 @@ const ContentObject = ({
         return all;
       }
     });
+    md = md.replace(/(\!?)\[([\s\S]+?)\]\(([\s\S]+?)\)/g, (all, q, title, url) => {
+      if (q) {
+        return all;
+      }
+      return `[${title}](${encodeURIComponent(url)})`;
+    });
     return md;
   };
   content = formatImages(content);
