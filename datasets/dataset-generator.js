@@ -4,7 +4,7 @@ import {
 import {DatasetEngine} from '../../datasets/dataset-engine.js';
 import {Ctx} from '../../context.js';
 
-export const generateItem = async (type, name, description) => {
+export const generateItem = async (type, name = '', description = '') => {
   const datasetSpecs = await getDatasetSpecs();
   const datasetSpec = datasetSpecs.find(ds => ds.type === type);
   if (datasetSpec) {

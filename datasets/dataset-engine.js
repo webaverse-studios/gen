@@ -159,7 +159,7 @@ export class DatasetEngine {
     this.dataset = dataset;
     this.aiClient = aiClient;
   }
-  async generateItem(name, description) {
+  async generateItem(name = '', description = '') {
     const {
       nameKey,
       descriptionKey,
