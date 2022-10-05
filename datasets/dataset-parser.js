@@ -210,19 +210,26 @@ export const parseDatasetSpec = md => {
       count: 1,
     });
     const item0 = datasetItems[0];
-    const itemKeys = Object.keys(item0);
+    let itemKeys = Object.keys(item0);
     if (itemKeys.length >= 4) {
-      const [typeKey, nameKey, descriptionKey] = itemKeys;
+      const [
+        typeKey,
+        imagePrompt,
+        nameKey,
+        descriptionKey,
+        ...attributeKeys
+      ] = itemKeys;
       const type = item0[typeKey];
-      const attributeKeys = itemKeys;
+      // const attributeKeys = itemKeys.slice(2);
       const groupKey = attributeKeys.find(k => k.endsWith('*')) ?? null;
       return {
         type,
-        prefix,
+        imagePrompt,
         nameKey,
         descriptionKey,
         attributeKeys,
         groupKey,
+        prefix,
       };
     } else {
       throw new Error('invalid dataset item keys: ' + JSON.stringify(itemKeys, null, 2));
