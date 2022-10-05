@@ -4,8 +4,10 @@ import Markdown from 'marked-react';
 import styles from '../../styles/Character.module.css'
 import {Ctx} from '../../context.js';
 import {cleanName} from '../../utils.js';
-import {DatasetEngine, formatItem} from '../../datasets/datasets.js';
-import datasets from '../../datasets/data.js';
+// import {DatasetEngine, formatItem} from '../../datasets/datasets.js';
+// import datasets from '../../datasets/data.js';
+import {generateItem} from '../../datasets/dataset-generator.js';
+import {formatItemText} from '../../datasets/dataset-parser.js';
 
 const Character = ({
   title,
@@ -39,41 +41,22 @@ Character.getInitialProps = async ctx => {
       content,
     };
   } else {
-    // let bio = '';
-    // const numTries = 5;
-    // for (let i = 0; i < numTries; i++) {
-
     const c = new Ctx();
-    const dataset = datasets.characters;
+    /* const dataset = datasets.characters;
     const datasetEngine = new DatasetEngine({
       dataset,
       aiClient: c.aiClient,
-    });
+    }); */
 
-    const {
-      response,
-      parsedResponse: item,
-    } = await datasetEngine.generateItem(name);
-    // console.log('try generate', {name, response});
-    // const bio = response;
+    const generatedItem = await generateItem('character', name);
+    const itemText = formatItemText(generatedItem);
 
-    // const {
-    //   prompt,
-    //   response: bio,
-    // } = await datasetEngine.generateItemAttribute('characters', attributeName, description);
-
-    // }
-    // if (!bio) {
-    //   throw new Error('too many retries');
-    // }
-
-    const imgUrl = `/api/characters/${name}/images/main.png`;
+    // const imgUrl = `/api/characters/${name}/images/main.png`;
 
     const content = `\
-# ${name}
-${formatItem(item)}
-![](${encodeURI(imgUrl)})
+${itemText}
 `;
+// ![](${encodeURI(imgUrl)})
 
     await c.databaseClient.setByName('Content', title, content);
     
