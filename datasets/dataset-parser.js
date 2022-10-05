@@ -1,21 +1,46 @@
 import {isAllCaps} from '../utils.js';
 
-const typeSymbol = Symbol('type');
-const nameKeySymbol = Symbol('nameKey');
-const descriptionKeySymbol = Symbol('descriptionKey');
+export const typeSymbol = Symbol('type');
+export const nameKeySymbol = Symbol('nameKey');
+export const descriptionKeySymbol = Symbol('descriptionKey');
 
+export const formatItemJson = item => {
+  const {
+    [nameKeySymbol]: nameKey,
+    [descriptionKeySymbol]: descriptionKey,
+  } = item;
+  console.log('got item', item, {nameKey, descriptionKey});
+  return {
+    [nameKey]: item[nameKey],
+    [descriptionKey]: item[descriptionKey],
+    ...item,
+  };
+};
 // const _hasNewline = s => s.indexOf('\n') !== -1;
-export const formatItemText = (item, ignoreKeys = []) => {
+export const formatItemText = item => {
+  const {
+    [nameKeySymbol]: nameKey,
+    [descriptionKeySymbol]: descriptionKey,
+  } = item;
+  // const ignoreKeys = [
+  //   nameKey,
+  //   descriptionKey,
+  // ];
+
   let s = '';
   for (const k in item) {
-    if (!ignoreKeys.includes(k)) {
+    // if (!ignoreKeys.includes(k)) {
       const v = item[k];
       if (s) {
         s += '\n';
       }
-      // s += `@@${k}: ${_hasNewline(v) ? '\n' : ''}${v}`;
-      s += `@@${k}:\n${v}`;
-    }
+      if (k === nameKey) {
+        s += `@${k}: ${v}`;
+      } else {
+        // s += `@@${k}: ${_hasNewline(v) ? '\n' : ''}${v}`;
+        s += `@@${k}:\n${v}`;
+      }
+    // }
   }
   return s;
 };
