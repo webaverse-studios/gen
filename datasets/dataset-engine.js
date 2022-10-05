@@ -1,5 +1,7 @@
 // import Alea from 'alea';
 import {
+  nameKeySymbol,
+  descriptionKeySymbol,
   formatDatasetNamePrompt,
   formatDatasetDescriptionPrompt,
   formatDatasetAttributePrompts,
@@ -198,6 +200,8 @@ export class DatasetEngine {
       [nameKey]: name,
       [descriptionKey]: description,
       ...attributes,
+      [nameKeySymbol]: nameKey,
+      [descriptionKeySymbol]: descriptionKey,
     };
 
     /* if (this.dataset.items.length > 0) {
