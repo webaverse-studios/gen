@@ -20,9 +20,6 @@ dotenv.config({
 });
 
 const args = minimist(process.argv.slice(2));
-// const type = process.argv[2] ?? '';
-// const name = process.argv[3] ?? '';
-// const description = process.argv[4] ?? '';
 const [type, name, description] = args._;
 
 //
@@ -37,7 +34,6 @@ const _run = async (type, name, description) => {
       aiClient: ctx.aiClient,
     });
     const generatedItem = await datasetEngine.generateItem(name, description);
-    // console.log(JSON.stringify(generatedItem, null, 2));
 
     if (args.t) {
       const itemText = formatItemText(generatedItem);
