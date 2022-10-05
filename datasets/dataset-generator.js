@@ -1,8 +1,8 @@
 import {
   getDatasetSpecs,
-} from '../../datasets/dataset-specs.js';
-import {DatasetEngine} from '../../datasets/dataset-engine.js';
-import {Ctx} from '../../context.js';
+} from './dataset-specs.js';
+import {DatasetEngine} from './dataset-engine.js';
+import {Ctx} from '../context.js';
 
 export const generateItem = async (type, name = '', description = '') => {
   const datasetSpecs = await getDatasetSpecs();
