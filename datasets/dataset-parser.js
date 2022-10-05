@@ -1,8 +1,8 @@
-import {isAllCaps} from '../utils.js';
+// import {isAllCaps} from '../utils.js';
 
-export const typeSymbol = Symbol('type');
-export const nameKeySymbol = Symbol('nameKey');
-export const descriptionKeySymbol = Symbol('descriptionKey');
+const typeSymbol = Symbol('type');
+const nameKeySymbol = Symbol('nameKey');
+const descriptionKeySymbol = Symbol('descriptionKey');
 
 export const formatItemJson = item => {
   const {
@@ -160,99 +160,126 @@ ${description}\n\
     };
   });
 };
-export const parseDatasetSpecItems = (mdSpec, {
+export const parseDatasetItems = (md, datasetSpec, {
   count = Infinity,
 } = {}) => {
-  let {
+  const {
     type,
-    md,
-    nameKey = 'Name',
-    descriptionKey = 'Description',
-    groupKey = null,
-  } = mdSpec;
-  if (!type) {
-    throw new Error('type is required')
-  }
-  if (!md) {
-    throw new Error('md is required')
-  }
-  if (!nameKey) {
-    throw new Error('nameKey is required')
-  }
-  if (!descriptionKey) {
-    throw new Error('descriptionKey is required')
-  }
+    nameKey,
+    descriptionKey,
+    groupKey,
+  } = datasetSpec;
 
   const items = [];
+  const r = /([\s\S]+?)(?:\n\n|$)/g;
+  let match2;
+  while (match2 = r.exec(md)) {
+    const itemString = match2[1];
+
+    const itemAttributes = {};
+    let currentAttributeName = '';
+    let currentAttributeValue = '';
+    let currentAttributeAsterisk = false;
+    const _flushAttribute = () => {
+      itemAttributes[currentAttributeName] = currentAttributeValue;
+      if (currentAttributeAsterisk) {
+        itemAttributes[currentAttributeName] = currentAttributeAsterisk;
+      } 
+
+      currentAttributeName = '';
+      currentAttributeValue = '';
+      currentAttributeAsterisk = false;
+    };
+
+    // initialize with type
+    itemAttributes[typeSymbol] = type;
+    itemAttributes[nameKeySymbol] = nameKey;
+    itemAttributes[descriptionKeySymbol] = descriptionKey;
+
+    const itemLines = itemString.split('\n');
+    for (let i = 0; i < itemLines.length; i++) {
+      const itemLine = itemLines[i];
+
+      const match3 = itemLine.match(/^([@#]+ ?[\s\S]+?)(\*?):(?: )?(.*)(?:\n|$)/);
+      if (match3 /* && !isAllCaps(name) */) {
+        const name = match3[1];
+        const asterisk = match3[2];
+        const value = match3[3];
+
+        if (currentAttributeName) {
+          _flushAttribute();
+        }
+
+        currentAttributeName = name.replace(/^[@#]+ ?/, '');
+        currentAttributeValue = value;
+        currentAttributeAsterisk = !!asterisk;
+      } else {
+        if (currentAttributeName) {
+          if (currentAttributeName === groupKey) {
+            const itemAttributesClone = {...itemAttributes};
+            itemAttributesClone[currentAttributeName] = itemLine;
+            items.push(itemAttributesClone);
+            if (items.length >= count) {
+              return items;
+            }
+          } else {
+            if (currentAttributeValue) {
+              currentAttributeValue += '\n';
+            }
+            currentAttributeValue += itemLine;
+          }
+        } else {
+          throw new Error('did not have item attribute context: ' + JSON.stringify({itemString, itemLines}, null, 2));
+        }
+      }
+    }
+    if (currentAttributeName) {
+      _flushAttribute();
+    }
+
+    items.push(itemAttributes);
+    if (items.length >= count) {
+      return items;
+    }
+  }
+  return items;
+};
+export const parseDatasetSpec = md => {
   const match = md.match(/^([\s\S]*?)\n\n([\s\S]*)$/);
   if (match) {
     const prefix = match[1];
-    md = match[2];
+    const itemsMd = match[2];
 
-    const r = /([\s\S]+?)(?:\n\n|$)/g;
-    let match2;
-    while (match2 = r.exec(md)) {
-      const itemString = match2[1];
+    console.log('parse dataset spec', {prefix, itemsMd});
 
-      const itemAttributes = {};
-      let currentAttributeName = '';
-      let currentAttributeValue = '';
-      const _flushAttribute = () => {
-        itemAttributes[currentAttributeName] = currentAttributeValue;
-        
-        currentAttributeName = '';
-        currentAttributeValue = '';
-      };
-
-      // initialize with type
-      itemAttributes[typeSymbol] = type;
-      itemAttributes[nameKeySymbol] = nameKey;
-      itemAttributes[descriptionKeySymbol] = descriptionKey;
-
-      const itemLines = itemString.split('\n');
-      for (let i = 0; i < itemLines.length; i++) {
-        const itemLine = itemLines[i];
-
-        const match3 = itemLine.match(/^(#+ [\s\S]+?):(?: )?(.*)(?:\n|$)/);
-        if (match3 && !isAllCaps(match3[1])) {
-          if (currentAttributeName) {
-            _flushAttribute();
-          }
-
-          currentAttributeName = match3[1].replace(/^#+ /, '');
-          currentAttributeValue = match3[2];
-        } else {
-          if (currentAttributeName) {
-            if (currentAttributeName === groupKey) {
-              const itemAttributesClone = {...itemAttributes};
-              itemAttributesClone[currentAttributeName] = itemLine;
-              items.push(itemAttributesClone);
-              if (items.length >= count) {
-                return items;
-              }
-            } else {
-              if (currentAttributeValue) {
-                currentAttributeValue += '\n';
-              }
-              currentAttributeValue += itemLine;
-            }
-          } else {
-            throw new Error('did not have item attribute context: ' + JSON.stringify({itemString, itemLines}, null, 2));
-          }
-        }
+    const datasetItems = parseDatasetItems(itemsMd, {
+      count: 1,
+    });
+    if (datasetItems.length === 1) {
+      const item0 = datasetItems[0];
+      const itemKeys = Object.keys(item0);
+      if (itemKeys.length >= 4) {
+        const [typeKey, nameKey, descriptionKey] = itemKeys;
+        const type = item0[typeKey];
+        const ignoreKeys = [typeKey, nameKey, descriptionKey];
+        let attributeKeys = itemKeys.filter(k => !ignoreKeys.includes(k));
+        const groupKey = attributeKeys.find(k => k.endsWith('*')) ?? null;
+        attributeKeys = attributeKeys.filter(k => !k.endsWith('*'));
+        return {
+          type,
+          prefix,
+          nameKey,
+          descriptionKey,
+          attributeKeys,
+          groupKey,
+        };
+      } else {
+        throw new Error('invalid dataset item keys: ' + JSON.stringify(itemKeys, null, 2));
       }
-      if (currentAttributeName) {
-        _flushAttribute();
-      }
-
-      items.push(itemAttributes);
-      if (items.length >= count) {
-        return items;
-      }
+    } else {
+      throw new Error('expected 1 dataset spec item, got ' + datasetItems.length);
     }
   } else {
     throw new Error('had no prefix: ' + JSON.stringify(md));
   }
-
-  return items;
 };

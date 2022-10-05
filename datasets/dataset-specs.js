@@ -1,9 +1,10 @@
 import {
-  parseDatasetSpecItems,
+  parseDatasetSpec,
+  parseDatasetItems,
   formatTrainingItemCandidates,
-  getItemNameKey,
-  getItemDescriptionKey,
-  getItemAttributeKeys,
+  // getItemNameKey,
+  // getItemDescriptionKey,
+  // getItemAttributeKeys,
 } from './dataset-parser.js';
 
 //
@@ -20,79 +21,81 @@ const fetchText = async u => {
 
 //
 
-const datasetBasePath = `https://webaverse.github.io/lore/datasets/data/`;
+const datasetSpecsBasePath = `https://webaverse.github.io/lore/datasets/specs/`;
+const datasetDataBasePath = `https://webaverse.github.io/lore/datasets/data/`;
 const mdSpecs = [
   {
-    type: 'character',
+    // type: 'character',
     url: 'characters.md',
   },
   {
-    type: 'setting',
+    // type: 'setting',
     url: 'settings.md',
   },
   {
-    type: 'item',
+    // type: 'item',
     url: 'items.md',
   },
   {
-    type: 'cutscene',
+    // type: 'cutscene',
     url: 'cutscenes.md',
   },
   {
-    type: 'chat',
+    // type: 'chat',
     url: 'chats.md',
   },
   {
-    type: 'lore',
+    // type: 'lore',
     url: 'lore.md',
   },
   {
-    type: 'battle-banter',
+    // type: 'battle-banter',
     url: 'battle-banters.md',
-    groupKey: 'Banters',
+    // groupKey: 'Banters',
   },
   {
-    type: 'match',
+    // type: 'match',
     url: 'matches.md',
-    nameKey: 'Match string',
-    descriptionKey: 'Candidate assets',
+    // nameKey: 'Match string',
+    // descriptionKey: 'Candidate assets',
   },
-].map(mdSpec => {
-  return {
-    nameKey: 'Name',
-    descriptionKey: 'Description',
-    ...mdSpec,
-    url: `${datasetBasePath}${mdSpec.url}`,
-    md: '',
-    attributeKeys: [],
-  };
-});
+];
+const datasetSpecUrls = mdSpecs.map(mdSpec => `${datasetSpecsBasePath}${mdSpec.url}`);
+const datasetDataUrls = mdSpecs.map(mdSpec => `${datasetDataBasePath}${mdSpec.url}`);
 
 //
 
-export const getDatasetSpecs = async () => {
-  const datasetSpecs = await Promise.all(mdSpecs.map(async mdSpec => {
-    const mdText = await fetchText(mdSpec.url);
-    mdSpec.md = mdText;
-    return mdSpec;
-  }));
-  for (let i = 0; i < datasetSpecs.length; i++) {
-    const datasetSpec = datasetSpecs[i];
-    const item0 = parseDatasetSpecItems(datasetSpec, {
-      count: 1,
-    })[0];
-
-    datasetSpec.nameKey = getItemNameKey(item0);
-    datasetSpec.descriptionKey = getItemDescriptionKey(item0);
-    datasetSpec.attributeKeys = getItemAttributeKeys(item0);
+let datasetSpecPromise = null;
+export const getDatasetSpecs = () => {
+  if (!datasetSpecPromise) {
+    datasetSpecPromise = (async () => {
+      const datasetSpecs = await Promise.all(datasetSpecUrls.map(async datasetSpecUrl => {
+        const mdText = await fetchText(datasetSpecUrl);
+        const datasetSpec = parseDatasetSpec(mdText);
+        return datasetSpec;
+      }));
+      /* for (let i = 0; i < datasetSpecs.length; i++) {
+        const datasetSpec = datasetSpecs[i];
+        const item0 = parseDatasetItems(datasetSpec, {
+          count: 1,
+        })[0];
+    
+        datasetSpec.nameKey = getItemNameKey(item0);
+        datasetSpec.descriptionKey = getItemDescriptionKey(item0);
+        datasetSpec.attributeKeys = getItemAttributeKeys(item0);
+      } */
+      return datasetSpecs;
+    })();
   }
-  return datasetSpecs;
+  return datasetSpecPromise;
 };
 
 export const getTrainingItems = async () => {
   const datasetSpecs = await getDatasetSpecs();
-  const itemsArray = await Promise.all(datasetSpecs.map(async datasetSpec => {
-    let items = parseDatasetSpecItems(datasetSpec);
+  const itemsArray = await Promise.all(datasetDataUrls.map(async (datasetDataUrl, index) => {
+    const mdText = await fetchText(datasetDataUrl);
+    const datasetSpec = datasetSpecs[index];
+    let items = parseDatasetItems(mdText, datasetSpec);
     items = items.map(item => formatTrainingItemCandidates(item)).flat();
     return items;
   }));
