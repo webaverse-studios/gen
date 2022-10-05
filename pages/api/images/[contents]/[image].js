@@ -1,15 +1,9 @@
 import {Ctx} from '../../../../context.js';
+import {getDatasetSpecs} from '../../../../datasets/dataset-specs.js';
 import {cleanName} from '../../../../utils.js';
 import {generateImage} from '../../../../media/images/image-generator.js';
-// import {parseDatasetItems} from '../../../../datasets/dataset-parser.js';
 
-//
-
-const generateCharacterImage = generateImage({
-  modelName: null,
-  suffix: 'anime style video game character concept, full body',
-  // seed: [512, 512, 64, 128, 1, 256],
-});
+const globalImagePrompt = `trending on ArtStation`;
 
 //
 
@@ -31,41 +25,58 @@ CharacterImage.getInitialProps = async ctx => {
   if (match) {
     let type = match[1];
     type = decodeURIComponent(type);
+    const singleType = type.replace(/s$/, '');
     type = cleanName(type);
     let description = match[2];
     description = decodeURIComponent(description);
     description = cleanName(description);
 
-    const imageTitle = `images/${type}/${description}`;
-    const imageName = `${description}.png`;
+    const datasetSpecs = await getDatasetSpecs();
+    const datasetSpec = datasetSpecs.find(spec => spec.type === singleType);
+    if (datasetSpec) {
+      const imageTitle = `images/${type}/${description}`;
+      const imageName = `${description}.png`;
 
-    const c = new Ctx();
-    const imageQuery = await c.databaseClient.getByName('IpfsData', imageTitle);
-    if (imageQuery) {
-      const {
-        content: ipfsHash,
-      } = imageQuery;
+      const c = new Ctx();
+      const imageQuery = await c.databaseClient.getByName('IpfsData', imageTitle);
+      if (imageQuery) {
+        const {
+          content: ipfsHash,
+        } = imageQuery;
 
-      const imgUrl = c.storageClient.getUrl(ipfsHash, imageName);
-      return {
-        imgUrl,
-      };
+        const imgUrl = c.storageClient.getUrl(ipfsHash, imageName);
+        return {
+          imgUrl,
+        };
+      } else {
+        const {
+          imagePrompt,
+        } = datasetSpec;
+
+        const generateCharacterImage = generateImage({
+          modelName: null,
+          // suffix: 'anime style video game character concept, full body',
+          suffix: `${imagePrompt}, ${globalImagePrompt}`,
+          // seed: [512, 512, 64, 128, 1, 256],
+        });
+        let imgArrayBuffer = await generateCharacterImage(description); // XXX make this based on the type
+
+        const file = new Blob([imgArrayBuffer], {
+          type: 'image/png',
+        });
+        file.name = imageName;
+        const hash = await c.storageClient.uploadFile(file);
+
+        await c.databaseClient.setByName('IpfsData', imageTitle, hash);
+
+        const imgUrl = c.storageClient.getUrl(hash, file.name);
+
+        return {
+          imgUrl,
+        };
+      }
     } else {
-      let imgArrayBuffer = await generateCharacterImage(description); // XXX make this based on the type
-
-      const file = new Blob([imgArrayBuffer], {
-        type: 'image/png',
-      });
-      file.name = imageName;
-      const hash = await c.storageClient.uploadFile(file);
-
-      await c.databaseClient.setByName('IpfsData', imageTitle, hash);
-
-      const imgUrl = c.storageClient.getUrl(hash, file.name);
-
-      return {
-        imgUrl,
-      };
+      return null;
     }
   } else {
     return null;
