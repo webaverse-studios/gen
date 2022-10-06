@@ -28,8 +28,16 @@ export const MapCanvas = () => {
   const [camera, setCamera] = useState(null);
   const [renderer, setRenderer] = useState(null);
   const [debugMesh, setDebugMesh] = useState(null);
-  // const [frame, setFrame] = useState(null);
-  // const [live, setLive] = useState(true);
+
+  const setRaycasterFromEvent = (raycaster, e) => {
+    const w = dimensions[0] / devicePixelRatio;
+    const h = dimensions[1] / devicePixelRatio;
+    const mouse = localVector2D.set(
+      (e.clientX / w) * 2 - 1,
+      -(e.clientY / h) * 2 + 1
+    );
+    raycaster.setFromCamera(mouse, camera);
+  };
 
   const handleCanvas = useMemo(() => canvasEl => {
     if (canvasEl) {
@@ -166,15 +174,6 @@ export const MapCanvas = () => {
     renderer && renderer.setSize(width, height);
   }, [renderer, dimensions]);
 
-  const setRaycasterFromEvent = (raycaster, e) => {
-    const w = dimensions[0] / devicePixelRatio;
-    const h = dimensions[1] / devicePixelRatio;
-    const mouse = localVector2D.set(
-      (e.clientX / w) * 2 - 1,
-      -(e.clientY / h) * 2 + 1
-    );
-    raycaster.setFromCamera(mouse, camera);
-  };
   const handleMouseDown = e => {
     e.preventDefault();
     e.stopPropagation();
