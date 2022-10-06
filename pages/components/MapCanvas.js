@@ -22,10 +22,16 @@ const localRaycaster = new THREE.Raycaster();
 
 //
 
-const procGenManager = new ProcGenManager({
-  chunkSize,
-});
-const instance = procGenManager.getInstance('lol');
+let procGenInstance = null;
+const useInstance = () => {
+  if (!procGenInstance) {
+    const procGenManager = new ProcGenManager({
+      chunkSize,
+    });
+    procGenInstance = procGenManager.getInstance('lol');
+  }
+  return procGenInstance;
+};
 
 export const MapCanvas = () => {
   // 2d
@@ -90,6 +96,8 @@ export const MapCanvas = () => {
   const _refreshChunks = (camera, chunksMesh) => {
     const chunks = _getChunksInRange(camera);
     _renderChunksToMeshInstances(chunks, chunksMesh);
+
+    const instance = useInstance();
   };
 
   // initialize canvas from element ref
