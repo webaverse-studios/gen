@@ -193,6 +193,9 @@ export class PGWorkerManager {
     chunkPosition,
     minLod,
     maxLod,
+    {
+      signal = null,
+    } = {},
   ) {
     const result = await this.worker.request('generateBarrier', {
       instance: this.instance,

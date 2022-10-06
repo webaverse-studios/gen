@@ -491,6 +491,7 @@ const _handleMethod = async ({method, args, instance: instanceKey, taskId}) => {
         chunkPosition,
         minLod,
         maxLod,
+        chunkSize,
       } = args;
       const instance = instances.get(instanceKey);
       if (!instance) throw new Error('generateBarrier : instance not found');
