@@ -1,5 +1,7 @@
-import PgWorker from './pg-worker.js';
-// import PgWorker from 'worker-loader!.//pg-worker.js';
+// import PgWorker from './pg.worker.js';
+// import PgWorker from 'worker-loader!./src/procedural-generation/pg.worker.js';
+// import PgWorker from 'worker-loader!./pg.worker.js';
+// import {WorkerUrl} from 'worker-url';
 
 const abortError = new Error('aborted');
 abortError.isAbortError = true;
@@ -46,10 +48,18 @@ export class PGWorkerManager {
   waitForLoad() {
     if (!this.loadPromise) {
       this.loadPromise = (async () => {
-        /* const worker = new Worker(new URL(`./pg-worker.js`, import.meta.url), {
+        const u = import.meta.url;
+        const worker = new Worker(new URL(`/procedural-generation/pg.worker.js`, window.location.href), {
           type: 'module',
+        });
+        /* const workerUrl = new WorkerUrl(new URL('./pg.worker.js', import.meta.url), {
+          name: 'pg',
         }); */
-        const worker = new PgWorker();
+        // console.log('worker url', workerUrl);
+        // const worker = new Worker(workerUrl, {
+        //   // type: 'module',
+        // });
+        // const worker = new PgWorker();
         const cbs = new Map();
         worker.onmessage = (e) => {
           const {taskId} = e.data;
