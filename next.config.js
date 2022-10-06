@@ -38,7 +38,7 @@ const nextConfig = {
       },
     ]
   },
-  webpack: (config) => {
+  webpack(config) {
     return Object.assign({}, config, {
       /* externals: Object.assign({}, config.externals, {
         fs: 'fs',
@@ -59,7 +59,7 @@ const nextConfig = {
         ]),
       }),
     });
-  }
+  },
 };
 export default nextConfig;
 // module.exports = nextConfig;
