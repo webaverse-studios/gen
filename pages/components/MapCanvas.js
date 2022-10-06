@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import {useState, useMemo, useEffect} from 'react';
 
+import {ProcGenManager} from '../../src/procgen/procgen-manager.js';
 import styles from '../../styles/MapCanvas.module.css';
 
 //
@@ -20,6 +21,11 @@ const localMatrix2 = new THREE.Matrix4();
 const localRaycaster = new THREE.Raycaster();
 
 //
+
+const procGenManager = new ProcGenManager({
+  chunkSize,
+});
+const instance = procGenManager.getInstance('lol');
 
 export const MapCanvas = () => {
   // 2d
