@@ -1,3 +1,4 @@
+import stream from 'stream';
 import {Ctx} from '../../../../context.js';
 import {getDatasetSpecs} from '../../../../datasets/dataset-specs.js';
 import {cleanName} from '../../../../utils.js';
@@ -13,7 +14,16 @@ const CharacterImage = async (req, res) => {
     const {
       imgUrl,
     } = props;
-    res.redirect(imgUrl);
+
+    const proxyRes = await fetch(imgUrl);
+    // proxy the status and headers
+    res.status(proxyRes.status);
+    for (const [key, value] of proxyRes.headers.entries()) {
+      res.setHeader(key, value);
+    }
+    // pipe the response
+    // console.log('got body', proxyRes.body);
+    stream.Readable.fromWeb(proxyRes.body).pipe(res);
   } else {
     res.send(404);
   }
