@@ -49,8 +49,8 @@ export const MapCanvas = () => {
       
       const scale = 0.9;
       const geometry = new THREE.PlaneGeometry(chunkSize, chunkSize)
-        .translate(chunkSize / 2, -chunkSize / 2, 0)
         .scale(scale, scale, scale)
+        .translate(chunkSize / 2, -chunkSize / 2, 0)
         .rotateX(-Math.PI / 2);
       const material = new THREE.ShaderMaterial({
         vertexShader: `\
