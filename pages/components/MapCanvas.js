@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import {useState, useMemo, useEffect} from 'react';
 
-import {ProcGenManager} from '../../src/procgen/procgen-manager.js';
+import {ProcGenManager} from '../../src/procedural-generation/procgen-manager.js';
 import styles from '../../styles/MapCanvas.module.css';
 
 //
