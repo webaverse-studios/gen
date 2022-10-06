@@ -5,9 +5,19 @@ import styles from '../../styles/MapCanvas.module.css';
 
 //
 
+const localVector = new THREE.Vector3();
+const localVector2 = new THREE.Vector3();
+const localVector2D = new THREE.Vector2();
+const localQuaternion = new THREE.Quaternion();
 const localMatrix = new THREE.Matrix4();
+const localMatrix2 = new THREE.Matrix4();
+const localRaycaster = new THREE.Raycaster();
+
+const downQuaternion = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
 
 //
+
+let scale = 1;
 
 export const MapCanvas = () => {
   const [dimensions, setDimensions] = useState([
@@ -17,6 +27,7 @@ export const MapCanvas = () => {
   const [dragState, setDragState] = useState(null);
   const [camera, setCamera] = useState(null);
   const [renderer, setRenderer] = useState(null);
+  const [debugMesh, setDebugMesh] = useState(null);
   // const [frame, setFrame] = useState(null);
   // const [live, setLive] = useState(true);
 
@@ -71,8 +82,17 @@ export const MapCanvas = () => {
         material,
         256
       );
-      scene.add(mesh);
       mesh.frustumCulled = false;
+      scene.add(mesh);
+
+      const debugGeometry = new THREE.BoxGeometry(1, 1, 1);
+      const debugMaterial = new THREE.MeshBasicMaterial({
+        color: 0x0000ff,
+      });
+      const debugMesh = new THREE.Mesh(debugGeometry, debugMaterial);
+      debugMesh.frustumCulled = false;
+      scene.add(debugMesh);
+      setDebugMesh(debugMesh);
 
       // get the top left near point of the camera
       const topLeftNear = new THREE.Vector3(-1, 1, 0);
@@ -146,6 +166,15 @@ export const MapCanvas = () => {
     renderer && renderer.setSize(width, height);
   }, [renderer, dimensions]);
 
+  const setRaycasterFromEvent = (raycaster, e) => {
+    const w = dimensions[0] / devicePixelRatio;
+    const h = dimensions[1] / devicePixelRatio;
+    const mouse = localVector2D.set(
+      (e.clientX / w) * 2 - 1,
+      -(e.clientY / h) * 2 + 1
+    );
+    raycaster.setFromCamera(mouse, camera);
+  };
   const handleMouseDown = e => {
     e.preventDefault();
     e.stopPropagation();
