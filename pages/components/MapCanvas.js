@@ -15,8 +15,6 @@ const localRaycaster = new THREE.Raycaster();
 
 //
 
-let scale = 1;
-
 export const MapCanvas = () => {
   const [dimensions, setDimensions] = useState([
     globalThis.innerWidth * globalThis.devicePixelRatio,
@@ -216,8 +214,8 @@ export const MapCanvas = () => {
     // scale around the mouse position
     setRaycasterFromEvent(localRaycaster, e);
 
-    const oldScale = scale;
-    const newScale = Math.min(Math.max(scale * (1 + e.deltaY * 0.001), 0.02), 3);
+    const oldScale = camera.scale.x;
+    const newScale = Math.min(Math.max(oldScale * (1 + e.deltaY * 0.001), 0.02), 3);
     const scaleFactor = newScale / oldScale;
 
     localMatrix.compose(
@@ -245,7 +243,6 @@ export const MapCanvas = () => {
       .decompose(camera.position, localQuaternion, localVector2);
     camera.scale.set(newScale, newScale, 1);
     camera.updateMatrixWorld();
-    scale = newScale;
   };
 
   return (
