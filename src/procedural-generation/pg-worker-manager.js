@@ -15,9 +15,6 @@ const localArray16D = Array(16);
 
 //
 
-// const baseUrl = import.meta.url;
-// const workerUrl = `./pg-worker.js`;
-// const workerUrl = new URL(`./pg-worker.js`, baseUrl);
 const TASK_PRIORITIES = {
   tracker: -10,
   splat: -1,
@@ -49,17 +46,9 @@ export class PGWorkerManager {
     if (!this.loadPromise) {
       this.loadPromise = (async () => {
         const u = import.meta.url;
-        const worker = new Worker(new URL(`/procedural-generation/pg.worker.js`, window.location.href), {
+        const worker = new Worker(new URL(`/procedural-generation/pg-worker.js`, window.location.href), {
           type: 'module',
         });
-        /* const workerUrl = new WorkerUrl(new URL('./pg.worker.js', import.meta.url), {
-          name: 'pg',
-        }); */
-        // console.log('worker url', workerUrl);
-        // const worker = new Worker(workerUrl, {
-        //   // type: 'module',
-        // });
-        // const worker = new PgWorker();
         const cbs = new Map();
         worker.onmessage = (e) => {
           const {taskId} = e.data;
