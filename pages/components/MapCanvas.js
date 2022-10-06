@@ -5,6 +5,12 @@ import styles from '../../styles/MapCanvas.module.css';
 
 //
 
+const chunkSize = 16;
+const worldWidth = 128;
+const worldHeight = 128;
+
+//
+
 const localVector = new THREE.Vector3();
 const localVector2 = new THREE.Vector3();
 const localVector2D = new THREE.Vector2();
@@ -28,10 +34,6 @@ export const MapCanvas = () => {
   const [chunksMesh, setChunksMesh] = useState(null);
   const [debugMesh, setDebugMesh] = useState(null);
 
-  // constants
-  const worldWidth = 128;
-  const worldHeight = 128;
-  const chunkSize = 16;
   // helpers
   const setRaycasterFromEvent = (raycaster, e) => {
     const w = dimensions[0] / devicePixelRatio;
