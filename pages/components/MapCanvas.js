@@ -20,6 +20,8 @@ const localMatrix = new THREE.Matrix4();
 const localMatrix2 = new THREE.Matrix4();
 const localRaycaster = new THREE.Raycaster();
 
+const zeroQuaternion = new THREE.Quaternion();
+
 //
 
 let procGenInstance = null;
@@ -45,6 +47,7 @@ export const MapCanvas = () => {
   const [camera, setCamera] = useState(null);
   const [chunksMesh, setChunksMesh] = useState(null);
   const [debugMesh, setDebugMesh] = useState(null);
+  const [barrierMesh, setBarrierMesh] = useState(null);
 
   // helpers
   const setRaycasterFromEvent = (raycaster, e) => {
@@ -87,7 +90,6 @@ export const MapCanvas = () => {
         0,
         min.y * chunkSize
       );
-
       chunksMesh.setMatrixAt(i, localMatrix);
     }
     chunksMesh.instanceMatrix.needsUpdate = true;
@@ -96,29 +98,6 @@ export const MapCanvas = () => {
   const _refreshChunks = (camera, chunksMesh) => {
     const chunks = _getChunksInRange(camera);
     _renderChunksToMeshInstances(chunks, chunksMesh);
-
-    (async () => {
-      if (!procGenInstance) {
-        const instance = useInstance();
-
-        const position = localVector.set(0, 0, 0);
-        const minLod = 1;
-        const maxLod = 6;
-        const abortController = new AbortController();
-        const {signal} = abortController;
-
-        const barrierResult = await instance.generateBarrier(
-          position,
-          minLod,
-          maxLod,
-          chunkSize,
-          {
-            signal,
-          },
-        );
-        console.log('got barrier', barrierResult);
-      }
-    })();
   };
 
   // initialize canvas from element ref
@@ -192,6 +171,24 @@ export const MapCanvas = () => {
       scene.add(debugMesh);
       setDebugMesh(debugMesh);
 
+      const barrierGeometry = new THREE.PlaneGeometry(1, 1)
+        .scale(scale, scale, scale)
+        .translate(0.5, -0.5, 0)
+        .rotateX(-Math.PI / 2);
+      const barrierMaterial = new THREE.MeshBasicMaterial({
+        color: 0x00ff00,
+        transparent: true,
+        opacity: 0.1,
+      });
+      const barrierMesh = new THREE.InstancedMesh(
+        barrierGeometry,
+        barrierMaterial,
+        256
+      );
+      barrierMesh.frustumCulled = false;
+      scene.add(barrierMesh);
+      setBarrierMesh(barrierMesh);
+
       // camera
       const left = worldWidth / -2;
       const right = worldWidth / 2;
@@ -215,6 +212,61 @@ export const MapCanvas = () => {
 
       // init
       _refreshChunks(camera, chunksMesh);
+
+      // debug barrier
+      (async () => {
+        if (!procGenInstance) {
+          const instance = useInstance();
+  
+          const position = localVector.set(0, 0, 0);
+          const minLod = 1;
+          const maxLod = 6;
+          const abortController = new AbortController();
+          const {signal} = abortController;
+  
+          const barrierResult = await instance.generateBarrier(
+            position,
+            minLod,
+            maxLod,
+            chunkSize,
+            {
+              signal,
+            },
+          );
+          // console.log('got barrier', barrierResult);
+  
+          const {
+            leafNodes,
+          } = barrierResult;
+          for (let i = 0; i < leafNodes.length; i++) {
+            const leafNode = leafNodes[i];
+            const {
+              min,
+              lod,
+            } = leafNode;
+
+            const size = lod * chunkSize;
+            /* console.log('make translate', [
+              min[0],
+              0,
+              min[1],
+              size
+            ]); */
+            localMatrix.compose(
+              localVector.set(
+                min[0],
+                0,
+                min[1]
+              ),
+              zeroQuaternion,
+              localVector2.setScalar(size)
+            );
+            barrierMesh.setMatrixAt(i, localMatrix);
+          }
+          barrierMesh.instanceMatrix.needsUpdate = true;
+          barrierMesh.count = leafNodes.length;
+        }
+      })();
     }
   }, []);
   function handleResize() {
