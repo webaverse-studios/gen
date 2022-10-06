@@ -125,8 +125,6 @@ export const MapCanvas = () => {
       const _recurse = () => {
         frame = requestAnimationFrame(() => {
           _recurse();
-          // camera.position.x = Math.sin(performance.now() / 300) * chunkSize;
-          // camera.updateMatrixWorld();
           renderer.render(scene, camera);
         });
       };
