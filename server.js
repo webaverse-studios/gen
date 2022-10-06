@@ -26,6 +26,6 @@ app.prepare()
       handle(req, res, parsedUrl);
     }).listen(port, (err) => {
       if (err) throw err;
-      console.log("ready - started server on url: https://localhost:" + port);
+      console.log(`https://local.webaverse.com:${port}/`)
     });
   });
