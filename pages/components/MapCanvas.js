@@ -14,10 +14,11 @@ export const MapCanvas = () => {
     globalThis.innerWidth * globalThis.devicePixelRatio,
     globalThis.innerHeight * globalThis.devicePixelRatio,
   ]);
-  const [dragging, setDragging] = useState(false);
+  const [dragState, setDragState] = useState(null);
+  const [camera, setCamera] = useState(null);
   const [renderer, setRenderer] = useState(null);
   // const [frame, setFrame] = useState(null);
-  const [live, setLive] = useState(true);
+  // const [live, setLive] = useState(true);
 
   const handleCanvas = useMemo(() => canvasEl => {
     if (canvasEl) {
@@ -46,7 +47,8 @@ export const MapCanvas = () => {
       camera.position.set(0, 128, 0);
       camera.quaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
       camera.updateMatrixWorld();
-      
+      setCamera(camera);
+
       const scale = 0.9;
       const geometry = new THREE.PlaneGeometry(chunkSize, chunkSize)
         .scale(scale, scale, scale)
@@ -129,7 +131,7 @@ export const MapCanvas = () => {
     const handleMouseUp = e => {
       e.preventDefault();
       e.stopPropagation();
-      setDragging(false);
+      setDragState(null);
     };
     globalThis.addEventListener('mouseup', handleMouseUp);
 
@@ -147,11 +149,38 @@ export const MapCanvas = () => {
   const handleMouseDown = e => {
     e.preventDefault();
     e.stopPropagation();
-    setDragging(true);
+    const {clientX, clientY} = e;
+    setDragState({
+      startX: clientX,
+      startY: clientY,
+      cameraStartPositon: camera.position.clone(),
+    });
   };
   const handleMouseMove = e => {
     e.preventDefault();
     e.stopPropagation();
+    if (dragState) {
+      const {clientX, clientY} = e;
+      const {startX, startY} = dragState;
+
+      const w = dimensions[0] / devicePixelRatio;
+      const h = dimensions[1] / devicePixelRatio;
+      const startPosition = new THREE.Vector3(
+        (-startX / w) * 2 - 1,
+        (startY / h) * 2 + 1,
+        0
+      ).unproject(camera);
+      const endPosition = new THREE.Vector3(
+        (-clientX / w) * 2 - 1,
+        (clientY / h) * 2 + 1,
+        0
+      ).unproject(camera);
+
+      camera.position.copy(dragState.cameraStartPositon)
+        .sub(startPosition)
+        .add(endPosition);
+      camera.updateMatrixWorld();
+    }
   };
 
   return (
