@@ -1,15 +1,7 @@
-// import uuidByString from 'uuid-by-string';
-// import Markdown from 'marked-react';
 import * as THREE from 'three';
 import {useState, useMemo, useEffect} from 'react';
 
-// import styles from '../styles/ContentObject.module.css';
 import styles from '../styles/Map.module.css';
-// import {Ctx} from '../context.js';
-// import {cleanName} from '../utils.js';
-// import {generateItem} from '../datasets/dataset-generator.js';
-// import {formatItemText} from '../datasets/dataset-parser.js';
-// import {getDatasetSpecs} from '../datasets/dataset-specs.js';
 
 const MapCanvas = () => {
   const [dimensions, setDimensions] = useState([
