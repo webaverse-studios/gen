@@ -16,15 +16,23 @@ const localRaycaster = new THREE.Raycaster();
 //
 
 export const MapCanvas = () => {
+  // 2d
   const [dimensions, setDimensions] = useState([
     globalThis.innerWidth * globalThis.devicePixelRatio,
     globalThis.innerHeight * globalThis.devicePixelRatio,
   ]);
   const [dragState, setDragState] = useState(null);
-  const [camera, setCamera] = useState(null);
+  // 3d
   const [renderer, setRenderer] = useState(null);
+  const [camera, setCamera] = useState(null);
+  const [chunksMesh, setChunksMesh] = useState(null);
   const [debugMesh, setDebugMesh] = useState(null);
 
+  // constants
+  const worldWidth = 128;
+  const worldHeight = 128;
+  const chunkSize = 16;
+  // helpers
   const setRaycasterFromEvent = (raycaster, e) => {
     const w = dimensions[0] / devicePixelRatio;
     const h = dimensions[1] / devicePixelRatio;
@@ -34,82 +42,52 @@ export const MapCanvas = () => {
     );
     raycaster.setFromCamera(mouse, camera);
   };
+  const _getChunksInRange = camera => {
+    const chunks = [];
 
+    // get the top left near point of the camera
+    const topLeftNear = new THREE.Vector3(-1, 1, 0);
+    topLeftNear.unproject(camera);
+    // get the bottom right near point of the camera
+    const bottomRightNear = new THREE.Vector3(1, -1, 0);
+    bottomRightNear.unproject(camera);
+
+    for (let dx = topLeftNear.x; dx < bottomRightNear.x + chunkSize; dx += chunkSize) {
+      for (let dz = topLeftNear.z; dz < bottomRightNear.z + chunkSize; dz += chunkSize) {
+        const x = Math.floor(dx / chunkSize);
+        const z = Math.floor(dz / chunkSize);
+        chunks.push({
+          min: new THREE.Vector2(x, z),
+        });
+      }
+    }
+
+    return chunks;
+  };
+  const _renderChunksToMeshInstances = (chunks, chunksMesh) => {
+    for (let i = 0; i < chunks.length; i++) {
+      const chunk = chunks[i];
+      const {min} = chunk;
+      localMatrix.makeTranslation(
+        min.x * chunkSize,
+        0,
+        min.y * chunkSize
+      );
+
+      chunksMesh.setMatrixAt(i, localMatrix);
+    }
+    chunksMesh.instanceMatrix.needsUpdate = true;
+    chunksMesh.count = chunks.length;
+  };
+  const _refreshChunks = (camera, chunksMesh) => {
+    const chunks = _getChunksInRange(camera);
+    _renderChunksToMeshInstances(chunks, chunksMesh);
+  };
+
+  // initialize canvas from element ref
   const handleCanvas = useMemo(() => canvasEl => {
     if (canvasEl) {
-      const worldWidth = 128;
-      const worldHeight = 128;
-      const chunkSize = 16;
-
-      const scene = new THREE.Scene();
-      scene.matrixWorldAutoUpdate = false;
-
-      const left = worldWidth / -2;
-      const right = worldWidth / 2;
-      const top = worldHeight / 2;
-      const bottom = worldHeight / -2;
-      const near = 0.1;
-      const far = 1000;
-      const fov = dimensions[0] / dimensions[1];
-      const camera = new THREE.OrthographicCamera(
-        left,
-        right,
-        top / fov,
-        bottom / fov,
-        near,
-        far
-      );
-      camera.position.set(0, 128, 0);
-      camera.quaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
-      camera.updateMatrixWorld();
-      setCamera(camera);
-
-      const scale = 0.9;
-      const geometry = new THREE.PlaneGeometry(chunkSize, chunkSize)
-        .scale(scale, scale, scale)
-        .translate(chunkSize / 2, -chunkSize / 2, 0)
-        .rotateX(-Math.PI / 2);
-      const material = new THREE.ShaderMaterial({
-        vertexShader: `\
-          void main() {
-            gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.0);
-          }
-        `,
-        fragmentShader: `\
-          void main() {
-            gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
-          }
-        `,
-      });
-      const mesh = new THREE.InstancedMesh(
-        geometry,
-        material,
-        256
-      );
-      mesh.frustumCulled = false;
-      scene.add(mesh);
-
-      const debugGeometry = new THREE.BoxGeometry(1, 1, 1);
-      const debugMaterial = new THREE.MeshBasicMaterial({
-        color: 0x0000ff,
-      });
-      const debugMesh = new THREE.Mesh(debugGeometry, debugMaterial);
-      debugMesh.frustumCulled = false;
-      scene.add(debugMesh);
-      setDebugMesh(debugMesh);
-
-      // get the top left near point of the camera
-      const topLeftNear = new THREE.Vector3(-1, 1, 0);
-      topLeftNear.unproject(camera);
-      localMatrix.makeTranslation(
-        topLeftNear.x,
-        topLeftNear.y,
-        topLeftNear.z
-      );
-      mesh.setMatrixAt(0, localMatrix);
-      mesh.instanceMatrix.needsUpdate = true;
-      mesh.count = 1;
-
+      // renderer
       const renderer = new THREE.WebGLRenderer({
         canvas: canvasEl,
         antialias: true,
@@ -137,6 +115,68 @@ export const MapCanvas = () => {
         cancelAnimationFrame(frame);
         renderer.dispose();
       };
+
+      // scene
+      const scene = new THREE.Scene();
+      scene.matrixWorldAutoUpdate = false;
+
+      const scale = 0.9;
+      const geometry = new THREE.PlaneGeometry(chunkSize, chunkSize)
+        .scale(scale, scale, scale)
+        .translate(chunkSize / 2, -chunkSize / 2, 0)
+        .rotateX(-Math.PI / 2);
+      const material = new THREE.ShaderMaterial({
+        vertexShader: `\
+          void main() {
+            gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.0);
+          }
+        `,
+        fragmentShader: `\
+          void main() {
+            gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+          }
+        `,
+      });
+      const chunksMesh = new THREE.InstancedMesh(
+        geometry,
+        material,
+        256
+      );
+      chunksMesh.frustumCulled = false;
+      scene.add(chunksMesh);
+
+      const debugGeometry = new THREE.BoxGeometry(1, 1, 1);
+      const debugMaterial = new THREE.MeshBasicMaterial({
+        color: 0x0000ff,
+      });
+      const debugMesh = new THREE.Mesh(debugGeometry, debugMaterial);
+      debugMesh.frustumCulled = false;
+      scene.add(debugMesh);
+      setDebugMesh(debugMesh);
+
+      // camera
+      const left = worldWidth / -2;
+      const right = worldWidth / 2;
+      const top = worldHeight / 2;
+      const bottom = worldHeight / -2;
+      const near = 0.1;
+      const far = 1000;
+      const fov = dimensions[0] / dimensions[1];
+      const camera = new THREE.OrthographicCamera(
+        left,
+        right,
+        top / fov,
+        bottom / fov,
+        near,
+        far
+      );
+      camera.position.set(0, 128, 0);
+      camera.quaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
+      camera.updateMatrixWorld();
+      setCamera(camera);
+
+      // init
+      _refreshChunks(camera, chunksMesh);
     }
   }, []);
   function handleResize() {
