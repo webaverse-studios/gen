@@ -97,7 +97,28 @@ export const MapCanvas = () => {
     const chunks = _getChunksInRange(camera);
     _renderChunksToMeshInstances(chunks, chunksMesh);
 
-    const instance = useInstance();
+    (async () => {
+      if (!procGenInstance) {
+        const instance = useInstance();
+
+        const position = localVector.set(0, 0, 0);
+        const minLod = 1;
+        const maxLod = 6;
+        const abortController = new AbortController();
+        const {signal} = abortController;
+
+        const barrierResult = await instance.generateBarrier(
+          position,
+          minLod,
+          maxLod,
+          chunkSize,
+          {
+            signal,
+          },
+        );
+        console.log('got barrier', barrierResult);
+      }
+    })();
   };
 
   // initialize canvas from element ref
