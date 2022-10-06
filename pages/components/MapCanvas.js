@@ -210,6 +210,47 @@ export const MapCanvas = () => {
         .add(endPosition);
       camera.updateMatrixWorld();
     }
+
+    setRaycasterFromEvent(localRaycaster, e);
+    debugMesh.position.set(localRaycaster.ray.origin.x, 0, localRaycaster.ray.origin.z);
+    debugMesh.updateMatrixWorld();
+  };
+  const handleWheel = e => {
+    e.stopPropagation();
+
+    // scale around the mouse position
+    setRaycasterFromEvent(localRaycaster, e);
+
+    const oldScale = scale;
+    const newScale = Math.min(Math.max(scale * (1 + e.deltaY * 0.001), 0.01), 3);
+    const scaleFactor = newScale / oldScale;
+
+    localMatrix.compose(
+      camera.position,
+      downQuaternion,
+      localVector2.setScalar(oldScale)
+    )
+      .premultiply(
+        localMatrix2.makeTranslation(
+          -localRaycaster.ray.origin.x,
+          0,
+          -localRaycaster.ray.origin.z
+        )
+      )
+      .premultiply(
+        localMatrix2.makeScale(scaleFactor, 1, scaleFactor)
+      )
+      .premultiply(
+        localMatrix2.makeTranslation(
+          localRaycaster.ray.origin.x,
+          0,
+          localRaycaster.ray.origin.z
+        )
+      )
+      .decompose(camera.position, localQuaternion, localVector2);
+    camera.scale.set(newScale, newScale, 1);
+    camera.updateMatrixWorld();
+    scale = newScale;
   };
 
   return (
@@ -219,6 +260,7 @@ export const MapCanvas = () => {
       // height={dimensions[1]}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
+      onWheel={handleWheel}
       ref={handleCanvas}
     />
   );
