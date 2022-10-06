@@ -195,13 +195,13 @@ export const MapCanvas = () => {
       const w = dimensions[0] / devicePixelRatio;
       const h = dimensions[1] / devicePixelRatio;
       const startPosition = new THREE.Vector3(
-        (-startX / w) * 2 - 1,
-        (startY / h) * 2 + 1,
+        (-startX / w) * 2 + 1,
+        (startY / h) * 2 - 1,
         0
       ).unproject(camera);
       const endPosition = new THREE.Vector3(
-        (-clientX / w) * 2 - 1,
-        (clientY / h) * 2 + 1,
+        (-clientX / w) * 2 + 1,
+        (clientY / h) * 2 - 1,
         0
       ).unproject(camera);
 
