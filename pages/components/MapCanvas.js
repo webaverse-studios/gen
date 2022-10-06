@@ -148,7 +148,7 @@ export const MapCanvas = () => {
       const chunksMesh = new THREE.InstancedMesh(
         geometry,
         material,
-        512
+        1024
       );
       chunksMesh.frustumCulled = false;
       scene.add(chunksMesh);
