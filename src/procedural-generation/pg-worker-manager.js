@@ -1,3 +1,6 @@
+import PgWorker from './pg-worker.js';
+// import PgWorker from 'worker-loader!.//pg-worker.js';
+
 const abortError = new Error('aborted');
 abortError.isAbortError = true;
 
@@ -10,7 +13,9 @@ const localArray16D = Array(16);
 
 //
 
-const workerUrl = `./pg-worker.js?import`;
+// const baseUrl = import.meta.url;
+// const workerUrl = `./pg-worker.js`;
+// const workerUrl = new URL(`./pg-worker.js`, baseUrl);
 const TASK_PRIORITIES = {
   tracker: -10,
   splat: -1,
@@ -41,9 +46,10 @@ export class PGWorkerManager {
   waitForLoad() {
     if (!this.loadPromise) {
       this.loadPromise = (async () => {
-        const worker = new Worker(workerUrl, {
+        /* const worker = new Worker(new URL(`./pg-worker.js`, import.meta.url), {
           type: 'module',
-        });
+        }); */
+        const worker = new PgWorker();
         const cbs = new Map();
         worker.onmessage = (e) => {
           const {taskId} = e.data;
