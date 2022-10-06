@@ -214,7 +214,10 @@ export const MapCanvas = () => {
   }, [renderer]);
   useEffect(() => {
     const [width, height] = dimensions;
-    renderer && renderer.setSize(width, height);
+    if (renderer) {
+      renderer.setSize(width, height);
+      _refreshChunks(camera, chunksMesh);
+    }
   }, [renderer, dimensions]);
 
   const handleMouseDown = e => {
