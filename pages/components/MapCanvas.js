@@ -13,8 +13,6 @@ const localMatrix = new THREE.Matrix4();
 const localMatrix2 = new THREE.Matrix4();
 const localRaycaster = new THREE.Raycaster();
 
-const downQuaternion = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
-
 //
 
 let scale = 1;
@@ -191,12 +189,12 @@ export const MapCanvas = () => {
 
       const w = dimensions[0] / devicePixelRatio;
       const h = dimensions[1] / devicePixelRatio;
-      const startPosition = new THREE.Vector3(
+      const startPosition = localVector.set(
         (-startX / w) * 2 + 1,
         (startY / h) * 2 - 1,
         0
       ).unproject(camera);
-      const endPosition = new THREE.Vector3(
+      const endPosition = localVector2.set(
         (-clientX / w) * 2 + 1,
         (clientY / h) * 2 - 1,
         0
@@ -219,12 +217,12 @@ export const MapCanvas = () => {
     setRaycasterFromEvent(localRaycaster, e);
 
     const oldScale = scale;
-    const newScale = Math.min(Math.max(scale * (1 + e.deltaY * 0.001), 0.01), 3);
+    const newScale = Math.min(Math.max(scale * (1 + e.deltaY * 0.001), 0.02), 3);
     const scaleFactor = newScale / oldScale;
 
     localMatrix.compose(
       camera.position,
-      downQuaternion,
+      camera.quaternion,
       localVector2.setScalar(oldScale)
     )
       .premultiply(
@@ -235,7 +233,7 @@ export const MapCanvas = () => {
         )
       )
       .premultiply(
-        localMatrix2.makeScale(scaleFactor, 1, scaleFactor)
+        localMatrix2.makeScale(scaleFactor, scaleFactor, scaleFactor)
       )
       .premultiply(
         localMatrix2.makeTranslation(
