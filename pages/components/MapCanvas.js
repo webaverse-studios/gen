@@ -140,10 +140,11 @@ export const MapCanvas = () => {
       const chunksMesh = new THREE.InstancedMesh(
         geometry,
         material,
-        256
+        512
       );
       chunksMesh.frustumCulled = false;
       scene.add(chunksMesh);
+      setChunksMesh(chunksMesh);
 
       const debugGeometry = new THREE.BoxGeometry(1, 1, 1);
       const debugMaterial = new THREE.MeshBasicMaterial({
@@ -242,6 +243,8 @@ export const MapCanvas = () => {
         .sub(startPosition)
         .add(endPosition);
       camera.updateMatrixWorld();
+
+      _refreshChunks(camera, chunksMesh);
     }
 
     setRaycasterFromEvent(localRaycaster, e);
@@ -283,6 +286,8 @@ export const MapCanvas = () => {
       .decompose(camera.position, localQuaternion, localVector2);
     camera.scale.set(newScale, newScale, 1);
     camera.updateMatrixWorld();
+
+    _refreshChunks(camera, chunksMesh);
   };
 
   return (
