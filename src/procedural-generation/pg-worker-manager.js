@@ -46,7 +46,7 @@ export class PGWorkerManager {
     if (!this.loadPromise) {
       this.loadPromise = (async () => {
         const u = import.meta.url;
-        const worker = new Worker(new URL(`/procedural-generation/pg-worker.js`, window.location.href), {
+        const worker = new Worker(`/procedural-generation/pg-worker.js`, {
           type: 'module',
         });
         const cbs = new Map();
