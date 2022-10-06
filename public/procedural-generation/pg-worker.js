@@ -1,7 +1,7 @@
 // import * as THREE from 'three';
 // import {defaultChunkSize} from './constants.js';
 import pg from './pg-binding.js';
-import {makePromise} from '../util.js';
+import {makePromise} from '../utils/misc.js';
 
 //
 
