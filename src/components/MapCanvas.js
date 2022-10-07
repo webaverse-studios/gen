@@ -480,8 +480,8 @@ export const MapCanvas = () => {
       setCamera(camera);
 
       // init
-      chunksMesh.update(camera);
       loadBarriers(barrierMesh);
+      chunksMesh.update(camera);
     }
   }, []);
   function handleResize() {
