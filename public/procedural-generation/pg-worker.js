@@ -279,11 +279,13 @@ const _cloneChunkResult = chunkResult => {
   };
   const _cloneHeightfields = () => {
     if (heightfields) {
-      const heightfields2 = new heightfields.constructor(arrayBuffer, index, heightfields.length);
-      heightfields2.set(heightfields);
-      index += heightfields.length * heightfields.constructor.BYTES_PER_ELEMENT;
+      const pixels = new heightfields.pixels.constructor(arrayBuffer, index, heightfields.pixels.length);
+      pixels.set(heightfields.pixels);
+      index += pixels.length * pixels.constructor.BYTES_PER_ELEMENT;
 
-      return heightfields2;
+      return {
+        pixels,
+      };
     } else {
       return null;
     }
