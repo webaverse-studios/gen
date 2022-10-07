@@ -178,7 +178,7 @@ export const MapCanvas = () => {
       const barrierMaterial = new THREE.MeshBasicMaterial({
         color: 0x00ff00,
         transparent: true,
-        opacity: 0.1,
+        opacity: 0.3,
       });
       const barrierMesh = new THREE.InstancedMesh(
         barrierGeometry,
