@@ -109,48 +109,88 @@ export const MapCanvas = () => {
     if (!procGenInstance) {
       const instance = useInstance();
 
-      const position = localVector.set(0, 0, 0);
-      const minLod = 1;
-      const maxLod = 6;
       const abortController = new AbortController();
       const {signal} = abortController;
-
-      const barrierResult = await instance.generateBarrier(
-        position,
-        minLod,
-        maxLod,
-        chunkSize,
-        {
+      const _generateChunks = async () => {
+        const min = new THREE.Vector2(0, 0);
+        const lod = 1;
+        const lodArray = Int32Array.from([0, 0]);
+        const generateFlags = {
+          terrain: false,
+          water: true,
+          barrier: true,
+          vegetation: true,
+          grass: true,
+          poi: true,
+          heightfield: true,
+        };
+        const numVegetationInstances = 0; // litterUrls.length;
+        const numGrassInstances = 0; // grassUrls.length;
+        const numPoiInstances = 0; // hudUrls.length;
+        const options = {
           signal,
-        },
-      );
-      // console.log('got barrier', barrierResult);
-      barrierMesh.barrierResult = barrierResult;
-
-      const {
-        leafNodes,
-      } = barrierResult;
-      for (let i = 0; i < leafNodes.length; i++) {
-        const leafNode = leafNodes[i];
-        const {
+        };
+        const heightfield = await instance.generateChunk(
           min,
           lod,
-        } = leafNode;
-
-        const size = lod * chunkSize;
-        localMatrix.compose(
-          localVector.set(
-            min[0] * chunkSize,
-            0,
-            min[1] * chunkSize
-          ),
-          zeroQuaternion,
-          localVector2.setScalar(size - spacing)
+          lodArray,
+          generateFlags,
+          numVegetationInstances,
+          numGrassInstances,
+          numPoiInstances,
+          options
         );
-        barrierMesh.setMatrixAt(i, localMatrix);
-      }
-      barrierMesh.instanceMatrix.needsUpdate = true;
-      barrierMesh.count = leafNodes.length;
+        console.log('got heightfield', heightfield);
+        /* generation.finish({
+          heightfield,
+        }); */
+      };
+      const _generateBarriers = async () => {
+        const position = localVector.set(0, 0, 0);
+        const minLod = 1;
+        const maxLod = 6;
+
+        const barrierResult = await instance.generateBarrier(
+          position,
+          minLod,
+          maxLod,
+          chunkSize,
+          {
+            signal,
+          },
+        );
+        // console.log('got barrier', barrierResult);
+        barrierMesh.barrierResult = barrierResult;
+
+        const {
+          leafNodes,
+        } = barrierResult;
+        for (let i = 0; i < leafNodes.length; i++) {
+          const leafNode = leafNodes[i];
+          const {
+            min,
+            lod,
+          } = leafNode;
+
+          const size = lod * chunkSize;
+          localMatrix.compose(
+            localVector.set(
+              min[0] * chunkSize,
+              0,
+              min[1] * chunkSize
+            ),
+            zeroQuaternion,
+            localVector2.setScalar(size - spacing)
+          );
+          barrierMesh.setMatrixAt(i, localMatrix);
+        }
+        barrierMesh.instanceMatrix.needsUpdate = true;
+        barrierMesh.count = leafNodes.length;
+      };
+      await Promise.all([
+        _generateChunks(),
+        _generateBarriers(),
+      ]);
     }
   };
   const _updateBarrierHover = (barrierMesh, position) => {
