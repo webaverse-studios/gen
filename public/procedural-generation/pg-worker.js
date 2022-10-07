@@ -298,6 +298,11 @@ const _cloneChunkResult = chunkResult => {
   const poiInstances2 = _clonePIInstances(poiInstances);
   const heightfields2 = _cloneHeightfields();
 
+  /* // sanity check
+  if (arrayBuffer.byteLength !== index) {
+    throw new Error('arrayBuffer byteLength mismatch during clone');
+  } */
+
   return {
     arrayBuffer,
     terrainGeometry: terrainGeometry2,
