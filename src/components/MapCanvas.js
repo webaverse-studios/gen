@@ -262,11 +262,24 @@ export const MapCanvas = () => {
       lod1Range: Math.ceil(chunksPerView / 2),
       // debug: true,
     });
+    const freeList = new FreeList(maxChunks);
+    const allocMap = new Map();
     lodTracker.onChunkAdd(chunk => {
-      // console.log('chunk add', chunk);
+      const key = procGenManager.getNodeHash(chunk);
+      const freeListEntry = freeList.alloc(1);
+      // key === -65536 && console.log('chunk add', chunk, freeListEntry);
+      allocMap.set(key, freeListEntry);
     });
     lodTracker.onChunkRemove(chunk => {
-      // console.log('chunk remove', chunk);
+      const key = procGenManager.getNodeHash(chunk);
+      const freeListEntry = allocMap.get(key);
+      // key === -65536 && console.log('chunk remove', chunk, freeListEntry);
+      if (freeListEntry !== undefined) {
+        freeList.free(freeListEntry);
+        allocMap.delete(key);
+      } else {
+        debugger;
+      }
     });
     return lodTracker;
   };
