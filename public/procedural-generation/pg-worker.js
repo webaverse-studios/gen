@@ -83,7 +83,7 @@ const _cloneChunkResult = chunkResult => {
   };
   const _getHeightfieldsSize = () => {
     if (heightfields) {
-      let size = heightfields.length * heightfields.constructor.BYTES_PER_ELEMENT;
+      let size = heightfields.pixels.length * heightfields.pixels.constructor.BYTES_PER_ELEMENT;
       return size;
     } else {
       return 0;

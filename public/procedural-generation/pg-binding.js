@@ -323,12 +323,16 @@ const _parseChunkResult = (arrayBuffer, bufferAddress) => {
     const bufferAddress = dataView.getUint32(index, true);
     index += Uint32Array.BYTES_PER_ELEMENT;
 
+    // console.log('buffer address', bufferAddress);
+
     if (bufferAddress) {
       const dataView2 = new DataView(arrayBuffer, bufferAddress);
       let index2 = 0;
 
       const numPixels = dataView2.getUint32(index2, true);
       index2 += Uint32Array.BYTES_PER_ELEMENT;
+
+      // console.log('num pixels', numPixels);
 
       const pixels = new Float32Array(dataView2.buffer, dataView2.byteOffset + index2, numPixels * 4);
       index2 += numPixels * 4 * Float32Array.BYTES_PER_ELEMENT;
@@ -374,7 +378,7 @@ w.createChunkMeshAsync = async (
 
   const lodArray2 = allocator.alloc(Int32Array, 2);
   lodArray2.set(lodArray);
-
+  
   Module._createChunkMeshAsync(
     inst,
     taskId,
