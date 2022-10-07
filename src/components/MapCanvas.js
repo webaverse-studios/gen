@@ -105,6 +105,109 @@ export const MapCanvas = () => {
     _renderChunksToMeshInstances(chunks, chunksMesh);
   };
 
+  const loadBarriers = async barrierMesh => {
+    if (!procGenInstance) {
+      const instance = useInstance();
+
+      const position = localVector.set(0, 0, 0);
+      const minLod = 1;
+      const maxLod = 6;
+      const abortController = new AbortController();
+      const {signal} = abortController;
+
+      const barrierResult = await instance.generateBarrier(
+        position,
+        minLod,
+        maxLod,
+        chunkSize,
+        {
+          signal,
+        },
+      );
+      // console.log('got barrier', barrierResult);
+      barrierMesh.barrierResult = barrierResult;
+
+      const {
+        leafNodes,
+      } = barrierResult;
+      for (let i = 0; i < leafNodes.length; i++) {
+        const leafNode = leafNodes[i];
+        const {
+          min,
+          lod,
+        } = leafNode;
+
+        const size = lod * chunkSize;
+        localMatrix.compose(
+          localVector.set(
+            min[0] * chunkSize,
+            0,
+            min[1] * chunkSize
+          ),
+          zeroQuaternion,
+          localVector2.setScalar(size - spacing)
+        );
+        barrierMesh.setMatrixAt(i, localMatrix);
+      }
+      barrierMesh.instanceMatrix.needsUpdate = true;
+      barrierMesh.count = leafNodes.length;
+    }
+  };
+  const _updateBarrierHover = (barrierMesh, position) => {
+    const {barrierResult} = barrierMesh;
+    if (barrierResult) {
+      const {leafNodes, leafNodesMin, leafNodesMax, leafNodesIndex} = barrierResult;
+
+      const chunkPosition = localVector.copy(position);
+      chunkPosition.x = Math.floor(chunkPosition.x / chunkSize);
+      chunkPosition.y = Math.floor(chunkPosition.y / chunkSize);
+      chunkPosition.z = Math.floor(chunkPosition.z / chunkSize);
+
+      if (
+        chunkPosition.x >= leafNodesMin[0] && chunkPosition.x < leafNodesMax[0] &&
+        chunkPosition.z >= leafNodesMin[1] && chunkPosition.z < leafNodesMax[1]
+      ) {
+        const x = chunkPosition.x - leafNodesMin[0];
+        const z = chunkPosition.z - leafNodesMin[1];
+        const w = leafNodesMax[0] - leafNodesMin[0];
+        // const h = leafNodesMax[1] - leafNodesMin[1];
+        const index = x + z * w;
+        if (index >= 0 && index < leafNodesIndex.length) {
+          const indexIndex = leafNodesIndex[index];
+          const leafNode = leafNodes[indexIndex];
+          if (leafNode) {
+            const {min, lod} = leafNode;
+
+            barrierMesh.material.uniforms.highlightMin.value.fromArray(min)
+              .multiplyScalar(chunkSize);
+            barrierMesh.material.uniforms.highlightMin.needsUpdate = true;
+            barrierMesh.material.uniforms.highlightMax.value.fromArray(min)
+              .add(localVector2.setScalar(lod))
+              .multiplyScalar(chunkSize);
+            barrierMesh.material.uniforms.highlightMax.needsUpdate = true;
+
+            // console.log('got', leafNode.min.join(','), leafNode.lod, leafNodesMin.join(','), leafNodesMax.join(','), barrierResult);
+
+            // console.log('setting',
+            //   barrierMesh.material.uniforms.highlightMin.value.toArray().join(','),
+            //   barrierMesh.material.uniforms.highlightMax.value.toArray().join(','),
+            // );
+          } else {
+            debugger;
+          }
+        } else {
+          // console.log('bad index', index, x, z, w);
+          debugger;
+        }
+      } else {
+        barrierMesh.material.uniforms.highlightMin.value.setScalar(0);
+        barrierMesh.material.uniforms.highlightMin.needsUpdate = true;
+        barrierMesh.material.uniforms.highlightMax.value.setScalar(0);
+        barrierMesh.material.uniforms.highlightMax.needsUpdate = true;
+      }
+    }
+  };
+
   // initialize canvas from element ref
   const handleCanvas = useMemo(() => canvasEl => {
     if (canvasEl) {
@@ -194,9 +297,9 @@ export const MapCanvas = () => {
           varying vec3 vPosition;
 
           void main() {
-            vec4 modelViewPosition = modelViewMatrix * instanceMatrix * vec4(position, 1.0);
-            vPosition = modelViewPosition.xyz;
-            gl_Position = projectionMatrix * modelViewPosition;
+            vec4 instancePosition = instanceMatrix * vec4(position, 1.0);
+            vPosition = instancePosition.xyz;
+            gl_Position = projectionMatrix * modelViewMatrix * instancePosition;
           }
         `,
         fragmentShader: `\
@@ -209,8 +312,8 @@ export const MapCanvas = () => {
             if (
               vPosition.x >= highlightMin.x &&
               vPosition.x < highlightMax.x &&
-              vPosition.y >= highlightMin.y &&
-              vPosition.y <= highlightMax.y
+              vPosition.z >= highlightMin.y &&
+              vPosition.z <= highlightMax.y
             ) {
               c = vec3(0., 0., 1.);
             } else {
@@ -227,6 +330,7 @@ export const MapCanvas = () => {
         256
       );
       barrierMesh.frustumCulled = false;
+      barrierMesh.barrierResult = null;
       scene.add(barrierMesh);
       setBarrierMesh(barrierMesh);
 
@@ -253,61 +357,7 @@ export const MapCanvas = () => {
 
       // init
       _refreshChunks(camera, chunksMesh);
-
-      // debug barrier
-      (async () => {
-        if (!procGenInstance) {
-          const instance = useInstance();
-  
-          const position = localVector.set(0, 0, 0);
-          const minLod = 1;
-          const maxLod = 6;
-          const abortController = new AbortController();
-          const {signal} = abortController;
-  
-          const barrierResult = await instance.generateBarrier(
-            position,
-            minLod,
-            maxLod,
-            chunkSize,
-            {
-              signal,
-            },
-          );
-          // console.log('got barrier', barrierResult);
-  
-          const {
-            leafNodes,
-          } = barrierResult;
-          for (let i = 0; i < leafNodes.length; i++) {
-            const leafNode = leafNodes[i];
-            const {
-              min,
-              lod,
-            } = leafNode;
-
-            const size = lod * chunkSize;
-            /* console.log('make translate', [
-              min[0],
-              0,
-              min[1],
-              size
-            ]); */
-            localMatrix.compose(
-              localVector.set(
-                min[0] * chunkSize,
-                0,
-                min[1] * chunkSize
-              ),
-              zeroQuaternion,
-              localVector2.setScalar(size - spacing)
-            );
-            barrierMesh.setMatrixAt(i, localMatrix);
-          }
-          barrierMesh.instanceMatrix.needsUpdate = true;
-          barrierMesh.count = leafNodes.length;
-        }
-      })();
+      loadBarriers(barrierMesh);
     }
   }, []);
   function handleResize() {
@@ -383,6 +433,10 @@ export const MapCanvas = () => {
     setRaycasterFromEvent(localRaycaster, e);
     debugMesh.position.set(localRaycaster.ray.origin.x, 0, localRaycaster.ray.origin.z);
     debugMesh.updateMatrixWorld();
+
+    if (barrierMesh) {
+      _updateBarrierHover(barrierMesh, localRaycaster.ray.origin);
+    }
   };
   const handleWheel = e => {
     e.stopPropagation();
