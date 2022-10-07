@@ -541,6 +541,7 @@ const _handleMethod = async ({method, args, instance: instanceKey, taskId}) => {
         chunkPosition,
         lod,
         lodArray,
+        chunkSize,
         generateFlagsInt,
         numVegetationInstances,
         numGrassInstances,
