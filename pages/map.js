@@ -2,7 +2,7 @@
 // import {useState, useMemo, useEffect} from 'react';
 
 import styles from '../styles/Map.module.css';
-import {MapCanvas} from './components/MapCanvas.js';
+import {MapCanvas} from '../src/components/MapCanvas.js';
 
 const Map = () => {
   return (
