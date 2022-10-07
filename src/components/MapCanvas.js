@@ -25,6 +25,202 @@ const zeroQuaternion = new THREE.Quaternion();
 
 //
 
+const abortError = new Error('aborted');
+abortError.isAbortError = true;
+
+// helpers
+
+const setRaycasterFromEvent = (raycaster, camera, e) => {
+  const w = globalThis.innerWidth;
+  const h = globalThis.innerHeight;
+  const mouse = localVector2D.set(
+    (e.clientX / w) * 2 - 1,
+    -(e.clientY / h) * 2 + 1
+  );
+  raycaster.setFromCamera(mouse, camera);
+};
+const _getChunksInRange = camera => {
+  const chunks = [];
+
+  // get the top left near point of the camera
+  const topLeftNear = new THREE.Vector3(-1, 1, 0);
+  topLeftNear.unproject(camera);
+  // get the bottom right near point of the camera
+  const bottomRightNear = new THREE.Vector3(1, -1, 0);
+  bottomRightNear.unproject(camera);
+
+  for (let dx = topLeftNear.x; dx < bottomRightNear.x + chunkSize; dx += chunkSize) {
+    for (let dz = topLeftNear.z; dz < bottomRightNear.z + chunkSize; dz += chunkSize) {
+      const x = Math.floor(dx / chunkSize);
+      const z = Math.floor(dz / chunkSize);
+      chunks.push({
+        min: new THREE.Vector2(x, z),
+      });
+    }
+  }
+
+  return chunks;
+};
+const _getChunkHeightfieldAsync = async (x, z, {
+  signal = null,
+} = {}) => {
+  const instance = useInstance();
+
+  const min = new THREE.Vector2(x, z);
+  const lod = 1;
+  const lodArray = Int32Array.from([lod, lod]);
+  const generateFlags = {
+    terrain: false,
+    water: false,
+    barrier: false,
+    vegetation: false,
+    grass: false,
+    poi: false,
+    heightfield: true,
+  };
+  const numVegetationInstances = 0; // litterUrls.length;
+  const numGrassInstances = 0; // grassUrls.length;
+  const numPoiInstances = 0; // hudUrls.length;
+  const options = {
+    signal,
+  };
+  const chunkResult = await instance.generateChunk(
+    min,
+    lod,
+    lodArray,
+    generateFlags,
+    numVegetationInstances,
+    numGrassInstances,
+    numPoiInstances,
+    options
+  );
+  return chunkResult.heightfields.pixels;
+};
+
+// mesh classes
+
+class ChunksMesh extends THREE.InstancedMesh {
+  constructor() {
+    const chunksGeometry = new THREE.PlaneGeometry(1, 1)
+      // .scale(scale, scale, scale)
+      .translate(0.5, -0.5, 0)
+      .rotateX(-Math.PI / 2);
+    const chunksMaterial = new THREE.ShaderMaterial({
+      vertexShader: `\
+        void main() {
+          gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `\
+        void main() {
+          gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+        }
+      `,
+    });
+    super(
+      chunksGeometry,
+      chunksMaterial,
+      1024
+    );
+
+    this.canvas = document.createElement('canvas');
+    this.canvas.ctx = this.canvas.getContext('2d');
+    this.canvas.style.cssText = `\
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 100;
+      pointer-events: none;
+    `;
+    document.body.appendChild(this.canvas);
+    this.updateCancelFn = null;
+  }
+  update(camera) {
+    this.updateInstances(camera);
+    this.updateAsyncTextureAsync(camera);
+  }
+  updateInstances(camera) {
+    const chunks = _getChunksInRange(camera);
+
+    for (let i = 0; i < chunks.length; i++) {
+      const chunk = chunks[i];
+      const {min} = chunk;
+      localMatrix.compose(
+        localVector.set(
+          min.x * chunkSize,
+          0,
+          min.y * chunkSize
+        ),
+        zeroQuaternion,
+        localVector2.setScalar(chunkSize - spacing)
+      );
+      this.setMatrixAt(i, localMatrix);
+    }
+    this.instanceMatrix.needsUpdate = true;
+    this.count = chunks.length;
+  }
+  async updateAsyncTextureAsync(camera) {
+    if (this.updateCancelFn) {
+      this.updateCancelFn();
+      this.updateCancelFn = null;
+    }
+
+    const abortController = new AbortController();
+    const {signal} = abortController;
+    this.updateCancelFn = () => {
+      abortController.abort(abortError);
+    };
+
+    const {canvas} = this;
+    const {ctx} = canvas;
+
+    const chunksPerView = Math.ceil(worldWidth / chunkSize * camera.scale.x);
+    const canvasSize = chunksPerView * chunkSize;
+
+    const rangeMin = new THREE.Vector2(-16, -16);
+    const rangeMax = new THREE.Vector2(16, 16);
+    canvas.width = canvasSize;
+    canvas.height = canvasSize;
+    const imageData = ctx.createImageData(chunkSize, chunkSize);
+
+    const promises = [];
+    for (let dx = rangeMin.x; dx < rangeMax.x; dx++) {
+      for (let dz = rangeMin.y; dz < rangeMax.y; dz++) {
+        const promise = (async () => {
+          try {
+            const pixels = await _getChunkHeightfieldAsync(dx, dz, {
+              signal,
+            });
+            
+            let index = 0;
+            for (let ddz = 0; ddz < chunkSize; ddz++) {
+              for (let ddx = 0; ddx < chunkSize; ddx++) {
+                const srcHeight = pixels[index];
+                const srcWater = pixels[index + 1];
+                imageData.data[index] = srcHeight;
+                imageData.data[index + 1] = srcWater;
+                imageData.data[index + 2] = 0;
+                imageData.data[index + 3] = 255;
+
+                index += 4;
+              }
+            }
+            ctx.putImageData(imageData, dx * chunkSize, dz * chunkSize);
+          } catch(err) {
+            if (!err?.isAbortError) {
+              throw err;
+            }
+          }
+        })();
+        promises.push(promise);
+      }
+    }
+    await Promise.all(promises);
+  }
+}
+
+//
+
 let procGenInstance = null;
 const useInstance = () => {
   if (!procGenInstance) {
@@ -51,201 +247,55 @@ export const MapCanvas = () => {
   const [barrierMesh, setBarrierMesh] = useState(null);
 
   // helpers
-  const setRaycasterFromEvent = (raycaster, e) => {
-    const w = dimensions[0] / devicePixelRatio;
-    const h = dimensions[1] / devicePixelRatio;
-    const mouse = localVector2D.set(
-      (e.clientX / w) * 2 - 1,
-      -(e.clientY / h) * 2 + 1
-    );
-    raycaster.setFromCamera(mouse, camera);
-  };
-  const _getChunksInRange = camera => {
-    const chunks = [];
+  const loadBarriers = async barrierMesh => {
+    const instance = useInstance();
+    
+    const minLod = 1;
+    const maxLod = 6;
+    
+    const abortController = new AbortController();
+    const {signal} = abortController;
+    const _generateBarriers = async () => {
+      const position = localVector.set(0, 0, 0);
 
-    // get the top left near point of the camera
-    const topLeftNear = new THREE.Vector3(-1, 1, 0);
-    topLeftNear.unproject(camera);
-    // get the bottom right near point of the camera
-    const bottomRightNear = new THREE.Vector3(1, -1, 0);
-    bottomRightNear.unproject(camera);
-
-    for (let dx = topLeftNear.x; dx < bottomRightNear.x + chunkSize; dx += chunkSize) {
-      for (let dz = topLeftNear.z; dz < bottomRightNear.z + chunkSize; dz += chunkSize) {
-        const x = Math.floor(dx / chunkSize);
-        const z = Math.floor(dz / chunkSize);
-        chunks.push({
-          min: new THREE.Vector2(x, z),
-        });
-      }
-    }
-
-    return chunks;
-  };
-  const _renderChunksToMeshInstances = (chunks, chunksMesh) => {
-    for (let i = 0; i < chunks.length; i++) {
-      const chunk = chunks[i];
-      const {min} = chunk;
-      localMatrix.compose(
-        localVector.set(
-          min.x * chunkSize,
-          0,
-          min.y * chunkSize
-        ),
-        zeroQuaternion,
-        localVector2.setScalar(chunkSize - spacing)
+      const barrierResult = await instance.generateBarrier(
+        position,
+        minLod,
+        maxLod,
+        chunkSize,
+        {
+          signal,
+        },
       );
-      chunksMesh.setMatrixAt(i, localMatrix);
-    }
-    chunksMesh.instanceMatrix.needsUpdate = true;
-    chunksMesh.count = chunks.length;
-  };
-  const _refreshChunks = (camera, chunksMesh) => {
-    const chunks = _getChunksInRange(camera);
-    _renderChunksToMeshInstances(chunks, chunksMesh);
-  };
-
-  const loadTerrain = async barrierMesh => {
-    if (!procGenInstance) {
-      const instance = useInstance();
-      
-      const minLod = 1;
-      const maxLod = 6;
-      
-      const abortController = new AbortController();
-      const {signal} = abortController;
-      const _generateBarriers = async () => {
-        const position = localVector.set(0, 0, 0);
-    
-        const barrierResult = await instance.generateBarrier(
-          position,
-          minLod,
-          maxLod,
-          chunkSize,
-          {
-            signal,
-          },
-        );
-        // console.log('got barrier', barrierResult);
-        barrierMesh.barrierResult = barrierResult;
-    
+      // console.log('got barrier', barrierResult);
+      barrierMesh.barrierResult = barrierResult;
+  
+      const {
+        leafNodes,
+      } = barrierResult;
+      for (let i = 0; i < leafNodes.length; i++) {
+        const leafNode = leafNodes[i];
         const {
-          leafNodes,
-        } = barrierResult;
-        for (let i = 0; i < leafNodes.length; i++) {
-          const leafNode = leafNodes[i];
-          const {
-            min,
-            lod,
-          } = leafNode;
-    
-          const size = lod * chunkSize;
-          localMatrix.compose(
-            localVector.set(
-              min[0] * chunkSize,
-              0,
-              min[1] * chunkSize
-            ),
-            zeroQuaternion,
-            localVector2.setScalar(size - spacing)
-          );
-          barrierMesh.setMatrixAt(i, localMatrix);
-        }
-        barrierMesh.instanceMatrix.needsUpdate = true;
-        barrierMesh.count = leafNodes.length;
-      };
-      const _generateChunks = async () => {
-        const _getChunkHeightfield = async (x, z) => {
-          const min = new THREE.Vector2(x, z);
-          const lod = 1;
-          const lodArray = Int32Array.from([lod, lod]);
-          const generateFlags = {
-            terrain: false,
-            water: false,
-            barrier: false,
-            vegetation: false,
-            grass: false,
-            poi: false,
-            heightfield: true,
-          };
-          const numVegetationInstances = 0; // litterUrls.length;
-          const numGrassInstances = 0; // grassUrls.length;
-          const numPoiInstances = 0; // hudUrls.length;
-          const options = {
-            signal,
-          };
-          const chunkResult = await instance.generateChunk(
-            min,
-            lod,
-            lodArray,
-            generateFlags,
-            numVegetationInstances,
-            numGrassInstances,
-            numPoiInstances,
-            options
-          );
-          // console.log('got heightfield', heightfield);
-          /* generation.finish({
-            heightfield,
-          }); */
-          return chunkResult.heightfields.pixels;
-        };
-
-        const rangeMin = new THREE.Vector2(-16, -16);
-        const rangeMax = new THREE.Vector2(16, 16);
-        const w = rangeMax.x - rangeMin.x;
-        const h = rangeMax.y - rangeMin.y;
-        // const center = rangeMin.clone().add(rangeMax).multiplyScalar(0.5);
-        // const radius = Math.max(
-        //   Math.abs(rangeMax.x - center.x),
-        //   Math.abs(rangeMax.y - center.y)
-        // );
-
-        const canvas = document.createElement('canvas');
-        canvas.width = w * chunkSize;
-        canvas.height = h * chunkSize;
-        const ctx = canvas.getContext('2d');
-        const imageData = ctx.createImageData(chunkSize, chunkSize);
-        canvas.style.cssText = `\
-          position: fixed;
-          top: 0;
-          left: 0;
-          z-index: 100;
-          pointer-events: none;
-        `;
-        document.body.appendChild(canvas);
-
-        const promises = [];
-        for (let dx = rangeMin.x; dx < rangeMax.x; dx++) {
-          for (let dz = rangeMin.y; dz < rangeMax.y; dz++) {
-            const promise = (async () => {
-              const pixels = await _getChunkHeightfield(dx, dz);
-              
-              let index = 0;
-              for (let ddz = 0; ddz < chunkSize; ddz++) {
-                for (let ddx = 0; ddx < chunkSize; ddx++) {
-                  const srcHeight = pixels[index];
-                  const srcWater = pixels[index + 1];
-                  imageData.data[index] = srcHeight;
-                  imageData.data[index + 1] = srcWater;
-                  imageData.data[index + 2] = 0;
-                  imageData.data[index + 3] = 255;
-
-                  index += 4;
-                }
-              }
-              ctx.putImageData(imageData, dx * chunkSize, dz * chunkSize);
-            })();
-            promises.push(promise);
-          }
-        }
-        await Promise.all(promises);
-      };
-      await Promise.all([
-        _generateBarriers(),
-        _generateChunks(),
-      ]);
-    }
+          min,
+          lod,
+        } = leafNode;
+  
+        const size = lod * chunkSize;
+        localMatrix.compose(
+          localVector.set(
+            min[0] * chunkSize,
+            0,
+            min[1] * chunkSize
+          ),
+          zeroQuaternion,
+          localVector2.setScalar(size - spacing)
+        );
+        barrierMesh.setMatrixAt(i, localMatrix);
+      }
+      barrierMesh.instanceMatrix.needsUpdate = true;
+      barrierMesh.count = leafNodes.length;
+    };
+    await _generateBarriers();
   };
   const _updateBarrierHover = (barrierMesh, position) => {
     const {barrierResult} = barrierMesh;
@@ -338,27 +388,7 @@ export const MapCanvas = () => {
       const scene = new THREE.Scene();
       scene.matrixWorldAutoUpdate = false;
 
-      const chunksGeometry = new THREE.PlaneGeometry(1, 1)
-        // .scale(scale, scale, scale)
-        .translate(0.5, -0.5, 0)
-        .rotateX(-Math.PI / 2);
-      const chunksMaterial = new THREE.ShaderMaterial({
-        vertexShader: `\
-          void main() {
-            gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.0);
-          }
-        `,
-        fragmentShader: `\
-          void main() {
-            gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
-          }
-        `,
-      });
-      const chunksMesh = new THREE.InstancedMesh(
-        chunksGeometry,
-        chunksMaterial,
-        1024
-      );
+      const chunksMesh = new ChunksMesh();
       chunksMesh.frustumCulled = false;
       scene.add(chunksMesh);
       setChunksMesh(chunksMesh);
@@ -450,8 +480,8 @@ export const MapCanvas = () => {
       setCamera(camera);
 
       // init
-      _refreshChunks(camera, chunksMesh);
-      loadTerrain(barrierMesh);
+      chunksMesh.update(camera);
+      loadBarriers(barrierMesh);
     }
   }, []);
   function handleResize() {
@@ -482,7 +512,7 @@ export const MapCanvas = () => {
     const [width, height] = dimensions;
     if (renderer) {
       renderer.setSize(width, height);
-      _refreshChunks(camera, chunksMesh);
+      chunksMesh.update(camera);
     }
   }, [renderer, dimensions]);
 
@@ -521,10 +551,10 @@ export const MapCanvas = () => {
         .add(endPosition);
       camera.updateMatrixWorld();
 
-      _refreshChunks(camera, chunksMesh);
+      chunksMesh.update(camera);
     }
 
-    setRaycasterFromEvent(localRaycaster, e);
+    setRaycasterFromEvent(localRaycaster, camera, e);
     debugMesh.position.set(localRaycaster.ray.origin.x, 0, localRaycaster.ray.origin.z);
     debugMesh.updateMatrixWorld();
 
@@ -536,11 +566,13 @@ export const MapCanvas = () => {
     e.stopPropagation();
 
     // scale around the mouse position
-    setRaycasterFromEvent(localRaycaster, e);
+    setRaycasterFromEvent(localRaycaster, camera, e);
 
     const oldScale = camera.scale.x;
     const newScale = Math.min(Math.max(oldScale * (1 + e.deltaY * 0.001), 0.02), 3);
     const scaleFactor = newScale / oldScale;
+
+    // console.log('new scale', newScale);
 
     localMatrix.compose(
       camera.position,
@@ -568,7 +600,7 @@ export const MapCanvas = () => {
     camera.scale.set(newScale, newScale, 1);
     camera.updateMatrixWorld();
 
-    _refreshChunks(camera, chunksMesh);
+    chunksMesh.update(camera);
   };
 
   return (
