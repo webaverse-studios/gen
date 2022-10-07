@@ -1,5 +1,5 @@
 import Module from './pg.module.js'
-// import {Allocator} from './geometry-util.js';
+import {Allocator} from '../utils/geometry-utils.js';
 import {makePromise} from '../utils/async-utils.js';
 
 //
