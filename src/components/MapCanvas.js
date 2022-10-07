@@ -9,6 +9,7 @@ import styles from '../../styles/MapCanvas.module.css';
 const chunkSize = 16;
 const worldWidth = 128;
 const worldHeight = 128;
+const spacing = 1;
 
 //
 
@@ -85,10 +86,14 @@ export const MapCanvas = () => {
     for (let i = 0; i < chunks.length; i++) {
       const chunk = chunks[i];
       const {min} = chunk;
-      localMatrix.makeTranslation(
-        min.x * chunkSize,
-        0,
-        min.y * chunkSize
+      localMatrix.compose(
+        localVector.set(
+          min.x * chunkSize,
+          0,
+          min.y * chunkSize
+        ),
+        zeroQuaternion,
+        localVector2.setScalar(chunkSize - spacing)
       );
       chunksMesh.setMatrixAt(i, localMatrix);
     }
@@ -136,10 +141,9 @@ export const MapCanvas = () => {
       const scene = new THREE.Scene();
       scene.matrixWorldAutoUpdate = false;
 
-      const scale = 0.9;
-      const geometry = new THREE.PlaneGeometry(chunkSize, chunkSize)
-        .scale(scale, scale, scale)
-        .translate(chunkSize / 2, -chunkSize / 2, 0)
+      const geometry = new THREE.PlaneGeometry(1, 1)
+        // .scale(scale, scale, scale)
+        .translate(0.5, -0.5, 0)
         .rotateX(-Math.PI / 2);
       const material = new THREE.ShaderMaterial({
         vertexShader: `\
@@ -172,7 +176,7 @@ export const MapCanvas = () => {
       setDebugMesh(debugMesh);
 
       const barrierGeometry = new THREE.PlaneGeometry(1, 1)
-        .scale(scale, scale, scale)
+        // .scale(scale, scale, scale)
         .translate(0.5, -0.5, 0)
         .rotateX(-Math.PI / 2);
       const barrierMaterial = new THREE.MeshBasicMaterial({
@@ -259,7 +263,7 @@ export const MapCanvas = () => {
                 min[1] * chunkSize
               ),
               zeroQuaternion,
-              localVector2.setScalar(size)
+              localVector2.setScalar(size - spacing)
             );
             barrierMesh.setMatrixAt(i, localMatrix);
           }
