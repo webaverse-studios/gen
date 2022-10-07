@@ -224,12 +224,12 @@ class ChunksMesh extends THREE.InstancedMesh {
 
 //
 
+const procGenManager = new ProcGenManager({
+  chunkSize,
+});
 let procGenInstance = null;
 const useInstance = () => {
   if (!procGenInstance) {
-    const procGenManager = new ProcGenManager({
-      chunkSize,
-    });
     procGenInstance = procGenManager.getInstance('lol');
   }
   return procGenInstance;
