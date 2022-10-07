@@ -179,10 +179,47 @@ export const MapCanvas = () => {
         // .scale(scale, scale, scale)
         .translate(0.5, -0.5, 0)
         .rotateX(-Math.PI / 2);
-      const barrierMaterial = new THREE.MeshBasicMaterial({
-        color: 0x00ff00,
-        transparent: true,
-        opacity: 0.3,
+      const barrierMaterial = new THREE.ShaderMaterial({
+        uniforms: {
+          highlightMin: {
+            value: new THREE.Vector2(),
+            needsUpdate: false,
+          },
+          highlightMax: {
+            value: new THREE.Vector2(),
+            needsUpdate: false,
+          },
+        },
+        vertexShader: `\
+          varying vec3 vPosition;
+
+          void main() {
+            vec4 modelViewPosition = modelViewMatrix * instanceMatrix * vec4(position, 1.0);
+            vPosition = modelViewPosition.xyz;
+            gl_Position = projectionMatrix * modelViewPosition;
+          }
+        `,
+        fragmentShader: `\
+          uniform vec2 highlightMin;
+          uniform vec2 highlightMax;
+          varying vec3 vPosition;
+
+          void main() {
+            vec3 c;
+            if (
+              vPosition.x >= highlightMin.x &&
+              vPosition.x < highlightMax.x &&
+              vPosition.y >= highlightMin.y &&
+              vPosition.y <= highlightMax.y
+            ) {
+              c = vec3(0., 0., 1.);
+            } else {
+              c = vec3(0., 1., 0.);
+            }
+            gl_FragColor = vec4(c, 0.5);
+          }
+        `,
+        transparent: true
       });
       const barrierMesh = new THREE.InstancedMesh(
         barrierGeometry,
