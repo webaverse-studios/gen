@@ -600,9 +600,9 @@ export const MapCanvas = () => {
     debugMesh.position.set(localRaycaster.ray.origin.x, 0, localRaycaster.ray.origin.z);
     debugMesh.updateMatrixWorld();
 
-    if (barrierMesh) {
+    // if (barrierMesh) {
       _updateBarrierHover(barrierMesh, localRaycaster.ray.origin);
-    }
+    // }
   };
   const handleWheel = e => {
     e.stopPropagation();
