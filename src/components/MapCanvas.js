@@ -105,51 +105,18 @@ export const MapCanvas = () => {
     _renderChunksToMeshInstances(chunks, chunksMesh);
   };
 
-  const loadBarriers = async barrierMesh => {
+  const loadTerrain = async barrierMesh => {
     if (!procGenInstance) {
       const instance = useInstance();
-
+      
+      const minLod = 1;
+      const maxLod = 6;
+      
       const abortController = new AbortController();
       const {signal} = abortController;
-      const _generateChunks = async () => {
-        const min = new THREE.Vector2(0, 0);
-        const lod = 1;
-        const lodArray = Int32Array.from([0, 0]);
-        const generateFlags = {
-          terrain: false,
-          water: true,
-          barrier: true,
-          vegetation: true,
-          grass: true,
-          poi: true,
-          heightfield: true,
-        };
-        const numVegetationInstances = 0; // litterUrls.length;
-        const numGrassInstances = 0; // grassUrls.length;
-        const numPoiInstances = 0; // hudUrls.length;
-        const options = {
-          signal,
-        };
-        const heightfield = await instance.generateChunk(
-          min,
-          lod,
-          lodArray,
-          generateFlags,
-          numVegetationInstances,
-          numGrassInstances,
-          numPoiInstances,
-          options
-        );
-        console.log('got heightfield', heightfield);
-        /* generation.finish({
-          heightfield,
-        }); */
-      };
       const _generateBarriers = async () => {
         const position = localVector.set(0, 0, 0);
-        const minLod = 1;
-        const maxLod = 6;
-
+    
         const barrierResult = await instance.generateBarrier(
           position,
           minLod,
@@ -161,7 +128,7 @@ export const MapCanvas = () => {
         );
         // console.log('got barrier', barrierResult);
         barrierMesh.barrierResult = barrierResult;
-
+    
         const {
           leafNodes,
         } = barrierResult;
@@ -171,7 +138,7 @@ export const MapCanvas = () => {
             min,
             lod,
           } = leafNode;
-
+    
           const size = lod * chunkSize;
           localMatrix.compose(
             localVector.set(
@@ -187,9 +154,96 @@ export const MapCanvas = () => {
         barrierMesh.instanceMatrix.needsUpdate = true;
         barrierMesh.count = leafNodes.length;
       };
+      const _generateChunks = async () => {
+        const _getChunkHeightfield = async (x, z) => {
+          const min = new THREE.Vector2(x, z);
+          const lod = 1;
+          const lodArray = Int32Array.from([lod, lod]);
+          const generateFlags = {
+            terrain: false,
+            water: false,
+            barrier: false,
+            vegetation: false,
+            grass: false,
+            poi: false,
+            heightfield: true,
+          };
+          const numVegetationInstances = 0; // litterUrls.length;
+          const numGrassInstances = 0; // grassUrls.length;
+          const numPoiInstances = 0; // hudUrls.length;
+          const options = {
+            signal,
+          };
+          const chunkResult = await instance.generateChunk(
+            min,
+            lod,
+            lodArray,
+            generateFlags,
+            numVegetationInstances,
+            numGrassInstances,
+            numPoiInstances,
+            options
+          );
+          // console.log('got heightfield', heightfield);
+          /* generation.finish({
+            heightfield,
+          }); */
+          return chunkResult.heightfields.pixels;
+        };
+
+        const rangeMin = new THREE.Vector2(-16, -16);
+        const rangeMax = new THREE.Vector2(16, 16);
+        const w = rangeMax.x - rangeMin.x;
+        const h = rangeMax.y - rangeMin.y;
+        // const center = rangeMin.clone().add(rangeMax).multiplyScalar(0.5);
+        // const radius = Math.max(
+        //   Math.abs(rangeMax.x - center.x),
+        //   Math.abs(rangeMax.y - center.y)
+        // );
+
+        const canvas = document.createElement('canvas');
+        canvas.width = w * chunkSize;
+        canvas.height = h * chunkSize;
+        const ctx = canvas.getContext('2d');
+        const imageData = ctx.createImageData(chunkSize, chunkSize);
+        canvas.style.cssText = `\
+          position: fixed;
+          top: 0;
+          left: 0;
+          z-index: 100;
+          pointer-events: none;
+        `;
+        document.body.appendChild(canvas);
+
+        const promises = [];
+        for (let dx = rangeMin.x; dx < rangeMax.x; dx++) {
+          for (let dz = rangeMin.y; dz < rangeMax.y; dz++) {
+            const promise = (async () => {
+              const pixels = await _getChunkHeightfield(dx, dz);
+              
+              let index = 0;
+              for (let ddz = 0; ddz < chunkSize; ddz++) {
+                for (let ddx = 0; ddx < chunkSize; ddx++) {
+                  const srcHeight = pixels[index];
+                  const srcWater = pixels[index + 1];
+                  imageData.data[index] = srcHeight;
+                  imageData.data[index + 1] = srcWater;
+                  imageData.data[index + 2] = 0;
+                  imageData.data[index + 3] = 255;
+
+                  index += 4;
+                }
+              }
+              ctx.putImageData(imageData, dx * chunkSize, dz * chunkSize);
+            })();
+            promises.push(promise);
+          }
+        }
+        await Promise.all(promises);
+      };
       await Promise.all([
-        _generateChunks(),
         _generateBarriers(),
+        _generateChunks(),
       ]);
     }
   };
@@ -397,7 +451,7 @@ export const MapCanvas = () => {
 
       // init
       _refreshChunks(camera, chunksMesh);
-      loadBarriers(barrierMesh);
+      loadTerrain(barrierMesh);
     }
   }, []);
   function handleResize() {
