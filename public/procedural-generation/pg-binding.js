@@ -303,12 +303,31 @@ const _parseChunkResult = (arrayBuffer, bufferAddress) => {
       instances,
     };
   };
+  const _parseHeightfields = () => {
+    const bufferAddress = dataView.getUint32(index, true);
+    index += Uint32Array.BYTES_PER_ELEMENT;
+
+    const dataView2 = new DataView(arrayBuffer, bufferAddress);
+    let index2 = 0;
+
+    const numPixels = dataView2.getUint32(index2, true);
+    index2 += Uint32Array.BYTES_PER_ELEMENT;
+
+    const pixels = new Float32Array(dataView2.buffer, dataView2.byteOffset + index2, numPixels * 4);
+    index2 += numPixels * 4 * Float32Array.BYTES_PER_ELEMENT;
+
+    return {
+      bufferAddress,
+      pixels,
+    };
+  };
 
   const terrainGeometry = _parseTerrainVertexBuffer();
   const waterGeometry = _parseWaterVertexBuffer();
   const vegetationInstances = _parsePQIInstances();
   const grassInstances = _parsePQIInstances();
   const poiInstances = _parsePIInstances();
+  const heightfields = _parseHeightfields();
 
   return {
     bufferAddress,
@@ -317,6 +336,7 @@ const _parseChunkResult = (arrayBuffer, bufferAddress) => {
     vegetationInstances,
     grassInstances,
     poiInstances,
+    heightfields,
   };
 };
 w.createChunkMeshAsync = async (

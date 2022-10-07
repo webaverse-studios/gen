@@ -19,6 +19,7 @@ const GenerateFlags = {
   vegetation: 1 << 2,
   grass: 1 << 3,
   poi: 1 << 4,
+  heightfield: 1 << 5,
 };
 const _generateFlagsToInt = generateFlags => {
   let result = 0;
@@ -27,6 +28,7 @@ const _generateFlagsToInt = generateFlags => {
   generateFlags.vegetation && (result |= GenerateFlags.vegetation);
   generateFlags.grass && (result |= GenerateFlags.grass);
   generateFlags.poi && (result |= GenerateFlags.poi);
+  generateFlags.heightfield && (result |= GenerateFlags.heightfield);
   return result;
 };
 

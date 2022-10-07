@@ -16,6 +16,7 @@ const _cloneChunkResult = chunkResult => {
     vegetationInstances,
     grassInstances,
     poiInstances,
+    heightfields,
   } = chunkResult;
 
   const _getTerrainGeometrySize = () => {
@@ -60,6 +61,10 @@ const _cloneChunkResult = chunkResult => {
       instances.length * instances.constructor.BYTES_PER_ELEMENT;
     return size;
   };
+  const _getHeightfieldsSize = () => {
+    let size = heightfields.length * heightfields.constructor.BYTES_PER_ELEMENT;
+    return size;
+  };
 
   const terrainGeometrySize = _getTerrainGeometrySize();
   const waterGeometrySize = _getWaterGeometrySize();
@@ -67,13 +72,15 @@ const _cloneChunkResult = chunkResult => {
   const vegetationInstancesSize = _getPQIInstancesSize(vegetationInstances);
   const grassInstancesSize = _getPQIInstancesSize(grassInstances);
   const poiInstancesSize = _getPIInstancesSize(poiInstances);
+  const heightfieldsSize = _getHeightfieldsSize();
   const arrayBuffer = new ArrayBuffer(
     terrainGeometrySize +
     waterGeometrySize +
     // barrierGeometrySize +
     vegetationInstancesSize +
     grassInstancesSize +
-    poiInstancesSize
+    poiInstancesSize +
+    heightfieldsSize
   );
   let index = 0;
 
@@ -226,12 +233,20 @@ const _cloneChunkResult = chunkResult => {
       instances,
     };
   };
+  const _cloneHeightfields = () => {
+    const heightfields2 = new heightfields.constructor(arrayBuffer, index, heightfields.length);
+    heightfields2.set(heightfields);
+    index += heightfields.length * heightfields.constructor.BYTES_PER_ELEMENT;
+
+    return heightfields2;
+  };
 
   const terrainGeometry2 = _cloneTerrainGeometry();
   const waterGeometry2 = _cloneWaterGeometry();
   const vegetationInstances2 = _clonePQIInstances(vegetationInstances);
   const grassInstances2 = _clonePQIInstances(grassInstances);
   const poiInstances2 = _clonePIInstances(poiInstances);
+  const heightfields2 = _cloneHeightfields();
 
   return {
     arrayBuffer,
@@ -240,6 +255,7 @@ const _cloneChunkResult = chunkResult => {
     vegetationInstances: vegetationInstances2,
     grassInstances: grassInstances2,
     poiInstances: poiInstances2,
+    heightfields: heightfields2,
   };
 };
 const _cloneBarrierResult = barrierResult => {
@@ -506,6 +522,7 @@ const _handleMethod = async ({method, args, instance: instanceKey, taskId}) => {
         pg.free(chunkResult.waterGeometry.bufferAddress);
         pg.free(chunkResult.grassInstances.bufferAddress);
         pg.free(chunkResult.poiInstances.bufferAddress);
+        pg.free(chunkResult.heightfields.bufferAddress);
         pg.free(chunkResult.bufferAddress);
       };
       _freeChunkResult(chunkResult);
