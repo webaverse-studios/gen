@@ -254,9 +254,9 @@ export const MapCanvas = () => {
             ]); */
             localMatrix.compose(
               localVector.set(
-                min[0],
+                min[0] * chunkSize,
                 0,
-                min[1]
+                min[1] * chunkSize
               ),
               zeroQuaternion,
               localVector2.setScalar(size)
