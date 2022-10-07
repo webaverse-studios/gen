@@ -141,11 +141,11 @@ export const MapCanvas = () => {
       const scene = new THREE.Scene();
       scene.matrixWorldAutoUpdate = false;
 
-      const geometry = new THREE.PlaneGeometry(1, 1)
+      const chunksGeometry = new THREE.PlaneGeometry(1, 1)
         // .scale(scale, scale, scale)
         .translate(0.5, -0.5, 0)
         .rotateX(-Math.PI / 2);
-      const material = new THREE.ShaderMaterial({
+      const chunksMaterial = new THREE.ShaderMaterial({
         vertexShader: `\
           void main() {
             gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.0);
@@ -158,8 +158,8 @@ export const MapCanvas = () => {
         `,
       });
       const chunksMesh = new THREE.InstancedMesh(
-        geometry,
-        material,
+        chunksGeometry,
+        chunksMaterial,
         1024
       );
       chunksMesh.frustumCulled = false;
