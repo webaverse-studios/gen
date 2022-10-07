@@ -412,7 +412,7 @@ const _cloneBarrierResult = barrierResult => {
       leafNodesMins[i * 2] = leafNode.min[0];
       leafNodesMins[i * 2 + 1] = leafNode.min[1];
       leafNodes2[i] = {
-        min: leafNode.min,
+        min: leafNodesMins.subarray(i * 2, i * 2 + 2),
         lod: leafNode.lod,
       };
     }
