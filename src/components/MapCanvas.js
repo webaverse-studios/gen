@@ -137,7 +137,7 @@ class ChunksMesh extends THREE.InstancedMesh {
   }
   update(camera) {
     this.updateInstances(camera);
-    this.updateAsyncTextureAsync(camera);
+    // this.updateAsyncTextureAsync(camera);
   }
   updateInstances(camera) {
     const chunks = _getChunksInRange(camera);
@@ -215,7 +215,10 @@ class ChunksMesh extends THREE.InstancedMesh {
         promises.push(promise);
       }
     }
-    await Promise.all(promises);
+    await Promise.all(promises); 
+  }
+  destroy() {
+    this.canvas?.parentNode?.removeChild(this.canvas);
   }
 }
 
@@ -245,8 +248,26 @@ export const MapCanvas = () => {
   const [chunksMesh, setChunksMesh] = useState(null);
   const [debugMesh, setDebugMesh] = useState(null);
   const [barrierMesh, setBarrierMesh] = useState(null);
+  const [lodTracker, setLodTracker] = useState(null);
 
   // helpers
+  const loadLods = async () => {
+    const instance = useInstance();
+
+    const chunksPerView = Math.ceil(worldWidth / chunkSize);
+    const lodTracker = await instance.createLodChunkTracker({
+      lods: 1,
+      lod1Range: Math.ceil(chunksPerView / 2),
+      // debug: true,
+    });
+    lodTracker.onChunkAdd(chunk => {
+      // console.log('chunk add', chunk);
+    });
+    lodTracker.onChunkRemove(chunk => {
+      // console.log('chunk remove', chunk);
+    });
+    return lodTracker;
+  };
   const loadBarriers = async barrierMesh => {
     const instance = useInstance();
     
@@ -480,8 +501,11 @@ export const MapCanvas = () => {
       setCamera(camera);
 
       // init
+      loadLods().then(lodTracker => {
+        lodTracker.update(camera.position);
+        setLodTracker(lodTracker);
+      });
       loadBarriers(barrierMesh);
-      chunksMesh.update(camera);
     }
   }, []);
   function handleResize() {
@@ -506,15 +530,18 @@ export const MapCanvas = () => {
       globalThis.removeEventListener('resize', handleResize);
       globalThis.removeEventListener('mouseup', handleMouseUp);
       renderer && renderer.stop();
+      chunksMesh && chunksMesh.destroy();
     };
   }, [renderer]);
   useEffect(() => {
-    const [width, height] = dimensions;
     if (renderer) {
+      const [width, height] = dimensions;
       renderer.setSize(width, height);
-      chunksMesh.update(camera);
     }
   }, [renderer, dimensions]);
+  useEffect(() => {
+    lodTracker && lodTracker.update(camera.position);
+  }, [lodTracker, camera, dimensions]);
 
   const handleMouseDown = e => {
     e.preventDefault();
@@ -551,7 +578,7 @@ export const MapCanvas = () => {
         .add(endPosition);
       camera.updateMatrixWorld();
 
-      chunksMesh.update(camera);
+      lodTracker.update(camera.position);
     }
 
     setRaycasterFromEvent(localRaycaster, camera, e);
@@ -600,7 +627,7 @@ export const MapCanvas = () => {
     camera.scale.set(newScale, newScale, 1);
     camera.updateMatrixWorld();
 
-    chunksMesh.update(camera);
+    lodTracker.update(camera.position);
   };
 
   return (
