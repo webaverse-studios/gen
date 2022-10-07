@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import {useState, useMemo, useEffect} from 'react';
 
 import {ProcGenManager} from '../../src/procedural-generation/procgen-manager.js';
+import {FreeList} from '../../public/utils/geometry-utils.js';
 import styles from '../../styles/MapCanvas.module.css';
 
 //
@@ -10,6 +11,7 @@ const chunkSize = 16;
 const worldWidth = 128;
 const worldHeight = 128;
 const spacing = 1;
+const maxChunks = 1024;
 
 //
 
@@ -120,7 +122,7 @@ class ChunksMesh extends THREE.InstancedMesh {
     super(
       chunksGeometry,
       chunksMaterial,
-      1024
+      maxChunks
     );
 
     this.canvas = document.createElement('canvas');
