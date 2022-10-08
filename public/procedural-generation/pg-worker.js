@@ -533,14 +533,15 @@ const _handleMethod = async ({method, args, instance: instanceKey, taskId}) => {
       return true;
     }
     case 'trackerUpdate': {
-      const {instance: instanceKey, tracker, position, lods, lod1Range, priority} = args;
+      const {instance: instanceKey, tracker, position, minLod, maxLod, lod1Range, priority} = args;
       const instance = instances.get(instanceKey);
       const trackerUpdate = await pg.trackerUpdateAsync(
         instance,
         taskId,
         tracker,
         position,
-        lods,
+        minLod,
+        maxLod,
         lod1Range,
         priority
       );

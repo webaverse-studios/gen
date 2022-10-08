@@ -11,7 +11,7 @@ const chunkSize = 16;
 const worldWidth = 256;
 const worldHeight = 256;
 let chunksPerView = Math.ceil(worldWidth / chunkSize);
-const lod1Range = Math.ceil(chunksPerView / 2);
+const baseLod1Range = Math.ceil(chunksPerView / 2);
 chunksPerView++;
 const spacing = 1;
 const maxChunks = 1024;
@@ -44,6 +44,29 @@ const setRaycasterFromEvent = (raycaster, camera, e) => {
   );
   raycaster.setFromCamera(mouse, camera);
 };
+const getScaleLod = scale => {
+  let scaleLod = Math.ceil(Math.log2(scale));
+  scaleLod = Math.max(scaleLod, 0);
+  scaleLod++;
+  return scaleLod;
+};
+const getScaleInt = scale => {
+  const scaleLod = getScaleLod(scale);
+  // console.log('scale lod', scale, scaleLod);
+  // const scaleInt = Math.pow(2, scaleLod);
+  const scaleInt = 1 << (scaleLod - 1);
+  return scaleInt;
+};
+const getLodTrackerOptions = camera => {
+  const scaleLod = getScaleLod(camera.scale.x);
+  const lodTrackerOptions = {
+    minLod: scaleLod,
+    maxLod: scaleLod,
+    lod1Range: baseLod1Range,
+    // debug: true,
+  };
+  return lodTrackerOptions;
+};
 /* const _getChunksInRange = camera => {
   const chunks = [];
 
@@ -66,13 +89,12 @@ const setRaycasterFromEvent = (raycaster, camera, e) => {
 
   return chunks;
 }; */
-const _getChunkHeightfieldAsync = async (x, z, {
+const _getChunkHeightfieldAsync = async (x, z, lod, {
   signal = null,
 } = {}) => {
   const instance = useInstance();
 
   const min = new THREE.Vector2(x, z);
-  const lod = 1;
   const lodArray = Int32Array.from([lod, lod]);
   const generateFlags = {
     terrain: false,
@@ -181,22 +203,22 @@ class ChunksMesh extends THREE.InstancedMesh {
     camera,
     signal,
   }) {
-    // console.log('add chunk', chunk.min.toArray().join(','), freeListEntry);
-    
-    const scaleFactor = camera.scale.x;
-    // snap to closest power of 2 that fits the scale factor
-    let scaleInt = Math.pow(2, Math.ceil(Math.log2(scaleFactor)));
-    scaleInt = Math.max(scaleInt, 1);
+    // console.log('add chunk', chunk.min.toArray().join(','), chunk.lod);
+
+    const scaleInt = getScaleInt(camera.scale.x);
+    // const scaleLodRange = (1 << (scaleInt - 1)) * chunkSize;
+
+    // console.log('set chunk scale', scaleInt);
 
     const {min} = chunk;
     localMatrix.compose(
       localVector.set(
-        min.x * chunkSize * scaleInt,
+        min.x * chunkSize,
         0,
-        min.y * chunkSize * scaleInt
+        min.y * chunkSize
       ),
       zeroQuaternion,
-      localVector2.setScalar(chunkSize * scaleInt - spacing)
+      localVector2.setScalar(scaleInt * chunkSize - spacing)
     );
     this.setMatrixAt(freeListEntry, localMatrix);
     this.instanceMatrix.needsUpdate = true;
@@ -214,7 +236,8 @@ class ChunksMesh extends THREE.InstancedMesh {
     // update texture
     (async () => {
       try {
-        const pixels = await _getChunkHeightfieldAsync(min.x, min.y, {
+        // console.log('get pixels lod', scaleInt);
+        const pixels = await _getChunkHeightfieldAsync(min.x, min.y, scaleInt, {
           signal,
         });
         // console.log('got pixels', pixels);
@@ -313,11 +336,8 @@ export const MapCanvas = () => {
   const loadLods = async (chunksMesh, camera) => {
     const instance = useInstance();
 
-    const lodTracker = await instance.createLodChunkTracker({
-      lods: 1,
-      lod1Range,
-      // debug: true,
-    });
+    const lodTrackerOptions = getLodTrackerOptions(camera);
+    const lodTracker = await instance.createLodChunkTracker(lodTrackerOptions);
     const freeList = new FreeList(maxChunks);
     const allocMap = new Map();
     lodTracker.onChunkAdd(chunk => {
@@ -710,6 +730,8 @@ export const MapCanvas = () => {
     camera.scale.set(newScale, newScale, 1);
     camera.updateMatrixWorld();
 
+    const lodTrackerOptions = getLodTrackerOptions(camera);
+    lodTracker.setOptions(lodTrackerOptions);
     lodTracker.update(camera.position);
   };
 

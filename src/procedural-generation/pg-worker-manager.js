@@ -150,12 +150,13 @@ export class PGWorkerManager {
     }, {signal});
     return result;
   }
-  async trackerUpdate(tracker, position, lods, lod1Range, {signal} = {}) {
+  async trackerUpdate(tracker, position, minLod, maxLod, lod1Range, {signal} = {}) {
     const result = await this.worker.request('trackerUpdate', {
       instance: this.instance,
       tracker,
       position: position.toArray(),
-      lods,
+      minLod,
+      maxLod,
       lod1Range,
       priority: TASK_PRIORITIES.tracker,
     }, {signal});

@@ -18,13 +18,15 @@ class OctreeNode {
 export class LodChunkTracker {
   constructor({
     chunkSize,
-    lods = 7,
+    minLod = 1,
+    maxLod = 7,
     lod1Range = 2,
     pgWorkerManager = null,
     debug = false,
   } = {}) {
     this.chunkSize = chunkSize;
-    this.lods = lods;
+    this.minLod = minLod;
+    this.maxLod = maxLod;
     this.lod1Range = lod1Range;
     this.pgWorkerManager = pgWorkerManager;
 
@@ -33,6 +35,9 @@ export class LodChunkTracker {
     this.displayChunks = []; // for debug mesh
     this.dataRequests = new Map(); // hash -> DataRequest
     this.lastUpdateCoord = new THREE.Vector2(NaN, NaN);
+    this.lastMinLod = -1;
+    this.lastMaxLod = -1;
+    this.lastLod1Range = -1;
 
     this.isUpdating = false;
     this.queued = false;
@@ -167,19 +172,20 @@ export class LodChunkTracker {
   }
 
   setOptions({
-    lods,
+    minLod,
+    maxLod,
     lod1Range,
   }) {
-    if (lods !== undefined) {
-      this.lods = lods;
+    // console.log('update options', [lods, this.lods, lod1Range, this.lod1Range]);
+    if (minLod !== undefined) {
+      this.minLod = minLod;
+    }
+    if (maxLod !== undefined) {
+      this.maxLod = maxLod;
     }
     if (lod1Range !== undefined) {
       this.lod1Range = lod1Range;
     }
-  }
-  reset() {
-    // XXX needs to return the old data requests and treat them as removed
-    // this.pgWorkerManager.trackerReset();
   }
 
   async waitForLoad() {
@@ -190,14 +196,17 @@ export class LodChunkTracker {
       this.tracker = await this.pgWorkerManager.createTracker();
     }
   }
-  async updateInternal(position) {
+  async updateInternal(position, minLod, maxLod, lod1Range) {
     await this.ensureTracker();
+
+    // console.log('update chunks lod', minLod, maxLod);
 
     const trackerUpdateSpec = await this.pgWorkerManager.trackerUpdate(
       this.tracker,
       position,
-      this.lods,
-      this.lod1Range
+      minLod,
+      maxLod,
+      lod1Range
     );
     let {
       leafNodes,
@@ -222,9 +231,11 @@ export class LodChunkTracker {
     // keepDataRequests = keepDataRequests.map(_reifyNode);
     cancelDataRequests = cancelDataRequests.map(_reifyNode);
 
+    // console.log('remove', cancelDataRequests.length);
     for (const cancelDataRequest of cancelDataRequests) {
       this.handleChunkRemove(cancelDataRequest);
     }
+    // console.log('add', newDataRequests.length);
     for (const newDataRequest of newDataRequests) {
       this.handleChunkAdd(newDataRequest);
     }
@@ -235,14 +246,20 @@ export class LodChunkTracker {
     // update coordinate
     if (!this.isUpdating) {
       const currentCoord = this.#getCurrentCoord(position, localVector2D);
+      const {minLod, maxLod, lod1Range} = this;
       
-      if (!this.lastUpdateCoord.equals(currentCoord)) {
+      if (
+        !this.lastUpdateCoord.equals(currentCoord) ||
+        this.lastMinLod !== minLod ||
+        this.lastMaxLod !== maxLod ||
+        this.lastLod1Range !== lod1Range
+      ) {
         (async () => {
           this.isUpdating = true;
 
           const positionClone = position.clone();
           // const currentCoordClone = currentCoord.clone();
-          await this.updateInternal(positionClone);
+          await this.updateInternal(positionClone, minLod, maxLod, lod1Range);
 
           this.isUpdating = false;
 
@@ -253,6 +270,9 @@ export class LodChunkTracker {
         })();
 
         this.lastUpdateCoord.copy(currentCoord);
+        this.lastMinLod = minLod;
+        this.lastMaxLod = maxLod;
+        this.lastLod1Range = lod1Range;
       }
     } else {
       this.queued = true;
