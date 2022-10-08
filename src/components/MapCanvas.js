@@ -8,8 +8,8 @@ import styles from '../../styles/MapCanvas.module.css';
 //
 
 const chunkSize = 16;
-const worldWidth = 128;
-const worldHeight = 128;
+const worldWidth = 256;
+const worldHeight = 256;
 let chunksPerView = Math.ceil(worldWidth / chunkSize);
 const lod1Range = Math.ceil(chunksPerView / 2);
 chunksPerView++;
