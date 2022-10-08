@@ -176,9 +176,10 @@ class ChunksMesh extends THREE.InstancedMesh {
         varying vec2 vUv;
 
         void main() {
-          // gl_FragColor = vec4(vUv.x, 0.0, vUv.y, 1.0);
+          // vec3 uvc = vec3(vUv.x, 0.0, vUv.y);
 
           vec4 c = texture2D(uTex, vUv);
+          // c.rgb += uvc;
           gl_FragColor = vec4(c.rgb, 1.0);
         }
       `,
