@@ -353,6 +353,25 @@ export const MapCanvas = () => {
     });
     return lodTracker;
   };
+  const updateLodTracker = (lodTracker, camera) => {
+    const instance = useInstance();
+    const playerPosition = localVector.set(
+      camera.position.x,
+      0,
+      camera.position.z
+    );
+    instance.setCamera(
+      playerPosition,
+      playerPosition,
+      camera.quaternion,
+      camera.projectionMatrix
+    );
+
+    lodTracker.update(playerPosition);
+  };
+
+  //
+
   const loadBarriers = async barrierMesh => {
     const instance = useInstance();
     
@@ -588,7 +607,7 @@ export const MapCanvas = () => {
       // init
       loadLods(chunksMesh, camera)
         .then(lodTracker => {
-          lodTracker.update(camera.position);
+          updateLodTracker(lodTracker, camera);
           setLodTracker(lodTracker);
         });
       loadBarriers(barrierMesh);
@@ -626,7 +645,7 @@ export const MapCanvas = () => {
     }
   }, [renderer, dimensions]);
   useEffect(() => {
-    lodTracker && lodTracker.update(camera.position);
+    lodTracker && updateLodTracker(lodTracker, camera);
   }, [lodTracker, camera, dimensions]);
 
   const handleMouseDown = e => {
@@ -664,7 +683,7 @@ export const MapCanvas = () => {
         .add(endPosition);
       camera.updateMatrixWorld();
 
-      lodTracker.update(camera.position);
+      updateLodTracker(lodTracker, camera);
     }
 
     setRaycasterFromEvent(localRaycaster, camera, e);
@@ -715,7 +734,7 @@ export const MapCanvas = () => {
 
     const lodTrackerOptions = getLodTrackerOptions(camera);
     lodTracker.setOptions(lodTrackerOptions);
-    lodTracker.update(camera.position);
+    updateLodTracker(lodTracker, camera);
   };
 
   return (
