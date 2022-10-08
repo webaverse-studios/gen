@@ -172,6 +172,7 @@ class ChunksMesh extends THREE.InstancedMesh {
     this.instanceMatrix.needsUpdate = true;
 
     // update uvs
+    // XXX why does the right/bottom get removed and then added again when scrolling left/up?
     const dx = freeListEntry % chunksPerView;
     const uvX = dx / chunksPerView;
     const dy = Math.floor(freeListEntry / chunksPerView);
