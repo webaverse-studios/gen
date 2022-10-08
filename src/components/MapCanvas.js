@@ -11,6 +11,7 @@ const chunkSize = 16;
 const worldWidth = 128;
 const worldHeight = 128;
 const chunksPerView = Math.ceil(worldWidth / chunkSize);
+// console.log('max', chunksPerView);
 const spacing = 1;
 const maxChunks = 1024;
 
@@ -105,28 +106,43 @@ const _getChunkHeightfieldAsync = async (x, z, {
 class ChunksMesh extends THREE.InstancedMesh {
   constructor() {
     const chunksGeometry = new THREE.PlaneGeometry(1, 1)
-      // .scale(scale, scale, scale)
       .translate(0.5, -0.5, 0)
       .rotateX(-Math.PI / 2);
+    const chunksInstancedGeometry = new THREE.InstancedBufferGeometry();
+    chunksInstancedGeometry.attributes = chunksGeometry.attributes;
+    chunksInstancedGeometry.index = chunksGeometry.index;
+    const uvs2 = new Float32Array(2 * maxChunks);
+    const uvs2Attribute = new THREE.InstancedBufferAttribute(uvs2, 2);
+    chunksInstancedGeometry.setAttribute('uv2', uvs2Attribute);
+
     const chunksMaterial = new THREE.ShaderMaterial({
       vertexShader: `\
+        attribute vec2 uv2;
+        varying vec2 vUv;
+      
         void main() {
           gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.0);
+          vUv = uv2;
         }
       `,
       fragmentShader: `\
+        varying vec2 vUv;
+
         void main() {
-          gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+          gl_FragColor = vec4(vUv.x, 0.0, vUv.y, 1.0);
         }
       `,
     });
+
     super(
-      chunksGeometry,
+      chunksInstancedGeometry,
       chunksMaterial,
       maxChunks
     );
 
     this.canvas = document.createElement('canvas');
+    this.canvas.width = chunksPerView * chunkSize;
+    this.canvas.height = chunksPerView * chunkSize;
     this.canvas.ctx = this.canvas.getContext('2d');
     this.canvas.style.cssText = `\
       position: fixed;
@@ -139,7 +155,8 @@ class ChunksMesh extends THREE.InstancedMesh {
     this.updateCancelFn = null;
   }
   addChunk(chunk, freeListEntry) {
-    // console.log('add chunk', chunk, freeListEntry);
+    // console.log('add chunk', chunk.min.toArray().join(','), freeListEntry);
+    
     const {min} = chunk;
     localMatrix.compose(
       localVector.set(
@@ -153,8 +170,18 @@ class ChunksMesh extends THREE.InstancedMesh {
     this.setMatrixAt(freeListEntry, localMatrix);
     this.instanceMatrix.needsUpdate = true;
     // this.count = chunks.length;
+
+    // x and y normalized to [0, 1]
+    const x = (freeListEntry % chunksPerView) / chunksPerView;
+    const y = Math.floor(freeListEntry / chunksPerView) / chunksPerView;
+    // this.geometry.attributes.uv.setXY(freeListEntry, x, y);
+    this.geometry.attributes.uv2.array[freeListEntry * 2] = x;
+    this.geometry.attributes.uv2.array[freeListEntry * 2 + 1] = y;
+    this.geometry.attributes.uv2.needsUpdate = true;
   }
   removeChunk(chunk, freeListEntry) {
+    // console.log('remove chunk', chunk.min.toArray().join(','), freeListEntry);
+    
     // const {min} = chunk;
     localMatrix.makeScale(
       0,
@@ -163,7 +190,6 @@ class ChunksMesh extends THREE.InstancedMesh {
     );
     this.setMatrixAt(freeListEntry, localMatrix);
     this.instanceMatrix.needsUpdate = true;
-    // console.log('remove chunk', chunk);
   }
   update(camera) {
     this.updateInstances(camera);
