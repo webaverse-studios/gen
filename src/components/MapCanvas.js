@@ -641,9 +641,6 @@ export const MapCanvas = () => {
       renderer.setSize(width, height);
     }
   }, [renderer, dimensions]);
-  useEffect(() => {
-    lodTracker && updateLodTracker(lodTracker, camera);
-  }, [lodTracker, camera, dimensions]);
 
   const handleMouseDown = e => {
     e.preventDefault();
