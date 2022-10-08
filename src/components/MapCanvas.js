@@ -67,28 +67,6 @@ const getLodTrackerOptions = camera => {
   };
   return lodTrackerOptions;
 };
-/* const _getChunksInRange = camera => {
-  const chunks = [];
-
-  // get the top left near point of the camera
-  const topLeftNear = new THREE.Vector3(-1, 1, 0);
-  topLeftNear.unproject(camera);
-  // get the bottom right near point of the camera
-  const bottomRightNear = new THREE.Vector3(1, -1, 0);
-  bottomRightNear.unproject(camera);
-
-  for (let dx = topLeftNear.x; dx < bottomRightNear.x + chunkSize; dx += chunkSize) {
-    for (let dz = topLeftNear.z; dz < bottomRightNear.z + chunkSize; dz += chunkSize) {
-      const x = Math.floor(dx / chunkSize);
-      const z = Math.floor(dz / chunkSize);
-      chunks.push({
-        min: new THREE.Vector2(x, z),
-      });
-    }
-  }
-
-  return chunks;
-}; */
 const _getChunkHeightfieldAsync = async (x, z, lod, {
   signal = null,
 } = {}) => {
