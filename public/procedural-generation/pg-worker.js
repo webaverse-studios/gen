@@ -517,9 +517,9 @@ const _handleMethod = async ({method, args, instance: instanceKey, taskId}) => {
       return true;
     }
     case 'createTracker': {
-      const {instance: instanceKey, lod, lod1Range, trackY} = args;
+      const {instance: instanceKey} = args;
       const instance = instances.get(instanceKey);
-      const tracker = pg.createTracker(instance, lod, lod1Range, trackY);
+      const tracker = pg.createTracker(instance);
       const spec = {
         result: tracker,
         transfers: [],
@@ -533,9 +533,17 @@ const _handleMethod = async ({method, args, instance: instanceKey, taskId}) => {
       return true;
     }
     case 'trackerUpdate': {
-      const {instance: instanceKey, tracker, position, priority} = args;
+      const {instance: instanceKey, tracker, position, lods, lod1Range, priority} = args;
       const instance = instances.get(instanceKey);
-      const trackerUpdate = await pg.trackerUpdateAsync(instance, taskId, tracker, position, priority);
+      const trackerUpdate = await pg.trackerUpdateAsync(
+        instance,
+        taskId,
+        tracker,
+        position,
+        lods,
+        lod1Range,
+        priority
+      );
       const trackerUpdate2 = _cloneTrackerUpdate(trackerUpdate);
       const spec = {
         result: trackerUpdate2,

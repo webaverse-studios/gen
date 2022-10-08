@@ -13,7 +13,6 @@ const worldHeight = 256;
 let chunksPerView = Math.ceil(worldWidth / chunkSize);
 const lod1Range = Math.ceil(chunksPerView / 2);
 chunksPerView++;
-// console.log('chunksPerView', chunksPerView);
 const spacing = 1;
 const maxChunks = 1024;
 

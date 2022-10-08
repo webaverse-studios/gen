@@ -137,11 +137,9 @@ export class PGWorkerManager {
     });
   }
 
-  async createTracker(lod, lod1Range, {signal} = {}) {
+  async createTracker({signal} = {}) {
     const result = await this.worker.request('createTracker', {
       instance: this.instance,
-      lod,
-      lod1Range,
     }, {signal});
     return result;
   }
@@ -152,11 +150,13 @@ export class PGWorkerManager {
     }, {signal});
     return result;
   }
-  async trackerUpdate(tracker, position, {signal} = {}) {
+  async trackerUpdate(tracker, position, lods, lod1Range, {signal} = {}) {
     const result = await this.worker.request('trackerUpdate', {
       instance: this.instance,
       tracker,
       position: position.toArray(),
+      lods,
+      lod1Range,
       priority: TASK_PRIORITIES.tracker,
     }, {signal});
     return result;

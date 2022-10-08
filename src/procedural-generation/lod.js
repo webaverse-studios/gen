@@ -171,13 +171,18 @@ export class LodChunkTracker {
   }
   async ensureTracker() {
     if (!this.tracker) {
-      this.tracker = await this.pgWorkerManager.createTracker(this.lods, this.lod1Range);
+      this.tracker = await this.pgWorkerManager.createTracker();
     }
   }
   async updateInternal(position) {
     await this.ensureTracker();
 
-    const trackerUpdateSpec = await this.pgWorkerManager.trackerUpdate(this.tracker, position);
+    const trackerUpdateSpec = await this.pgWorkerManager.trackerUpdate(
+      this.tracker,
+      position,
+      this.lods,
+      this.lod1Range
+    );
     let {
       leafNodes,
       newDataRequests,
