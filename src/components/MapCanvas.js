@@ -229,9 +229,10 @@ class ChunksMesh extends THREE.InstancedMesh {
     const dy = Math.floor(freeListEntry / chunksPerView);
 
     const {ctx} = this.canvas;
-    const {imageData} = ctx;
-    imageData.data.fill(0);
-    ctx.putImageData(imageData, dx * chunkSize, dy * chunkSize);
+    // const {imageData} = ctx;
+    // imageData.data.fill(0);
+    // ctx.putImageData(imageData, dx * chunkSize, dy * chunkSize);
+    ctx.clearRect(dx * chunkSize, dy * chunkSize, chunkSize, chunkSize);
   }
   update(camera) {
     this.updateInstances(camera);
