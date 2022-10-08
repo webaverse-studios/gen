@@ -44,7 +44,7 @@ const setRaycasterFromEvent = (raycaster, camera, e) => {
   );
   raycaster.setFromCamera(mouse, camera);
 };
-const _getChunksInRange = camera => {
+/* const _getChunksInRange = camera => {
   const chunks = [];
 
   // get the top left near point of the camera
@@ -65,7 +65,7 @@ const _getChunksInRange = camera => {
   }
 
   return chunks;
-};
+}; */
 const _getChunkHeightfieldAsync = async (x, z, {
   signal = null,
 } = {}) => {
