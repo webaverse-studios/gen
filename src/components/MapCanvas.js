@@ -176,18 +176,27 @@ class ChunksMesh extends THREE.InstancedMesh {
     document.body.appendChild(canvas); // XXX debugging
     this.updateCancelFn = null;
   }
-  addChunk(chunk, freeListEntry, signal) {
+  addChunk({
+    chunk,
+    freeListEntry,
+    camera,
+    signal,
+  }) {
     // console.log('add chunk', chunk.min.toArray().join(','), freeListEntry);
     
+    const scaleFactor = camera.scale.x;
+    // snap to closest power of 2 that fits the scale factor
+    const scaleInt = Math.pow(2, Math.ceil(Math.log2(scaleFactor)));
+
     const {min} = chunk;
     localMatrix.compose(
       localVector.set(
-        min.x * chunkSize,
+        min.x * chunkSize * scaleInt,
         0,
-        min.y * chunkSize
+        min.y * chunkSize * scaleInt
       ),
       zeroQuaternion,
-      localVector2.setScalar(chunkSize - spacing)
+      localVector2.setScalar(chunkSize * scaleInt - spacing)
     );
     this.setMatrixAt(freeListEntry, localMatrix);
     this.instanceMatrix.needsUpdate = true;
@@ -235,7 +244,7 @@ class ChunksMesh extends THREE.InstancedMesh {
       }
     })();
   }
-  removeChunk(chunk, freeListEntry) {
+  removeChunk(freeListEntry) {
     // console.log('remove chunk', chunk.min.toArray().join(','), freeListEntry);
     
     // const {min} = chunk;
@@ -301,7 +310,7 @@ export const MapCanvas = () => {
   const [lodTracker, setLodTracker] = useState(null);
 
   // helpers
-  const loadLods = async chunksMesh => {
+  const loadLods = async (chunksMesh, camera) => {
     const instance = useInstance();
 
     const lodTracker = await instance.createLodChunkTracker({
@@ -316,15 +325,22 @@ export const MapCanvas = () => {
       const freeListEntry = freeList.alloc(1);
 
       const allocEntry = new AllocEntry(freeListEntry);
+      const {abortController} = allocEntry;
+      const {signal} = abortController;
 
-      chunksMesh.addChunk(chunk, freeListEntry, allocEntry.abortController.signal);
+      chunksMesh.addChunk({
+        chunk,
+        freeListEntry,
+        camera,
+        signal,
+      });
       allocMap.set(key, allocEntry);
     });
     lodTracker.onChunkRemove(chunk => {
       const key = procGenManager.getNodeHash(chunk);
       const allocEntry = allocMap.get(key);
       if (allocEntry !== undefined) {
-        chunksMesh.removeChunk(chunk, allocEntry.freeListEntry);
+        chunksMesh.removeChunk(allocEntry.freeListEntry);
         freeList.free(allocEntry.freeListEntry);
         allocEntry.abortController.abort(abortError);
         allocMap.delete(key);
@@ -567,7 +583,7 @@ export const MapCanvas = () => {
       setCamera(camera);
 
       // init
-      loadLods(chunksMesh)
+      loadLods(chunksMesh, camera)
         .then(lodTracker => {
           lodTracker.update(camera.position);
           setLodTracker(lodTracker);
