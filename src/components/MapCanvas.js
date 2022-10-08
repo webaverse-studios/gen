@@ -592,7 +592,7 @@ export const MapCanvas = () => {
       const top = worldHeight / 2;
       const bottom = worldHeight / -2;
       const near = 0.1;
-      const far = 1000;
+      const far = 10000;
       const fov = dimensions[0] / dimensions[1];
       const camera = new THREE.OrthographicCamera(
         left,
@@ -704,7 +704,7 @@ export const MapCanvas = () => {
     setRaycasterFromEvent(localRaycaster, camera, e);
 
     const oldScale = camera.scale.x;
-    const newScale = Math.min(Math.max(oldScale * (1 + e.deltaY * 0.001), 0.02), 3);
+    const newScale = Math.min(Math.max(oldScale * (1 + e.deltaY * 0.001), 0.02), 12);
     const scaleFactor = newScale / oldScale;
 
     // console.log('new scale', newScale);
