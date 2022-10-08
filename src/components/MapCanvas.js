@@ -144,6 +144,7 @@ class ChunksMesh extends THREE.InstancedMesh {
     this.canvas.width = chunksPerView * chunkSize;
     this.canvas.height = chunksPerView * chunkSize;
     this.canvas.ctx = this.canvas.getContext('2d');
+    this.canvas.ctx.imageData = this.canvas.ctx.createImageData(chunkSize, chunkSize);
     this.canvas.style.cssText = `\
       position: fixed;
       top: 0;
@@ -154,7 +155,7 @@ class ChunksMesh extends THREE.InstancedMesh {
     document.body.appendChild(this.canvas);
     this.updateCancelFn = null;
   }
-  addChunk(chunk, freeListEntry) {
+  addChunk(chunk, freeListEntry, signal) {
     // console.log('add chunk', chunk.min.toArray().join(','), freeListEntry);
     
     const {min} = chunk;
@@ -169,15 +170,46 @@ class ChunksMesh extends THREE.InstancedMesh {
     );
     this.setMatrixAt(freeListEntry, localMatrix);
     this.instanceMatrix.needsUpdate = true;
-    // this.count = chunks.length;
 
-    // x and y normalized to [0, 1]
-    const x = (freeListEntry % chunksPerView) / chunksPerView;
-    const y = Math.floor(freeListEntry / chunksPerView) / chunksPerView;
-    // this.geometry.attributes.uv.setXY(freeListEntry, x, y);
-    this.geometry.attributes.uv2.array[freeListEntry * 2] = x;
-    this.geometry.attributes.uv2.array[freeListEntry * 2 + 1] = y;
+    // update uvs
+    const dx = freeListEntry % chunksPerView;
+    const uvX = dx / chunksPerView;
+    const dy = Math.floor(freeListEntry / chunksPerView);
+    const uvY = dy / chunksPerView;
+    this.geometry.attributes.uv2.array[freeListEntry * 2] = uvX;
+    this.geometry.attributes.uv2.array[freeListEntry * 2 + 1] = uvY;
     this.geometry.attributes.uv2.needsUpdate = true;
+
+    // update texture
+    (async () => {
+      try {
+        const pixels = await _getChunkHeightfieldAsync(min.x, min.y, {
+          signal,
+        });
+        // console.log('got pixels', pixels);
+
+        const {ctx} = this.canvas;
+        const {imageData} = ctx;
+        let index = 0;
+        for (let ddz = 0; ddz < chunkSize; ddz++) {
+          for (let ddx = 0; ddx < chunkSize; ddx++) {
+            const srcHeight = pixels[index];
+            const srcWater = pixels[index + 1];
+            imageData.data[index] = srcHeight;
+            imageData.data[index + 1] = srcWater;
+            imageData.data[index + 2] = 0;
+            imageData.data[index + 3] = 255;
+
+            index += 4;
+          }
+        }
+        ctx.putImageData(imageData, dx * chunkSize, dy * chunkSize);
+      } catch(err) {
+        if (!err?.isAbortError) {
+          throw err;
+        }
+      }
+    })();
   }
   removeChunk(chunk, freeListEntry) {
     // console.log('remove chunk', chunk.min.toArray().join(','), freeListEntry);
@@ -190,6 +222,15 @@ class ChunksMesh extends THREE.InstancedMesh {
     );
     this.setMatrixAt(freeListEntry, localMatrix);
     this.instanceMatrix.needsUpdate = true;
+
+    // update texture
+    const dx = freeListEntry % chunksPerView;
+    const dy = Math.floor(freeListEntry / chunksPerView);
+
+    const {ctx} = this.canvas;
+    const {imageData} = ctx;
+    imageData.data.fill(0);
+    ctx.putImageData(imageData, dx * chunkSize, dy * chunkSize);
   }
   update(camera) {
     this.updateInstances(camera);
@@ -280,6 +321,15 @@ class ChunksMesh extends THREE.InstancedMesh {
 
 //
 
+class AllocEntry {
+  constructor(freeListEntry) {
+    this.freeListEntry = freeListEntry;
+    this.abortController = new AbortController();
+  }
+}
+
+//
+
 const procGenManager = new ProcGenManager({
   chunkSize,
 });
@@ -320,15 +370,19 @@ export const MapCanvas = () => {
     lodTracker.onChunkAdd(chunk => {
       const key = procGenManager.getNodeHash(chunk);
       const freeListEntry = freeList.alloc(1);
-      chunksMesh.addChunk(chunk, freeListEntry);
-      allocMap.set(key, freeListEntry);
+
+      const allocEntry = new AllocEntry(freeListEntry);
+
+      chunksMesh.addChunk(chunk, freeListEntry, allocEntry.abortController.signal);
+      allocMap.set(key, allocEntry);
     });
     lodTracker.onChunkRemove(chunk => {
       const key = procGenManager.getNodeHash(chunk);
-      const freeListEntry = allocMap.get(key);
-      if (freeListEntry !== undefined) {
-        chunksMesh.removeChunk(chunk, freeListEntry);
-        freeList.free(freeListEntry);
+      const allocEntry = allocMap.get(key);
+      if (allocEntry !== undefined) {
+        chunksMesh.removeChunk(chunk, allocEntry.freeListEntry);
+        freeList.free(allocEntry.freeListEntry);
+        allocEntry.abortController.abort(abortError);
         allocMap.delete(key);
       } else {
         debugger;
