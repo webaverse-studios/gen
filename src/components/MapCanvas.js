@@ -144,13 +144,13 @@ class ChunksMesh extends THREE.InstancedMesh {
     canvas.height = chunksPerView * chunkSize;
     canvas.ctx = canvas.getContext('2d');
     canvas.ctx.imageData = canvas.ctx.createImageData(chunkSize, chunkSize);
-    canvas.style.cssText = `\
+    /* canvas.style.cssText = `\
       position: fixed;
       top: 0;
       left: 0;
       z-index: 100;
       pointer-events: none;
-    `;
+    `; */
 
     const uTex = new THREE.Texture(canvas);
     // uTex.flipY = false;
@@ -195,7 +195,7 @@ class ChunksMesh extends THREE.InstancedMesh {
     );
 
     this.canvas = canvas;
-    document.body.appendChild(canvas); // XXX debugging
+    // document.body.appendChild(canvas); // XXX debugging
     this.updateCancelFn = null;
   }
   addChunk({
@@ -292,7 +292,7 @@ class ChunksMesh extends THREE.InstancedMesh {
     this.material.uniforms.uTex.value.needsUpdate = true;
   }
   destroy() {
-    this.canvas?.parentNode?.removeChild(this.canvas);
+    // this.canvas?.parentNode?.removeChild(this.canvas);
   }
 }
 
