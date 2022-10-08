@@ -114,25 +114,55 @@ class ChunksMesh extends THREE.InstancedMesh {
     const uvs2 = new Float32Array(2 * maxChunks);
     const uvs2Attribute = new THREE.InstancedBufferAttribute(uvs2, 2);
     chunksInstancedGeometry.setAttribute('uv2', uvs2Attribute);
+    // console.log('got geo', chunksInstancedGeometry);
 
+    const canvas = document.createElement('canvas');
+    canvas.width = chunksPerView * chunkSize;
+    canvas.height = chunksPerView * chunkSize;
+    canvas.ctx = canvas.getContext('2d');
+    canvas.ctx.imageData = canvas.ctx.createImageData(chunkSize, chunkSize);
+    canvas.style.cssText = `\
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 100;
+      pointer-events: none;
+    `;
+
+    const uTex = new THREE.Texture(canvas);
+    // uTex.flipY = false;
     const chunksMaterial = new THREE.ShaderMaterial({
+      uniforms: {
+        uTex: {
+          value: uTex,
+          needsUpdate: true,
+        },
+      },
       vertexShader: `\
         attribute vec2 uv2;
         varying vec2 vUv;
       
         void main() {
           gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.0);
-          vUv = uv2;
+          vUv = uv2 + uv / ${chunksPerView.toFixed(8)};
+          // vUv = uv;
         }
       `,
       fragmentShader: `\
+        uniform sampler2D uTex;
         varying vec2 vUv;
 
         void main() {
-          gl_FragColor = vec4(vUv.x, 0.0, vUv.y, 1.0);
+          // gl_FragColor = vec4(vUv.x, 0.0, vUv.y, 1.0);
+
+          vec4 c = texture2D(uTex, vUv);
+          gl_FragColor = vec4(c.rgb, 1.0);
         }
       `,
     });
+    // chunksMaterial.uniforms.uTex.value.onUpdate = () => {
+    //   console.log('tex update');
+    // };
 
     super(
       chunksInstancedGeometry,
@@ -140,19 +170,8 @@ class ChunksMesh extends THREE.InstancedMesh {
       maxChunks
     );
 
-    this.canvas = document.createElement('canvas');
-    this.canvas.width = chunksPerView * chunkSize;
-    this.canvas.height = chunksPerView * chunkSize;
-    this.canvas.ctx = this.canvas.getContext('2d');
-    this.canvas.ctx.imageData = this.canvas.ctx.createImageData(chunkSize, chunkSize);
-    this.canvas.style.cssText = `\
-      position: fixed;
-      top: 0;
-      left: 0;
-      z-index: 100;
-      pointer-events: none;
-    `;
-    document.body.appendChild(this.canvas);
+    this.canvas = canvas;
+    document.body.appendChild(canvas); // XXX debugging
     this.updateCancelFn = null;
   }
   addChunk(chunk, freeListEntry, signal) {
@@ -176,7 +195,7 @@ class ChunksMesh extends THREE.InstancedMesh {
     const dx = freeListEntry % chunksPerView;
     const uvX = dx / chunksPerView;
     const dy = Math.floor(freeListEntry / chunksPerView);
-    const uvY = dy / chunksPerView;
+    const uvY = (1 - 1 / chunksPerView) - (dy / chunksPerView);
     this.geometry.attributes.uv2.array[freeListEntry * 2] = uvX;
     this.geometry.attributes.uv2.array[freeListEntry * 2 + 1] = uvY;
     this.geometry.attributes.uv2.needsUpdate = true;
@@ -205,6 +224,8 @@ class ChunksMesh extends THREE.InstancedMesh {
           }
         }
         ctx.putImageData(imageData, dx * chunkSize, dy * chunkSize);
+        this.material.uniforms.uTex.value.needsUpdate = true;
+        // console.log('update', this.material.uniforms.uTex);
       } catch(err) {
         if (!err?.isAbortError) {
           throw err;
@@ -233,6 +254,7 @@ class ChunksMesh extends THREE.InstancedMesh {
     // imageData.data.fill(0);
     // ctx.putImageData(imageData, dx * chunkSize, dy * chunkSize);
     ctx.clearRect(dx * chunkSize, dy * chunkSize, chunkSize, chunkSize);
+    this.material.uniforms.uTex.value.needsUpdate = true;
   }
   update(camera) {
     this.updateInstances(camera);
@@ -588,7 +610,7 @@ export const MapCanvas = () => {
             } else {
               c = vec3(0., 1., 0.);
             }
-            gl_FragColor = vec4(c, 0.5);
+            gl_FragColor = vec4(c, 0.2);
           }
         `,
         transparent: true
