@@ -355,7 +355,11 @@ export const MapCanvas = () => {
         camera,
         signal,
       });
-      allocMap.set(key, allocEntry);
+      if (!allocMap.has(key)) {
+        allocMap.set(key, allocEntry);
+      } else {
+        debugger;
+      }
     });
     lodTracker.onChunkRemove(chunk => {
       const key = procGenManager.getNodeHash(chunk);
