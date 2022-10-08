@@ -10,6 +10,7 @@ import styles from '../../styles/MapCanvas.module.css';
 const chunkSize = 16;
 const worldWidth = 128;
 const worldHeight = 128;
+const chunksPerView = Math.ceil(worldWidth / chunkSize);
 const spacing = 1;
 const maxChunks = 1024;
 
@@ -283,7 +284,6 @@ export const MapCanvas = () => {
   const loadLods = async chunksMesh => {
     const instance = useInstance();
 
-    const chunksPerView = Math.ceil(worldWidth / chunkSize);
     const lodTracker = await instance.createLodChunkTracker({
       lods: 1,
       lod1Range: Math.ceil(chunksPerView / 2),
