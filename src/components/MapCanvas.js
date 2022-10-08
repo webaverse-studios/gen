@@ -185,7 +185,8 @@ class ChunksMesh extends THREE.InstancedMesh {
     
     const scaleFactor = camera.scale.x;
     // snap to closest power of 2 that fits the scale factor
-    const scaleInt = Math.pow(2, Math.ceil(Math.log2(scaleFactor)));
+    let scaleInt = Math.pow(2, Math.ceil(Math.log2(scaleFactor)));
+    scaleInt = Math.max(scaleInt, 1);
 
     const {min} = chunk;
     localMatrix.compose(

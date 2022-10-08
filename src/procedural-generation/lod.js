@@ -166,6 +166,22 @@ export class LodChunkTracker {
     }
   }
 
+  setOptions({
+    lods,
+    lod1Range,
+  }) {
+    if (lods !== undefined) {
+      this.lods = lods;
+    }
+    if (lod1Range !== undefined) {
+      this.lod1Range = lod1Range;
+    }
+  }
+  reset() {
+    // XXX needs to return the old data requests and treat them as removed
+    // this.pgWorkerManager.trackerReset();
+  }
+
   async waitForLoad() {
     await Promise.all(this.liveTasks.map(task => task.waitForLoad()));
   }
