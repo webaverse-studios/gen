@@ -34,6 +34,62 @@ const zeroQuaternion = new THREE.Quaternion();
 const abortError = new Error('aborted');
 abortError.isAbortError = true;
 
+//
+
+class ParcelsMesh extends THREE.InstancedMesh {
+  constructor() {
+    const parcelGeometry = new THREE.PlaneGeometry(1, 1)
+      // .scale(scale, scale, scale)
+      .translate(0.5, -0.5, 0)
+      .rotateX(-Math.PI / 2);
+    const parcelMaterial = new THREE.ShaderMaterial({
+      uniforms: {
+        highlightMin: {
+          value: new THREE.Vector2(),
+          needsUpdate: false,
+        },
+        highlightMax: {
+          value: new THREE.Vector2(),
+          needsUpdate: false,
+        },
+      },
+      vertexShader: `\
+        varying vec3 vPosition;
+
+        void main() {
+          vec4 instancePosition = instanceMatrix * vec4(position, 1.0);
+          vPosition = instancePosition.xyz;
+          gl_Position = projectionMatrix * modelViewMatrix * instancePosition;
+        }
+      `,
+      fragmentShader: `\
+        uniform vec2 highlightMin;
+        uniform vec2 highlightMax;
+        varying vec3 vPosition;
+
+        void main() {
+          vec3 c;
+          if (
+            vPosition.x >= highlightMin.x &&
+            vPosition.x < highlightMax.x &&
+            vPosition.z >= highlightMin.y &&
+            vPosition.z <= highlightMax.y
+          ) {
+            c = vec3(0., 0., 1.);
+          } else {
+            c = vec3(0., 1., 0.);
+          }
+          gl_FragColor = vec4(c, 0.2);
+        }
+      `,
+      transparent: true
+    });
+    super(parcelGeometry, parcelMaterial, 256);
+
+    this.barrierResult = null;
+  }
+}
+
 // helpers
 
 const getLodTrackerOptions = camera => {
@@ -286,6 +342,7 @@ export const MapCanvas = () => {
       const scene = new THREE.Scene();
       scene.matrixWorldAutoUpdate = false;
 
+      // layers
       const instance = useInstance();
       const heightfieldsMesh = new HeightfieldsMesh({
         instance,
@@ -294,6 +351,12 @@ export const MapCanvas = () => {
       scene.add(heightfieldsMesh);
       setHeightfieldsMesh(heightfieldsMesh);
 
+      const parcelsMesh = new ParcelsMesh();
+      parcelsMesh.frustumCulled = false;
+      scene.add(parcelsMesh);
+      setParcelsMesh(parcelsMesh);
+
+      // cursor
       const debugGeometry = new THREE.BoxGeometry(1, 1, 1);
       const debugMaterial = new THREE.MeshBasicMaterial({
         color: 0x0000ff,
@@ -302,62 +365,6 @@ export const MapCanvas = () => {
       debugMesh.frustumCulled = false;
       scene.add(debugMesh);
       setDebugMesh(debugMesh);
-
-      const barrierGeometry = new THREE.PlaneGeometry(1, 1)
-        // .scale(scale, scale, scale)
-        .translate(0.5, -0.5, 0)
-        .rotateX(-Math.PI / 2);
-      const barrierMaterial = new THREE.ShaderMaterial({
-        uniforms: {
-          highlightMin: {
-            value: new THREE.Vector2(),
-            needsUpdate: false,
-          },
-          highlightMax: {
-            value: new THREE.Vector2(),
-            needsUpdate: false,
-          },
-        },
-        vertexShader: `\
-          varying vec3 vPosition;
-
-          void main() {
-            vec4 instancePosition = instanceMatrix * vec4(position, 1.0);
-            vPosition = instancePosition.xyz;
-            gl_Position = projectionMatrix * modelViewMatrix * instancePosition;
-          }
-        `,
-        fragmentShader: `\
-          uniform vec2 highlightMin;
-          uniform vec2 highlightMax;
-          varying vec3 vPosition;
-
-          void main() {
-            vec3 c;
-            if (
-              vPosition.x >= highlightMin.x &&
-              vPosition.x < highlightMax.x &&
-              vPosition.z >= highlightMin.y &&
-              vPosition.z <= highlightMax.y
-            ) {
-              c = vec3(0., 0., 1.);
-            } else {
-              c = vec3(0., 1., 0.);
-            }
-            gl_FragColor = vec4(c, 0.2);
-          }
-        `,
-        transparent: true
-      });
-      const parcelsMesh = new THREE.InstancedMesh(
-        barrierGeometry,
-        barrierMaterial,
-        256
-      );
-      parcelsMesh.frustumCulled = false;
-      parcelsMesh.barrierResult = null;
-      scene.add(parcelsMesh);
-      setParcelsMesh(parcelsMesh);
 
       // camera
       const left = worldWidth / -2;
