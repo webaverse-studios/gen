@@ -5,16 +5,17 @@ import {ProcGenManager} from '../../src/procedural-generation/procgen-manager.js
 import {FreeList} from '../../public/utils/geometry-utils.js';
 import styles from '../../styles/MapCanvas.module.css';
 
-//
-
-const chunkSize = 16;
-const worldWidth = 512;
-const worldHeight = 512;
-let chunksPerView = Math.ceil(worldWidth / chunkSize);
-const baseLod1Range = Math.ceil(chunksPerView / 2);
-chunksPerView++;
-const spacing = 1;
-const maxChunks = 2048;
+import {
+  chunkSize,
+  worldWidth,
+  worldHeight,
+  // chunksPerView,
+  baseLod1Range,
+  spacing,
+  maxChunks,
+} from '../../constants/render.js';
+import {HeightfieldsMesh} from '../layers/heightfields-mesh.js';
+import {getScaleLod} from '../../public/utils/procgen-utils.js';
 
 //
 
@@ -44,19 +45,6 @@ const setRaycasterFromEvent = (raycaster, camera, e) => {
   );
   raycaster.setFromCamera(mouse, camera);
 };
-const getScaleLod = scale => {
-  let scaleLod = Math.ceil(Math.log2(scale));
-  scaleLod = Math.max(scaleLod, 0);
-  scaleLod++;
-  return scaleLod;
-};
-const getScaleInt = scale => {
-  const scaleLod = getScaleLod(scale);
-  // console.log('scale lod', scale, scaleLod);
-  // const scaleInt = Math.pow(2, scaleLod);
-  const scaleInt = 1 << (scaleLod - 1);
-  return scaleInt;
-};
 const getLodTrackerOptions = camera => {
   const scaleLod = getScaleLod(camera.scale.x);
   const lodTrackerOptions = {
@@ -67,223 +55,6 @@ const getLodTrackerOptions = camera => {
   };
   return lodTrackerOptions;
 };
-const _getChunkHeightfieldAsync = async (x, z, lod, {
-  signal = null,
-} = {}) => {
-  const instance = useInstance();
-
-  const min = new THREE.Vector2(x, z);
-  const lodArray = Int32Array.from([lod, lod]);
-  const generateFlags = {
-    terrain: false,
-    water: false,
-    barrier: false,
-    vegetation: false,
-    grass: false,
-    poi: true,
-    heightfield: true,
-  };
-  const numVegetationInstances = 0; // litterUrls.length;
-  const numGrassInstances = 0; // grassUrls.length;
-  const numPoiInstances = 0; // hudUrls.length;
-  const options = {
-    signal,
-  };
-  const chunkResult = await instance.generateChunk(
-    min,
-    lod,
-    lodArray,
-    generateFlags,
-    numVegetationInstances,
-    numGrassInstances,
-    numPoiInstances,
-    options
-  );
-  return chunkResult;
-};
-
-// mesh classes
-
-class ChunksMesh extends THREE.InstancedMesh {
-  constructor() {
-    const chunksGeometry = new THREE.PlaneGeometry(1, 1)
-      .translate(0.5, -0.5, 0)
-      .rotateX(-Math.PI / 2);
-    const chunksInstancedGeometry = new THREE.InstancedBufferGeometry();
-    chunksInstancedGeometry.attributes = chunksGeometry.attributes;
-    chunksInstancedGeometry.index = chunksGeometry.index;
-    const uvs2 = new Float32Array(2 * maxChunks);
-    const uvs2Attribute = new THREE.InstancedBufferAttribute(uvs2, 2);
-    chunksInstancedGeometry.setAttribute('uv2', uvs2Attribute);
-    // console.log('got geo', chunksInstancedGeometry);
-
-    const canvas = document.createElement('canvas');
-    canvas.width = chunksPerView * chunkSize;
-    canvas.height = chunksPerView * chunkSize;
-    canvas.ctx = canvas.getContext('2d');
-    canvas.ctx.imageData = canvas.ctx.createImageData(chunkSize, chunkSize);
-    /* canvas.style.cssText = `\
-      position: fixed;
-      top: 0;
-      left: 0;
-      z-index: 100;
-      pointer-events: none;
-    `; */
-
-    const uTex = new THREE.Texture(canvas);
-    // uTex.flipY = false;
-    const chunksMaterial = new THREE.ShaderMaterial({
-      uniforms: {
-        uTex: {
-          value: uTex,
-          needsUpdate: true,
-        },
-      },
-      vertexShader: `\
-        attribute vec2 uv2;
-        varying vec2 vUv;
-      
-        void main() {
-          gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.0);
-          vUv = uv2 + uv / ${chunksPerView.toFixed(8)};
-          // vUv = uv;
-        }
-      `,
-      fragmentShader: `\
-        uniform sampler2D uTex;
-        varying vec2 vUv;
-
-        void main() {
-          // vec3 uvc = vec3(vUv.x, 0.0, vUv.y);
-
-          vec4 c = texture2D(uTex, vUv);
-          // c.rgb += uvc;
-          gl_FragColor = vec4(c.rgb, 1.0);
-        }
-      `,
-    });
-    // chunksMaterial.uniforms.uTex.value.onUpdate = () => {
-    //   console.log('tex update');
-    // };
-
-    super(
-      chunksInstancedGeometry,
-      chunksMaterial,
-      maxChunks
-    );
-
-    this.canvas = canvas;
-    // document.body.appendChild(canvas); // XXX debugging
-    this.updateCancelFn = null;
-  }
-  addChunk({
-    chunk,
-    freeListEntry,
-    camera,
-    signal,
-  }) {
-    (async () => {
-      try {
-        const {min} = chunk;
-        const scaleInt = getScaleInt(camera.scale.x);
-        
-        const chunkResult = await _getChunkHeightfieldAsync(min.x, min.y, scaleInt, {
-          signal,
-        });
-        // console.log('got chunk result', chunkResult);
-        const {
-          heightfields,
-          poiInstances,
-        } = chunkResult;
-        
-        const _updateHeightfields = () => {
-          const {
-            pixels,
-          } = heightfields;
-
-          const dx = freeListEntry % chunksPerView;
-          const dy = Math.floor(freeListEntry / chunksPerView);
-
-          const _updateGeometry = () => {
-            localMatrix.compose(
-              localVector.set(
-                min.x * chunkSize,
-                0,
-                min.y * chunkSize
-              ),
-              zeroQuaternion,
-              localVector2.setScalar(scaleInt * chunkSize - spacing)
-            );
-            this.setMatrixAt(freeListEntry, localMatrix);
-            this.instanceMatrix.needsUpdate = true;
-
-            // update uvs
-            // XXX why does the right/bottom get removed and then added again when scrolling left/up?
-            const uvX = dx / chunksPerView;
-            const uvY = (1 - 1 / chunksPerView) - (dy / chunksPerView);
-            this.geometry.attributes.uv2.array[freeListEntry * 2] = uvX;
-            this.geometry.attributes.uv2.array[freeListEntry * 2 + 1] = uvY;
-            this.geometry.attributes.uv2.needsUpdate = true;
-          };
-          const _updateTexture = () => {
-            const {ctx} = this.canvas;
-            const {imageData} = ctx;
-            let index = 0;
-            for (let ddz = 0; ddz < chunkSize; ddz++) {
-              for (let ddx = 0; ddx < chunkSize; ddx++) {
-                const srcHeight = pixels[index];
-                const srcWater = pixels[index + 1];
-                imageData.data[index] = srcHeight;
-                imageData.data[index + 1] = srcWater;
-                imageData.data[index + 2] = 0;
-                imageData.data[index + 3] = 255;
-
-                index += 4;
-              }
-            }
-            ctx.putImageData(imageData, dx * chunkSize, dy * chunkSize);
-            this.material.uniforms.uTex.value.needsUpdate = true;
-            // console.log('update', this.material.uniforms.uTex);
-          };
-          _updateGeometry();
-          _updateTexture();
-        };
-        const _updatePois = () => {
-          // XXX
-        };
-        _updateHeightfields();
-        _updatePois();
-      } catch(err) {
-        if (!err?.isAbortError) {
-          throw err;
-        }
-      }
-    })();
-  }
-  removeChunk(freeListEntry) {
-    // console.log('remove chunk', chunk.min.toArray().join(','), freeListEntry);
-    
-    // const {min} = chunk;
-    localMatrix.makeScale(
-      0,
-      0,
-      0
-    );
-    this.setMatrixAt(freeListEntry, localMatrix);
-    this.instanceMatrix.needsUpdate = true;
-
-    /* // update texture
-    const dx = freeListEntry % chunksPerView;
-    const dy = Math.floor(freeListEntry / chunksPerView);
-
-    const {ctx} = this.canvas;
-    ctx.clearRect(dx * chunkSize, dy * chunkSize, chunkSize, chunkSize);
-    this.material.uniforms.uTex.value.needsUpdate = true; */
-  }
-  destroy() {
-    // this.canvas?.parentNode?.removeChild(this.canvas);
-  }
-}
 
 //
 
@@ -317,13 +88,13 @@ export const MapCanvas = () => {
   // 3d
   const [renderer, setRenderer] = useState(null);
   const [camera, setCamera] = useState(null);
-  const [chunksMesh, setChunksMesh] = useState(null);
+  const [heightfieldsMesh, setHeightfieldsMesh] = useState(null);
   const [debugMesh, setDebugMesh] = useState(null);
   const [barrierMesh, setBarrierMesh] = useState(null);
   const [lodTracker, setLodTracker] = useState(null);
 
   // helpers
-  const loadLods = async (chunksMesh, camera) => {
+  const loadHeightfields = async (heightfieldsMesh, camera) => {
     const instance = useInstance();
 
     const lodTrackerOptions = getLodTrackerOptions(camera);
@@ -338,7 +109,7 @@ export const MapCanvas = () => {
       const {abortController} = allocEntry;
       const {signal} = abortController;
 
-      chunksMesh.addChunk({
+      heightfieldsMesh.addChunk({
         chunk,
         freeListEntry,
         camera,
@@ -354,7 +125,7 @@ export const MapCanvas = () => {
       const key = procGenManager.getNodeHash(chunk);
       const allocEntry = allocMap.get(key);
       if (allocEntry !== undefined) {
-        chunksMesh.removeChunk(allocEntry.freeListEntry);
+        heightfieldsMesh.removeChunk(allocEntry.freeListEntry);
         freeList.free(allocEntry.freeListEntry);
         allocEntry.abortController.abort(abortError);
         allocMap.delete(key);
@@ -524,10 +295,13 @@ export const MapCanvas = () => {
       const scene = new THREE.Scene();
       scene.matrixWorldAutoUpdate = false;
 
-      const chunksMesh = new ChunksMesh();
-      chunksMesh.frustumCulled = false;
-      scene.add(chunksMesh);
-      setChunksMesh(chunksMesh);
+      const instance = useInstance();
+      const heightfieldsMesh = new HeightfieldsMesh({
+        instance,
+      });
+      heightfieldsMesh.frustumCulled = false;
+      scene.add(heightfieldsMesh);
+      setHeightfieldsMesh(heightfieldsMesh);
 
       const debugGeometry = new THREE.BoxGeometry(1, 1, 1);
       const debugMaterial = new THREE.MeshBasicMaterial({
@@ -616,7 +390,7 @@ export const MapCanvas = () => {
       setCamera(camera);
 
       // init
-      loadLods(chunksMesh, camera)
+      loadHeightfields(heightfieldsMesh, camera)
         .then(lodTracker => {
           updateLodTracker(lodTracker, camera);
           setLodTracker(lodTracker);
@@ -646,7 +420,7 @@ export const MapCanvas = () => {
       globalThis.removeEventListener('resize', handleResize);
       globalThis.removeEventListener('mouseup', handleMouseUp);
       renderer && renderer.stop();
-      chunksMesh && chunksMesh.destroy();
+      heightfieldsMesh && heightfieldsMesh.destroy();
     };
   }, [renderer]);
   useEffect(() => {
