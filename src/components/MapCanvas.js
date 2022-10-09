@@ -3,6 +3,7 @@ import {useState, useMemo, useEffect} from 'react';
 
 import {ProcGenManager} from '../../src/procedural-generation/procgen-manager.js';
 import {FreeList} from '../../public/utils/geometry-utils.js';
+import {setRaycasterFromEvent} from '../../public/utils/renderer-utils.js';
 import styles from '../../styles/MapCanvas.module.css';
 
 import {
@@ -21,7 +22,6 @@ import {getScaleLod} from '../../public/utils/procgen-utils.js';
 
 const localVector = new THREE.Vector3();
 const localVector2 = new THREE.Vector3();
-const localVector2D = new THREE.Vector2();
 const localQuaternion = new THREE.Quaternion();
 const localMatrix = new THREE.Matrix4();
 const localMatrix2 = new THREE.Matrix4();
@@ -36,15 +36,6 @@ abortError.isAbortError = true;
 
 // helpers
 
-const setRaycasterFromEvent = (raycaster, camera, e) => {
-  const w = globalThis.innerWidth;
-  const h = globalThis.innerHeight;
-  const mouse = localVector2D.set(
-    (e.clientX / w) * 2 - 1,
-    -(e.clientY / h) * 2 + 1
-  );
-  raycaster.setFromCamera(mouse, camera);
-};
 const getLodTrackerOptions = camera => {
   const scaleLod = getScaleLod(camera.scale.x);
   const lodTrackerOptions = {
