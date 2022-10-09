@@ -1,4 +1,4 @@
-import {stableDiffusionUrl} from '../../constants/endpoints.js';
+import {stableDiffusionUrl} from '../../constants/endpoints-constants.js';
 
 // seed args:
 // character: [512, 512, 64, 128, 1, 256]

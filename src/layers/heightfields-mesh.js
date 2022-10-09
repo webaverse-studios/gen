@@ -7,7 +7,7 @@ import {
   // baseLod1Range,
   spacing,
   maxChunks,
-} from '../../constants/render.js';
+} from '../../constants/renderer-constants.js';
 import {getScaleInt} from '../../public/utils/procgen-utils.js';
 
 //
