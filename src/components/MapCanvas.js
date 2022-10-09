@@ -80,7 +80,7 @@ const _getChunkHeightfieldAsync = async (x, z, lod, {
     barrier: false,
     vegetation: false,
     grass: false,
-    poi: false,
+    poi: true,
     heightfield: true,
   };
   const numVegetationInstances = 0; // litterUrls.length;
@@ -99,7 +99,7 @@ const _getChunkHeightfieldAsync = async (x, z, lod, {
     numPoiInstances,
     options
   );
-  return chunkResult.heightfields.pixels;
+  return chunkResult;
 };
 
 // mesh classes
@@ -187,58 +187,72 @@ class ChunksMesh extends THREE.InstancedMesh {
         const {min} = chunk;
         const scaleInt = getScaleInt(camera.scale.x);
         
-        const pixels = await _getChunkHeightfieldAsync(min.x, min.y, scaleInt, {
+        const chunkResult = await _getChunkHeightfieldAsync(min.x, min.y, scaleInt, {
           signal,
         });
+        // console.log('got chunk result', chunkResult);
+        const {
+          heightfields,
+          poiInstances,
+        } = chunkResult;
         
-        const dx = freeListEntry % chunksPerView;
-        const dy = Math.floor(freeListEntry / chunksPerView);
+        const _updateHeightfields = () => {
+          const {
+            pixels,
+          } = heightfields;
 
-        const _updateGeometry = () => {
-          localMatrix.compose(
-            localVector.set(
-              min.x * chunkSize,
-              0,
-              min.y * chunkSize
-            ),
-            zeroQuaternion,
-            localVector2.setScalar(scaleInt * chunkSize - spacing)
-          );
-          this.setMatrixAt(freeListEntry, localMatrix);
-          this.instanceMatrix.needsUpdate = true;
+          const dx = freeListEntry % chunksPerView;
+          const dy = Math.floor(freeListEntry / chunksPerView);
 
-          // update uvs
-          // XXX why does the right/bottom get removed and then added again when scrolling left/up?
-          const uvX = dx / chunksPerView;
-          const uvY = (1 - 1 / chunksPerView) - (dy / chunksPerView);
-          this.geometry.attributes.uv2.array[freeListEntry * 2] = uvX;
-          this.geometry.attributes.uv2.array[freeListEntry * 2 + 1] = uvY;
-          this.geometry.attributes.uv2.needsUpdate = true;
-        };
+          const _updateGeometry = () => {
+            localMatrix.compose(
+              localVector.set(
+                min.x * chunkSize,
+                0,
+                min.y * chunkSize
+              ),
+              zeroQuaternion,
+              localVector2.setScalar(scaleInt * chunkSize - spacing)
+            );
+            this.setMatrixAt(freeListEntry, localMatrix);
+            this.instanceMatrix.needsUpdate = true;
 
-        const _updateTexture = () => {
-          const {ctx} = this.canvas;
-          const {imageData} = ctx;
-          let index = 0;
-          for (let ddz = 0; ddz < chunkSize; ddz++) {
-            for (let ddx = 0; ddx < chunkSize; ddx++) {
-              const srcHeight = pixels[index];
-              const srcWater = pixels[index + 1];
-              imageData.data[index] = srcHeight;
-              imageData.data[index + 1] = srcWater;
-              imageData.data[index + 2] = 0;
-              imageData.data[index + 3] = 255;
+            // update uvs
+            // XXX why does the right/bottom get removed and then added again when scrolling left/up?
+            const uvX = dx / chunksPerView;
+            const uvY = (1 - 1 / chunksPerView) - (dy / chunksPerView);
+            this.geometry.attributes.uv2.array[freeListEntry * 2] = uvX;
+            this.geometry.attributes.uv2.array[freeListEntry * 2 + 1] = uvY;
+            this.geometry.attributes.uv2.needsUpdate = true;
+          };
+          const _updateTexture = () => {
+            const {ctx} = this.canvas;
+            const {imageData} = ctx;
+            let index = 0;
+            for (let ddz = 0; ddz < chunkSize; ddz++) {
+              for (let ddx = 0; ddx < chunkSize; ddx++) {
+                const srcHeight = pixels[index];
+                const srcWater = pixels[index + 1];
+                imageData.data[index] = srcHeight;
+                imageData.data[index + 1] = srcWater;
+                imageData.data[index + 2] = 0;
+                imageData.data[index + 3] = 255;
 
-              index += 4;
+                index += 4;
+              }
             }
-          }
-          ctx.putImageData(imageData, dx * chunkSize, dy * chunkSize);
-          this.material.uniforms.uTex.value.needsUpdate = true;
-          // console.log('update', this.material.uniforms.uTex);
+            ctx.putImageData(imageData, dx * chunkSize, dy * chunkSize);
+            this.material.uniforms.uTex.value.needsUpdate = true;
+            // console.log('update', this.material.uniforms.uTex);
+          };
+          _updateGeometry();
+          _updateTexture();
         };
-
-        _updateGeometry();
-        _updateTexture();
+        const _updatePois = () => {
+          // XXX
+        };
+        _updateHeightfields();
+        _updatePois();
       } catch(err) {
         if (!err?.isAbortError) {
           throw err;
