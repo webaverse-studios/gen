@@ -1,22 +1,16 @@
 import * as THREE from 'three';
-import metaversefile from 'metaversefile';
-const {useCamera, useGeometries, useGeometryChunking, useProcGenManager} = metaversefile;
-const procGenManager = useProcGenManager();
-// const {DoubleSidedPlaneGeometry} = useGeometries();
-const {ChunkedBatchedMesh, ChunkedGeometryAllocator} = useGeometryChunking();
 import {
-  // bufferSize,
   WORLD_BASE_HEIGHT,
   MIN_WORLD_HEIGHT,
   MAX_WORLD_HEIGHT,
-  maxAnisotropy,
-} from '../constants.js';
+} from '../../constants/procgen-constants.js';
+import {maxAnisotropy} from '../../constants/renderer-constants.js';
+import {ChunkedBatchedMesh, ChunkedGeometryAllocator} from '../geometries/geometry-chunking.js';
 
 //
 
 const localVector = new THREE.Vector3();
 const localVector2 = new THREE.Vector3();
-// const localEuler = new THREE.Euler();
 const localBox = new THREE.Box3();
 
 //
@@ -73,6 +67,7 @@ export class IconMesh extends ChunkedBatchedMesh {
   constructor({
     instance,
     lodCutoff,
+    renderer,
   } = {}) {
     // allocator
     const baseGeometry = new THREE.PlaneGeometry(1, 1);
@@ -91,6 +86,7 @@ export class IconMesh extends ChunkedBatchedMesh {
       maxDrawCalls,
       maxInstancesPerDrawCall,
       boundingType: 'box',
+      renderer,
     });
     const {textures: attributeTextures} = allocator;
     for (const k in attributeTextures) {
@@ -228,18 +224,10 @@ export class IconMesh extends ChunkedBatchedMesh {
     const {ps, instances} = chunkResult;
     if (chunk.lod < this.lodCutoff && instances.length > 0) {
       const _renderIconGeometry = (drawCall, ps, instances) => {
-        // console.log('got ps', ps.slice());
         const pTexture = drawCall.getTexture('p');
         const pOffset = drawCall.getTextureOffset('p');
         const itemIndexTexture = drawCall.getTexture('itemIndex');
         const itemIndexOffset = drawCall.getTextureOffset('itemIndex');
-
-        /* if (ps.length / 3 !== instances.length) {
-          debugger;
-        } */
-        /* if (instances.length > maxInstancesPerDrawCall) {
-          debugger;
-        } */
 
         for (let i = 0; i < instances.length; i++) {
           const instanceId = instances[i];
@@ -253,15 +241,6 @@ export class IconMesh extends ChunkedBatchedMesh {
           pTexture.image.data[pOffset + i * 4 + 2] = pz;
 
           itemIndexTexture.image.data[itemIndexOffset + i * 4] = instanceId;
-
-          /* pTexture.image.data[pOffset + indexOffset] = px;
-          pTexture.image.data[pOffset + indexOffset + 1] = py;
-          pTexture.image.data[pOffset + indexOffset + 2] = pz;
-
-          offsetTexture.image.data[offsetOffset + indexOffset] = this.offsets[instanceId * 4];
-          offsetTexture.image.data[offsetOffset + indexOffset + 1] = this.offsets[instanceId * 4 + 1];
-          offsetTexture.image.data[offsetOffset + indexOffset + 2] = this.offsets[instanceId * 4 + 2];
-          offsetTexture.image.data[offsetOffset + indexOffset + 3] = this.offsets[instanceId * 4 + 3]; */
         }
 
         drawCall.updateTexture('p', pOffset, ps.length / 3 * 4);
@@ -299,9 +278,7 @@ export class IconMesh extends ChunkedBatchedMesh {
     }
     this.allocatedChunks.delete(key);
   }
-  update() {
-    const camera = useCamera();
-
+  update(camera) {
     this.material.uniforms.cameraPos.value.copy(camera.position);
     this.material.uniforms.cameraPos.needsUpdate = true;
 
