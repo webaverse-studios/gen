@@ -6,18 +6,20 @@ import {FreeList} from '../../public/utils/geometry-utils.js';
 import {setRaycasterFromEvent} from '../../public/utils/renderer-utils.js';
 import styles from '../../styles/MapCanvas.module.css';
 
-import {
-  chunkSize,
-  worldWidth,
-  worldHeight,
-  // chunksPerView,
-  baseLod1Range,
-  // spacing,
-  maxChunks,
-} from '../../constants/renderer-constants.js';
 import {HeightfieldsMesh} from '../layers/heightfields-mesh.js';
 import {ParcelsMesh} from '../layers/parcels-mesh.js';
+import {HudMesh} from '../layers/hud-mesh.js';
 import {getScaleLod} from '../../public/utils/procgen-utils.js';
+
+import {
+  chunkSize,
+} from '../../constants/procgen-constants.js';
+import {
+  worldWidth,
+  worldHeight,
+  baseLod1Range,
+  maxChunks,
+} from '../../constants/map-constants.js';
 
 //
 
@@ -83,6 +85,7 @@ export const MapCanvas = () => {
   const [heightfieldsMesh, setHeightfieldsMesh] = useState(null);
   const [debugMesh, setDebugMesh] = useState(null);
   const [parcelsMesh, setParcelsMesh] = useState(null);
+  const [hudMesh, setHudMesh] = useState(null);
   const [lodTracker, setLodTracker] = useState(null);
 
   // helpers
@@ -208,6 +211,7 @@ export const MapCanvas = () => {
       scene.matrixWorldAutoUpdate = false;
 
       // layers
+      // heightfields
       const instance = useInstance();
       const heightfieldsMesh = new HeightfieldsMesh({
         instance,
@@ -215,11 +219,19 @@ export const MapCanvas = () => {
       heightfieldsMesh.frustumCulled = false;
       scene.add(heightfieldsMesh);
       setHeightfieldsMesh(heightfieldsMesh);
-
+      // parcels
       const parcelsMesh = new ParcelsMesh();
       parcelsMesh.frustumCulled = false;
       scene.add(parcelsMesh);
       setParcelsMesh(parcelsMesh);
+      // hud
+      const hudMesh = new HudMesh({
+        instance,
+        renderer,
+      });
+      hudMesh.frustumCulled = false;
+      scene.add(hudMesh);
+      setHudMesh(hudMesh);
 
       // cursor
       const debugGeometry = new THREE.BoxGeometry(1, 1, 1);
