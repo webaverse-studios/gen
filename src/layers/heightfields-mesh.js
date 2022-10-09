@@ -1,13 +1,12 @@
 import * as THREE from 'three';
 import {
   chunkSize,
-  // worldWidth,
-  // worldHeight,
+} from '../../constants/procgen-constants.js';
+import {
   chunksPerView,
-  // baseLod1Range,
   spacing,
   maxChunks,
-} from '../../constants/renderer-constants.js';
+} from '../../constants/map-constants.js';
 import {getScaleInt} from '../../public/utils/procgen-utils.js';
 
 //

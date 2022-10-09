@@ -2,8 +2,10 @@ import * as THREE from 'three';
 
 import {
   chunkSize,
+} from '../../constants/procgen-constants.js';
+import {
   spacing,
-} from '../../constants/renderer-constants.js';
+} from '../../constants/map-constants.js';
 
 //
 
