@@ -81,7 +81,7 @@ export const MapCanvas = () => {
   const [camera, setCamera] = useState(null);
   const [heightfieldsMesh, setHeightfieldsMesh] = useState(null);
   const [debugMesh, setDebugMesh] = useState(null);
-  const [barrierMesh, setBarrierMesh] = useState(null);
+  const [parcelsMesh, setParcelsMesh] = useState(null);
   const [lodTracker, setLodTracker] = useState(null);
 
   // helpers
@@ -145,7 +145,7 @@ export const MapCanvas = () => {
 
   //
 
-  const loadBarriers = async barrierMesh => {
+  const loadParcels = async parcelsMesh => {
     const instance = useInstance();
     
     const minLod = 1;
@@ -166,7 +166,7 @@ export const MapCanvas = () => {
         },
       );
       // console.log('got barrier', barrierResult);
-      barrierMesh.barrierResult = barrierResult;
+      parcelsMesh.barrierResult = barrierResult;
   
       const {
         leafNodes,
@@ -188,15 +188,15 @@ export const MapCanvas = () => {
           zeroQuaternion,
           localVector2.setScalar(size - spacing)
         );
-        barrierMesh.setMatrixAt(i, localMatrix);
+        parcelsMesh.setMatrixAt(i, localMatrix);
       }
-      barrierMesh.instanceMatrix.needsUpdate = true;
-      barrierMesh.count = leafNodes.length;
+      parcelsMesh.instanceMatrix.needsUpdate = true;
+      parcelsMesh.count = leafNodes.length;
     };
     await _generateBarriers();
   };
-  const _updateBarrierHover = (barrierMesh, position) => {
-    const {barrierResult} = barrierMesh;
+  const _updateParcelsHover = (parcelsMesh, position) => {
+    const {barrierResult} = parcelsMesh;
     if (barrierResult) {
       const {leafNodes, leafNodesMin, leafNodesMax, leafNodesIndex} = barrierResult;
 
@@ -220,19 +220,19 @@ export const MapCanvas = () => {
           if (leafNode) {
             const {min, lod} = leafNode;
 
-            barrierMesh.material.uniforms.highlightMin.value.fromArray(min)
+            parcelsMesh.material.uniforms.highlightMin.value.fromArray(min)
               .multiplyScalar(chunkSize);
-            barrierMesh.material.uniforms.highlightMin.needsUpdate = true;
-            barrierMesh.material.uniforms.highlightMax.value.fromArray(min)
+            parcelsMesh.material.uniforms.highlightMin.needsUpdate = true;
+            parcelsMesh.material.uniforms.highlightMax.value.fromArray(min)
               .add(localVector2.setScalar(lod))
               .multiplyScalar(chunkSize);
-            barrierMesh.material.uniforms.highlightMax.needsUpdate = true;
+            parcelsMesh.material.uniforms.highlightMax.needsUpdate = true;
 
             // console.log('got', leafNode.min.join(','), leafNode.lod, leafNodesMin.join(','), leafNodesMax.join(','), barrierResult);
 
             // console.log('setting',
-            //   barrierMesh.material.uniforms.highlightMin.value.toArray().join(','),
-            //   barrierMesh.material.uniforms.highlightMax.value.toArray().join(','),
+            //   parcelsMesh.material.uniforms.highlightMin.value.toArray().join(','),
+            //   parcelsMesh.material.uniforms.highlightMax.value.toArray().join(','),
             // );
           } else {
             debugger;
@@ -242,10 +242,10 @@ export const MapCanvas = () => {
           debugger;
         }
       } else {
-        barrierMesh.material.uniforms.highlightMin.value.setScalar(0);
-        barrierMesh.material.uniforms.highlightMin.needsUpdate = true;
-        barrierMesh.material.uniforms.highlightMax.value.setScalar(0);
-        barrierMesh.material.uniforms.highlightMax.needsUpdate = true;
+        parcelsMesh.material.uniforms.highlightMin.value.setScalar(0);
+        parcelsMesh.material.uniforms.highlightMin.needsUpdate = true;
+        parcelsMesh.material.uniforms.highlightMax.value.setScalar(0);
+        parcelsMesh.material.uniforms.highlightMax.needsUpdate = true;
       }
     }
   };
@@ -349,15 +349,15 @@ export const MapCanvas = () => {
         `,
         transparent: true
       });
-      const barrierMesh = new THREE.InstancedMesh(
+      const parcelsMesh = new THREE.InstancedMesh(
         barrierGeometry,
         barrierMaterial,
         256
       );
-      barrierMesh.frustumCulled = false;
-      barrierMesh.barrierResult = null;
-      scene.add(barrierMesh);
-      setBarrierMesh(barrierMesh);
+      parcelsMesh.frustumCulled = false;
+      parcelsMesh.barrierResult = null;
+      scene.add(parcelsMesh);
+      setParcelsMesh(parcelsMesh);
 
       // camera
       const left = worldWidth / -2;
@@ -386,7 +386,7 @@ export const MapCanvas = () => {
           updateLodTracker(lodTracker, camera);
           setLodTracker(lodTracker);
         });
-      loadBarriers(barrierMesh);
+      loadParcels(parcelsMesh);
     }
   }, []);
   function handleResize() {
@@ -463,9 +463,7 @@ export const MapCanvas = () => {
     debugMesh.position.set(localRaycaster.ray.origin.x, 0, localRaycaster.ray.origin.z);
     debugMesh.updateMatrixWorld();
 
-    // if (barrierMesh) {
-      _updateBarrierHover(barrierMesh, localRaycaster.ray.origin);
-    // }
+    _updateParcelsHover(parcelsMesh, localRaycaster.ray.origin);
   };
   const handleWheel = e => {
     e.stopPropagation();
