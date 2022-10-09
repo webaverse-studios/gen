@@ -12,7 +12,7 @@ import {
   worldHeight,
   // chunksPerView,
   baseLod1Range,
-  spacing,
+  // spacing,
   maxChunks,
 } from '../../constants/renderer-constants.js';
 import {HeightfieldsMesh} from '../layers/heightfields-mesh.js';
@@ -157,7 +157,7 @@ export const MapCanvas = () => {
     const _generateBarriers = async () => {
       const position = localVector.set(0, 0, 0);
 
-      const barrierResult = await instance.generateBarrier(
+      const result = await instance.generateBarrier(
         position,
         minLod,
         maxLod,
@@ -166,40 +166,14 @@ export const MapCanvas = () => {
           signal,
         },
       );
-      // console.log('got barrier', barrierResult);
-      parcelsMesh.barrierResult = barrierResult;
-  
-      const {
-        leafNodes,
-      } = barrierResult;
-      for (let i = 0; i < leafNodes.length; i++) {
-        const leafNode = leafNodes[i];
-        const {
-          min,
-          lod,
-        } = leafNode;
-  
-        const size = lod * chunkSize;
-        localMatrix.compose(
-          localVector.set(
-            min[0] * chunkSize,
-            0,
-            min[1] * chunkSize
-          ),
-          zeroQuaternion,
-          localVector2.setScalar(size - spacing)
-        );
-        parcelsMesh.setMatrixAt(i, localMatrix);
-      }
-      parcelsMesh.instanceMatrix.needsUpdate = true;
-      parcelsMesh.count = leafNodes.length;
+      parcelsMesh.setResult(result);
     };
     await _generateBarriers();
   };
   const _updateParcelsHover = (parcelsMesh, position) => {
-    const {barrierResult} = parcelsMesh;
-    if (barrierResult) {
-      const {leafNodes, leafNodesMin, leafNodesMax, leafNodesIndex} = barrierResult;
+    const {result} = parcelsMesh;
+    if (result) {
+      const {leafNodes, leafNodesMin, leafNodesMax, leafNodesIndex} = result;
 
       const chunkPosition = localVector.copy(position);
       chunkPosition.x = Math.floor(chunkPosition.x / chunkSize);
@@ -229,7 +203,7 @@ export const MapCanvas = () => {
               .multiplyScalar(chunkSize);
             parcelsMesh.material.uniforms.highlightMax.needsUpdate = true;
 
-            // console.log('got', leafNode.min.join(','), leafNode.lod, leafNodesMin.join(','), leafNodesMax.join(','), barrierResult);
+            // console.log('got', leafNode.min.join(','), leafNode.lod, leafNodesMin.join(','), leafNodesMax.join(','), result);
 
             // console.log('setting',
             //   parcelsMesh.material.uniforms.highlightMin.value.toArray().join(','),

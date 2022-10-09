@@ -1,12 +1,17 @@
 import * as THREE from 'three';
 
+import {
+  chunkSize,
+  spacing,
+} from '../../constants/renderer-constants.js';
+
 //
 
-// const localVector = new THREE.Vector3();
-// const localVector2 = new THREE.Vector3();
-// const localMatrix = new THREE.Matrix4();
+const localVector = new THREE.Vector3();
+const localVector2 = new THREE.Vector3();
+const localMatrix = new THREE.Matrix4();
 
-// const zeroQuaternion = new THREE.Quaternion();
+const zeroQuaternion = new THREE.Quaternion();
 
 //
 
@@ -60,6 +65,34 @@ export class ParcelsMesh extends THREE.InstancedMesh {
     });
     super(parcelGeometry, parcelMaterial, 256);
 
-    this.barrierResult = null;
+    this.result = null;
+  }
+  setResult(result) {
+    this.result = result;
+  
+    const {
+      leafNodes,
+    } = result;
+    for (let i = 0; i < leafNodes.length; i++) {
+      const leafNode = leafNodes[i];
+      const {
+        min,
+        lod,
+      } = leafNode;
+
+      const size = lod * chunkSize;
+      localMatrix.compose(
+        localVector.set(
+          min[0] * chunkSize,
+          0,
+          min[1] * chunkSize
+        ),
+        zeroQuaternion,
+        localVector2.setScalar(size - spacing)
+      );
+      this.setMatrixAt(i, localMatrix);
+    }
+    this.instanceMatrix.needsUpdate = true;
+    this.count = leafNodes.length;
   }
 }
