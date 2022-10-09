@@ -130,25 +130,6 @@ export const MapCanvas = () => {
     });
     return lodTracker;
   };
-  const updateLodTracker = (lodTracker, camera) => {
-    const instance = useInstance();
-    const playerPosition = localVector.set(
-      camera.position.x,
-      0,
-      camera.position.z
-    );
-    instance.setCamera(
-      playerPosition,
-      playerPosition,
-      camera.quaternion,
-      camera.projectionMatrix
-    );
-
-    lodTracker.update(playerPosition);
-  };
-
-  //
-
   const loadParcels = async parcelsMesh => {
     const instance = useInstance();
     
@@ -173,6 +154,30 @@ export const MapCanvas = () => {
     };
     await _generateBarriers();
   };
+  const loadHud = async hudMesh => {
+    await hudMesh.waitForLoad();
+  };
+
+  //
+
+  const updateLodTracker = (lodTracker, camera) => {
+    const instance = useInstance();
+    const playerPosition = localVector.set(
+      camera.position.x,
+      0,
+      camera.position.z
+    );
+    instance.setCamera(
+      playerPosition,
+      playerPosition,
+      camera.quaternion,
+      camera.projectionMatrix
+    );
+
+    lodTracker.update(playerPosition);
+  };
+
+  //
 
   // initialize canvas from element ref
   const handleCanvas = useMemo(() => canvasEl => {
@@ -271,6 +276,7 @@ export const MapCanvas = () => {
           setLodTracker(lodTracker);
         });
       loadParcels(parcelsMesh);
+      loadHud(hudMesh);
     }
   }, []);
   function handleResize() {
