@@ -202,18 +202,10 @@ export const MapCanvas = () => {
               .add(localVector2.setScalar(lod))
               .multiplyScalar(chunkSize);
             parcelsMesh.material.uniforms.highlightMax.needsUpdate = true;
-
-            // console.log('got', leafNode.min.join(','), leafNode.lod, leafNodesMin.join(','), leafNodesMax.join(','), result);
-
-            // console.log('setting',
-            //   parcelsMesh.material.uniforms.highlightMin.value.toArray().join(','),
-            //   parcelsMesh.material.uniforms.highlightMax.value.toArray().join(','),
-            // );
           } else {
             debugger;
           }
         } else {
-          // console.log('bad index', index, x, z, w);
           debugger;
         }
       } else {
