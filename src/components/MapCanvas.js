@@ -170,52 +170,6 @@ export const MapCanvas = () => {
     };
     await _generateBarriers();
   };
-  const _updateParcelsHover = (parcelsMesh, position) => {
-    const {result} = parcelsMesh;
-    if (result) {
-      const {leafNodes, leafNodesMin, leafNodesMax, leafNodesIndex} = result;
-
-      const chunkPosition = localVector.copy(position);
-      chunkPosition.x = Math.floor(chunkPosition.x / chunkSize);
-      chunkPosition.y = Math.floor(chunkPosition.y / chunkSize);
-      chunkPosition.z = Math.floor(chunkPosition.z / chunkSize);
-
-      if (
-        chunkPosition.x >= leafNodesMin[0] && chunkPosition.x < leafNodesMax[0] &&
-        chunkPosition.z >= leafNodesMin[1] && chunkPosition.z < leafNodesMax[1]
-      ) {
-        const x = chunkPosition.x - leafNodesMin[0];
-        const z = chunkPosition.z - leafNodesMin[1];
-        const w = leafNodesMax[0] - leafNodesMin[0];
-        // const h = leafNodesMax[1] - leafNodesMin[1];
-        const index = x + z * w;
-        if (index >= 0 && index < leafNodesIndex.length) {
-          const indexIndex = leafNodesIndex[index];
-          const leafNode = leafNodes[indexIndex];
-          if (leafNode) {
-            const {min, lod} = leafNode;
-
-            parcelsMesh.material.uniforms.highlightMin.value.fromArray(min)
-              .multiplyScalar(chunkSize);
-            parcelsMesh.material.uniforms.highlightMin.needsUpdate = true;
-            parcelsMesh.material.uniforms.highlightMax.value.fromArray(min)
-              .add(localVector2.setScalar(lod))
-              .multiplyScalar(chunkSize);
-            parcelsMesh.material.uniforms.highlightMax.needsUpdate = true;
-          } else {
-            debugger;
-          }
-        } else {
-          debugger;
-        }
-      } else {
-        parcelsMesh.material.uniforms.highlightMin.value.setScalar(0);
-        parcelsMesh.material.uniforms.highlightMin.needsUpdate = true;
-        parcelsMesh.material.uniforms.highlightMax.value.setScalar(0);
-        parcelsMesh.material.uniforms.highlightMax.needsUpdate = true;
-      }
-    }
-  };
 
   // initialize canvas from element ref
   const handleCanvas = useMemo(() => canvasEl => {
@@ -381,7 +335,7 @@ export const MapCanvas = () => {
     debugMesh.position.set(localRaycaster.ray.origin.x, 0, localRaycaster.ray.origin.z);
     debugMesh.updateMatrixWorld();
 
-    _updateParcelsHover(parcelsMesh, localRaycaster.ray.origin);
+    parcelsMesh.updateHover(localRaycaster.ray.origin);
   };
   const handleWheel = e => {
     e.stopPropagation();
