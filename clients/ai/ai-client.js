@@ -1,4 +1,4 @@
-import {model} from '../constants/model-constants.js';
+import {model} from '../../constants/model-constants.js';
 
 export function makeGenerateFn() {
   function getOpenAIKey() {

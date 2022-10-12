@@ -1,5 +1,5 @@
 import stream from 'stream';
-import {Ctx} from '../../../../context.js';
+import {Ctx} from '../../../../clients/context.js';
 import {getDatasetSpecs} from '../../../../datasets/dataset-specs.js';
 import {cleanName} from '../../../../utils.js';
 import {generateImage} from '../../../../media/images/image-generator.js';

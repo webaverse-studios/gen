@@ -2,7 +2,7 @@ import uuidByString from 'uuid-by-string';
 import Markdown from 'marked-react';
 
 import styles from '../../styles/ContentObject.module.css';
-import {Ctx} from '../../context.js';
+import {Ctx} from '../../clients/context.js';
 import {cleanName} from '../../utils.js';
 import {generateItem} from '../../datasets/dataset-generator.js';
 import {formatItemText} from '../../datasets/dataset-parser.js';
