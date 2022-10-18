@@ -7,7 +7,7 @@ import {parse} from 'url';
 import next from 'next';
 import fs from 'fs';
 
-const port = 3030;
+const port = parseInt(process.env.PORT, 10) || 4444;
 const dev = process.env.NODE_ENV !== 'production';
 const app = next({
   dev,
