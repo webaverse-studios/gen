@@ -3,6 +3,7 @@ import {Ctx} from '../../../../clients/context.js';
 import {getDatasetSpecs} from '../../../../datasets/dataset-specs.js';
 import {cleanName} from '../../../../utils.js';
 import {generateImage} from '../../../../media/images/image-generator.js';
+import { Blob } from 'buffer';
 
 const globalImagePrompt = `trending on ArtStation`;
 

@@ -12,7 +12,7 @@ export default function Home() {
       </Head>
 
       <main className={styles.main}>
-        Lore engine
+        <img src="/assets/logo.svg" alt="Webaverse Wiki" />
       </main>
     </div>
   )

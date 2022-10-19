@@ -39,11 +39,19 @@ const ContentObject = ({
     return md;
   };
   content = formatImages(content);
+
+  const name = title.split("/")[1];
   return (
     <div className={styles.character}>
-      <div className={styles.name}>{title}</div>
-      <div className={styles.markdown}>
-        <Markdown gfm openLinksInNewTab={false}>{content}</Markdown>
+      <img src={'/assets/logo.svg'} className={styles.logo} alt="Webaverse Wiki" />
+      <div className={styles.contentWrap}>
+        <div className={styles.name}>{name}</div>
+        <div className={styles.leftContent}>
+          <div className={styles.markdown}>
+            <Markdown gfm openLinksInNewTab={false}>{content}</Markdown>
+          </div>
+        </div>
+        <div className={styles.rightContent}></div>
       </div>
     </div>
   );

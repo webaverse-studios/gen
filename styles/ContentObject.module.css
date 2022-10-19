@@ -1,7 +1,48 @@
 .character {
-  max-width: 100vw;
+  width: 100vw;
+  max-width: 960px;
+  margin: 0 auto;
+  position: relative;
+  padding: 80px 0;
 }
-.character .name {
+.character .logo {
+  height: 60px;
+  position: absolute;
+  left: 40px;
+  top: 12px;
+}
+.character .contentWrap {
+  background-color: #112029;
+  width: 100%;
+  padding: 28px 40px;
+  box-sizing: border-box;
+}
+.character .contentWrap .name {
+  font-size: 24px;
+  border-bottom: 2px solid #152934;
+  padding-bottom: 14px;
+  margin-bottom: 8px;
+}
+.character .contentWrap h2 {
+  color: #99ABB2;
+  text-transform: uppercase;
+  font-weight: 300;
+  font-size: 16px;
+  border-bottom: 2px solid #152934;
+  padding-bottom: 14px;
+  margin-bottom: 8px;
+}
+.character .contentWrap p {
+  font-size: 14px;
+  font-weight: 300;
+  margin: 0 0 24px 0;
+  padding: 0;
+  line-height: 20px;
+}
+.character .contentWrap .leftContent {
+  width: -webkit-calc(100% - 280px);
+  width: -moz-calc(100% - 280px);
+  width: calc(100% - 280px);
 }
 .character .bio {
   white-space: pre-wrap;
