@@ -79,6 +79,7 @@ export const MapCanvas = () => {
     globalThis.innerHeight * globalThis.devicePixelRatio,
   ]);
   const [dragState, setDragState] = useState(null);
+  const [fragMovedState, setFragMovedState] = useState(false);
   // 3d
   const [renderer, setRenderer] = useState(null);
   const [camera, setCamera] = useState(null);
@@ -294,6 +295,8 @@ export const MapCanvas = () => {
       e.preventDefault();
       e.stopPropagation();
       setDragState(null);
+
+      parcelsMesh.updateActive(false);
     };
     globalThis.addEventListener('mouseup', handleMouseUp);
 
@@ -320,6 +323,8 @@ export const MapCanvas = () => {
       startY: clientY,
       cameraStartPositon: camera.position.clone(),
     });
+    setFragMovedState(false);
+    parcelsMesh.updateActive(true);
   };
   const handleMouseMove = e => {
     e.preventDefault();
@@ -327,26 +332,28 @@ export const MapCanvas = () => {
     if (dragState) {
       const {clientX, clientY} = e;
       const {startX, startY} = dragState;
-
+      
       const w = dimensions[0] / devicePixelRatio;
       const h = dimensions[1] / devicePixelRatio;
       const startPosition = localVector.set(
         (-startX / w) * 2 + 1,
         (startY / h) * 2 - 1,
         0
-      ).unproject(camera);
+        ).unproject(camera);
       const endPosition = localVector2.set(
         (-clientX / w) * 2 + 1,
         (clientY / h) * 2 - 1,
         0
-      ).unproject(camera);
-
+        ).unproject(camera);
+        
       camera.position.copy(dragState.cameraStartPositon)
-        .sub(startPosition)
-        .add(endPosition);
+      .sub(startPosition)
+      .add(endPosition);
       camera.updateMatrixWorld();
-
+        
       updateLodTracker(lodTracker, camera);
+      
+      setFragMovedState(true);
     }
 
     setRaycasterFromEvent(localRaycaster, camera, e);

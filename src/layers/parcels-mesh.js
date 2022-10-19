@@ -19,10 +19,12 @@ const zeroQuaternion = new THREE.Quaternion();
 
 export class ParcelsMesh extends THREE.InstancedMesh {
   constructor() {
+    const maxCount = 256;
     const parcelGeometry = new THREE.PlaneGeometry(1, 1)
       // .scale(scale, scale, scale)
       .translate(0.5, -0.5, 0)
       .rotateX(-Math.PI / 2);
+    // parcelGeometry.setAttribute('positionIndex', new THREE.InstancedBufferAttribute(new Float32Array(maxCount), 1));
     const parcelMaterial = new THREE.ShaderMaterial({
       uniforms: {
         highlightMin: {
@@ -33,22 +35,40 @@ export class ParcelsMesh extends THREE.InstancedMesh {
           value: new THREE.Vector2(),
           needsUpdate: false,
         },
+        uDown: {
+          value: 0,
+          needsUpdate: false,
+        },
+        hoverIndex: {
+          value: -1,
+          needsUpdate: true,
+        },
       },
       vertexShader: `\
+        uniform vec2 highlightMin;
+        uniform vec2 highlightMax;  
+        uniform float uDown;
+        uniform float hoverIndex;
         varying vec3 vPosition;
+        varying vec3 vColor;
 
         void main() {
-          vec4 instancePosition = instanceMatrix * vec4(position, 1.0);
+          vec4 instancePosition = vec4(position, 1.0);
+
+          float index = float(gl_InstanceID);
+          if (
+            abs(hoverIndex - index) < 0.1
+          ) {
+            float scaleFactor = 1. - 0.1 * uDown;
+            instancePosition.xyz -= 0.5;
+            instancePosition.xyz *= scaleFactor;
+            instancePosition.xyz += 0.5;
+          }
+          
+          instancePosition = instanceMatrix * instancePosition;
           vPosition = instancePosition.xyz;
           gl_Position = projectionMatrix * modelViewMatrix * instancePosition;
-        }
-      `,
-      fragmentShader: `\
-        uniform vec2 highlightMin;
-        uniform vec2 highlightMax;
-        varying vec3 vPosition;
 
-        void main() {
           vec3 c;
           if (
             vPosition.x >= highlightMin.x &&
@@ -60,12 +80,22 @@ export class ParcelsMesh extends THREE.InstancedMesh {
           } else {
             c = vec3(0., 1., 0.);
           }
-          gl_FragColor = vec4(c, 0.2);
+          vColor = c;
+        }
+      `,
+      fragmentShader: `\
+        uniform vec2 highlightMin;
+        uniform vec2 highlightMax;
+        varying vec3 vPosition;
+        varying vec3 vColor;
+
+        void main() {
+          gl_FragColor = vec4(vColor, 0.2);
         }
       `,
       transparent: true
     });
-    super(parcelGeometry, parcelMaterial, 256);
+    super(parcelGeometry, parcelMaterial, maxCount);
 
     this.result = null;
   }
@@ -106,6 +136,7 @@ export class ParcelsMesh extends THREE.InstancedMesh {
       chunkPosition.y = Math.floor(chunkPosition.y / chunkSize);
       chunkPosition.z = Math.floor(chunkPosition.z / chunkSize);
 
+      let hoverIndex = -1;
       if (
         chunkPosition.x >= leafNodesMin[0] && chunkPosition.x < leafNodesMax[0] &&
         chunkPosition.z >= leafNodesMin[1] && chunkPosition.z < leafNodesMax[1]
@@ -128,6 +159,8 @@ export class ParcelsMesh extends THREE.InstancedMesh {
               .add(localVector2.setScalar(lod))
               .multiplyScalar(chunkSize);
             this.material.uniforms.highlightMax.needsUpdate = true;
+
+            hoverIndex = indexIndex;
           } else {
             debugger;
           }
@@ -140,6 +173,15 @@ export class ParcelsMesh extends THREE.InstancedMesh {
         this.material.uniforms.highlightMax.value.setScalar(0);
         this.material.uniforms.highlightMax.needsUpdate = true;
       }
+
+      this.material.uniforms.hoverIndex.value = hoverIndex ? hoverIndex : -1;
+      this.material.uniforms.hoverIndex.needsUpdate = true;
     }
+  }
+  updateActive(down) {
+    // if (this.result) {
+      this.material.uniforms.uDown.value = down ? 1 : 0;
+      this.material.uniforms.uDown.needsUpdate = true;
+    // }
   }
 }
