@@ -224,6 +224,7 @@ export const MapCanvas = () => {
 
       // scene
       const scene = new THREE.Scene();
+      scene.autoUpdate = false;
       scene.matrixWorldAutoUpdate = false;
 
       // layers
