@@ -10,6 +10,7 @@ import {HeightfieldsMesh} from '../layers/heightfields-mesh.js';
 import {ParcelsMesh} from '../layers/parcels-mesh.js';
 import {Target2DMesh} from '../meshes/target-2d-mesh.js';
 import {HudMesh} from '../layers/hud-mesh.js';
+import {LoadingMesh} from '../layers/loading-mesh.js';
 import {getScaleLod} from '../../public/utils/procgen-utils.js';
 
 import {
@@ -93,6 +94,7 @@ export const MapCanvas = () => {
   const [parcelsMesh, setParcelsMesh] = useState(null);
   const [targetMesh, setTargetMesh] = useState(null);
   const [hudMesh, setHudMesh] = useState(null);
+  const [loadingMesh, setLoadingMesh] = useState(null);
   const [lodTracker, setLodTracker] = useState(null);
 
   // helpers
@@ -225,12 +227,12 @@ export const MapCanvas = () => {
       scene.matrixWorldAutoUpdate = false;
 
       // layers
-      const layer1Mesh = new THREE.Object3D();
-      scene.add(layer1Mesh);
-      setLayer1Mesh(layer1Mesh);
       const layer2Mesh = new THREE.Object3D();
       scene.add(layer2Mesh);
       setLayer2Mesh(layer2Mesh);
+      const layer1Mesh = new THREE.Object3D();
+      scene.add(layer1Mesh);
+      setLayer1Mesh(layer1Mesh);
       // heightfields
       const instance = useInstance();
       const heightfieldsMesh = new HeightfieldsMesh({
@@ -277,6 +279,11 @@ export const MapCanvas = () => {
       hudMesh.frustumCulled = false;
       layer1Mesh.add(hudMesh);
       setHudMesh(hudMesh);
+      // loadingMesh
+      const loadingMesh = new LoadingMesh();
+      loadingMesh.frustumCulled = false;
+      setLoadingMesh(loadingMesh);
+      layer2Mesh.add(loadingMesh);
 
       // cursor
       const debugGeometry = new THREE.BoxGeometry(1, 1, 1);
@@ -484,10 +491,14 @@ export const MapCanvas = () => {
               const v = cubicBezier(currentValue);
               layer1Mesh.scale.set(1 - v * 0.2, 1, 1 - v * 0.2);
               layer1Mesh.updateMatrixWorld();
+              
+              layer2Mesh.scale.set(1.2 - v * 0.2, 1, 1.2 - v * 0.2);
+              layer2Mesh.updateMatrixWorld();
 
               heightfieldsMesh.setOpacity(1 - v);
               parcelsMesh.setOpacity(1 - v);
               targetMesh.setOpacity(1 - v);
+              loadingMesh.setOpacity(v);
             };
 
             const startTime = performance.now();
@@ -525,13 +536,18 @@ export const MapCanvas = () => {
             }
 
             const _updateScale = () => {
+              const v2 = cubicBezier(1 - currentValue);
               const v = (1 - cubicBezier(1 - currentValue));
               layer1Mesh.scale.set(1 - v * 0.2, 1, 1 - v * 0.2);
               layer1Mesh.updateMatrixWorld();
 
+              layer2Mesh.scale.set(1.2 - v * 0.2, 1, 1.2 - v * 0.2);
+              layer2Mesh.updateMatrixWorld();
+
               heightfieldsMesh.setOpacity(1 - v);
               parcelsMesh.setOpacity(1 - v);
               targetMesh.setOpacity(1 - v);
+              loadingMesh.setOpacity(1 - v2);
             };
 
             const startTime = performance.now();
@@ -572,6 +588,7 @@ export const MapCanvas = () => {
           if (animation) {
             animation.update();
           }
+          loadingMesh.update();
         });
       };
       _recurse();
