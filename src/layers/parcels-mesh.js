@@ -194,4 +194,8 @@ export class ParcelsMesh extends THREE.InstancedMesh {
       this.material.uniforms.uDown.needsUpdate = true;
     // }
   }
+  setOpacity(opacity) {
+    this.material.uniforms.opacity.value = opacity;
+    this.material.uniforms.opacity.needsUpdate = true;
+  }
 }

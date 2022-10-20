@@ -52,9 +52,12 @@ export class Target2DMesh extends THREE.Mesh {
     ]);
     const material = new THREE.MeshBasicMaterial({
       color: 0xFFFFFF,
-      // transparent: true,
+      transparent: true,
       // opacity: 0.5,
     });
     super(geometry, material);
+  }
+  setOpacity(opacity) {
+    this.material.opacity = opacity;
   }
 }

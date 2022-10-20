@@ -86,6 +86,8 @@ export const MapCanvas = () => {
   // 3d
   const [renderer, setRenderer] = useState(null);
   const [camera, setCamera] = useState(null);
+  const [layer1Mesh, setLayer1Mesh] = useState(null);
+  const [layer2Mesh, setLayer2Mesh] = useState(null);
   const [heightfieldsMesh, setHeightfieldsMesh] = useState(null);
   const [debugMesh, setDebugMesh] = useState(null);
   const [parcelsMesh, setParcelsMesh] = useState(null);
@@ -185,8 +187,6 @@ export const MapCanvas = () => {
   //
 
   // initialize canvas from element ref
-  let layer1Mesh = null;
-  let layer2Mesh = null;
   let animation = null;
   let currentValue = 0;
   const handleCanvas = useMemo(() => canvasEl => {
@@ -225,10 +225,12 @@ export const MapCanvas = () => {
       scene.matrixWorldAutoUpdate = false;
 
       // layers
-      layer1Mesh = new THREE.Object3D();
+      const layer1Mesh = new THREE.Object3D();
       scene.add(layer1Mesh);
-      layer2Mesh = new THREE.Object3D();
+      setLayer1Mesh(layer1Mesh);
+      const layer2Mesh = new THREE.Object3D();
       scene.add(layer2Mesh);
+      setLayer2Mesh(layer2Mesh);
       // heightfields
       const instance = useInstance();
       const heightfieldsMesh = new HeightfieldsMesh({
@@ -467,105 +469,117 @@ export const MapCanvas = () => {
   };
 
   useEffect(() => {
-    const keydown = e => {
-      switch (e.code) {
-        // page up
-        case 'PageUp': {
-          // console.log('page up');
+    if (parcelsMesh) {
+      const keydown = e => {
+        switch (e.code) {
+          // page up
+          case 'PageUp': {
+            // console.log('page up');
+
+            if (animation) {
+              animation.end();
+            }
+
+            const _updateScale = () => {
+              layer1Mesh.scale.set(1 - cubicBezier(currentValue) * 0.2, 1, 1 - cubicBezier(currentValue) * 0.2);
+              layer1Mesh.updateMatrixWorld();
+
+              heightfieldsMesh.setOpacity(1 - currentValue);
+              parcelsMesh.setOpacity(1 - currentValue);
+              targetMesh.setOpacity(1 - currentValue);
+            };
+
+            const startTime = performance.now();
+            animation = {
+              startTime,
+              startValue: new THREE.Vector3(0, currentValue, 0),
+              endValue: new THREE.Vector3(0, 1, 0),
+              duration: 1000,
+              update() {
+                const currentTime = performance.now();
+                const t = Math.min((currentTime - this.startTime) / this.duration, 1);
+                const value = this.startValue.clone().lerp(this.endValue, t);
+                currentValue = value.y;
+
+                _updateScale();
+
+                if (t >= 1) {
+                  animation = null;
+                }
+              },
+              end() {
+                currentValue = this.endValue.y;
+                _updateScale();
+                animation = null;
+              },
+            };
+            break;
+          }
+          // page down
+          case 'PageDown': {
+            // console.log('page down');
+
+            if (animation) {
+              animation.end();
+            }
+
+            const _updateScale = () => {
+              layer1Mesh.scale.set(1 - (1 - cubicBezier(1 - currentValue)) * 0.2, 1, 1 - (1 - cubicBezier(1 - currentValue)) * 0.2);
+              layer1Mesh.updateMatrixWorld();
+
+              heightfieldsMesh.setOpacity(1 - currentValue);
+              parcelsMesh.setOpacity(1 - currentValue);
+              targetMesh.setOpacity(1 - currentValue);
+            };
+
+            const startTime = performance.now();
+            animation = {
+              startTime,
+              startValue: new THREE.Vector3(0, currentValue, 0),
+              endValue: new THREE.Vector3(0, 0, 0),
+              duration: 1000,
+              update() {
+                const currentTime = performance.now();
+                const t = Math.min((currentTime - this.startTime) / this.duration, 1);
+                const value = this.startValue.clone().lerp(this.endValue, t);
+                currentValue = value.y;
+
+                _updateScale();
+
+                if (t >= 1) {
+                  animation = null;
+                }
+              },
+              end() {
+                currentValue = this.endValue.y;
+                _updateScale();
+                animation = null;
+              },
+            };
+            break;
+          }
+        }
+      };
+      window.addEventListener('keydown', keydown);
+
+      let frame;
+      const _recurse = () => {
+        frame = window.requestAnimationFrame(() => {
+          _recurse();
 
           if (animation) {
-            animation.end();
+            animation.update();
           }
+        });
+      };
+      _recurse();
 
-          const _updateScale = () => {
-            layer1Mesh.scale.set(1 - cubicBezier(currentValue) * 0.2, 1, 1 - cubicBezier(currentValue) * 0.2);
-          };
-
-          const startTime = performance.now();
-          animation = {
-            startTime,
-            startValue: new THREE.Vector3(0, currentValue, 0),
-            endValue: new THREE.Vector3(0, 1, 0),
-            duration: 1000,
-            update() {
-              const currentTime = performance.now();
-              const t = Math.min((currentTime - this.startTime) / this.duration, 1);
-              const value = this.startValue.clone().lerp(this.endValue, t);
-              currentValue = value.y;
-
-              _updateScale();
-
-              if (t >= 1) {
-                animation = null;
-              }
-            },
-            end() {
-              currentValue = this.endValue.y;
-              _updateScale();
-              animation = null;
-            },
-          };
-          break;
-        }
-        // page down
-        case 'PageDown': {
-          // console.log('page down');
-
-          if (animation) {
-            animation.end();
-          }
-
-          const _updateScale = () => {
-            layer1Mesh.scale.set(1 - (1 - cubicBezier(1 - currentValue)) * 0.2, 1, 1 - (1 - cubicBezier(1 - currentValue)) * 0.2);
-          };
-
-          const startTime = performance.now();
-          animation = {
-            startTime,
-            startValue: new THREE.Vector3(0, currentValue, 0),
-            endValue: new THREE.Vector3(0, 0, 0),
-            duration: 1000,
-            update() {
-              const currentTime = performance.now();
-              const t = Math.min((currentTime - this.startTime) / this.duration, 1);
-              const value = this.startValue.clone().lerp(this.endValue, t);
-              currentValue = value.y;
-
-              _updateScale();
-
-              if (t >= 1) {
-                animation = null;
-              }
-            },
-            end() {
-              currentValue = this.endValue.y;
-              _updateScale();
-              animation = null;
-            },
-          };
-          break;
-        }
-      }
-    };
-    window.addEventListener('keydown', keydown);
-
-    let frame;
-    const _recurse = () => {
-      frame = window.requestAnimationFrame(() => {
-        _recurse();
-
-        if (animation) {
-          animation.update();
-        }
-      });
-    };
-    _recurse();
-
-    return () => {
-      window.removeEventListener('keydown', keydown);
-      cancelAnimationFrame(frame);
-    };
-  }, []);
+      return () => {
+        window.removeEventListener('keydown', keydown);
+        cancelAnimationFrame(frame);
+      };
+    }
+  }, [parcelsMesh]);
 
   return (
     <canvas
