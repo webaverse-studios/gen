@@ -481,12 +481,13 @@ export const MapCanvas = () => {
             }
 
             const _updateScale = () => {
-              layer1Mesh.scale.set(1 - cubicBezier(currentValue) * 0.2, 1, 1 - cubicBezier(currentValue) * 0.2);
+              const v = cubicBezier(currentValue);
+              layer1Mesh.scale.set(1 - v * 0.2, 1, 1 - v * 0.2);
               layer1Mesh.updateMatrixWorld();
 
-              heightfieldsMesh.setOpacity(1 - currentValue);
-              parcelsMesh.setOpacity(1 - currentValue);
-              targetMesh.setOpacity(1 - currentValue);
+              heightfieldsMesh.setOpacity(1 - v);
+              parcelsMesh.setOpacity(1 - v);
+              targetMesh.setOpacity(1 - v);
             };
 
             const startTime = performance.now();
@@ -524,12 +525,13 @@ export const MapCanvas = () => {
             }
 
             const _updateScale = () => {
-              layer1Mesh.scale.set(1 - (1 - cubicBezier(1 - currentValue)) * 0.2, 1, 1 - (1 - cubicBezier(1 - currentValue)) * 0.2);
+              const v = (1 - cubicBezier(1 - currentValue));
+              layer1Mesh.scale.set(1 - v * 0.2, 1, 1 - v * 0.2);
               layer1Mesh.updateMatrixWorld();
 
-              heightfieldsMesh.setOpacity(1 - currentValue);
-              parcelsMesh.setOpacity(1 - currentValue);
-              targetMesh.setOpacity(1 - currentValue);
+              heightfieldsMesh.setOpacity(1 - v);
+              parcelsMesh.setOpacity(1 - v);
+              targetMesh.setOpacity(1 - v);
             };
 
             const startTime = performance.now();
