@@ -12,6 +12,7 @@ import {Target2DMesh} from '../meshes/target-2d-mesh.js';
 import {HudMesh} from '../layers/hud-mesh.js';
 import {LoadingMesh} from '../layers/loading-mesh.js';
 import {getScaleLod} from '../../public/utils/procgen-utils.js';
+import {appUrl} from '../../constants/endpoints-constants.js';
 
 import {
   chunkSize,
@@ -80,7 +81,7 @@ const useInstance = () => {
 let currentValue = 0; // XXX make this not a singleton
 export const MapCanvas = ({
   onSelectChange,
-  // minMax,
+  onLoad,
 }) => {
   // 2d
   const [dimensions, setDimensions] = useState([
@@ -481,6 +482,8 @@ export const MapCanvas = ({
       animation.end();
     }
 
+    const destinationRealm = currentValue < 0.5 ? 'overworld' : 'homespace';
+
     const startTime = performance.now();
     setAnimation({
       startTime,
@@ -504,7 +507,7 @@ export const MapCanvas = ({
         camera.scale.set(currentScale, currentScale, 1);
         camera.updateMatrixWorld();
         
-        if (currentValue < 0.5) {
+        if (destinationRealm === 'overworld') {
           heightfieldsMesh.setOpacity(1 - t);
           parcelsMesh.setOpacity(1 - t);
           targetMesh.setOpacity(1 - t);
@@ -519,6 +522,8 @@ export const MapCanvas = ({
 
         if (t >= 1) {
           setAnimation(null);
+
+          onLoad(`${appUrl}/${destinationRealm}?coord=[${currentPosition.x.toFixed(0)},${currentPosition.y.toFixed(0)}]`);
         }
       },
       end() {

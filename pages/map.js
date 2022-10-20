@@ -30,6 +30,9 @@ const Map = () => {
     <div className={styles.map}>
       <MapCanvas 
         minMax={minMax}
+        onLoad={u => {
+          console.log('load url', {u});
+        }}
         onSelectChange={o => {
           // console.log('check array', minMax.slice(), o.minMax.slice(), !arrayEquals(minMax, o.minMax));
           if (!arrayEquals(minMax, o.minMax)) {
