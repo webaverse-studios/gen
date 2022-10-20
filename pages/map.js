@@ -28,13 +28,17 @@ const Map = () => {
   
   return (
     <div className={styles.map}>
-      <MapCanvas onSelectChange={o => {
-        if (!arrayEquals(minMax, o.minMax)) {
-          setMinMax(o.minMax);
-        } else {
-          setMinMax([0, 0, 0, 0]);
-        }
-      }} />
+      <MapCanvas 
+        minMax={minMax}
+        onSelectChange={o => {
+          // console.log('check array', minMax.slice(), o.minMax.slice(), !arrayEquals(minMax, o.minMax));
+          if (!arrayEquals(minMax, o.minMax)) {
+            setMinMax(o.minMax.slice());
+          } else {
+            setMinMax([0, 0, 0, 0]);
+          }
+        }}
+      />
       <MapSidebar minMax={minMax} />
     </div>
   );

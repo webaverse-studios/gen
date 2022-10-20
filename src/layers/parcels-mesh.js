@@ -225,6 +225,10 @@ export class ParcelsMesh extends THREE.InstancedMesh {
     this.material.uniforms.selectMax.value.setScalar(0);
     this.material.uniforms.selectMax.needsUpdate = true;
   }
+  hoverEqualsSelect() {
+    return this.material.uniforms.highlightMin.value.equals(this.material.uniforms.selectMin.value) &&
+      this.material.uniforms.highlightMax.value.equals(this.material.uniforms.selectMax.value);
+  }
   updateSelected() {
     // copy from highlight state
     if (this.material.uniforms.hoverIndex.value !== -1) {

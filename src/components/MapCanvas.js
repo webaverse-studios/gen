@@ -78,6 +78,7 @@ const useInstance = () => {
 
 export const MapCanvas = ({
   onSelectChange,
+  // minMax,
 }) => {
   // 2d
   const [dimensions, setDimensions] = useState([
@@ -340,17 +341,32 @@ export const MapCanvas = ({
   useEffect(() => {
     globalThis.addEventListener('resize', handleResize);
 
+    return () => {
+      globalThis.removeEventListener('resize', handleResize);
+      renderer && renderer.stop();
+      heightfieldsMesh && heightfieldsMesh.destroy();
+    };
+  }, [renderer]);
+  useEffect(() => {
     const handleMouseUp = e => {
       e.preventDefault();
       e.stopPropagation();
       setDragState(null);
 
       if (parcelsMesh.getActive()) {
-        const minMax = parcelsMesh.updateSelected();
-        // console.log('on select change', minMax);
-        onSelectChange({
-          minMax,
-        });
+        if (!parcelsMesh.hoverEqualsSelect()) {
+          // console.log('set one');
+          const minMax = parcelsMesh.updateSelected();
+          onSelectChange({
+            minMax,
+          });
+        } else {
+          // console.log('set zero');
+          onSelectChange({
+            minMax: [0, 0, 0, 0],
+          });
+          parcelsMesh.clearSelected();
+        }
       }
 
       parcelsMesh.updateActive(false);
@@ -359,12 +375,9 @@ export const MapCanvas = ({
     globalThis.addEventListener('mouseup', handleMouseUp);
 
     return () => {
-      globalThis.removeEventListener('resize', handleResize);
       globalThis.removeEventListener('mouseup', handleMouseUp);
-      renderer && renderer.stop();
-      heightfieldsMesh && heightfieldsMesh.destroy();
     };
-  }, [renderer]);
+  }, [renderer, onSelectChange]);
   useEffect(() => {
     const keydown = e => {
       if (e.key === 'Escape') {
@@ -372,10 +385,7 @@ export const MapCanvas = ({
           minMax: [0, 0, 0, 0],
         });
 
-        // parcelsMesh.clearHover();
-        console.log('clear hover');
-        const selected = parcelsMesh.clearSelected();
-        console.log('update selected', selected);
+        parcelsMesh.clearSelected();
       }
     };
     window.addEventListener('keydown', keydown);
