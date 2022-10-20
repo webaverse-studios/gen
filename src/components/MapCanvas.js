@@ -35,6 +35,7 @@ const localMatrix2 = new THREE.Matrix4();
 const localRaycaster = new THREE.Raycaster();
 
 const cubicBezier = bezier(0, 1, 0, 1);
+const zeroQuaternion = new THREE.Quaternion();
 
 //
 
@@ -99,6 +100,7 @@ export const MapCanvas = ({
   const [hudMesh, setHudMesh] = useState(null);
   const [loadingMesh, setLoadingMesh] = useState(null);
   const [lodTracker, setLodTracker] = useState(null);
+  const [animation, setAnimation] = useState(null);
 
   // helpers
   const loadHeightfields = async (heightfieldsMesh, camera) => {
@@ -192,7 +194,6 @@ export const MapCanvas = ({
   //
 
   // initialize canvas from element ref
-  let animation = null;
   let currentValue = 0;
   const handleCanvas = useMemo(() => canvasEl => {
     if (canvasEl) {
@@ -404,14 +405,17 @@ export const MapCanvas = ({
     e.preventDefault();
     e.stopPropagation();
     const {clientX, clientY} = e;
-    setDragState({
-      startX: clientX,
-      startY: clientY,
-      cameraStartPositon: camera.position.clone(),
-    });
-    setFragMovedState(false);
-    parcelsMesh.updateActive(true);
-    targetMesh.updateActive(true);
+
+    if (!animation) {
+      setDragState({
+        startX: clientX,
+        startY: clientY,
+        cameraStartPositon: camera.position.clone(),
+      });
+      setFragMovedState(false);
+      parcelsMesh.updateActive(true);
+      targetMesh.updateActive(true);
+    }
   };
   const handleMouseMove = e => {
     e.preventDefault();
@@ -470,6 +474,50 @@ export const MapCanvas = ({
     } else {
       targetMesh.updateActive(false);
     }
+  };
+  const handleDoubleClick = e => {
+    if (animation) {
+      animation.end();
+    }
+
+    console.log('double click', e);
+
+    const startTime = performance.now();
+    setAnimation({
+      startTime,
+      startPosition: camera.position.clone(),
+      endPosition: localRaycaster.ray.origin.clone().set(localRaycaster.ray.origin.x, 10, localRaycaster.ray.origin.z),
+      startScale: camera.scale.x,
+      endScale: 0.5,
+      duration: 1000,
+      update() {
+        const currentTime = performance.now();
+        const t = Math.min((currentTime - this.startTime) / this.duration, 1);
+
+        const v = cubicBezier(t);
+        // const v2 = 1 + v * 0.2;
+
+        const currentPosition = this.startPosition.clone()
+          .lerp(this.endPosition, v);
+        const currentScale = this.startScale + (this.endScale - this.startScale) * v;
+
+        camera.position.copy(currentPosition);
+        camera.scale.set(currentScale, currentScale, 1);
+        camera.updateMatrixWorld();
+
+        if (t >= 1) {
+          setAnimation(null);
+        }
+      },
+      end() {
+        console.log('end');
+
+        currentValue = this.endValue.y;
+        _updateScale();
+        setAnimation(null);
+      },
+    });
+    // console.log('set animation', animation);
   };
   const handleWheel = e => {
     e.stopPropagation();
@@ -541,7 +589,7 @@ export const MapCanvas = ({
             };
 
             const startTime = performance.now();
-            animation = {
+            setAnimation({
               startTime,
               startValue: new THREE.Vector3(0, currentValue, 0),
               endValue: new THREE.Vector3(0, 1, 0),
@@ -555,15 +603,15 @@ export const MapCanvas = ({
                 _updateScale();
 
                 if (t >= 1) {
-                  animation = null;
+                  setAnimation(null);
                 }
               },
               end() {
                 currentValue = this.endValue.y;
                 _updateScale();
-                animation = null;
+                setAnimation(null);
               },
-            };
+            });
             break;
           }
           // page down
@@ -590,7 +638,7 @@ export const MapCanvas = ({
             };
 
             const startTime = performance.now();
-            animation = {
+            setAnimation({
               startTime,
               startValue: new THREE.Vector3(0, currentValue, 0),
               endValue: new THREE.Vector3(0, 0, 0),
@@ -604,40 +652,44 @@ export const MapCanvas = ({
                 _updateScale();
 
                 if (t >= 1) {
-                  animation = null;
+                  setAnimation(null);
                 }
               },
               end() {
                 currentValue = this.endValue.y;
                 _updateScale();
-                animation = null;
+                setAnimation(null);
               },
-            };
+            });
             break;
           }
         }
       };
       window.addEventListener('keydown', keydown);
 
-      let frame;
-      const _recurse = () => {
-        frame = window.requestAnimationFrame(() => {
-          _recurse();
-
-          if (animation) {
-            animation.update();
-          }
-          loadingMesh.update();
-        });
-      };
-      _recurse();
-
       return () => {
         window.removeEventListener('keydown', keydown);
-        cancelAnimationFrame(frame);
       };
     }
-  }, [parcelsMesh]);
+  }, [parcelsMesh, animation]);
+
+  useEffect(() => {
+    let frame;
+    const _recurse = () => {
+      frame = window.requestAnimationFrame(() => {
+        _recurse();
+
+        if (animation) {
+          animation.update();
+        }
+        loadingMesh.update();
+      });
+    };
+    _recurse();
+    return () => {
+      cancelAnimationFrame(frame);
+    };
+  }, [parcelsMesh, animation]);
 
   return (
     <canvas
@@ -646,6 +698,7 @@ export const MapCanvas = ({
       // height={dimensions[1]}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
+      onDoubleClick={handleDoubleClick}
       onWheel={handleWheel}
       ref={handleCanvas}
     />
