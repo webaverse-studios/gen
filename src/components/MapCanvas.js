@@ -76,7 +76,9 @@ const useInstance = () => {
   return procGenInstance;
 };
 
-export const MapCanvas = () => {
+export const MapCanvas = ({
+  onSelectChange,
+}) => {
   // 2d
   const [dimensions, setDimensions] = useState([
     globalThis.innerWidth * globalThis.devicePixelRatio,
@@ -342,6 +344,11 @@ export const MapCanvas = () => {
       e.preventDefault();
       e.stopPropagation();
       setDragState(null);
+
+      if (parcelsMesh.getActive()) {
+        const minMax = parcelsMesh.updateSelected();
+        onSelectChange({minMax});
+      }
 
       parcelsMesh.updateActive(false);
       targetMesh.updateActive(false);

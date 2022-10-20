@@ -102,6 +102,7 @@ export class ParcelsMesh extends THREE.InstancedMesh {
     });
     super(parcelGeometry, parcelMaterial, maxCount);
 
+    this.minMax = new Float32Array(4);
     this.result = null;
   }
   setResult(result) {
@@ -189,10 +190,25 @@ export class ParcelsMesh extends THREE.InstancedMesh {
     }
   }
   updateActive(down) {
-    // if (this.result) {
-      this.material.uniforms.uDown.value = down ? 1 : 0;
-      this.material.uniforms.uDown.needsUpdate = true;
-    // }
+    this.material.uniforms.uDown.value = down ? 1 : 0;
+    this.material.uniforms.uDown.needsUpdate = true;
+  }
+  getActive() {
+    return this.material.uniforms.uDown.value > 0;
+  }
+  updateSelected() {
+    if (this.material.uniforms.hoverIndex.value !== -1) {
+      this.minMax[0] = this.material.uniforms.highlightMin.value.x;
+      this.minMax[1] = this.material.uniforms.highlightMin.value.y;
+      this.minMax[2] = this.material.uniforms.highlightMax.value.x;
+      this.minMax[3] = this.material.uniforms.highlightMax.value.y;
+    } else {
+      this.minMax[0] = 0;
+      this.minMax[1] = 0;
+      this.minMax[2] = 0;
+      this.minMax[3] = 0;
+    }
+    return this.minMax.slice();
   }
   setOpacity(opacity) {
     this.material.uniforms.opacity.value = opacity;
