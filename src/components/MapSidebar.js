@@ -29,26 +29,17 @@ import styles from '../../styles/MapSidebar.module.css';
 
 export const MapSidebar = ({
   minMax = [0, 0, 0, 0],
-  onClose,
 }) => {
   const selected = (minMax[2] - minMax[0]) > 0;
   // console.log('got', selected, minMax[2]);
 
-  useEffect(() => {
-    const keydown = e => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-    window.addEventListener('keydown', keydown);
-    return () => {
-      window.removeEventListener('keydown', keydown);
-    };
-  }, []);
-
   return (
     <div
       className={classnames(styles.mapSidebar, selected ? styles.open : null)}
-    />
+    >
+      <div className={styles.placeholder}>
+        <img src="/images/arc-white2.png" />
+      </div>
+    </div>
   );
 };

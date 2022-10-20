@@ -35,6 +35,14 @@ export class ParcelsMesh extends THREE.InstancedMesh {
           value: new THREE.Vector2(),
           needsUpdate: false,
         },
+        selectMin: {
+          value: new THREE.Vector2(),
+          needsUpdate: false,
+        },
+        selectMax: {
+          value: new THREE.Vector2(),
+          needsUpdate: false,
+        },
         uDown: {
           value: 0,
           needsUpdate: false,
@@ -50,7 +58,9 @@ export class ParcelsMesh extends THREE.InstancedMesh {
       },
       vertexShader: `\
         uniform vec2 highlightMin;
-        uniform vec2 highlightMax;  
+        uniform vec2 highlightMax; 
+        uniform vec2 selectMin;
+        uniform vec2 selectMax; 
         uniform float uDown;
         uniform float hoverIndex;
         varying vec3 vPosition;
@@ -75,6 +85,13 @@ export class ParcelsMesh extends THREE.InstancedMesh {
 
           vec3 c;
           if (
+            vPosition.x >= selectMin.x &&
+            vPosition.z >= selectMin.y &&
+            vPosition.x < selectMax.x &&
+            vPosition.z < selectMax.y
+          ) {
+            c = vec3(1., 0., 0.);
+          } else if (
             vPosition.x >= highlightMin.x &&
             vPosition.x < highlightMax.x &&
             vPosition.z >= highlightMin.y &&
@@ -196,19 +213,37 @@ export class ParcelsMesh extends THREE.InstancedMesh {
   getActive() {
     return this.material.uniforms.uDown.value > 0;
   }
+  clearHover() {
+    this.material.uniforms.highlightMin.value.setScalar(0);
+    this.material.uniforms.highlightMin.needsUpdate = true;
+    this.material.uniforms.highlightMax.value.setScalar(0);
+    this.material.uniforms.highlightMax.needsUpdate = true;
+  }
+  clearSelected() {
+    this.material.uniforms.selectMin.value.setScalar(0);
+    this.material.uniforms.selectMin.needsUpdate = true;
+    this.material.uniforms.selectMax.value.setScalar(0);
+    this.material.uniforms.selectMax.needsUpdate = true;
+  }
   updateSelected() {
+    // copy from highlight state
     if (this.material.uniforms.hoverIndex.value !== -1) {
-      this.minMax[0] = this.material.uniforms.highlightMin.value.x;
-      this.minMax[1] = this.material.uniforms.highlightMin.value.y;
-      this.minMax[2] = this.material.uniforms.highlightMax.value.x;
-      this.minMax[3] = this.material.uniforms.highlightMax.value.y;
+      this.material.uniforms.selectMin.value.copy(this.material.uniforms.highlightMin.value);
+      this.material.uniforms.selectMax.value.copy(this.material.uniforms.highlightMax.value);
+      this.material.uniforms.selectMin.needsUpdate = true;
+      this.material.uniforms.selectMax.needsUpdate = true;
     } else {
-      this.minMax[0] = 0;
-      this.minMax[1] = 0;
-      this.minMax[2] = 0;
-      this.minMax[3] = 0;
+      this.material.uniforms.selectMin.value.set(0, 0);
+      this.material.uniforms.selectMax.value.set(0, 0);
+      this.material.uniforms.selectMin.needsUpdate = true;
+      this.material.uniforms.selectMax.needsUpdate = true;
     }
-    return this.minMax.slice();
+    return [
+      this.material.uniforms.selectMin.value.x,
+      this.material.uniforms.selectMin.value.y,
+      this.material.uniforms.selectMax.value.x,
+      this.material.uniforms.selectMax.value.y,
+    ];
   }
   setOpacity(opacity) {
     this.material.uniforms.opacity.value = opacity;

@@ -347,7 +347,10 @@ export const MapCanvas = ({
 
       if (parcelsMesh.getActive()) {
         const minMax = parcelsMesh.updateSelected();
-        onSelectChange({minMax});
+        // console.log('on select change', minMax);
+        onSelectChange({
+          minMax,
+        });
       }
 
       parcelsMesh.updateActive(false);
@@ -362,6 +365,24 @@ export const MapCanvas = ({
       heightfieldsMesh && heightfieldsMesh.destroy();
     };
   }, [renderer]);
+  useEffect(() => {
+    const keydown = e => {
+      if (e.key === 'Escape') {
+        onSelectChange({
+          minMax: [0, 0, 0, 0],
+        });
+
+        // parcelsMesh.clearHover();
+        console.log('clear hover');
+        const selected = parcelsMesh.clearSelected();
+        console.log('update selected', selected);
+      }
+    };
+    window.addEventListener('keydown', keydown);
+    return () => {
+      window.removeEventListener('keydown', keydown);
+    };
+  }, [parcelsMesh]);
   useEffect(() => {
     if (renderer) {
       const [width, height] = dimensions;
