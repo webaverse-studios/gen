@@ -43,6 +43,10 @@ export class ParcelsMesh extends THREE.InstancedMesh {
           value: -1,
           needsUpdate: true,
         },
+        opacity: {
+          value: 1,
+          needsUpdate: true,
+        },
       },
       vertexShader: `\
         uniform vec2 highlightMin;
@@ -86,11 +90,12 @@ export class ParcelsMesh extends THREE.InstancedMesh {
       fragmentShader: `\
         uniform vec2 highlightMin;
         uniform vec2 highlightMax;
+        uniform float opacity;
         varying vec3 vPosition;
         varying vec3 vColor;
 
         void main() {
-          gl_FragColor = vec4(vColor, 0.2);
+          gl_FragColor = vec4(vColor, 0.2 * opacity);
         }
       `,
       transparent: true
