@@ -35,7 +35,7 @@ const localMatrix2 = new THREE.Matrix4();
 const localRaycaster = new THREE.Raycaster();
 
 const cubicBezier = bezier(0, 1, 0, 1);
-const zeroQuaternion = new THREE.Quaternion();
+// const zeroQuaternion = new THREE.Quaternion();
 
 //
 
@@ -77,6 +77,7 @@ const useInstance = () => {
   return procGenInstance;
 };
 
+let currentValue = 0; // XXX make this not a singleton
 export const MapCanvas = ({
   onSelectChange,
   // minMax,
@@ -194,7 +195,6 @@ export const MapCanvas = ({
   //
 
   // initialize canvas from element ref
-  let currentValue = 0;
   const handleCanvas = useMemo(() => canvasEl => {
     if (canvasEl) {
       // renderer
@@ -481,8 +481,6 @@ export const MapCanvas = ({
       animation.end();
     }
 
-    console.log('double click', e);
-
     const startTime = performance.now();
     setAnimation({
       startTime,
@@ -505,6 +503,19 @@ export const MapCanvas = ({
         camera.position.copy(currentPosition);
         camera.scale.set(currentScale, currentScale, 1);
         camera.updateMatrixWorld();
+        
+        if (currentValue < 0.5) {
+          heightfieldsMesh.setOpacity(1 - t);
+          parcelsMesh.setOpacity(1 - t);
+          targetMesh.setOpacity(1 - t);
+          
+          loadingMesh.setOpacity(0);
+        } else {
+          heightfieldsMesh.setOpacity(0);
+          parcelsMesh.setOpacity(0);
+          targetMesh.setOpacity(0);
+          loadingMesh.setOpacity(1 - t);
+        }
 
         if (t >= 1) {
           setAnimation(null);
@@ -513,8 +524,6 @@ export const MapCanvas = ({
       end() {
         console.log('end');
 
-        currentValue = this.endValue.y;
-        _updateScale();
         setAnimation(null);
       },
     });
