@@ -22,6 +22,8 @@ import {
   maxChunks,
 } from '../../constants/map-constants.js';
 
+import bezier from '../utils/easing.js';
+
 //
 
 const localVector = new THREE.Vector3();
@@ -31,7 +33,7 @@ const localMatrix = new THREE.Matrix4();
 const localMatrix2 = new THREE.Matrix4();
 const localRaycaster = new THREE.Raycaster();
 
-const zeroQuaternion = new THREE.Quaternion();
+const cubicBezier = bezier(0, 1, 0, 1);
 
 //
 
