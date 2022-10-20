@@ -318,6 +318,7 @@ export const MapCanvas = ({
       );
       camera.position.set(0, 128, 0);
       camera.quaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
+      camera.scale.set(2, 2, 1);
       camera.updateMatrixWorld();
       setCamera(camera);
 
