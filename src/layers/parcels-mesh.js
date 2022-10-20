@@ -128,6 +128,7 @@ export class ParcelsMesh extends THREE.InstancedMesh {
     this.count = leafNodes.length;
   }
   updateHover(position) {
+    let hoverIndex = -1;
     if (this.result) {
       const {leafNodes, leafNodesMin, leafNodesMax, leafNodesIndex} = this.result;
 
@@ -136,7 +137,6 @@ export class ParcelsMesh extends THREE.InstancedMesh {
       chunkPosition.y = Math.floor(chunkPosition.y / chunkSize);
       chunkPosition.z = Math.floor(chunkPosition.z / chunkSize);
 
-      let hoverIndex = -1;
       if (
         chunkPosition.x >= leafNodesMin[0] && chunkPosition.x < leafNodesMax[0] &&
         chunkPosition.z >= leafNodesMin[1] && chunkPosition.z < leafNodesMax[1]
@@ -173,9 +173,14 @@ export class ParcelsMesh extends THREE.InstancedMesh {
         this.material.uniforms.highlightMax.value.setScalar(0);
         this.material.uniforms.highlightMax.needsUpdate = true;
       }
-
-      this.material.uniforms.hoverIndex.value = hoverIndex ? hoverIndex : -1;
-      this.material.uniforms.hoverIndex.needsUpdate = true;
+    }
+    this.material.uniforms.hoverIndex.value = hoverIndex;
+    this.material.uniforms.hoverIndex.needsUpdate = true;
+    return {
+      hoverIndex: this.material.uniforms.hoverIndex.value,
+      highlightMin: this.material.uniforms.highlightMin.value.clone(),
+      highlightMax: this.material.uniforms.highlightMax.value.clone(),
+      active: this.material.uniforms.uDown.value > 0,
     }
   }
   updateActive(down) {

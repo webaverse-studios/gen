@@ -8,6 +8,7 @@ import styles from '../../styles/MapCanvas.module.css';
 
 import {HeightfieldsMesh} from '../layers/heightfields-mesh.js';
 import {ParcelsMesh} from '../layers/parcels-mesh.js';
+import {Target2DMesh} from '../meshes/target-2d-mesh.js';
 import {HudMesh} from '../layers/hud-mesh.js';
 import {getScaleLod} from '../../public/utils/procgen-utils.js';
 
@@ -86,6 +87,7 @@ export const MapCanvas = () => {
   const [heightfieldsMesh, setHeightfieldsMesh] = useState(null);
   const [debugMesh, setDebugMesh] = useState(null);
   const [parcelsMesh, setParcelsMesh] = useState(null);
+  const [targetMesh, setTargetMesh] = useState(null);
   const [hudMesh, setHudMesh] = useState(null);
   const [lodTracker, setLodTracker] = useState(null);
 
@@ -230,6 +232,31 @@ export const MapCanvas = () => {
       parcelsMesh.frustumCulled = false;
       scene.add(parcelsMesh);
       setParcelsMesh(parcelsMesh);
+      // target
+      const targetMesh = new Target2DMesh();
+      targetMesh.frustumCulled = false;
+      targetMesh.visible = false;
+      let active = false;
+      const size = new THREE.Vector2();
+      const _updateScale = () => {
+        targetMesh.scale.set(size.x, 1, size.y).multiplyScalar(active ? 0.9 : 1);
+      };
+      targetMesh.updateHover = (hoverIndex, min, max) => {
+        if (hoverIndex !== -1) {
+          size.copy(max).sub(min);
+          targetMesh.updateMatrixWorld();
+          targetMesh.visible = true;
+        } else {
+          targetMesh.visible = false;
+        }
+      };
+      targetMesh.updateActive = (newActive) => {
+        active = newActive;
+        _updateScale();
+        targetMesh.updateMatrixWorld();
+      };
+      scene.add(targetMesh);
+      setTargetMesh(targetMesh);
       // hud
       const hudMesh = new HudMesh({
         instance,
@@ -297,6 +324,7 @@ export const MapCanvas = () => {
       setDragState(null);
 
       parcelsMesh.updateActive(false);
+      targetMesh.updateActive(false);
     };
     globalThis.addEventListener('mouseup', handleMouseUp);
 
@@ -325,6 +353,7 @@ export const MapCanvas = () => {
     });
     setFragMovedState(false);
     parcelsMesh.updateActive(true);
+    targetMesh.updateActive(true);
   };
   const handleMouseMove = e => {
     e.preventDefault();
@@ -347,20 +376,42 @@ export const MapCanvas = () => {
         ).unproject(camera);
         
       camera.position.copy(dragState.cameraStartPositon)
-      .sub(startPosition)
-      .add(endPosition);
+        .sub(startPosition)
+        .add(endPosition);
       camera.updateMatrixWorld();
         
       updateLodTracker(lodTracker, camera);
       
-      setFragMovedState(true);
+      const maxMoveDistance = 3;
+      const newMovedState = fragMovedState || new THREE.Vector2(clientX, clientY).distanceTo(new THREE.Vector2(startX, startY)) > maxMoveDistance;
+      if (!fragMovedState && newMovedState) {
+        parcelsMesh.updateActive(false);
+        targetMesh.updateActive(false);
+      }
+      setFragMovedState(newMovedState);
     }
 
     setRaycasterFromEvent(localRaycaster, camera, e);
     debugMesh.position.set(localRaycaster.ray.origin.x, 0, localRaycaster.ray.origin.z);
     debugMesh.updateMatrixWorld();
 
-    parcelsMesh.updateHover(localRaycaster.ray.origin);
+    const {
+      hoverIndex,
+      highlightMin,
+      highlightMax,
+      active,
+    } = parcelsMesh.updateHover(localRaycaster.ray.origin);
+    targetMesh.updateHover(hoverIndex, highlightMin, highlightMax);
+
+    if (hoverIndex !== -1) {
+      const size = highlightMax.clone().sub(highlightMin);
+      const center = highlightMin.clone().add(size.clone().multiplyScalar(0.5));
+      targetMesh.position.set(center.x, 0, center.y);
+      // console.log('set position', targetMesh.position.toArray().join(', '), size.x);
+      targetMesh.updateActive(active);
+    } else {
+      targetMesh.updateActive(false);
+    }
   };
   const handleWheel = e => {
     e.stopPropagation();
