@@ -7,6 +7,8 @@ import {cleanName} from '../../utils.js';
 import {generateItem} from '../../datasets/dataset-generator.js';
 import {formatItemText} from '../../datasets/dataset-parser.js';
 import {getDatasetSpecs} from '../../datasets/dataset-specs.js';
+import React, { useState } from 'react';
+import { UserBox } from '../../src/components/user-box/UserBox';
 
 //
 
@@ -39,19 +41,48 @@ const ContentObject = ({
     return md;
   };
   content = formatImages(content);
-
   const name = title.split("/")[1];
+
+  const [ itemClass, setItemClass ] = useState("");
+
+  React.useEffect(() => {
+    const val = document.querySelectorAll('h2');
+
+    [...val].map(item => {
+      if(item?.outerText === "CLASS:"){
+        setItemClass(item.nextSibling.outerText);
+        item.nextSibling.remove();
+        item.remove();
+      }
+      if(item?.outerText === "IMAGE GALLERY:"){
+        console.log(item.nextSibling);
+        item.nextSibling.classList.add(styles.galleryWrap);
+      }
+    })
+    //console.log(val);
+  },[content])
+
   return (
     <div className={styles.character}>
+      <UserBox />
       <img src={'/assets/logo.svg'} className={styles.logo} alt="Webaverse Wiki" />
       <div className={styles.contentWrap}>
         <div className={styles.name}>{name}</div>
+        <div className={styles.rightContent}>
+          <div className={styles.title}>{name}</div>
+          {itemClass && <div className={styles.subtitle}>{itemClass}</div>}
+          <div className={styles.previewImageWrap}>
+            <img src={'/assets/image-frame.svg'} className={styles.frame} />
+            <div className={styles.mask}>
+              <img />
+            </div>
+          </div>
+        </div>
         <div className={styles.leftContent}>
           <div className={styles.markdown}>
             <Markdown gfm openLinksInNewTab={false}>{content}</Markdown>
           </div>
         </div>
-        <div className={styles.rightContent}></div>
       </div>
     </div>
   );
