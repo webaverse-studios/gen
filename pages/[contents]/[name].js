@@ -98,8 +98,10 @@ const ContentObject = ({ type, title, content }) => {
                     )[0];
                     if (gallery) {
                         let img = gallery.getElementsByTagName("img")[0];
-                        let src = img.src;
-                        setFeaturedImage(src);
+                        if (img) {
+                            let src = img.src;
+                            setFeaturedImage(src);
+                        }
                     }
                 }
             }
