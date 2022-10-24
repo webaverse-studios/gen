@@ -4,6 +4,7 @@
   margin: 0 auto;
   position: relative;
   padding: 120px 0 80px 0;
+  font-size: 14px;
 }
 .character .logo {
   height: 60px;
@@ -45,6 +46,7 @@
   display: block;
   margin: 0;
   padding: 0;
+  padding-bottom: 24px;
 }
 .character .contentWrap .galleryWrap li {
   display: block;
@@ -63,18 +65,29 @@
   display: block;
   clear: both;
 }
-
-
 .character .contentWrap .leftContent {
-  width: -webkit-calc(100% - 280px);
-  width: -moz-calc(100% - 280px);
-  width: calc(100% - 280px);
+  width: -webkit-calc(100% - 300px);
+  width: -moz-calc(100% - 300px);
+  width: calc(100% - 300px);
 }
 .character .contentWrap .leftContent h2:first-child {
   display: none;
 }
+
+.character .contentWrap .leftContent ul:not(.galleryWrap),
+.character .contentWrap .leftContent ul:not(.galleryWrap) li {
+  margin: 0;
+  padding: 0;
+  display: block;
+}
+.character .contentWrap .leftContent ul:not(.galleryWrap) li {
+  padding: 0px 12px;
+  border-left: 6px solid #152934;
+  margin-bottom: 8px;
+}
+
 .character .contentWrap .rightContent {
-  width: 260px;
+  width: 280px;
   float: right;
   box-sizing: border-box;
   padding-left: 24px;
@@ -96,12 +109,11 @@
 .character .contentWrap .rightContent .previewImageWrap {
   width: 100%;
   position: relative;
+  margin-bottom: 8px;
 }
-
 .character .contentWrap .rightContent .previewImageWrap .frame {
   width: 100%;
 }
-
 .character .contentWrap .rightContent .previewImageWrap .mask {
   width: 96%;
   height: 96%;
@@ -120,7 +132,6 @@
   position: absolute;
   z-index: 10;
 }
-
 .character .contentWrap .rightContent .mask img {
   width: 100%;
   top: 50%;
@@ -131,6 +142,41 @@
   position: absolute;
 }
 
+.character .contentWrap .rightContent .infoWrap > div {
+  width: 100%;
+  box-sizing: border-box;
+  background-color: #091319;
+  padding: 10px 16px;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+.character .contentWrap .rightContent .infoWrap > div::after {
+  content: ' ';
+  display: block;
+  clear: both;
+}
+.character .contentWrap .rightContent .infoWrap .label {
+  width: 34%;
+  float: left;
+  color: #687674;
+  text-transform: capitalize;
+}
+.character .contentWrap .rightContent .infoWrap .value {
+  float: left;
+  width: 66%;
+}
+.character .contentWrap .rightContent .infoWrap ul,
+.character .contentWrap .rightContent .infoWrap li {
+  display: block;
+  padding: 0;
+  margin: 0;
+}
+.character .contentWrap .rightContent .infoWrap li {
+  margin-bottom: 6px;
+}
+.character .contentWrap .rightContent .infoWrap li:last-child {
+  margin-bottom: 0;
+}
 .character .bio {
   white-space: pre-wrap;
 }
