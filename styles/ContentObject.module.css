@@ -6,6 +6,9 @@
   padding: 120px 0 80px 0;
   font-size: 14px;
 }
+.character * {
+  position: relative;
+}
 .character .logo {
   height: 60px;
   position: absolute;
@@ -24,6 +27,22 @@
   padding-bottom: 14px;
   margin-bottom: 24px;
 }
+.character .contentWrap .editSource {
+  float: right;
+  color: #FFFFFF;
+  font-size: 12px;
+  margin-top: 8px;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.character .contentWrap .editSource .icon {
+  height: 18px;
+  margin-right: 8px;
+  vertical-align: bottom;
+}
+.character .contentWrap .editSource:hover {
+  opacity: 0.7;
+}
 .character .contentWrap h2 {
   color: #88989e;
   text-transform: uppercase;
@@ -32,6 +51,7 @@
   border-bottom: 2px solid #152934;
   padding-bottom: 14px;
   margin-bottom: 8px;
+  position: relative;
 }
 .character .contentWrap p {
   font-size: 14px;
@@ -142,7 +162,7 @@
   position: absolute;
 }
 
-.character .contentWrap .rightContent .infoWrap > div {
+.character .contentWrap .rightContent .infoWrap .infoBox {
   width: 100%;
   box-sizing: border-box;
   background-color: #091319;
@@ -150,7 +170,7 @@
   font-size: 12px;
   margin-bottom: 6px;
 }
-.character .contentWrap .rightContent .infoWrap > div::after {
+.character .contentWrap .rightContent .infoWrap .infoBox::after {
   content: ' ';
   display: block;
   clear: both;
@@ -164,6 +184,8 @@
 .character .contentWrap .rightContent .infoWrap .value {
   float: left;
   width: 66%;
+  box-sizing: border-box;
+  padding-right: 8px;
 }
 .character .contentWrap .rightContent .infoWrap ul,
 .character .contentWrap .rightContent .infoWrap li {
@@ -177,6 +199,72 @@
 .character .contentWrap .rightContent .infoWrap li:last-child {
   margin-bottom: 0;
 }
+
+.character .contentWrap .rightContent .infoWrap .locationMap {
+  position: relative;
+  width: 128px;
+  height: 115px;
+  margin-top: 8px;
+  margin-bottom: 4px;
+}
+
+.character .contentWrap .rightContent .infoWrap .mapWrap {
+  width: 160px;
+  height: 140px;
+  overflow: hidden;
+  position: relative;
+  -webkit-mask-image: url("/assets/map-background.svg");
+  mask-image: url("/assets/map-background.svg");
+  -webkit-mask-size: 80%;
+  mask-size: 80%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+}
+
+.character .contentWrap .rightContent .infoWrap .mapBg {
+  width: 138px;
+  height: 119px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 0;
+  background-image: url("/assets/map-background.svg");
+  background-position: center;
+  background-size: 100%;
+  background-repeat: no-repeat;
+}
+
+.character .contentWrap .rightContent .infoWrap .map {
+  margin-left: -54px;
+  margin-top: -50px;
+  width: 240px;
+  height: 240px;
+}
+
+.character .contentWrap .actionsBox {
+  position: absolute;
+  top: 0px;
+  right: 10px;
+}
+.character .contentWrap .rightContent .actionsBox {
+  top: 10px;
+  right: 6px;
+}
+
+.character .contentWrap .actionsBox .action {
+  display: inline-block;
+  margin-left: 8px;
+  opacity: 0.1;
+  cursor: pointer;
+}
+.character .contentWrap .actionsBox .action img {
+  height: 12px;
+}
+.character .contentWrap .actionsBox .action:hover {
+  opacity: 0.8;
+}
+
+
 .character .bio {
   white-space: pre-wrap;
 }

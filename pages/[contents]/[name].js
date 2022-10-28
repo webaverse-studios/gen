@@ -15,13 +15,34 @@ import { UserBox } from "../../src/components/user-box/UserBox";
 // Sections to move to the right column from the markdown
 
 const moveToRightColumn = [
-    "ALIGNMENT:",
-    "STATS:",
-    "PROPERTIES:",
-    "HAS:",
-    "ABILITIES:",
-    "LIMIT BREAK:",
+    "alignment:",
+    "stats:",
+    "properties:",
+    "has:",
+    "abilities:",
+    "limit break:",
 ];
+
+const sectionSelector = "h2";
+const featuredImageSectionTitle = "image:";
+const gallerySectionTitle = "image gallery:";
+const classSectionTitle = "class:";
+
+const addElement = async (label, value) => {
+    let e = document.createElement("div");
+    e.classList.add(styles.infoBox);
+    e.innerHTML = `<div class="${
+        styles.label
+    }">${label.toLowerCase()}</div><div class="${styles.value}">${value}</div>`;
+    return e;
+};
+
+const addActionsBox = async () => {
+    let e = document.createElement("div");
+    e.classList.add(styles.actionsBox);
+    e.innerHTML = `<div class="${styles.action}"><img src="/assets/refresh.svg" /></div>`;
+    return e;
+};
 
 //
 
@@ -30,17 +51,9 @@ const ContentObject = ({ type, title, content }) => {
     const [itemClass, setItemClass] = useState("");
     const [featuredImage, setFeaturedImage] = useState("");
 
-    const addElement = async (label, value) => {
-        let e = document.createElement("div");
-        e.innerHTML = `<div class="${
-            styles.label
-        }">${label.toLowerCase()}</div><div class="${
-            styles.value
-        }">${value}</div>`;
-        return e;
-    };
+    const [formatedContent, setFormatedContent] = useState();
 
-    const formatImages = (md) => {
+    const formatImages = async (md) => {
         md = md.replace(/\!\[([^\]]*?)\]\(([^\)]*?)\)/g, (all, title, url) => {
             const match = title.match(/^([\s\S]*?)(\|[\s\S]*?)?$/);
             if (match) {
@@ -68,36 +81,58 @@ const ContentObject = ({ type, title, content }) => {
         );
         return md;
     };
-    content = formatImages(content);
+
+    formatImages(content).then((res) => {
+        setFormatedContent(res);
+    });
 
     React.useEffect(() => {
-        const val = document.querySelectorAll("h2");
+        if (formatedContent) {
+            const val = document.querySelectorAll(sectionSelector);
 
-        [...val].map((item) => {
-            // Set Class
-            if (item?.outerText === "CLASS:") {
-                setItemClass(item.nextSibling.outerText);
-                item.nextSibling.remove();
-                item.remove();
+            // GET CLASS
+            const itemClass = [...val].filter(
+                (section) =>
+                    section.outerText.toLowerCase() === classSectionTitle
+            )[0];
+            if (itemClass) {
+                setItemClass(itemClass.nextSibling.outerText);
+                itemClass.nextSibling.remove();
+                itemClass.remove();
             }
-            // Set a classname to the gallery ul
-            if (item?.outerText === "IMAGE GALLERY:") {
-                item.nextSibling.classList.add(styles.galleryWrap);
+            // SET CLASS TO IMAGE GALLERY
+            const imageGallery = [...val].filter(
+                (section) =>
+                    section.outerText.toLowerCase() === gallerySectionTitle
+            )[0];
+            if (imageGallery) {
+                imageGallery.nextSibling.classList.add(styles.galleryWrap);
             }
-            // Set featured image
-            if (item?.outerText === "IMAGE:") {
-                let img = item.nextSibling.getElementsByTagName("img")[0];
+            // GET FEATURED IMAGE
+            // IF THERE IS NONE IT WILL RANDOMLY SELECT ONE FROM GALLERY
+            const featuredImage = [...val].filter(
+                (section) =>
+                    section.outerText.toLowerCase() ===
+                    featuredImageSectionTitle
+            )[0];
+            if (featuredImage) {
+                let img =
+                    featuredImage.nextSibling.getElementsByTagName("img")[0];
                 if (img) {
                     let src = img.src;
                     setFeaturedImage(src);
-                    item.nextSibling.remove();
-                    item.remove();
+                    featuredImage.nextSibling.remove();
+                    featuredImage.remove();
                 } else {
                     let gallery = document.getElementsByClassName(
                         styles.galleryWrap
                     )[0];
                     if (gallery) {
-                        let img = gallery.getElementsByTagName("img")[0];
+                        let randIndex = Math.floor(
+                            Math.random() * gallery.childElementCount
+                        );
+                        let img =
+                            gallery.getElementsByTagName("img")[randIndex];
                         if (img) {
                             let src = img.src;
                             setFeaturedImage(src);
@@ -106,17 +141,26 @@ const ContentObject = ({ type, title, content }) => {
                 }
             }
             // Move all the content specified in "moveToRightColumn" to the right column
-            if (moveToRightColumn.includes(item?.outerText)) {
-                addElement(item.innerText, item.nextSibling.innerHTML).then(
-                    (html) => {
-                        infoRef.current.append(html);
-                    }
-                );
-                item.nextSibling.remove();
-                item.remove();
-            }
-        });
-    }, [content]);
+            [...val].map((item) => {
+                if (moveToRightColumn.includes(item?.outerText.toLowerCase())) {
+                    addElement(item.innerText, item.nextSibling.innerHTML).then(
+                        (html) => {
+                            addActionsBox(item.innerText).then((actionsBox) => {
+                                html.append(actionsBox);
+                                infoRef.current.append(html);
+                            });
+                        }
+                    );
+                    item.nextSibling.remove();
+                    item.remove();
+                } else {
+                    addActionsBox(item.innerText).then((html) => {
+                        item.append(html);
+                    });
+                }
+            });
+        }
+    }, [formatedContent]);
 
     const name = title.split("/")[1];
 
@@ -129,7 +173,16 @@ const ContentObject = ({ type, title, content }) => {
                 alt="Webaverse Wiki"
             />
             <div className={styles.contentWrap}>
-                <div className={styles.name}>{name}</div>
+                <div className={styles.name}>
+                    {name}
+                    <div className={styles.editSource}>
+                        <img
+                            src={"/assets/edit-source-lock.svg"}
+                            className={styles.icon}
+                        />
+                        Edit Source
+                    </div>
+                </div>
                 <div className={styles.rightContent}>
                     <div className={styles.title}>{name}</div>
                     {itemClass && (
@@ -144,12 +197,26 @@ const ContentObject = ({ type, title, content }) => {
                             <img src={featuredImage} />
                         </div>
                     </div>
-                    <div className={styles.infoWrap} ref={infoRef}></div>
+                    <div className={styles.infoWrap}>
+                        <div ref={infoRef}></div>
+                        <div className={styles.infoBox}>
+                            <div className={styles.label}>Location</div>
+                            <div className={styles.value}>
+                                {
+                                    '"The Woods" A gloomy forest where sunlight seems to disappear'
+                                }
+                                <div className={styles.locationMap}>
+                                    <div className={styles.mapBg} />
+                                    <div className={styles.mapWrap}></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div className={styles.leftContent}>
                     <div className={styles.markdown}>
                         <Markdown gfm openLinksInNewTab={false}>
-                            {content}
+                            {formatedContent}
                         </Markdown>
                     </div>
                 </div>
