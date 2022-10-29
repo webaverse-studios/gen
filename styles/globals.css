@@ -2,6 +2,10 @@
   font-family: 'TTSC-Regular';
   src:  url('/fonts/TT Squares Condensed Regular.otf');
 }
+@font-face {
+  font-family: 'TTSC-Bold';
+  src:  url('/fonts/TT Squares Condensed Bold.otf');
+}
 
 html,
 body {

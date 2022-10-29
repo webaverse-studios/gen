@@ -1,0 +1,107 @@
+.leftSection > div:not(.galleryWrap) ul,
+.leftSection > div:not(.galleryWrap) li {
+  margin: 0;
+  padding: 0;
+  display: block;
+}
+.leftSection > div:not(.galleryWrap) li {
+  padding: 0px 12px;
+  border-left: 6px solid #152934;
+  margin-bottom: 8px;
+  color: #dadada;
+}
+.galleryWrap ul {
+    display: block;
+    margin: 0;
+    padding: 0;
+    margin-bottom: 8px;
+}
+.galleryWrap ul li {
+    display: block;
+    margin: 0;
+    padding: 0;
+    float: left;
+    width: 25%;
+    box-sizing: border-box;
+    padding: 4px;
+}
+.galleryWrap ul li img {
+    width: 100%;
+}
+.galleryWrap ul::after {
+    content: " ";
+    display: block;
+    visibility: hidden;
+    clear: both;
+}
+
+.rightSection {
+    width: 100%;
+    box-sizing: border-box;
+    background-color: #091319;
+    padding: 10px 16px;
+    font-size: 12px;
+    margin-bottom: 6px;
+}
+.rightSection * {
+    font-size: 12px !important;
+    line-height: 16px !important;
+}
+.rightSection p {
+    margin: 0 !important;
+    padding: 0;
+}
+.rightSection::after {
+    content: " ";
+    display: block;
+    clear: both;
+}
+.rightSection .label {
+    width: 34%;
+    float: left;
+    color: #687674;
+    text-transform: capitalize;
+}
+.rightSection .value {
+    float: left;
+    width: 66%;
+    box-sizing: border-box;
+    padding-right: 8px;
+}
+.rightSection ul,
+.rightSection li {
+    display: block;
+    padding: 0;
+    margin: 0;
+}
+.rightSection li {
+    margin-bottom: 6px;
+}
+.rightSection li:last-child {
+    margin-bottom: 0;
+}
+.actionsBox {
+    position: absolute;
+    top: 0px;
+    right: 10px;
+    opacity: 0;
+}
+.leftSection:hover .actionsBox {
+    opacity: 1; 
+} 
+.rightSection .actionsBox {
+    top: 14px;
+    right: 6px;
+}
+.actionsBox .action {
+    display: inline-block;
+    margin-left: 12px;
+    opacity: 0.4;
+    cursor: pointer;
+}
+.actionsBox .action img {
+    height: 14px;
+}
+.actionsBox .action:hover {
+    opacity: 0.8;
+}

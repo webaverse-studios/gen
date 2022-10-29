@@ -3,166 +3,97 @@ import Markdown from "marked-react";
 
 import styles from "../../styles/ContentObject.module.css";
 import { Ctx } from "../../clients/context.js";
-import { cleanName } from "../../utils.js";
+import { cleanName, formatImages, getSections } from "../../utils.js";
 import { generateItem } from "../../datasets/dataset-generator.js";
 import { formatItemText } from "../../datasets/dataset-parser.js";
 import { getDatasetSpecs } from "../../datasets/dataset-specs.js";
 import React, { useRef, useState } from "react";
 import { UserBox } from "../../src/components/user-box/UserBox";
+import { EditSource } from "../../src/components/edit-source";
+import {
+    LeftSection,
+    RightSection,
+} from "../../src/components/content-sections";
+import { MiniMap } from "../../src/components/mini-map/MiniMap";
 
 //
 
-// Sections to move to the right column from the markdown
-
-const moveToRightColumn = [
-    "alignment:",
-    "stats:",
-    "properties:",
-    "has:",
-    "abilities:",
-    "limit break:",
+const rightColumn = [
+    "Alignment",
+    "Price",
+    "Stats",
+    "Properties",
+    "Has",
+    "Abilities",
+    "Limit Break",
 ];
 
-const sectionSelector = "h2";
-const featuredImageSectionTitle = "image:";
-const gallerySectionTitle = "image gallery:";
-const classSectionTitle = "class:";
-
-const addElement = async (label, value) => {
-    let e = document.createElement("div");
-    e.classList.add(styles.infoBox);
-    e.innerHTML = `<div class="${
-        styles.label
-    }">${label.toLowerCase()}</div><div class="${styles.value}">${value}</div>`;
-    return e;
-};
-
-const addActionsBox = async () => {
-    let e = document.createElement("div");
-    e.classList.add(styles.actionsBox);
-    e.innerHTML = `<div class="${styles.action}"><img src="/assets/refresh.svg" /></div>`;
-    return e;
-};
+const hideSections = ["Name", "Class", "Image"];
 
 //
 
 const ContentObject = ({ type, title, content }) => {
-    const infoRef = useRef();
+    const [itemName, setItemName] = useState("");
     const [itemClass, setItemClass] = useState("");
     const [featuredImage, setFeaturedImage] = useState("");
 
+    const [sections, setSections] = useState([]);
+    const [editSource, setEditSource] = useState(false);
     const [formatedContent, setFormatedContent] = useState();
 
-    const formatImages = async (md) => {
-        md = md.replace(/\!\[([^\]]*?)\]\(([^\)]*?)\)/g, (all, title, url) => {
-            const match = title.match(/^([\s\S]*?)(\|[\s\S]*?)?$/);
-            if (match) {
-                title = match[1].trim();
-                url = match[2] ? match[2].trim() : title;
-                if (url) {
-                    return `![${title}](/api/images/${type}s/${encodeURIComponent(
-                        url
-                    )}.png)`;
-                } else {
-                    return null;
-                }
-            } else {
-                return all;
-            }
-        });
-        md = md.replace(
-            /(\!?)\[([\s\S]+?)\]\(([\s\S]+?)\)/g,
-            (all, q, title, url) => {
-                if (q) {
-                    return all;
-                }
-                return `[${title}](${encodeURI(url)})`;
-            }
-        );
-        return md;
-    };
-
-    formatImages(content).then((res) => {
-        setFormatedContent(res);
-    });
+    React.useEffect(() => {
+        if (content) {
+            formatImages(content, type, title).then((res) => {
+                setFormatedContent(res);
+            });
+        }
+    }, [content]);
 
     React.useEffect(() => {
         if (formatedContent) {
-            const val = document.querySelectorAll(sectionSelector);
-
-            // GET CLASS
-            const itemClass = [...val].filter(
-                (section) =>
-                    section.outerText.toLowerCase() === classSectionTitle
-            )[0];
-            if (itemClass) {
-                setItemClass(itemClass.nextSibling.outerText);
-                itemClass.nextSibling.remove();
-                itemClass.remove();
-            }
-            // SET CLASS TO IMAGE GALLERY
-            const imageGallery = [...val].filter(
-                (section) =>
-                    section.outerText.toLowerCase() === gallerySectionTitle
-            )[0];
-            if (imageGallery) {
-                imageGallery.nextSibling.classList.add(styles.galleryWrap);
-            }
-            // GET FEATURED IMAGE
-            // IF THERE IS NONE IT WILL RANDOMLY SELECT ONE FROM GALLERY
-            const featuredImage = [...val].filter(
-                (section) =>
-                    section.outerText.toLowerCase() ===
-                    featuredImageSectionTitle
-            )[0];
-            if (featuredImage) {
-                let img =
-                    featuredImage.nextSibling.getElementsByTagName("img")[0];
-                if (img) {
-                    let src = img.src;
-                    setFeaturedImage(src);
-                    featuredImage.nextSibling.remove();
-                    featuredImage.remove();
-                } else {
-                    let gallery = document.getElementsByClassName(
-                        styles.galleryWrap
-                    )[0];
-                    if (gallery) {
-                        let randIndex = Math.floor(
-                            Math.random() * gallery.childElementCount
-                        );
-                        let img =
-                            gallery.getElementsByTagName("img")[randIndex];
-                        if (img) {
-                            let src = img.src;
-                            setFeaturedImage(src);
-                        }
-                    }
-                }
-            }
-            // Move all the content specified in "moveToRightColumn" to the right column
-            [...val].map((item) => {
-                if (moveToRightColumn.includes(item?.outerText.toLowerCase())) {
-                    addElement(item.innerText, item.nextSibling.innerHTML).then(
-                        (html) => {
-                            addActionsBox(item.innerText).then((actionsBox) => {
-                                html.append(actionsBox);
-                                infoRef.current.append(html);
-                            });
-                        }
-                    );
-                    item.nextSibling.remove();
-                    item.remove();
-                } else {
-                    addActionsBox(item.innerText).then((html) => {
-                        item.append(html);
-                    });
-                }
+            getSections(formatedContent).then((res) => {
+                setSections(res);
+                setItemName(
+                    res.filter((item) => item.title === "Name")[0]?.content
+                );
+                setItemClass(
+                    res.filter((item) => item.title === "Class")[0]?.content
+                );
             });
         }
     }, [formatedContent]);
 
-    const name = title.split("/")[1];
+    React.useEffect(() => {
+        const imageContent = sections.filter(
+            (item) => item.title === "Image"
+        )[0]?.content;
+        if (imageContent) {
+            const match = imageContent.match(/(?<=\().+?(?=\))/g);
+            if (match) {
+                setFeaturedImage(match[0]);
+            } else {
+                setFeaturedImage(`/api/images/${type}s/${imageContent}.png`);
+            }
+        } else {
+            const galleryContent = sections.filter(
+                (item) => item.title === "Image Gallery"
+            )[0]?.content;
+            if (galleryContent) {
+                const match = galleryContent.match(/(?<=\().+?(?=\))/g);
+                let randIndex = Math.floor(Math.random() * match.length);
+                setFeaturedImage(match[randIndex]);
+                console.log(match);
+            }
+        }
+    }, [sections]);
+
+    const editContentSource = () => {
+        setEditSource(true);
+    };
+
+    const backToPage = () => {
+        setEditSource(false);
+    };
 
     return (
         <div className={styles.character}>
@@ -174,52 +105,93 @@ const ContentObject = ({ type, title, content }) => {
             />
             <div className={styles.contentWrap}>
                 <div className={styles.name}>
-                    {name}
-                    <div className={styles.editSource}>
-                        <img
-                            src={"/assets/edit-source-lock.svg"}
-                            className={styles.icon}
-                        />
-                        Edit Source
-                    </div>
-                </div>
-                <div className={styles.rightContent}>
-                    <div className={styles.title}>{name}</div>
-                    {itemClass && (
-                        <div className={styles.subtitle}>{itemClass}</div>
-                    )}
-                    <div className={styles.previewImageWrap}>
-                        <img
-                            src={"/assets/image-frame.svg"}
-                            className={styles.frame}
-                        />
-                        <div className={styles.mask}>
-                            <img src={featuredImage} />
-                        </div>
-                    </div>
-                    <div className={styles.infoWrap}>
-                        <div ref={infoRef}></div>
-                        <div className={styles.infoBox}>
-                            <div className={styles.label}>Location</div>
-                            <div className={styles.value}>
-                                {
-                                    '"The Woods" A gloomy forest where sunlight seems to disappear'
-                                }
-                                <div className={styles.locationMap}>
-                                    <div className={styles.mapBg} />
-                                    <div className={styles.mapWrap}></div>
-                                </div>
+                    {itemName}
+                    {!editSource ? (
+                        <div className={styles.sourceActions}>
+                            <div
+                                className={styles.edit}
+                                onClick={editContentSource}
+                            >
+                                <img
+                                    src={"/assets/edit-source-lock.svg"}
+                                    className={styles.icon}
+                                />
+                                Edit Source
                             </div>
                         </div>
-                    </div>
+                    ) : (
+                        <div className={styles.sourceActions}>
+                            <div className={styles.back} onClick={backToPage}>
+                                <img
+                                    src={"/assets/arrowBack.svg"}
+                                    className={styles.iconBack}
+                                />
+                                Back to Page
+                            </div>
+                            <button className={styles.button}>Save</button>
+                        </div>
+                    )}
                 </div>
-                <div className={styles.leftContent}>
-                    <div className={styles.markdown}>
-                        <Markdown gfm openLinksInNewTab={false}>
-                            {formatedContent}
-                        </Markdown>
-                    </div>
-                </div>
+                {!editSource ? (
+                    <React.Fragment>
+                        <div className={styles.rightContent}>
+                            <div className={styles.title}>{itemName}</div>
+                            {itemClass && (
+                                <div className={styles.subtitle}>
+                                    {itemClass}
+                                </div>
+                            )}
+                            <div className={styles.previewImageWrap}>
+                                <img
+                                    src={"/assets/image-frame.svg"}
+                                    className={styles.frame}
+                                />
+                                <div className={styles.mask}>
+                                    <img src={featuredImage} />
+                                </div>
+                            </div>
+                            <div>
+                                {sections &&
+                                    sections.map((section, i) => {
+                                        if (rightColumn.includes(section.title))
+                                            return (
+                                                <RightSection
+                                                    title={section.title}
+                                                    content={section.content}
+                                                    index={i}
+                                                />
+                                            );
+                                    })}
+                                <MiniMap coordinates={""} />
+                            </div>
+                        </div>
+                        <div className={styles.leftContent}>
+                            <div className={styles.markdown}>
+                                {sections &&
+                                    sections.map((section, i) => {
+                                        if (
+                                            !rightColumn.includes(
+                                                section.title
+                                            ) &&
+                                            !hideSections.includes(
+                                                section.title
+                                            )
+                                        ) {
+                                            return (
+                                                <LeftSection
+                                                    title={section.title}
+                                                    content={section.content}
+                                                    index={i}
+                                                />
+                                            );
+                                        }
+                                    })}
+                            </div>
+                        </div>
+                    </React.Fragment>
+                ) : (
+                    <EditSource content={content} />
+                )}
             </div>
         </div>
     );
