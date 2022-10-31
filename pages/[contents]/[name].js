@@ -2,8 +2,14 @@ import uuidByString from "uuid-by-string";
 import Markdown from "marked-react";
 
 import styles from "../../styles/ContentObject.module.css";
-import { Ctx } from "../../clients/context.js";
-import { cleanName, formatImages, getSections } from "../../utils.js";
+import { Ctx, saveContent } from "../../clients/context.js";
+import {
+    checkIfImageExists,
+    cleanName,
+    formatImages,
+    formatUrls,
+    getSections,
+} from "../../utils.js";
 import { generateItem } from "../../datasets/dataset-generator.js";
 import { formatItemText } from "../../datasets/dataset-parser.js";
 import { getDatasetSpecs } from "../../datasets/dataset-specs.js";
@@ -43,8 +49,10 @@ const ContentObject = ({ type, title, content }) => {
 
     React.useEffect(() => {
         if (content) {
-            formatImages(content, type, title).then((res) => {
-                setFormatedContent(res);
+            formatImages(content, type).then((fiContent) => {
+                formatUrls(fiContent).then((fuContent) => {
+                    setFormatedContent(fuContent);
+                });
             });
         }
     }, [content]);
@@ -70,7 +78,7 @@ const ContentObject = ({ type, title, content }) => {
         if (imageContent) {
             const match = imageContent.match(/(?<=\().+?(?=\))/g);
             if (match) {
-                setFeaturedImage(match[0]);
+                setFeaturedImage(match[0] + ".png");
             } else {
                 setFeaturedImage(`/api/images/${type}s/${imageContent}.png`);
             }
@@ -80,9 +88,12 @@ const ContentObject = ({ type, title, content }) => {
             )[0]?.content;
             if (galleryContent) {
                 const match = galleryContent.match(/(?<=\().+?(?=\))/g);
-                let randIndex = Math.floor(Math.random() * match.length);
-                setFeaturedImage(match[randIndex]);
-                console.log(match);
+                console.log(galleryContent);
+                if (match) {
+                    let randIndex = Math.floor(Math.random() * match.length);
+                    setFeaturedImage(match[randIndex]);
+                    console.log(match);
+                }
             }
         }
     }, [sections]);
@@ -93,6 +104,10 @@ const ContentObject = ({ type, title, content }) => {
 
     const backToPage = () => {
         setEditSource(false);
+    };
+
+    const editSection = async (content) => {
+        saveContent();
     };
 
     return (
@@ -181,6 +196,7 @@ const ContentObject = ({ type, title, content }) => {
                                                 <LeftSection
                                                     title={section.title}
                                                     content={section.content}
+                                                    editSection={editSection}
                                                     index={i}
                                                 />
                                             );
@@ -196,6 +212,7 @@ const ContentObject = ({ type, title, content }) => {
         </div>
     );
 };
+
 ContentObject.getInitialProps = async (ctx) => {
     const { req } = ctx;
     const match = req.url.match(/^\/([^\/]*)\/([^\/]*)/);
@@ -243,4 +260,5 @@ ${itemText}
         };
     }
 };
+
 export default ContentObject;

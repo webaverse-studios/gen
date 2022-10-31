@@ -1,3 +1,5 @@
+import { Ctx } from "./clients/context";
+
 export const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 export const capitalizeAllWords = (s) => {
     let words = s.split(/\s+/);
@@ -28,7 +30,27 @@ export const isAllCaps = (name) => {
     return !/[A-Z]/.test(name) || /^(?:[A-Z]+)$/.test(name);
 };
 
-export const formatImages = async (md, type, title) => {
+// Format Sections
+const sectionSeperator = "##"; // Section Title Separator
+const titleDescriptionSeperator = /:(.*)/s; // Title & Description Separator
+
+export const getSections = async (content) => {
+    const sections = [];
+    const sectionsArray = content.split(sectionSeperator);
+    await sectionsArray.map((section) => {
+        if (section) {
+            let sectionItem = {
+                title: section.split(titleDescriptionSeperator)[0].trim(),
+                content: section.split(titleDescriptionSeperator)[1].trim(),
+            };
+            sections.push(sectionItem);
+        }
+    });
+    return sections;
+};
+
+// Format Images
+export const formatImages = async (md, type) => {
     md = md.replace(/\!\[([^\]]*?)\]\(([^\)]*?)\)/g, (all, title, url) => {
         const match = title.match(/^([\s\S]*?)(\|[\s\S]*?)?$/);
         if (match) {
@@ -45,6 +67,11 @@ export const formatImages = async (md, type, title) => {
             return all;
         }
     });
+    return md;
+};
+
+// Format URLs
+export const formatUrls = async (md) => {
     md = md.replace(
         /(\!?)\[([\s\S]+?)\]\(([\s\S]+?)\)/g,
         (all, q, title, url) => {
@@ -55,22 +82,4 @@ export const formatImages = async (md, type, title) => {
         }
     );
     return md;
-};
-
-const sectionSeperator = "##";
-const titleDescriptionSeperator = /:(.*)/s;
-
-export const getSections = async (content) => {
-    const sections = [];
-    const sectionsArray = content.split(sectionSeperator);
-    await sectionsArray.map((section) => {
-        if (section) {
-            let sectionItem = {
-                title: section.split(titleDescriptionSeperator)[0].trim(),
-                content: section.split(titleDescriptionSeperator)[1].trim(),
-            };
-            sections.push(sectionItem);
-        }
-    });
-    return sections;
 };

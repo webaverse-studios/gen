@@ -56,7 +56,7 @@ const nextConfig = {
             test: /\.md$/,
             loader: 'raw-loader',
           }
-        ]),
+        ])
       }),
     });
   },

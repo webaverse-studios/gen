@@ -10,6 +10,54 @@
   margin-bottom: 8px;
   color: #dadada;
 }
+.leftSection .actionsWrap {
+    height: 34px;
+    border-bottom: 2px solid #152934;
+}
+.leftSection .actionsWrap .actions {
+    float: right;
+}
+.leftSection .actionsWrap .actions button {
+    margin-left: 8px;
+    border: 2px solid #000000;
+    color: #000000;
+    background-color: #eaf4ef;
+    padding: 5px 12px;
+    cursor: pointer;
+    font-size: 10px;
+    text-transform: uppercase;
+    font-family: "TTSC-Bold";
+}
+.leftSection .actionsWrap .actions button.cancel {
+    border: 1px solid #eaf4ef;
+    color: #eaf4ef;
+    background-color: #091319;
+}
+.leftSection .actionsWrap .tabs {
+    float: left;
+}
+.leftSection .actionsWrap .tabs button {
+    color: #88989e;
+    padding: 9px 8px;
+    font-size: 12px;
+    text-transform: uppercase;
+    background: none;
+    border: 0;
+    margin-right: 0;
+    cursor: pointer;
+}
+
+.leftSection .actionsWrap .tabs button.active {
+    color: #fdbf00;
+    border-bottom: 2px solid #fdbf00;
+}
+
+.leftSection .actionsWrap::after {
+    content: ' ';
+    display: block;
+    clear: both;
+}
+
 .galleryWrap ul {
     display: block;
     margin: 0;
@@ -24,6 +72,7 @@
     width: 25%;
     box-sizing: border-box;
     padding: 4px;
+    overflow: hidden;
 }
 .galleryWrap ul li img {
     width: 100%;
@@ -104,4 +153,17 @@
 }
 .actionsBox .action:hover {
     opacity: 0.8;
+}
+.editPreviewWrap {
+    margin-top: 12px;
+}
+.sectionTextarea {
+    width: 100%;
+    height: 120px;
+    background: #FFFFFF;
+    color: black;
+    outline: none;
+    resize: vertical;
+    min-height: 120px;
+    padding: 8px;
 }
