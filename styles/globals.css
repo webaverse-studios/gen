@@ -17,6 +17,7 @@ body {
     width: 100vw;
     overflow-x: hidden;
     overflow-y: scroll;
+    color: #FFFFFF;
 }
 
 a {
@@ -33,8 +34,7 @@ a {
     color-scheme: dark;
   }
   body,html {
-    color: white;
-    background-color: black;
+    color: #FFFFFF;
     background-image: url('/assets/main-background.jpg');
     background-position: center top;
     background-size: cover;

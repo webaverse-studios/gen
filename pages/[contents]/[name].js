@@ -4,16 +4,16 @@ import Markdown from "marked-react";
 import styles from "../../styles/ContentObject.module.css";
 import { Ctx, saveContent } from "../../clients/context.js";
 import {
-    checkIfImageExists,
     cleanName,
     formatImages,
     formatUrls,
+    getGalleryArray,
     getSections,
 } from "../../utils.js";
 import { generateItem } from "../../datasets/dataset-generator.js";
 import { formatItemText } from "../../datasets/dataset-parser.js";
 import { getDatasetSpecs } from "../../datasets/dataset-specs.js";
-import React, { useRef, useState } from "react";
+import React, { useState } from "react";
 import { UserBox } from "../../src/components/user-box/UserBox";
 import { EditSource } from "../../src/components/edit-source";
 import {
@@ -21,6 +21,8 @@ import {
     RightSection,
 } from "../../src/components/content-sections";
 import { MiniMap } from "../../src/components/mini-map/MiniMap";
+import { Gallery } from "../../src/components/gallery";
+import { ImageLoader } from "../../src/components/image-loader/ImageLoader";
 
 //
 
@@ -42,6 +44,7 @@ const ContentObject = ({ type, title, content }) => {
     const [itemName, setItemName] = useState("");
     const [itemClass, setItemClass] = useState("");
     const [featuredImage, setFeaturedImage] = useState("");
+    const [gallery, setGallery] = useState([]);
 
     const [sections, setSections] = useState([]);
     const [editSource, setEditSource] = useState(false);
@@ -68,6 +71,11 @@ const ContentObject = ({ type, title, content }) => {
                     res.filter((item) => item.title === "Class")[0]?.content
                 );
             });
+            getGalleryArray(formatedContent).then((res) => {
+                if (res) {
+                    setGallery(res);
+                }
+            });
         }
     }, [formatedContent]);
 
@@ -83,17 +91,9 @@ const ContentObject = ({ type, title, content }) => {
                 setFeaturedImage(`/api/images/${type}s/${imageContent}.png`);
             }
         } else {
-            const galleryContent = sections.filter(
-                (item) => item.title === "Image Gallery"
-            )[0]?.content;
-            if (galleryContent) {
-                const match = galleryContent.match(/(?<=\().+?(?=\))/g);
-                console.log(galleryContent);
-                if (match) {
-                    let randIndex = Math.floor(Math.random() * match.length);
-                    setFeaturedImage(match[randIndex]);
-                    console.log(match);
-                }
+            if (gallery) {
+                    let randIndex = Math.floor(Math.random() * gallery.length);
+                    setFeaturedImage(gallery[randIndex]?.url);
             }
         }
     }, [sections]);
@@ -162,7 +162,7 @@ const ContentObject = ({ type, title, content }) => {
                                     className={styles.frame}
                                 />
                                 <div className={styles.mask}>
-                                    <img src={featuredImage} />
+                                    <ImageLoader url={featuredImage} />
                                 </div>
                             </div>
                             <div>
@@ -197,6 +197,7 @@ const ContentObject = ({ type, title, content }) => {
                                                     title={section.title}
                                                     content={section.content}
                                                     editSection={editSection}
+                                                    gallery={gallery}
                                                     index={i}
                                                 />
                                             );

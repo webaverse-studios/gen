@@ -2,9 +2,10 @@ import React, { useState, useEffect, useContext } from "react";
 import classnames from "classnames";
 import Markdown from "marked-react";
 import styles from "./Sections.module.css";
+import { Gallery } from "../gallery";
 
 export const LeftSection = (props) => {
-    const { title, content, index, editSection } = props;
+    const { title, content, index, editSection, gallery } = props;
     const [editSource, setEditSource] = useState(false);
     const [iniContent, setIniContent] = useState(content);
     const [editedContent, setEditedContent] = useState(content);
@@ -17,13 +18,7 @@ export const LeftSection = (props) => {
     };
     return (
         <div className={classnames(styles.leftSection)} key={index}>
-            <div
-                className={
-                    title.toLowerCase().includes("image gallery")
-                        ? styles.galleryWrap
-                        : ""
-                }
-            >
+            <div>
                 <h2>
                     {title}
                     <div className={styles.actionsBox}>
@@ -42,7 +37,10 @@ export const LeftSection = (props) => {
                     <div>
                         <div className={styles.actionsWrap}>
                             <div className={styles.actions}>
-                                <button className={styles.cancel} onClick={() => setEditSource(false)}>
+                                <button
+                                    className={styles.cancel}
+                                    onClick={() => setEditSource(false)}
+                                >
                                     Cancel
                                 </button>
                                 <button onClick={saveSectionContent}>
@@ -72,16 +70,28 @@ export const LeftSection = (props) => {
                                     value={editedContent}
                                 />
                             ) : (
-                                <Markdown gfm openLinksInNewTab={false}>
-                                    {editedContent}
-                                </Markdown>
+                                <>
+                                    {title.toLowerCase() === "image gallery" ? (
+                                        <Gallery gallery={gallery} />
+                                    ) : (
+                                        <Markdown gfm openLinksInNewTab={false}>
+                                            {editedContent}
+                                        </Markdown>
+                                    )}
+                                </>
                             )}
                         </div>
                     </div>
                 ) : (
-                    <Markdown gfm openLinksInNewTab={false}>
-                        {content}
-                    </Markdown>
+                    <>
+                        {title.toLowerCase() === "image gallery" ? (
+                            <Gallery gallery={gallery} />
+                        ) : (
+                            <Markdown gfm openLinksInNewTab={false}>
+                                {content}
+                            </Markdown>
+                        )}
+                    </>
                 )}
             </div>
         </div>

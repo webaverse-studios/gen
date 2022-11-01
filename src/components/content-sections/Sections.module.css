@@ -57,33 +57,6 @@
     display: block;
     clear: both;
 }
-
-.galleryWrap ul {
-    display: block;
-    margin: 0;
-    padding: 0;
-    margin-bottom: 8px;
-}
-.galleryWrap ul li {
-    display: block;
-    margin: 0;
-    padding: 0;
-    float: left;
-    width: 25%;
-    box-sizing: border-box;
-    padding: 4px;
-    overflow: hidden;
-}
-.galleryWrap ul li img {
-    width: 100%;
-}
-.galleryWrap ul::after {
-    content: " ";
-    display: block;
-    visibility: hidden;
-    clear: both;
-}
-
 .rightSection {
     width: 100%;
     box-sizing: border-box;

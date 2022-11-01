@@ -30,25 +30,6 @@ export const isAllCaps = (name) => {
     return !/[A-Z]/.test(name) || /^(?:[A-Z]+)$/.test(name);
 };
 
-// Format Sections
-const sectionSeperator = "##"; // Section Title Separator
-const titleDescriptionSeperator = /:(.*)/s; // Title & Description Separator
-
-export const getSections = async (content) => {
-    const sections = [];
-    const sectionsArray = content.split(sectionSeperator);
-    await sectionsArray.map((section) => {
-        if (section) {
-            let sectionItem = {
-                title: section.split(titleDescriptionSeperator)[0].trim(),
-                content: section.split(titleDescriptionSeperator)[1].trim(),
-            };
-            sections.push(sectionItem);
-        }
-    });
-    return sections;
-};
-
 // Format Images
 export const formatImages = async (md, type) => {
     md = md.replace(/\!\[([^\]]*?)\]\(([^\)]*?)\)/g, (all, title, url) => {
@@ -82,4 +63,43 @@ export const formatUrls = async (md) => {
         }
     );
     return md;
+};
+
+// Format Sections
+const sectionSeperator = "##"; // Section Title Separator
+const titleDescriptionSeperator = /:(.*)/s; // Title & Description Separator
+
+export const getSections = async (content) => {
+    const sections = [];
+    const sectionsArray = content.split(sectionSeperator);
+    await sectionsArray.map((section) => {
+        if (section) {
+            let sectionItem = {
+                title: section.split(titleDescriptionSeperator)[0].trim(),
+                content: section.split(titleDescriptionSeperator)[1].trim(),
+            };
+            sections.push(sectionItem);
+        }
+    });
+    return sections;
+};
+
+// Fetch Gallery Images as an Array
+export const getGalleryArray = async (content) => {
+    const gallery = [];
+    const imagesArray = content.match(/\!\[([^\]]*?)\]\(([^\)]*?)\)/g);
+    if (imagesArray) {
+        await imagesArray.map((image) => {
+            const title = image.match(/(?<=\[).+?(?=\])/g)[0];
+            const url = image.match(/(?<=\().+?(?=\))/g)[0];
+            let galleryItem = {
+                caption: title,
+                url: url,
+            };
+            if (url) {
+                gallery.push(galleryItem);
+            }
+        });
+    }
+    return gallery;
 };
