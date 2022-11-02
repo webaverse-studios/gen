@@ -1,5 +1,5 @@
 import uuidByString from "uuid-by-string";
-import Markdown from "marked-react";
+import Head from "next/head";
 
 import styles from "../../styles/ContentObject.module.css";
 import { Ctx, saveContent } from "../../clients/context.js";
@@ -21,7 +21,6 @@ import {
     RightSection,
 } from "../../src/components/content-sections";
 import { MiniMap } from "../../src/components/mini-map/MiniMap";
-import { Gallery } from "../../src/components/gallery";
 import { ImageLoader } from "../../src/components/image-loader/ImageLoader";
 
 //
@@ -44,6 +43,7 @@ const ContentObject = ({ type, title, content }) => {
     const [itemName, setItemName] = useState("");
     const [itemClass, setItemClass] = useState("");
     const [featuredImage, setFeaturedImage] = useState("");
+    const [description, setDecription] = useState("");
     const [gallery, setGallery] = useState([]);
 
     const [sections, setSections] = useState([]);
@@ -119,6 +119,18 @@ const ContentObject = ({ type, title, content }) => {
                 alt="Webaverse Wiki"
             />
             <div className={styles.contentWrap}>
+                {/* META TAGS START */}
+                <Head>
+                    <title>{itemName} - {itemClass}</title>
+                    <meta property="og:title" content={`${itemName} - ${itemClass}`} />
+                    <meta property="og:site_name" content="Webaverse Wiki" />
+                    <meta property="og:url" content="http://wiki.webaverse.com" />
+                    <meta property="og:description" content={description} />
+                    <meta property="og:image" content={featuredImage} />
+                    <meta name="theme-color" content="#112029" />
+                    <meta name="twitter:card" content="summary_large_image" />
+                </Head>
+                {/* META TAGS END */}
                 <div className={styles.name}>
                     {itemName}
                     {!editSource ? (

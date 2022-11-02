@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { IconCollection } from "./IconCollection";
 import styles from "./CustomButton.module.css";
 import classnames from "classnames";
+import CustomIcon from "../custom-icons";
 
 async function getSVG(iconName) {
     const icon = IconCollection.find((item) => item.name === iconName);
@@ -17,20 +18,6 @@ async function getSVG(iconName) {
 
 export default function CustomButton(props) {
     const { size, icon, className, onClick, theme, type, text, onMouseEnter } = props;
-    const svgRef = useRef(null);
-
-    useEffect(() => {
-        if (icon) {
-            getSVG(icon).then((res) => {
-                svgRef.current.innerHTML = "";
-                if (res) {
-                    res.classList.add(styles.icon);
-                    svgRef.current.append(res);
-                }
-            });
-        }
-    }, []);
-
     if (type && type === "login") {
         return (
             <div
@@ -63,7 +50,7 @@ export default function CustomButton(props) {
                         className={styles.innerBackgroundColor}
                     />
                 </svg>
-                <span ref={svgRef} className={styles.iconWrap}></span>
+                <CustomIcon icon={icon} className={styles.iconWrap} />
             </div>
         );
     } else if (type && type === "icon") {
@@ -99,7 +86,7 @@ export default function CustomButton(props) {
                         className={styles.innerBackgroundColor}
                     />
                 </svg>
-                <span ref={svgRef} className={styles.iconWrap}></span>
+                <CustomIcon icon={icon} className={styles.iconWrap} />
             </div>
         );
     } else {
@@ -118,7 +105,7 @@ export default function CustomButton(props) {
                     style={{ fontSize: size }}
                 >
                     {icon && (
-                        <span ref={svgRef} className={styles.buttonIconWrap} style={{height: size, width: size}}></span>
+                        <CustomIcon icon={icon} className={styles.buttonIconWrap} />
                     )}
                     {text && text}
                 </div>

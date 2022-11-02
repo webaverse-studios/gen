@@ -35,7 +35,7 @@
     width: 100%;
 }
 
-.iconButtonWrap .icon {
+.iconButtonWrap .iconWrap svg {
     top: 50%;
     left: 50%;
     -ms-transform: translateX(-50%) translateY(-50%);
@@ -46,11 +46,11 @@
     max-width: 46%;
 }
 
-.iconButtonWrap .icon * {
+.iconButtonWrap .iconWrap * {
     fill: #000000;
 }
 
-.iconButtonWrap.dark .icon * {
+.iconButtonWrap.dark .iconWrap svg * {
     fill: #FFFFFF;
 }
 
@@ -63,7 +63,7 @@
     fill: #FFC000 !important;
 }
 
-.iconButtonWrap:hover .icon * {
+.iconButtonWrap:hover .iconWrap svg * {
     fill: #EAF4EF !important;
 }
 
@@ -75,7 +75,7 @@
     fill: #000000 !important;
 }
 
-.iconButtonWrap:active .icon * {
+.iconButtonWrap:active .iconWrap svg * {
     fill: #FFC000;
 }
 
