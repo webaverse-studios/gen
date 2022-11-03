@@ -66,8 +66,11 @@ export const formatUrls = async (md) => {
 };
 
 // Format Sections
-const sectionSeperator = "##"; // Section Title Separator
-const titleDescriptionSeperator = /:(.*)/s; // Title & Description Separator
+
+// Section Title Separator
+const sectionSeperator = "##";
+// Title & Description Separator by first ":" in the string
+const titleDescriptionSeperator = /:(.*)/s;
 
 export const getSections = async (content) => {
     const sections = [];
