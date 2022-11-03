@@ -89,6 +89,10 @@ export class HeightfieldsMesh extends THREE.InstancedMesh {
           value: uTex,
           needsUpdate: true,
         },
+        opacity: {
+          value: 1,
+          needsUpdate: true,
+        },
       },
       vertexShader: `\
         attribute vec2 uv2;
@@ -102,6 +106,7 @@ export class HeightfieldsMesh extends THREE.InstancedMesh {
       `,
       fragmentShader: `\
         uniform sampler2D uTex;
+        uniform float opacity;
         varying vec2 vUv;
 
         void main() {
@@ -109,9 +114,10 @@ export class HeightfieldsMesh extends THREE.InstancedMesh {
 
           vec4 c = texture2D(uTex, vUv);
           // c.rgb += uvc;
-          gl_FragColor = vec4(c.rgb, 1.0);
+          gl_FragColor = vec4(c.rgb, opacity);
         }
       `,
+      transparent: true,
     });
     // chunksMaterial.uniforms.uTex.value.onUpdate = () => {
     //   console.log('tex update');
@@ -233,6 +239,10 @@ export class HeightfieldsMesh extends THREE.InstancedMesh {
     const {ctx} = this.canvas;
     ctx.clearRect(dx * chunkSize, dy * chunkSize, chunkSize, chunkSize);
     this.material.uniforms.uTex.value.needsUpdate = true; */
+  }
+  setOpacity(opacity) {
+    this.material.uniforms.opacity.value = opacity;
+    this.material.uniforms.opacity.needsUpdate = true;
   }
   destroy() {
     // this.canvas?.parentNode?.removeChild(this.canvas);

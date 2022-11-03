@@ -29,4 +29,6 @@ app.prepare()
       console.log(`https://local.webaverse.com:${port}/`);
       console.log('ready');
     });
+  }).catch(err => {
+    throw err;
   });
