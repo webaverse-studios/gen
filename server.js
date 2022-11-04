@@ -7,6 +7,7 @@ import {parse} from 'url';
 import next from 'next';
 import fs from 'fs';
 
+const host = 'local.webaverse.com';
 const port = parseInt(process.env.PORT, 10) || 4444;
 const dev = process.env.NODE_ENV !== 'production';
 const app = next({
@@ -24,9 +25,9 @@ app.prepare()
     createServer(httpsOptions, (req, res) => {
       const parsedUrl = parse(req.url, true);
       handle(req, res, parsedUrl);
-    }).listen(port, (err) => {
+    }).listen(port, host, (err) => {
       if (err) throw err;
-      console.log(`https://local.webaverse.com:${port}/`);
+      console.log(`https://${host}:${port}/`);
       console.log('ready');
     });
   }).catch(err => {
