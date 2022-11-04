@@ -33,6 +33,5 @@ Example Route: ```/setting/Any_name_or_description```
 Example Route: ```/match/Any_name_or_description```
 ### Cutscenes:
 Example Route: ```/cuscenes/Any_name_or_description```
-
-
-
+### Battle Benters:
+Example Route: ```/battle-banter/Any_name_or_description```
