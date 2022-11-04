@@ -105,7 +105,7 @@ export default function CustomButton(props) {
                     style={{ fontSize: size }}
                 >
                     {icon && (
-                        <CustomIcon icon={icon} className={styles.buttonIconWrap} />
+                        <CustomIcon icon={icon} size={size} className={styles.buttonIconWrap} />
                     )}
                     {text && text}
                 </div>

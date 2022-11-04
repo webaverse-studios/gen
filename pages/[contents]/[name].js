@@ -22,6 +22,7 @@ import {
 } from "../../src/components/content-sections";
 import { MiniMap } from "../../src/components/mini-map/MiniMap";
 import { ImageLoader } from "../../src/components/image-loader/ImageLoader";
+import { MetaTags } from "../../src/components/meta-tags/MetaTags";
 
 //
 
@@ -92,8 +93,8 @@ const ContentObject = ({ type, title, content }) => {
             }
         } else {
             if (gallery) {
-                    let randIndex = Math.floor(Math.random() * gallery.length);
-                    setFeaturedImage(gallery[randIndex]?.url);
+                let randIndex = Math.floor(Math.random() * gallery.length);
+                setFeaturedImage(gallery[randIndex]?.url);
             }
         }
     }, [sections]);
@@ -112,6 +113,11 @@ const ContentObject = ({ type, title, content }) => {
 
     return (
         <div className={styles.character}>
+            <MetaTags
+                title={`${itemName} ${itemClass && `- ${itemClass}`}`}
+                description={description}
+                image={featuredImage}
+            />
             <UserBox />
             <img
                 src={"/assets/logo.svg"}
@@ -119,19 +125,8 @@ const ContentObject = ({ type, title, content }) => {
                 alt="Webaverse Wiki"
             />
             <div className={styles.contentWrap}>
-                {/* META TAGS START */}
-                <Head>
-                    <title>{itemName} - {itemClass}</title>
-                    <meta property="og:title" content={`${itemName} - ${itemClass}`} />
-                    <meta property="og:site_name" content="Webaverse Wiki" />
-                    <meta property="og:url" content="http://wiki.webaverse.com" />
-                    <meta property="og:description" content={description} />
-                    <meta property="og:image" content={featuredImage} />
-                    <meta name="theme-color" content="#112029" />
-                    <meta name="twitter:card" content="summary_large_image" />
-                </Head>
-                {/* META TAGS END */}
                 <div className={styles.name}>
+                    <span>{`${type}s`}</span>
                     {itemName}
                     {!editSource ? (
                         <div className={styles.sourceActions}>
@@ -174,7 +169,11 @@ const ContentObject = ({ type, title, content }) => {
                                     className={styles.frame}
                                 />
                                 <div className={styles.mask}>
-                                    <ImageLoader url={featuredImage} />
+                                    <ImageLoader
+                                        url={featuredImage}
+                                        className={styles.image}
+                                        rerollable={true}
+                                    />
                                 </div>
                             </div>
                             <div>

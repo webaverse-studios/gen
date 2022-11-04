@@ -31,6 +31,6 @@ export default function CustomIcon(props) {
     }, []);
 
     return (
-        <span ref={svgRef} className={className}></span>
+        <span ref={svgRef} style={{height: size, width: size}} className={className}></span>
     );
 }

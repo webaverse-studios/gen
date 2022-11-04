@@ -2,12 +2,13 @@ import React, { useState, useEffect, useContext } from "react";
 import classnames from "classnames";
 import styles from "./UserBox.module.css";
 import CustomButton from "../custom-button";
+import Link from "next/link";
 
-export const UserBox = () => {
+export const UserBox = ({ className }) => {
     const loggedIn = false;
-
+    const [ open , setOpen] = useState(false);
     return (
-        <div className={classnames(styles.userBoxWrap)}>
+        <div className={classnames(styles.userBoxWrap, className)}>
             <div className={styles.leftCorner} />
             <div className={styles.rightCorner} />
             <ul>
@@ -20,12 +21,14 @@ export const UserBox = () => {
                     />
                 </li>
                 <li>
-                    <CustomButton
-                        type="icon"
-                        theme="light"
-                        icon="map"
-                        size={32}
-                    />
+                    <a href={"/map"}>
+                        <CustomButton
+                            type="icon"
+                            theme="light"
+                            icon="map"
+                            size={32}
+                        />
+                    </a>
                 </li>
                 {!loggedIn && (
                     <>
@@ -48,6 +51,7 @@ export const UserBox = () => {
                                 icon="login"
                                 size={28}
                                 className={styles.loginButton}
+                                onClick={() => setOpen(true)}
                             />
                         </li>
                     </>
@@ -84,6 +88,39 @@ export const UserBox = () => {
                     </>
                 )}
             </ul>
+
+            <div
+                className={classnames(
+                    styles.userLoginMethodsModal,
+                    open ? styles.opened : null
+                )}
+            >
+                <div className={styles.title}>
+                    <span>Log in</span>
+                </div>
+                <CustomButton
+                    theme="light"
+                    icon="metamask"
+                    text="Metamask"
+                    size={18}
+                    className={styles.methodButton}
+                />
+                <CustomButton
+                    theme="light"
+                    icon="phantom"
+                    text="Phantom"
+                    size={18}
+                    className={styles.methodButton}
+                />
+                <CustomButton
+                    theme="light"
+                    icon="close"
+                    text="Cancel"
+                    size={18}
+                    onClick={() => setOpen(false)}
+                    className={styles.methodButton}
+                />
+            </div>
         </div>
     );
 };

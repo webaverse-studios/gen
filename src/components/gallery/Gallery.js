@@ -4,7 +4,9 @@ import styles from "./Gallery.module.css";
 import { ImageLoader } from "../image-loader/ImageLoader";
 
 export const Gallery = ({ gallery, className }) => {
-    console.log(gallery);
+    
+    const [ reroll, setReroll ] = useState(true);
+
     return (
         <div className={classnames(className)}>
             <div className={styles.galleryWrap}>
@@ -15,7 +17,7 @@ export const Gallery = ({ gallery, className }) => {
                             <div className={styles.galleryItem} key={i}>
                                 <div className={styles.imageWrap}>
                                 { image.url && (
-                                        <ImageLoader url={image.url} title={image.caption} />
+                                        <ImageLoader url={image.url} title={image.caption} rerollable={reroll} />
                                 )}
                                 </div>
                                 <p>{image?.caption}</p>

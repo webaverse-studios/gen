@@ -59,6 +59,7 @@
   margin: 0 8px 0 0;
   padding: 0;
   float: left;
+  position: relative;
 }
 
 .userBoxWrap .loggedOutText {
@@ -125,7 +126,7 @@
   transform: translateX(-50%) translateY(-50%) scale(1.2, 1.2);
   transform-origin: 50% 50%;
   padding: 10px;
-  background-image: url("/assets/backgrounds/popup-bg.svg");
+  background-image: url("/assets/popup-bg.svg");
   background-size: 100% 100%;
   background-repeat: no-repeat;
   transition: transform 1s cubic-bezier(0, 1, 0, 1);
@@ -161,7 +162,7 @@
   margin-left: auto;
   margin-right: auto;
   color: #fff;
-  background-image: url("/assets/backgrounds/popup-title-bg.svg");
+  background-image: url("/assets/popup-title-bg.svg");
   background-size: 100% 100%;
   background-repeat: no-repeat;
   font-size: 20px;
