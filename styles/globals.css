@@ -1,9 +1,23 @@
+@font-face {
+  font-family: 'TTSC-Regular';
+  src:  url('/fonts/TT Squares Condensed Regular.otf');
+}
+@font-face {
+  font-family: 'TTSC-Bold';
+  src:  url('/fonts/TT Squares Condensed Bold.otf');
+}
+
 html,
 body {
   padding: 0;
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen,
+  font-family: "TTSC-Regular", -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen,
     Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif;
+    height: 100vh;
+    width: 100vw;
+    overflow-x: hidden;
+    overflow-y: scroll;
+    color: #FFFFFF;
 }
 
 a {
@@ -19,8 +33,11 @@ a {
   html {
     color-scheme: dark;
   }
-  body {
-    color: white;
-    background: black;
+  body,html {
+    color: #FFFFFF;
+    background-image: url('/assets/main-background.jpg');
+    background-position: center top;
+    background-size: cover;
+    background-repeat: no-repeat;
   }
 }
