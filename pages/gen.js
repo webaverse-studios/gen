@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+// import * as THREE from 'three';
 // import {useState, useMemo, useEffect} from 'react';
 // import {Readable} from 'stream';
 // import FormData from 'form-data/lib/form_data.js';
@@ -13,9 +13,18 @@ import {Configuration, OpenAIApi} from 'openai';
 
 //
 
-// opeanaiKey = ``;
-// prompt = `2D overhead view fantasy battle map scene, mysterious lush sakura forest, anime drawing, digital art`;
-prompt = `2D overhead view fantasy battle map scene, mysterious dinosaur robot factory, anime video game drawing, trending, winner, digital art`;
+const OPENAI_API_KEY = ``;
+const prompts = {
+  // map: `2D overhead view fantasy battle map scene, mysterious lush sakura forest, anime drawing, digital art`;
+  map: `2D overhead view fantasy battle map scene, mysterious dinosaur robot factory, anime video game drawing, trending, winner, digital art`,
+  world: `young anime girl wearing a hoodie looks down at mysterious sakura forest cliffs, digital art`,
+};
+
+const configuration = new Configuration({
+  apiKey: OPENAI_API_KEY,
+  // formDataCtor: FormData,
+});
+const openai = new OpenAIApi(configuration);
 
 //
 
@@ -690,7 +699,7 @@ prompt = `2D overhead view fantasy battle map scene, mysterious dinosaur robot f
 
 //
 
-materialColors = {
+const materialColors = {
   "red": {
     "50": "#ffebee",
     "100": "#ffcdd2",
@@ -987,7 +996,7 @@ materialColors = {
 
 //
 
-createSeedImage = (
+const createSeedImage = (
   w, // width
   h, // height
   rw, // radius width
@@ -1031,10 +1040,11 @@ createSeedImage = (
 
   return canvas;
 };
-makeCharacterSeedImage = () => {
+const makeCharacterSeedImage = () => {
   return createSeedImage(512, 512, 64, 128, 1, 256);
 };
-createFullSeedImage = () => {
+globalThis.makeCharacterSeedImage = makeCharacterSeedImage;
+const createFullSeedImage = () => {
   const rng = () => (Math.random() * 2) - 1;
   const baseColors = Object.keys(materialColors).map(k => materialColors[k][400].slice(1));
 
@@ -1068,6 +1078,7 @@ createFullSeedImage = () => {
 
   return canvas;
 };
+globalThis.createFullSeedImage = createFullSeedImage;
 
 // 
 
@@ -1123,7 +1134,7 @@ function getLineForViewport(viewport) {
 
 //
 
-convertToUint16 = (() => {
+const convertToUint16 = (() => {
   const tmpArray = new Uint16Array(1);
   return v => {
     tmpArray[0] = v;
@@ -1133,7 +1144,7 @@ convertToUint16 = (() => {
 
 //
 
-calcSDF = (() => {
+const calcSDF = (() => {
   var INF = 1e20
 
   function calcSDF(src, options) {
@@ -1299,20 +1310,23 @@ function canvas2blob(canvas) {
 
 //
 
-globalThis.testMap = {
+const getFormData = (prompt, w, h) => {
+  const formData = new FormData();
+  formData.append('prompt', prompt);
+  formData.append('width', w);
+  formData.append('height', h);
+  return formData;
+};
+
+//
+
+globalThis.testMap = async () => {
   const canvasSize = 2048;
   const tileSize = 512;
 
   // const StackBlur = await import('https://webaverse.github.io/StackBlur/dist/stackblur-es.js');
   // globalThis.StackBlur = StackBlur
 
-  const getFormData = (prompt, w, h) => {
-    const formData = new FormData();
-    formData.append('prompt', prompt);
-    formData.append('width', w);
-    formData.append('height', h);
-    return formData;
-  };
   /* const fillNoise = (canvas, ctx) => {
     // fills a canvas with noise
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -1452,6 +1466,10 @@ globalThis.testMap = {
     const result = await res.blob();
     return result;
   }
+  async function depthRawToAbsolute(depthValue) {
+    // The prediction is relative inverse depth. For each prediction, there exist some scalars a,b such that a*prediction+b is the absolute inverse depth. The factors a,b cannot be determined without additional measurements.
+    // 
+  }
   async function genImg(prompt) {
     const fd = getFormData(prompt, tileSize, tileSize);
     const res = await fetch(`http://stable-diffusion-server.webaverse.com/api`, {method: 'POST', body: fd});
@@ -1514,7 +1532,7 @@ globalThis.testMap = {
   // render
   const tiles = [];
   const _initialTile = async () => {
-    const baseImg = await genImg(prompt, tileSize, tileSize);
+    const baseImg = await genImg(prompts.map, tileSize, tileSize);
     const viewport = [
       canvasSize / 2,
       canvasSize / 2,
@@ -1566,7 +1584,7 @@ globalThis.testMap = {
     fillMaskCanvasFromViewports(maskCanvas, maskCtx, tiles, mainViewport);
 
     // render image
-    const baseImg = await editImg(srcCanvas, prompt, maskCanvas);
+    const baseImg = await editImg(srcCanvas, prompts.map, maskCanvas);
     // draw image
     ctx.drawImage(baseImg, viewport[0], viewport[1]);
 
@@ -1682,21 +1700,6 @@ globalThis.testMap = {
 
 
 
-
-
-
-const OPENAI_API_KEY = `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`;
-// const prompt = `2D overhead view infinite fantasy battle map scene, lush sakura island, industrial metal sci fi gate ramp crates and barrels, anime style video game, digital art`;
-const prompt = `young anime girl wearing a hoodie looks down at mysterious sakura forest cliffs, digital art`;
-
-//
-
-const configuration = new Configuration({
-  apiKey: OPENAI_API_KEY,
-  formDataCtor: FormData,
-});
-const openai = new OpenAIApi(configuration);
-
 //
 
 async function getDepth(blob) {
@@ -1711,33 +1714,12 @@ async function getDepth(blob) {
   const result = await res.blob();
   return result;
 }
-function blob2img(blob) {
-  const img = new Image();
-  const u = URL.createObjectURL(blob);
-  const promise = new Promise((accept, reject) => {
-    function cleanup() {
-      URL.revokeObjectURL(u);
-    }
-    img.onload = () => {
-      accept(img);
-      cleanup();
-    };
-    img.onerror = err => {
-      reject(err);
-      cleanup();
-    };
-  });
-  img.crossOrigin = 'Anonymous';
-  img.src = u;
-  img.blob = blob;
-  return promise;
-}
 
 //
 
 globalThis.worldGen = async () => {
   const response = await openai.createImage({
-    prompt,
+    prompt: prompts.world,
     n: 1,
     size: "1024x1024",
   });
