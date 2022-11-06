@@ -1,4 +1,4 @@
-// import * as THREE from 'three';
+import * as THREE from 'three';
 // import {useState, useMemo, useEffect} from 'react';
 // import {Readable} from 'stream';
 // import FormData from 'form-data/lib/form_data.js';
@@ -1466,9 +1466,35 @@ globalThis.testMap = async () => {
     const result = await res.blob();
     return result;
   }
-  async function depthRawToAbsolute(depthValue) {
-    // The prediction is relative inverse depth. For each prediction, there exist some scalars a,b such that a*prediction+b is the absolute inverse depth. The factors a,b cannot be determined without additional measurements.
-    // 
+  function getDepthCalibration(p1, prediction1, p2, prediction2) {
+    // The prediction is relative inverse depth.
+    // For each prediction, there exist some scalars a,b such that a*prediction+b is the absolute inverse depth.
+    // The factors a,b cannot be determined without additional measurements.
+    //
+    // You'd need to know the absolute depth of at least two pixels in the image to derive the two unknowns.
+    // Based on these measurements you could align the predictions to these measurements as done in our SSIMSE loss.
+    // A practical solution would require more points to minimize the likelihood of running into degenerate configurations.
+
+    // absolute inverse depths
+    const aid1 = 1 / p1[2];
+    const aid2 = 1 / p2[2];
+
+    // solve for a and b
+    // a * prediction1 + b = aid1   [1]
+    // a * prediction2 + b = aid2   [2]
+    // a * prediction1 + b - aid1 = 0 // from [1]
+    // a * prediction2 + b - aid2 = 0 // from [2]
+    // a * (prediction1 - prediction2) = aid1 - aid2
+    // a = (aid1 - aid2) / (prediction1 - prediction2)
+    // b = aid1 - a * prediction1
+    const a = (aid1 - aid2) / (prediction1 - prediction2);
+    const b = aid1 - a * prediction1;
+    return {a, b};
+  }
+  function getDepth(p1, calibration) {
+    const prediction = p1[2];
+    const depth = 1 / (calibration.a * prediction + calibration.b);
+    return depth;
   }
   async function genImg(prompt) {
     const fd = getFormData(prompt, tileSize, tileSize);
@@ -1767,6 +1793,10 @@ globalThis.worldGen = async () => {
   const img2 = await blob2img(blob2);
   document.body.appendChild(img2);
 };
+
+//
+
+globalThis.THREE = THREE;
 
 //
 
