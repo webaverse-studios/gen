@@ -18,9 +18,9 @@ const OPENAI_API_KEY = ``;
 const prompts = {
   // map: `2D overhead view fantasy battle map scene, mysterious lush sakura forest, anime drawing, digital art`;
   map: `2D overhead view fantasy battle map scene, mysterious dinosaur robot factory, anime video game drawing, trending, winner, digital art`,
-  world: `anime screenshot, mysterious forest path with neon arrows, jungle labyrinth, lush vegetation, ancient technology, robot friend, glowing magic, ghibli style, digital art`,
+  world: `anime screenshot, mysterious forest path with neon arrows, jungle labyrinth with ramps and passages, lush vegetation, ancient technology, robot friend, glowing magic, ghibli style, digital art`,
 };
-const labelClasses = ['person', 'floor', 'path', 'ground', 'road', 'ceiling', 'land', 'river', 'water', 'sky', 'mountain', 'leaves', 'wall', 'house', 'machine', 'rock', 'flower', 'door', 'car', 'animal', 'mat', 'grass', 'metal', 'light', 'tree', 'wood', 'food', 'smoke'];
+const labelClasses = ['person', 'floor', 'path', 'sidewalk', 'ground', 'road', 'runway', 'ceiling', 'land', 'field', 'river', 'water', 'sea', 'sky', 'mountain', 'leaves', 'wall', 'house', 'machine', 'rock', 'flower', 'door', 'gate', 'car', 'animal', 'mat', 'grass', 'plant', 'metal', 'light', 'tree', 'wood', 'food', 'smoke', 'forest', 'pool', 'shirt', 'pant', 'structure', 'bird', 'tunnel', 'cave', 'skyscraper', 'sign', 'stairs', 'box'];
 const vqaQueries = [
   `is this birds eye view?`,
   `is the viewer looking up at the sky?`,
@@ -1918,8 +1918,8 @@ function pointCloudArrayBufferToColorAttributeArray(labelImg, uint8Array) { // r
 //
 
 async function getLabel(blob, {
-  classes = [],
-  threshold = 0.01,
+  classes,
+  threshold,
 }) {
   const res = await fetch(`https://ov-seg.webaverse.com/label?classes=${classes.join(',')}&threshold=${threshold}`, {
     method: "POST",
@@ -1952,18 +1952,39 @@ async function getLabel(blob, {
 
 //
 
-globalThis.worldGen = async () => {
-  // console.log('gen 1');
-  // generate image
-  const response = await openai.createImage({
-    prompt: prompts.world,
-    n: 1,
-    size: "1024x1024",
+// support darag and drop
+if (typeof window !== 'undefined') {
+  document.addEventListener('dragover', e => {
+    e.preventDefault();
+    e.stopPropagation();
   });
-  const image_url = response.data.data[0].url;
-  const u2 = new URL('/api/proxy', location.href);
-  u2.searchParams.set('url', image_url);
-  const res = await fetch(u2);
+  document.addEventListener('drop', async e => {
+    e.preventDefault();
+    e.stopPropagation();
+    const files = e.dataTransfer.files;
+    const file = files[0];
+    if (file) {
+      const u = URL.createObjectURL(file);
+      await globalThis.worldGen(u);
+      URL.revokeObjectURL(u);
+    }
+  });
+}
+globalThis.worldGen = async image_url => {
+  if (!image_url) {
+    // generate image
+    const response = await openai.createImage({
+      prompt: prompts.world,
+      n: 1,
+      size: "1024x1024",
+    });
+    image_url = response.data.data[0].url;
+
+    const u2 = new URL('/api/proxy', location.href);
+    u2.searchParams.set('url', image_url);
+    image_url = u2.href;
+  }
+  const res = await fetch(image_url);
   const blob = await res.blob();
 
   // canvas
@@ -1980,16 +2001,12 @@ globalThis.worldGen = async () => {
   document.body.appendChild(img);
   
   // label
-  /* const {
-    previewImg: labelBlob,
-    predictions,
-  } = await getLabel(blob); */
   const {
     headers: labelHeaders,
     blob: labelBlob,
   } = await getLabel(blob, {
     classes: labelClasses,
-    threshold: 0.05,
+    threshold: 0.001,
   });
   console.log('got label', {
     labelHeaders,
