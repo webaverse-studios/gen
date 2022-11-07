@@ -18,7 +18,7 @@ const OPENAI_API_KEY = ``;
 const prompts = {
   // map: `2D overhead view fantasy battle map scene, mysterious lush sakura forest, anime drawing, digital art`;
   map: `2D overhead view fantasy battle map scene, mysterious dinosaur robot factory, anime video game drawing, trending, winner, digital art`,
-  world: `young anime girl wearing a hoodie looks down at mysterious sakura forest cliffs, digital art`,
+  world: `young anime girl wearing a hoodie looks up at mysterious sakura forest dojo, digital art`,
 };
 const labelClasses = ['person', 'water', 'flower', 'mat', 'fog', 'land', 'grass', 'field', 'dirt', 'metal', 'light', 'book', 'leaves', 'mountain', 'tree', 'gravel', 'wood', 'bush', 'bag', 'food', 'path', 'stairs', 'rock', 'house', 'clothes', 'animal'];
 
@@ -1136,13 +1136,13 @@ function getLineForViewport(viewport) {
 
 //
 
-const convertToUint16 = (() => {
+/* const convertToUint16 = (() => {
   const tmpArray = new Uint16Array(1);
   return v => {
     tmpArray[0] = v;
     return tmpArray[0];
   };
-})();
+})(); */
 
 //
 
@@ -1827,13 +1827,23 @@ function pointCloudArrayBufferToPositionAttributeArray(arrayBuffer, float32Array
   }
   const dataView = new DataView(arrayBuffer);
   for (let i = 0, j = 0; i < arrayBuffer.byteLength; i += pointcloudStride, j += 3) {
-    const x = dataView.getFloat32(i + 0, true);
-    const y = dataView.getFloat32(i + 4, true);
-    const z = dataView.getFloat32(i + 8, true);
+    let x = dataView.getFloat32(i + 0, true);
+    let y = dataView.getFloat32(i + 4, true);
+    let z = dataView.getFloat32(i + 8, true);
 
-    float32Array[j + 0] = x * scaleFactor;
-    float32Array[j + 1] = -y * scaleFactor;
-    float32Array[j + 2] = -z * scaleFactor;
+    x *= scaleFactor;
+    y *= -scaleFactor;
+    z *= -scaleFactor;
+
+    if (z <= -4) {
+      const zoomFactor = 10;
+      x *= zoomFactor;
+      y *= zoomFactor;
+      z *= zoomFactor;
+    }
+    float32Array[j + 0] = x;
+    float32Array[j + 1] = y;
+    float32Array[j + 2] = z;
   }
 
   return float32Array;
@@ -2007,14 +2017,14 @@ globalThis.worldGen = async () => {
     directionalLight.position.set(1, 2, 3);
     scene.add(directionalLight);
 
-    const cubeMesh = new THREE.Mesh(
-      new THREE.BoxBufferGeometry(0.1, 0.1, 0.1),
-      new THREE.MeshPhongMaterial({
-        color: 0x00ff00,
-      }),
-    );
-    cubeMesh.frustumCulled = false;
-    scene.add(cubeMesh);
+    // const cubeMesh = new THREE.Mesh(
+    //   new THREE.BoxBufferGeometry(0.1, 0.1, 0.1),
+    //   new THREE.MeshPhongMaterial({
+    //     color: 0x00ff00,
+    //   }),
+    // );
+    // cubeMesh.frustumCulled = false;
+    // scene.add(cubeMesh);
 
     // add THREE.js orbit controls
     const controls = new OrbitControls(camera, canvas);
@@ -2022,10 +2032,19 @@ globalThis.worldGen = async () => {
     controls.dampingFactor = 0.05;
     controls.screenSpacePanning = false;
     controls.minDistance = 1;
-    controls.maxDistance = 5;
+    controls.maxDistance = 100;
     controls.maxPolarAngle = Math.PI / 2;
     // set the target
-    controls.target.set(0, 0, 3);
+    controls.target.set(0, 0, -3);
+
+    const blockEvent = e => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    canvas.addEventListener('mousedown', blockEvent);
+    canvas.addEventListener('mouseup', blockEvent);
+    canvas.addEventListener('click', blockEvent);
+    canvas.addEventListener('wheel', blockEvent);
 
     const _startLoop = () => {
       console.log('start render loop');
