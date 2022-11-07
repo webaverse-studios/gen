@@ -20,7 +20,7 @@ const prompts = {
   map: `2D overhead view fantasy battle map scene, mysterious dinosaur robot factory, anime video game drawing, trending, winner, digital art`,
   world: `young anime girl wearing a hoodie looks up at mysterious sakura forest dojo, digital art`,
 };
-const labelClasses = ['person', 'water', 'flower', 'mat', 'fog', 'land', 'grass', 'field', 'dirt', 'metal', 'light', 'book', 'leaves', 'mountain', 'tree', 'gravel', 'wood', 'bush', 'bag', 'food', 'path', 'stairs', 'rock', 'house', 'clothes', 'animal'];
+const labelClasses = ['person', 'water', 'flower', 'mat', 'land', 'grass', 'field', 'dirt', 'metal', 'light', 'leaves', 'mountain', 'tree', 'gravel', 'wood', 'bag', 'food', 'path', 'stairs', 'rock', 'house', 'clothes', 'animal'];
 const vqaQueries = [
   `is this birds eye view?`,
   `is the viewer looking up at the sky?`,
@@ -1328,14 +1328,14 @@ function drawLabelCanvas(img, boundingBoxLayers) {
   ctx.drawImage(img, 0, 0);
 
   //
-
-  for (const bboxes of boundingBoxLayers) {
+  window.boundingBoxLayers = boundingBoxLayers;
+  for (let i = 0; i < boundingBoxLayers.length; i++) {
+    const bboxes = boundingBoxLayers[i];
     ctx.strokeStyle = 'red';
-    for (let i = 0; i < bboxes.length; i += 4) {
-      const className = labelClasses[i];
-      
-      // draw the main box
-      const bbox = bboxes[i];
+    const className = labelClasses[i];
+    for (let j = 0; j < bboxes.length; j++) {      
+      // draw the main rectangle
+      const bbox = bboxes[j];
       const [x1, y1, x2, y2] = bbox;
       const w = x2 - x1;
       const h = y2 - y1;
@@ -1349,7 +1349,6 @@ function drawLabelCanvas(img, boundingBoxLayers) {
       ctx.font = '12px Arial';
       ctx.fillText(className, x1 + 2, y1 + 14);
     }
-    // break;
   }
 
   //
@@ -2021,7 +2020,7 @@ globalThis.worldGen = async () => {
   document.body.appendChild(pointCloudCanvas);
 
   // latch
-  window.img = img;
+  // window.img = img;
   // window.depthImg = depthImg;
   window.pointCloudCanvas = pointCloudCanvas;
   window.labelImg = labelImg;
