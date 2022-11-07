@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 // import {useState, useMemo, useEffect} from 'react';
 // import {Readable} from 'stream';
 // import FormData from 'form-data/lib/form_data.js';
@@ -19,6 +20,7 @@ const prompts = {
   map: `2D overhead view fantasy battle map scene, mysterious dinosaur robot factory, anime video game drawing, trending, winner, digital art`,
   world: `young anime girl wearing a hoodie looks down at mysterious sakura forest cliffs, digital art`,
 };
+const labelClasses = ['person', 'water', 'flower', 'mat', 'fog', 'land', 'grass', 'field', 'dirt', 'metal', 'light', 'book', 'leaves', 'mountain', 'tree', 'gravel', 'wood', 'bush', 'bag', 'food', 'path', 'stairs', 'rock', 'house', 'clothes', 'animal'];
 
 const configuration = new Configuration({
   apiKey: OPENAI_API_KEY,
@@ -1307,6 +1309,34 @@ function canvas2blob(canvas) {
     canvas.toBlob(accept, 'image/png');
   });
 }
+function drawLabelCanvas(img, boundingBoxLayers) {
+  const canvas = document.createElement('canvas');
+  canvas.width = img.width;
+  canvas.height = img.height;
+  const ctx = canvas.getContext('2d');
+
+  //
+
+  ctx.drawImage(img, 0, 0);
+
+  //
+
+  for (const bboxes of boundingBoxLayers) {
+    ctx.strokeStyle = 'red';
+    for (const bbox of bboxes) {
+      const [x1, y1, x2, y2] = bbox;
+      const w = x2 - x1;
+      const h = y2 - y1;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x1, y1, w, h);
+    }
+    break;
+  }
+
+  //
+
+  return canvas;
+}
 
 //
 
@@ -1454,48 +1484,6 @@ globalThis.testMap = async () => {
       // maskCtx.putImageData(maskImageData, 0, 0);
     }
   };
-  async function getDepth(blob) {
-    const res = await fetch('https://depth.webaverse.com/depth', {
-      method: "POST",
-      body: blob,
-      headers: {
-        "Content-Type": "image/png",
-      },
-      mode: 'cors',
-    });
-    const result = await res.blob();
-    return result;
-  }
-  function getDepthCalibration(p1, prediction1, p2, prediction2) {
-    // The prediction is relative inverse depth.
-    // For each prediction, there exist some scalars a,b such that a*prediction+b is the absolute inverse depth.
-    // The factors a,b cannot be determined without additional measurements.
-    //
-    // You'd need to know the absolute depth of at least two pixels in the image to derive the two unknowns.
-    // Based on these measurements you could align the predictions to these measurements as done in our SSIMSE loss.
-    // A practical solution would require more points to minimize the likelihood of running into degenerate configurations.
-
-    // absolute inverse depths
-    const aid1 = 1 / p1[2];
-    const aid2 = 1 / p2[2];
-
-    // solve for a and b
-    // a * prediction1 + b = aid1   [1]
-    // a * prediction2 + b = aid2   [2]
-    // a * prediction1 + b - aid1 = 0 // from [1]
-    // a * prediction2 + b - aid2 = 0 // from [2]
-    // a * (prediction1 - prediction2) = aid1 - aid2
-    // a = (aid1 - aid2) / (prediction1 - prediction2)
-    // b = aid1 - a * prediction1
-    const a = (aid1 - aid2) / (prediction1 - prediction2);
-    const b = aid1 - a * prediction1;
-    return {a, b};
-  }
-  function getDepth(p1, calibration) {
-    const prediction = p1[2];
-    const depth = 1 / (calibration.a * prediction + calibration.b);
-    return depth;
-  }
   async function genImg(prompt) {
     const fd = getFormData(prompt, tileSize, tileSize);
     const res = await fetch(`http://stable-diffusion-server.webaverse.com/api`, {method: 'POST', body: fd});
@@ -1729,7 +1717,7 @@ globalThis.testMap = async () => {
 //
 
 async function getDepth(blob) {
-  const res = await fetch('https://depth.webaverse.com/depth', {
+  const res = await fetch('https://depth.webaverse.com/depth?mode=rainbow', {
     method: "POST",
     body: blob,
     headers: {
@@ -1737,13 +1725,137 @@ async function getDepth(blob) {
     },
     mode: 'cors',
   });
-  const result = await res.blob();
-  return result;
+  if (res.ok) {
+    const result = await res.blob();
+    return result;
+  } else {
+    debugger;
+  }
+}
+/* function getDepthCalibration(p1, prediction1, p2, prediction2) {
+  // The prediction is relative inverse depth.
+  // For each prediction, there exist some scalars a,b such that a*prediction+b is the absolute inverse depth.
+  // The factors a,b cannot be determined without additional measurements.
+  //
+  // You'd need to know the absolute depth of at least two pixels in the image to derive the two unknowns.
+  // Based on these measurements you could align the predictions to these measurements as done in our SSIMSE loss.
+  // A practical solution would require more points to minimize the likelihood of running into degenerate configurations.
+
+  // absolute inverse depths
+  const aid1 = 1 / p1[2];
+  const aid2 = 1 / p2[2];
+
+  // solve for a and b
+  // a * prediction1 + b = aid1   [1]
+  // a * prediction2 + b = aid2   [2]
+  // a * prediction1 + b - aid1 = 0 // from [1]
+  // a * prediction2 + b - aid2 = 0 // from [2]
+  // a * (prediction1 - prediction2) = aid1 - aid2
+  // a = (aid1 - aid2) / (prediction1 - prediction2)
+  // b = aid1 - a * prediction1
+  const a = (aid1 - aid2) / (prediction1 - prediction2);
+  const b = aid1 - a * prediction1;
+  return {a, b};
+}
+function getAbsoluteDepth(prediction, calibration) {
+  return 1 / (calibration.a * prediction + calibration.b);
+} */
+
+//
+
+async function getPointCloud(blob) {
+  const res = await fetch('https://depth.webaverse.com/pointcloud', {
+    method: "POST",
+    body: blob,
+    headers: {
+      "Content-Type": "image/png",
+    },
+    mode: 'cors',
+  });
+  if (res.ok) {
+    const headers = Object.fromEntries(res.headers.entries());
+    const arrayBuffer = await res.arrayBuffer();
+    return {
+      headers,
+      arrayBuffer,
+    };
+  } else {
+    debugger;
+  }
+}
+
+function pointCloudArrayBuffer2canvas(arrayBuffer) {
+  // python_types = (float, float, float, int, int, int)
+  // npy_types = [('x', 'f4'), ('y', 'f4'), ('z', 'f4'), ('red', 'u1'), ('green', 'u1'), ('blue', 'u1')]
+  const srcStride = 4 + 4 + 4 + 1 + 1 + 1;
+  const numPixels = arrayBuffer.byteLength / srcStride;
+  const width = Math.sqrt(numPixels);
+  const height = width;
+  if (width * height !== numPixels) {
+    throw new Error('invalid point cloud dimensions');
+  }
+  // we want to parse the following ndarray into the canvas pixels
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  const imageData = ctx.createImageData(width, height);
+  const dataView = new DataView(arrayBuffer);
+  for (let i = 0, j = 0; i < arrayBuffer.byteLength; i += srcStride, j += 4) {
+    const x = dataView.getFloat32(i + 0, true);
+    const y = dataView.getFloat32(i + 4, true);
+    const z = dataView.getFloat32(i + 8, true);
+    const red = dataView.getUint8(i + 12);
+    const green = dataView.getUint8(i + 13);
+    const blue = dataView.getUint8(i + 14);
+
+    const v = z/100;
+    imageData.data[j + 0] = v;
+    imageData.data[j + 1] = v;
+    imageData.data[j + 2] = v;
+    imageData.data[j + 3] = 255;
+  }
+  ctx.putImageData(imageData, 0, 0);
+  return canvas;
+}
+
+//
+
+async function getLabel(blob) {
+  const res = await fetch('https://ov-seg.webaverse.com/label', {
+    method: "POST",
+    body: blob,
+    headers: {
+      "Content-Type": "image/png",
+    },
+    mode: 'cors',
+  });
+  if (res.ok) {
+    const headers = Object.fromEntries(res.headers.entries());
+    const blob = await res.blob();
+    return {
+      headers,
+      blob,
+    };
+    /* try {
+      console.log('form data 1');
+      const formData = await res.formData();
+      console.log('form data 2');
+      return formData;
+    } catch (err) {
+      debugger;
+    } */
+  } else {
+    // console.log('form data 3', res);
+    debugger;
+  }
 }
 
 //
 
 globalThis.worldGen = async () => {
+  // console.log('gen 1');
+  // generate image
   const response = await openai.createImage({
     prompt: prompts.world,
     n: 1,
@@ -1752,26 +1864,134 @@ globalThis.worldGen = async () => {
   const image_url = response.data.data[0].url;
   const u2 = new URL('/api/proxy', location.href);
   u2.searchParams.set('url', image_url);
-  // const u2 = `/api/proxy?url=${encodeURI(image_url)}`;
-  // console.log('got image url', {image_url, u2, href: u2.href});
   const res = await fetch(u2);
   const blob = await res.blob();
 
+  // canvas
+  const canvas = document.createElement('canvas');
+  canvas.width = 1024;
+  canvas.height = 1024;
+  canvas.classList.add('canvas');
+  document.body.appendChild(canvas);
+
+  // debug images
+  
+  // color
   const img = await blob2img(blob);
   document.body.appendChild(img);
-  {
-    const depthBlob = await getDepth(blob);
-    const depthImg = await blob2img(depthBlob);
-    document.body.appendChild(depthImg);
-  }
+  
+  // label
+  /* const {
+    previewImg: labelBlob,
+    predictions,
+  } = await getLabel(blob); */
+  const {
+    headers: labelHeaders,
+    blob: labelBlob,
+  } = await getLabel(blob);
+  console.log('got label', {
+    labelHeaders,
+    labelBlob,
+  });
+  const labelImg = await blob2img(labelBlob);
+  // document.body.appendChild(labelImg);
+  const boundingBoxLayers = JSON.parse(labelHeaders['x-bounding-boxes']);
+  console.log('got bounding boxes', boundingBoxLayers);
+  const labelCanvas = drawLabelCanvas(labelImg, boundingBoxLayers, {
+    classes: labelClasses,
+    // threshold: 1,
+  });
+  document.body.appendChild(labelCanvas);
+  window.labelCanvas = labelCanvas;
 
-  console.log('got response 1');
+  // depth
+  // const depthBlob = await getDepth(blob);
+  // const depthImg = await blob2img(depthBlob);
+  // document.body.appendChild(depthImg);
+
+  // point cloud
+  const {
+    headers: pointCloudHeaders,
+    arrayBuffer: pointCloudArrayBuffer,
+  } = await getPointCloud(blob);
+  const pointCloudCanvas = pointCloudArrayBuffer2canvas(pointCloudArrayBuffer);
+  console.log('got point cloud', {
+    pointCloudHeaders,
+    pointCloudCanvas,
+  });
+  document.body.appendChild(pointCloudCanvas);
+
+  // latch
+  window.img = img;
+  // window.depthImg = depthImg;
+  window.pointCloudCanvas = pointCloudCanvas;
+  window.labelImg = labelImg;
+
+  // start renderer
+  const _startRender = () => {
+    const renderer = new THREE.WebGLRenderer({
+      canvas,
+      alpha: true,
+      antialias: true,
+    });
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
+
+    const geometry = new THREE.PlaneBufferGeometry(img.width, img.height);
+    const material = new THREE.MeshBasicMaterial({
+      color: 0xff0000,
+      map: new THREE.Texture(),
+    });
+    const sceneMesh = new THREE.Mesh(
+      geometry,
+      material,
+    );
+    sceneMesh.frustumCulled = false;
+    scene.add(sceneMesh);
+
+    // add orbit controls
+    const controls = new OrbitControls(camera, canvas);
+    controls.enableDamping = true;
+    controls.enablePan = true;
+    controls.enableZoom = true;
+    controls.enableRotate = true;
+    controls.minDistance = 0;
+    controls.maxDistance = 0;
+    controls.minPolarAngle = Math.PI / 2;
+    controls.maxPolarAngle = Math.PI / 2;
+    controls.minAzimuthAngle = 0;
+    controls.maxAzimuthAngle = 0;
+    controls.update();
+
+    const _startLoop = () => {
+      const _render = () => {
+        // update orbit controls
+        // controls.update();
+
+        // update scene
+        // sceneMesh.material.map.needsUpdate = true;
+
+        // render
+        renderer.render(scene, camera);
+      };
+      const _loop = () => {
+        requestAnimationFrame(_loop);
+        _render();
+      };
+      _loop();
+    };
+    _startLoop();
+  };
+  const renderManager = _startRender();
+
+  // console.log('got response 1');
   /* const response2 = await openai.createImageVariation(
     blob.stream(),
     1,
     "1024x1024",
   ); */
-  const fd2 = new FormData();
+  /* const fd2 = new FormData();
   fd2.append('image', blob);
   fd2.append('n', 1);
   fd2.append('size', '1024x1024');
@@ -1791,7 +2011,7 @@ globalThis.worldGen = async () => {
   const res2 = await fetch(u3);
   const blob2 = await res2.blob();
   const img2 = await blob2img(blob2);
-  document.body.appendChild(img2);
+  document.body.appendChild(img2); */
 };
 
 //
