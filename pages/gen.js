@@ -23,6 +23,8 @@ const prompts = {
 const labelClasses = ['person', 'floor', 'path', 'sidewalk', 'ground', 'road', 'runway', 'land', 'dirt', 'ceiling', 'field', 'river', 'water', 'sea', 'sky', 'mountain', 'leaves', 'wall', 'house', 'machine', 'rock', 'flower', 'door', 'gate', 'car', 'boat', 'animal', 'mat', 'grass', 'plant', 'metal', 'light', 'tree', 'wood', 'food', 'smoke', 'forest', 'shirt', 'pant', 'structure', 'bird', 'tunnel', 'cave', 'skyscraper', 'sign', 'stairs', 'box', 'sand', 'fruit', 'vegetable', 'barrier'];
 const groundBoost = 50;
 const boostSpec = {
+  person: groundBoost,
+  building: groundBoost,
   floor: groundBoost,
   sidewalk: groundBoost,
   path: groundBoost,
@@ -33,8 +35,8 @@ const boostSpec = {
   dirt: groundBoost,
   field: groundBoost,
   // sky: groundBoost,
-  car: 0.5,
-  boat: 0.5,
+  // car: 0.5,
+  // boat: 0.5,
 };
 const boosts = labelClasses.map(c => boostSpec[c] ?? 1);
 const vqaQueries = [
