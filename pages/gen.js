@@ -1784,11 +1784,11 @@ async function getPointCloud(blob) {
   }
 }
 
+const pointcloudStride = 4 + 4 + 4 + 1 + 1 + 1;
 function pointCloudArrayBuffer2canvas(arrayBuffer) {
   // python_types = (float, float, float, int, int, int)
   // npy_types = [('x', 'f4'), ('y', 'f4'), ('z', 'f4'), ('red', 'u1'), ('green', 'u1'), ('blue', 'u1')]
-  const srcStride = 4 + 4 + 4 + 1 + 1 + 1;
-  const numPixels = arrayBuffer.byteLength / srcStride;
+  const numPixels = arrayBuffer.byteLength / pointcloudStride;
   const width = Math.sqrt(numPixels);
   const height = width;
   if (width * height !== numPixels) {
@@ -1801,7 +1801,7 @@ function pointCloudArrayBuffer2canvas(arrayBuffer) {
   const ctx = canvas.getContext('2d');
   const imageData = ctx.createImageData(width, height);
   const dataView = new DataView(arrayBuffer);
-  for (let i = 0, j = 0; i < arrayBuffer.byteLength; i += srcStride, j += 4) {
+  for (let i = 0, j = 0; i < arrayBuffer.byteLength; i += pointcloudStride, j += 4) {
     const x = dataView.getFloat32(i + 0, true);
     const y = dataView.getFloat32(i + 4, true);
     const z = dataView.getFloat32(i + 8, true);
@@ -1817,6 +1817,26 @@ function pointCloudArrayBuffer2canvas(arrayBuffer) {
   }
   ctx.putImageData(imageData, 0, 0);
   return canvas;
+}
+function pointCloudArrayBufferToPositionAttributeArray(arrayBuffer, float32Array, scaleFactor) { // result in float32Array
+  const numPixels = arrayBuffer.byteLength / pointcloudStride;
+  const width = Math.sqrt(numPixels);
+  const height = width;
+  if (width * height !== numPixels) {
+    throw new Error('invalid point cloud dimensions');
+  }
+  const dataView = new DataView(arrayBuffer);
+  for (let i = 0, j = 0; i < arrayBuffer.byteLength; i += pointcloudStride, j += 3) {
+    const x = dataView.getFloat32(i + 0, true);
+    const y = dataView.getFloat32(i + 4, true);
+    const z = dataView.getFloat32(i + 8, true);
+
+    float32Array[j + 0] = x * scaleFactor;
+    float32Array[j + 1] = -y * scaleFactor;
+    float32Array[j + 2] = -z * scaleFactor;
+  }
+
+  return float32Array;
 }
 
 //
@@ -1939,7 +1959,9 @@ globalThis.worldGen = async () => {
     scene.background = new THREE.Color(0x0000FF);
     const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
 
-    const geometry = new THREE.PlaneBufferGeometry(1, 1, img.width, img.height);
+    const geometry = new THREE.PlaneBufferGeometry(1, 1, img.width - 1, img.height - 1);
+    pointCloudArrayBufferToPositionAttributeArray(pointCloudArrayBuffer, geometry.attributes.position.array, 1/img.width);
+    window.array = geometry.attributes.position.array;
     const map = new THREE.Texture(img);
     map.needsUpdate = true;
     const material = new THREE.ShaderMaterial({
@@ -1991,7 +2013,6 @@ globalThis.worldGen = async () => {
         color: 0x00ff00,
       }),
     );
-    // cubeMesh.position.set(0, 0, -1);
     cubeMesh.frustumCulled = false;
     scene.add(cubeMesh);
 
@@ -2003,9 +2024,8 @@ globalThis.worldGen = async () => {
     controls.minDistance = 1;
     controls.maxDistance = 5;
     controls.maxPolarAngle = Math.PI / 2;
-
-    camera.position.z = 2;
-    camera.updateMatrixWorld();
+    // set the target
+    controls.target.set(0, 0, 3);
 
     const _startLoop = () => {
       console.log('start render loop');
