@@ -18,9 +18,9 @@ const OPENAI_API_KEY = ``;
 const prompts = {
   // map: `2D overhead view fantasy battle map scene, mysterious lush sakura forest, anime drawing, digital art`;
   map: `2D overhead view fantasy battle map scene, mysterious dinosaur robot factory, anime video game drawing, trending, winner, digital art`,
-  world: `young anime girl wearing a hoodie looks up at mysterious sakura forest dojo, digital art`,
+  world: `anime screenshot, mysterious forest path with neon arrows, jungle labyrinth, lush vegetation, ancient technology, robot friend, glowing magic, ghibli style, digital art`,
 };
-const labelClasses = ['person', 'water', 'flower', 'mat', 'land', 'grass', 'field', 'dirt', 'metal', 'light', 'leaves', 'mountain', 'tree', 'gravel', 'wood', 'bag', 'food', 'path', 'stairs', 'rock', 'house', 'clothes', 'animal'];
+const labelClasses = ['person', 'floor', 'path', 'ground', 'road', 'ceiling', 'land', 'river', 'water', 'sky', 'mountain', 'leaves', 'wall', 'house', 'machine', 'rock', 'flower', 'door', 'car', 'animal', 'mat', 'grass', 'metal', 'light', 'tree', 'wood', 'food', 'smoke'];
 const vqaQueries = [
   `is this birds eye view?`,
   `is the viewer looking up at the sky?`,
@@ -1870,7 +1870,7 @@ const labelColors = (() => {
   const result = [];
   for (const colorName of Object.keys(materialColors)) {
     const colors = materialColors[colorName];
-    for (const weight of Object.keys(colors)) {
+    for (const weight of ['400']) {
       const hashColor = colors[weight];
       const color = new THREE.Color(hashColor);
       result.push(color);
@@ -1879,9 +1879,9 @@ const labelColors = (() => {
   // random shuffle
   for (let i = 0; i < result.length; i++) {
     const j = Math.floor(Math.random() * result.length);
-    const tmp = result[i];
+    const temp = result[i];
     result[i] = result[j];
-    result[j] = tmp;
+    result[j] = temp;
   }
   return result;
 })();
@@ -1919,8 +1919,9 @@ function pointCloudArrayBufferToColorAttributeArray(labelImg, uint8Array) { // r
 
 async function getLabel(blob, {
   classes = [],
+  threshold = 0.01,
 }) {
-  const res = await fetch(`https://ov-seg.webaverse.com/label?classes=${classes.join(',')}`, {
+  const res = await fetch(`https://ov-seg.webaverse.com/label?classes=${classes.join(',')}&threshold=${threshold}`, {
     method: "POST",
     body: blob,
     headers: {
@@ -1988,7 +1989,7 @@ globalThis.worldGen = async () => {
     blob: labelBlob,
   } = await getLabel(blob, {
     classes: labelClasses,
-    // threshold: 1,
+    threshold: 0.05,
   });
   console.log('got label', {
     labelHeaders,
@@ -2000,7 +2001,8 @@ globalThis.worldGen = async () => {
   console.log('got bounding boxes', boundingBoxLayers);
   const labelCanvas = drawLabelCanvas(labelImg, boundingBoxLayers);
   document.body.appendChild(labelCanvas);
-  window.labelCanvas = labelCanvas;
+  // window.labelCanvas = labelCanvas;
+  console.log('found labels', labelClasses.filter((e, i) => boundingBoxLayers[i].length > 0));
 
   // depth
   // const depthBlob = await getDepth(blob);
@@ -2034,7 +2036,7 @@ globalThis.worldGen = async () => {
     });
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0000FF);
+    // scene.background = new THREE.Color(0x0000FF);
     const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
 
     const geometry = new THREE.PlaneBufferGeometry(1, 1, img.width - 1, img.height - 1);
@@ -2082,7 +2084,9 @@ globalThis.worldGen = async () => {
         void main() {
           gl_FragColor = texture2D(map, vUv);
           // gl_FragColor.rg += vUv * 0.1;
-          gl_FragColor.rgb += vColor * 0.5 * uColorEnabled;
+          if (uColorEnabled > 0.) {
+            gl_FragColor.rgb = vColor;
+          }
         }
       `,
     });
@@ -2097,14 +2101,14 @@ globalThis.worldGen = async () => {
     directionalLight.position.set(1, 2, 3);
     scene.add(directionalLight);
 
-    // const cubeMesh = new THREE.Mesh(
-    //   new THREE.BoxBufferGeometry(0.1, 0.1, 0.1),
-    //   new THREE.MeshPhongMaterial({
-    //     color: 0x00ff00,
-    //   }),
-    // );
-    // cubeMesh.frustumCulled = false;
-    // scene.add(cubeMesh);
+    const cubeMesh = new THREE.Mesh(
+      new THREE.BoxBufferGeometry(1, 1, 1),
+      new THREE.MeshPhongMaterial({
+        color: 0x00ff00,
+      }),
+    );
+    cubeMesh.frustumCulled = false;
+    scene.add(cubeMesh);
 
     // add THREE.js orbit controls
     const controls = new OrbitControls(camera, canvas);
