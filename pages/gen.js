@@ -1330,7 +1330,7 @@ function drawLabelCanvas(img, boundingBoxLayers) {
       ctx.lineWidth = 2;
       ctx.strokeRect(x1, y1, w, h);
     }
-    break;
+    // break;
   }
 
   //
@@ -1936,12 +1936,43 @@ globalThis.worldGen = async () => {
     });
 
     const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0000FF);
     const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
 
-    const geometry = new THREE.PlaneBufferGeometry(img.width, img.height);
-    const material = new THREE.MeshBasicMaterial({
-      color: 0xff0000,
-      map: new THREE.Texture(),
+    const geometry = new THREE.PlaneBufferGeometry(1, 1, img.width, img.height);
+    const map = new THREE.Texture(img);
+    map.needsUpdate = true;
+    const material = new THREE.ShaderMaterial({
+      uniforms: {
+        // color: {
+        //   value: new THREE.Color(0xff0000),
+        //   needsUpdate: true,
+        // },
+        map: {
+          value: map,
+          needsUpdate: true,
+        },
+        /* depthMap: {
+          value: new THREE.Texture(pointCloudCanvas),
+          needsUpdate: true,
+        }, */
+      },
+      side: THREE.DoubleSide,
+      vertexShader: `\
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `\
+        uniform sampler2D map;
+        varying vec2 vUv;
+        void main() {
+          gl_FragColor = texture2D(map, vUv);
+          gl_FragColor.rg += vUv * 0.1;
+        }
+      `,
     });
     const sceneMesh = new THREE.Mesh(
       geometry,
@@ -1950,24 +1981,39 @@ globalThis.worldGen = async () => {
     sceneMesh.frustumCulled = false;
     scene.add(sceneMesh);
 
-    // add orbit controls
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+    directionalLight.position.set(1, 2, 3);
+    scene.add(directionalLight);
+
+    const cubeMesh = new THREE.Mesh(
+      new THREE.BoxBufferGeometry(0.1, 0.1, 0.1),
+      new THREE.MeshPhongMaterial({
+        color: 0x00ff00,
+      }),
+    );
+    // cubeMesh.position.set(0, 0, -1);
+    cubeMesh.frustumCulled = false;
+    scene.add(cubeMesh);
+
+    // add THREE.js orbit controls
     const controls = new OrbitControls(camera, canvas);
     controls.enableDamping = true;
-    controls.enablePan = true;
-    controls.enableZoom = true;
-    controls.enableRotate = true;
-    controls.minDistance = 0;
-    controls.maxDistance = 0;
-    controls.minPolarAngle = Math.PI / 2;
+    controls.dampingFactor = 0.05;
+    controls.screenSpacePanning = false;
+    controls.minDistance = 1;
+    controls.maxDistance = 5;
     controls.maxPolarAngle = Math.PI / 2;
-    controls.minAzimuthAngle = 0;
-    controls.maxAzimuthAngle = 0;
-    controls.update();
+
+    camera.position.z = 2;
+    camera.updateMatrixWorld();
 
     const _startLoop = () => {
+      console.log('start render loop');
       const _render = () => {
         // update orbit controls
-        // controls.update();
+        controls.update();
+        // console.log('camera', camera.position.toArray().join(','));
+        camera.updateMatrixWorld();
 
         // update scene
         // sceneMesh.material.map.needsUpdate = true;
