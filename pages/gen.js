@@ -27,6 +27,8 @@ const vqaQueries = [
   `is the viewer looking up at the ceiling?`,
   `how many feet tall is the viewer?`,
 ];
+// const skyboxDistance = 5;
+const skyboxDistance = 100;
 
 const configuration = new Configuration({
   apiKey: OPENAI_API_KEY,
@@ -1329,12 +1331,23 @@ function drawLabelCanvas(img, boundingBoxLayers) {
 
   for (const bboxes of boundingBoxLayers) {
     ctx.strokeStyle = 'red';
-    for (const bbox of bboxes) {
+    for (let i = 0; i < bboxes.length; i += 4) {
+      const className = labelClasses[i];
+      
+      // draw the main box
+      const bbox = bboxes[i];
       const [x1, y1, x2, y2] = bbox;
       const w = x2 - x1;
       const h = y2 - y1;
       ctx.lineWidth = 2;
       ctx.strokeRect(x1, y1, w, h);
+
+      // label the box in the top left, with a black background and white text that fits inside
+      ctx.fillStyle = 'black';
+      ctx.fillRect(x1, y1, 100, 20);
+      ctx.fillStyle = 'white';
+      ctx.font = '12px Arial';
+      ctx.fillText(className, x1 + 2, y1 + 14);
     }
     // break;
   }
@@ -1841,7 +1854,7 @@ function pointCloudArrayBufferToPositionAttributeArray(arrayBuffer, float32Array
     y *= -scaleFactor;
     z *= -scaleFactor;
 
-    if (z <= -4) {
+    if (z <= -skyboxDistance) {
       const zoomFactor = 10;
       x *= zoomFactor;
       y *= zoomFactor;
@@ -1853,6 +1866,54 @@ function pointCloudArrayBufferToPositionAttributeArray(arrayBuffer, float32Array
   }
 
   return float32Array;
+}
+const labelColors = (() => {
+  const result = [];
+  for (const colorName of Object.keys(materialColors)) {
+    const colors = materialColors[colorName];
+    for (const weight of Object.keys(colors)) {
+      const hashColor = colors[weight];
+      const color = new THREE.Color(hashColor);
+      result.push(color);
+    }
+  }
+  // random shuffle
+  for (let i = 0; i < result.length; i++) {
+    const j = Math.floor(Math.random() * result.length);
+    const tmp = result[i];
+    result[i] = result[j];
+    result[j] = tmp;
+  }
+  return result;
+})();
+function pointCloudArrayBufferToColorAttributeArray(labelImg, uint8Array) { // result in uint8Array
+  // extract image data from labelImg
+  const imageData = (() => {
+    const canvas = document.createElement('canvas');
+    canvas.width = labelImg.width;
+    canvas.height = labelImg.height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(labelImg, 0, 0);
+    return ctx.getImageData(0, 0, canvas.width, canvas.height);
+  })();
+  // console.log('got data', imageData);
+
+  // write to the color attribute buffer (RGB)
+  for (let i = 0, j = 0; i < imageData.data.length; i += 4, j += 3) {
+    const r = imageData.data[i + 0];
+    // const g = imageData.data[i + 1];
+    // const b = imageData.data[i + 2];
+    // const a = imageData.data[i + 3];
+    if (r !== 255 && r < labelColors.length) {
+      // const labelClass = labelClasses[r];
+      const color = labelColors[r];
+      uint8Array[j + 0] = color.r * 255;
+      uint8Array[j + 1] = color.g * 255;
+      uint8Array[j + 2] = color.b * 255;
+    } else {
+      // none
+    }
+  }
 }
 
 //
@@ -1979,7 +2040,9 @@ globalThis.worldGen = async () => {
 
     const geometry = new THREE.PlaneBufferGeometry(1, 1, img.width - 1, img.height - 1);
     pointCloudArrayBufferToPositionAttributeArray(pointCloudArrayBuffer, geometry.attributes.position.array, 1/img.width);
-    window.array = geometry.attributes.position.array;
+    geometry.setAttribute('color', new THREE.BufferAttribute(new Uint8Array(pointCloudArrayBuffer.byteLength / pointcloudStride * 3), 3, true));
+    pointCloudArrayBufferToColorAttributeArray(labelImg, geometry.attributes.color.array);
+    window.colors = geometry.attributes.color.array;
     const map = new THREE.Texture(img);
     map.needsUpdate = true;
     const material = new THREE.ShaderMaterial({
@@ -1996,21 +2059,31 @@ globalThis.worldGen = async () => {
           value: new THREE.Texture(pointCloudCanvas),
           needsUpdate: true,
         }, */
+        uColorEnabled: {
+          value: 0,
+          needsUpdate: true,
+        },
       },
       side: THREE.DoubleSide,
       vertexShader: `\
+        attribute vec3 color;
         varying vec2 vUv;
+        varying vec3 vColor;
         void main() {
           vUv = uv;
+          vColor = color;
           gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
         }
       `,
       fragmentShader: `\
         uniform sampler2D map;
+        uniform float uColorEnabled;
         varying vec2 vUv;
+        varying vec3 vColor;
         void main() {
           gl_FragColor = texture2D(map, vUv);
-          gl_FragColor.rg += vUv * 0.1;
+          // gl_FragColor.rg += vUv * 0.1;
+          gl_FragColor.rgb += vColor * 0.5 * uColorEnabled;
         }
       `,
     });
@@ -2053,6 +2126,20 @@ globalThis.worldGen = async () => {
     canvas.addEventListener('mouseup', blockEvent);
     canvas.addEventListener('click', blockEvent);
     canvas.addEventListener('wheel', blockEvent);
+    document.addEventListener('keydown', e => {
+      if (!e.repeat) {
+        // page up
+        if (e.key === 'PageUp') {
+          material.uniforms.uColorEnabled.value = 1;
+          material.uniforms.uColorEnabled.needsUpdate = true;
+          blockEvent(e);
+        } else if (e.key === 'PageDown') {
+          material.uniforms.uColorEnabled.value = 0;
+          material.uniforms.uColorEnabled.needsUpdate = true;
+          blockEvent(e);
+        }
+      }
+    });
 
     const _startLoop = () => {
       console.log('start render loop');
