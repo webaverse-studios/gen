@@ -21,6 +21,12 @@ const prompts = {
   world: `young anime girl wearing a hoodie looks up at mysterious sakura forest dojo, digital art`,
 };
 const labelClasses = ['person', 'water', 'flower', 'mat', 'fog', 'land', 'grass', 'field', 'dirt', 'metal', 'light', 'book', 'leaves', 'mountain', 'tree', 'gravel', 'wood', 'bush', 'bag', 'food', 'path', 'stairs', 'rock', 'house', 'clothes', 'animal'];
+const vqaQueries = [
+  `is this birds eye view?`,
+  `is the viewer looking up at the sky?`,
+  `is the viewer looking up at the ceiling?`,
+  `how many feet tall is the viewer?`,
+];
 
 const configuration = new Configuration({
   apiKey: OPENAI_API_KEY,
@@ -1851,8 +1857,10 @@ function pointCloudArrayBufferToPositionAttributeArray(arrayBuffer, float32Array
 
 //
 
-async function getLabel(blob) {
-  const res = await fetch('https://ov-seg.webaverse.com/label', {
+async function getLabel(blob, {
+  classes = [],
+}) {
+  const res = await fetch(`https://ov-seg.webaverse.com/label?classes=${classes.join(',')}`, {
     method: "POST",
     body: blob,
     headers: {
@@ -1918,7 +1926,10 @@ globalThis.worldGen = async () => {
   const {
     headers: labelHeaders,
     blob: labelBlob,
-  } = await getLabel(blob);
+  } = await getLabel(blob, {
+    classes: labelClasses,
+    // threshold: 1,
+  });
   console.log('got label', {
     labelHeaders,
     labelBlob,
@@ -1927,10 +1938,7 @@ globalThis.worldGen = async () => {
   // document.body.appendChild(labelImg);
   const boundingBoxLayers = JSON.parse(labelHeaders['x-bounding-boxes']);
   console.log('got bounding boxes', boundingBoxLayers);
-  const labelCanvas = drawLabelCanvas(labelImg, boundingBoxLayers, {
-    classes: labelClasses,
-    // threshold: 1,
-  });
+  const labelCanvas = drawLabelCanvas(labelImg, boundingBoxLayers);
   document.body.appendChild(labelCanvas);
   window.labelCanvas = labelCanvas;
 
