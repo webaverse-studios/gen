@@ -20,7 +20,21 @@ const prompts = {
   map: `2D overhead view fantasy battle map scene, mysterious dinosaur robot factory, anime video game drawing, trending, winner, digital art`,
   world: `anime screenshot, mysterious forest path with neon arrows, jungle labyrinth with ramps and passages, lush vegetation, ancient technology, robot friend, glowing magic, ghibli style, digital art`,
 };
-const labelClasses = ['person', 'floor', 'path', 'sidewalk', 'ground', 'road', 'runway', 'ceiling', 'land', 'field', 'river', 'water', 'sea', 'sky', 'mountain', 'leaves', 'wall', 'house', 'machine', 'rock', 'flower', 'door', 'gate', 'car', 'animal', 'mat', 'grass', 'plant', 'metal', 'light', 'tree', 'wood', 'food', 'smoke', 'forest', 'pool', 'shirt', 'pant', 'structure', 'bird', 'tunnel', 'cave', 'skyscraper', 'sign', 'stairs', 'box'];
+const labelClasses = ['person', 'floor', 'path', 'sidewalk', 'ground', 'road', 'runway', 'land', 'ceiling', 'field', 'river', 'water', 'sea', 'sky', 'mountain', 'leaves', 'wall', 'house', 'machine', 'rock', 'flower', 'door', 'gate', 'car', 'boat', 'animal', 'mat', 'grass', 'plant', 'metal', 'light', 'tree', 'wood', 'food', 'smoke', 'forest', 'shirt', 'pant', 'structure', 'bird', 'tunnel', 'cave', 'skyscraper', 'sign', 'stairs', 'box', 'sand', 'fruit', 'vegetable'];
+const groundBoost = 50;
+const boostSpec = {
+  floor: groundBoost,
+  sidewalk: groundBoost,
+  path: groundBoost,
+  ground: groundBoost,
+  road: groundBoost,
+  runway: groundBoost,
+  land: groundBoost,
+  // sky: groundBoost,
+  car: 0.5,
+  boat: 0.5,
+};
+const boosts = labelClasses.map(c => boostSpec[c] ?? 1);
 const vqaQueries = [
   `is this birds eye view?`,
   `is the viewer looking up at the sky?`,
@@ -1897,6 +1911,7 @@ function pointCloudArrayBufferToColorAttributeArray(labelImg, uint8Array) { // r
   })();
   // console.log('got data', imageData);
 
+  const usedLabelColors = new Set();
   // write to the color attribute buffer (RGB)
   for (let i = 0, j = 0; i < imageData.data.length; i += 4, j += 3) {
     const r = imageData.data[i + 0];
@@ -1906,6 +1921,10 @@ function pointCloudArrayBufferToColorAttributeArray(labelImg, uint8Array) { // r
     if (r !== 255 && r < labelColors.length) {
       // const labelClass = labelClasses[r];
       const color = labelColors[r];
+      if (!usedLabelColors.has(color)) {
+        usedLabelColors.add(color);
+        console.log('add color', color);
+      }
       uint8Array[j + 0] = color.r * 255;
       uint8Array[j + 1] = color.g * 255;
       uint8Array[j + 2] = color.b * 255;
@@ -1921,7 +1940,7 @@ async function getLabel(blob, {
   classes,
   threshold,
 }) {
-  const res = await fetch(`https://ov-seg.webaverse.com/label?classes=${classes.join(',')}&threshold=${threshold}`, {
+  const res = await fetch(`https://ov-seg.webaverse.com/label?classes=${classes.join(',')}&boosts=${boosts}&threshold=${threshold}`, {
     method: "POST",
     body: blob,
     headers: {
@@ -1971,6 +1990,13 @@ if (typeof window !== 'undefined') {
   });
 }
 globalThis.worldGen = async image_url => {
+  if (window.triggered) {
+    // console.warn('already triggered', new Error().stack);
+    // debugger;
+    return;
+  }
+  window.triggered = true;
+
   if (!image_url) {
     // generate image
     const response = await openai.createImage({
@@ -2006,12 +2032,12 @@ globalThis.worldGen = async image_url => {
     blob: labelBlob,
   } = await getLabel(blob, {
     classes: labelClasses,
-    threshold: 0.001,
+    threshold: 0.0001,
   });
-  console.log('got label', {
-    labelHeaders,
-    labelBlob,
-  });
+  // console.log('got label', {
+  //   labelHeaders,
+  //   labelBlob,
+  // });
   const labelImg = await blob2img(labelBlob);
   // document.body.appendChild(labelImg);
   const boundingBoxLayers = JSON.parse(labelHeaders['x-bounding-boxes']);
@@ -2032,10 +2058,10 @@ globalThis.worldGen = async image_url => {
     arrayBuffer: pointCloudArrayBuffer,
   } = await getPointCloud(blob);
   const pointCloudCanvas = pointCloudArrayBuffer2canvas(pointCloudArrayBuffer);
-  console.log('got point cloud', {
-    pointCloudHeaders,
-    pointCloudCanvas,
-  });
+  // console.log('got point cloud', {
+  //   pointCloudHeaders,
+  //   pointCloudCanvas,
+  // });
   document.body.appendChild(pointCloudCanvas);
 
   // latch
@@ -2046,6 +2072,10 @@ globalThis.worldGen = async image_url => {
 
   // start renderer
   const _startRender = () => {
+    if (window.looping) {
+      debugger;
+    }
+    window.looping = true;
     const renderer = new THREE.WebGLRenderer({
       canvas,
       alpha: true,
