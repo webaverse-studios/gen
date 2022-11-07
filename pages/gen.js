@@ -20,7 +20,7 @@ const prompts = {
   map: `2D overhead view fantasy battle map scene, mysterious dinosaur robot factory, anime video game drawing, trending, winner, digital art`,
   world: `anime screenshot, mysterious forest path with neon arrows, jungle labyrinth with ramps and passages, lush vegetation, ancient technology, robot friend, glowing magic, ghibli style, digital art`,
 };
-const labelClasses = ['person', 'floor', 'path', 'sidewalk', 'ground', 'road', 'runway', 'land', 'ceiling', 'field', 'river', 'water', 'sea', 'sky', 'mountain', 'leaves', 'wall', 'house', 'machine', 'rock', 'flower', 'door', 'gate', 'car', 'boat', 'animal', 'mat', 'grass', 'plant', 'metal', 'light', 'tree', 'wood', 'food', 'smoke', 'forest', 'shirt', 'pant', 'structure', 'bird', 'tunnel', 'cave', 'skyscraper', 'sign', 'stairs', 'box', 'sand', 'fruit', 'vegetable'];
+const labelClasses = ['person', 'floor', 'path', 'sidewalk', 'ground', 'road', 'runway', 'land', 'dirt', 'ceiling', 'field', 'river', 'water', 'sea', 'sky', 'mountain', 'leaves', 'wall', 'house', 'machine', 'rock', 'flower', 'door', 'gate', 'car', 'boat', 'animal', 'mat', 'grass', 'plant', 'metal', 'light', 'tree', 'wood', 'food', 'smoke', 'forest', 'shirt', 'pant', 'structure', 'bird', 'tunnel', 'cave', 'skyscraper', 'sign', 'stairs', 'box', 'sand', 'fruit', 'vegetable', 'barrier'];
 const groundBoost = 50;
 const boostSpec = {
   floor: groundBoost,
@@ -30,6 +30,8 @@ const boostSpec = {
   road: groundBoost,
   runway: groundBoost,
   land: groundBoost,
+  dirt: groundBoost,
+  field: groundBoost,
   // sky: groundBoost,
   car: 0.5,
   boat: 0.5,
