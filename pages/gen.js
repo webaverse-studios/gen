@@ -18,7 +18,7 @@ const OPENAI_API_KEY = ``;
 const prompts = {
   // map: `2D overhead view fantasy battle map scene, mysterious lush sakura forest, anime drawing, digital art`;
   map: `2D overhead view fantasy battle map scene, mysterious dinosaur robot factory, anime video game drawing, trending, winner, digital art`,
-  world: `anime screenshot, mysterious forest path with neon arrows, jungle labyrinth with ramps and passages, lush vegetation, ancient technology, robot friend, glowing magic, ghibli style, digital art`,
+  world: `anime screenshot, mysterious forest path with japanese dojo doorway, neon arrows, jungle labyrinth, metal ramps, lush vegetation, ancient technology, mystery creature, glowing magic, ghibli style, digital art`,
 };
 const labelClasses = ['person', 'floor', 'path', 'sidewalk', 'ground', 'road', 'runway', 'land', 'dirt', 'ceiling', 'field', 'river', 'water', 'sea', 'sky', 'mountain', 'leaves', 'wall', 'house', 'machine', 'rock', 'flower', 'door', 'gate', 'car', 'boat', 'animal', 'mat', 'grass', 'plant', 'metal', 'light', 'tree', 'wood', 'food', 'smoke', 'forest', 'shirt', 'pant', 'structure', 'bird', 'tunnel', 'cave', 'skyscraper', 'sign', 'stairs', 'box', 'sand', 'fruit', 'vegetable', 'barrier'];
 const groundBoost = 50;
@@ -1043,12 +1043,17 @@ const createSeedImage = (
   const canvas = document.createElement('canvas');
   canvas.width = w;
   canvas.height = h;
-
   const ctx = canvas.getContext('2d');
   ctx.fillStyle = '#fff';
   ctx.fillRect(0, 0, w, h);
-  // ctx.filter = blur ? `blur(${blur}px) saturate(1.5)` : '';
-  
+
+  const maskCanvas = document.createElement('canvas');
+  maskCanvas.width = w;
+  maskCanvas.height = h;
+  const maskCtx = maskCanvas.getContext('2d');
+  maskCtx.fillStyle = '#fff';
+  maskCtx.fillRect(0, 0, w, h);
+
   const baseColor = color ?? baseColors[Math.floor(Math.random() * baseColors.length)];
   const scheme = new ColorScheme();
   scheme.from_hex(baseColor)
@@ -1062,11 +1067,23 @@ const createSeedImage = (
     const sw = Math.pow(Math.random(), p) * rw;
     const sh = Math.pow(Math.random(), p) * rh;
     ctx.fillStyle = '#' + colors[Math.floor(Math.random() * colors.length)];
-
-    ctx.fillRect(x - sw / 2, y - sh / 2, sw, sh);
+    ctx.beginPath();
+    ctx.ellipse(x, y, sw, sh, 0, 0, 2 * Math.PI);
+    ctx.fill();
   }
 
-  return canvas;
+  // make this box transparent in the mask
+  // requires blend mode
+  maskCtx.fillStyle = 'rgba(255, 255, 255, 1)';
+  maskCtx.globalCompositeOperation = 'destination-out';
+  maskCtx.beginPath();
+  maskCtx.ellipse(w / 2, h / 2, w / 2 * 0.9, h / 2 * 0.9, 0, 0, 2 * Math.PI);
+  maskCtx.fill();
+
+  return {
+    canvas,
+    maskCanvas,
+  };
 };
 const makeCharacterSeedImage = () => {
   return createSeedImage(512, 512, 64, 128, 1, 256);
@@ -1376,11 +1393,11 @@ function drawLabelCanvas(img, boundingBoxLayers) {
 
 //
 
-const getFormData = (prompt, w, h) => {
+const getFormData = o => {
   const formData = new FormData();
-  formData.append('prompt', prompt);
-  formData.append('width', w);
-  formData.append('height', h);
+  for (const k in o) {
+    formData.append(k, o[k]);
+  }
   return formData;
 };
 
@@ -1521,14 +1538,22 @@ globalThis.testMap = async () => {
     }
   };
   async function genImg(prompt) {
-    const fd = getFormData(prompt, tileSize, tileSize);
+    const fd = getFormData({
+      prompt,
+      width: tileSize,
+      height: tileSize,
+    });
     const res = await fetch(`http://stable-diffusion-server.webaverse.com/api`, {method: 'POST', body: fd});
     const b = await res.blob();
     const i = await blob2img(b);
     return i;
   }
   async function editImg(srcCanvas, prompt, maskCanvas) {
-    const fd = getFormData(prompt, srcCanvas.width, srcCanvas.height);
+    const fd = getFormData({
+      prompt,
+      width: srcCanvas.width,
+      height: srcCanvas.height,
+    });
 
     const srcCanvasBlob = await canvas2blob(srcCanvas);
     fd.append('init_img', srcCanvasBlob);
@@ -2250,7 +2275,73 @@ globalThis.worldGen = async image_url => {
 
 //
 
-globalThis.THREE = THREE;
+globalThis.testPotionSeed = async () => {
+  const {
+    canvas,
+    maskCanvas,
+  } = createSeedImage(
+    512, // w
+    512, // h
+    64, // rw
+    64, // rh
+    1, // p
+    256 // n
+  );
+
+  canvas.classList.add('mainCanvas');
+  canvas.style.cssText = `\
+    background: red;
+  `;
+  document.body.appendChild(canvas);
+  maskCanvas.classList.add('maskCanvas');
+  maskCanvas.style.cssText = `\
+    background: red;
+  `;
+  document.body.appendChild(maskCanvas);
+
+  const blob = await new Promise((accept, reject) => {
+    canvas.toBlob(accept, 'image/png');
+  });
+  const maskBlob = await new Promise((accept, reject) => {
+    maskCanvas.toBlob(accept, 'image/png');
+  });
+  const name = 'potion';
+  const prompt = `video game item concept art render, trending on ArtStation, ${name}`;
+
+  const fd = getFormData({
+    image: blob,
+    mask: maskBlob,
+    prompt,
+    n: 1,
+    size: '1024x1024',
+  });
+  const response = await fetch(`https://api.openai.com/v1/images/edits`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${OPENAI_API_KEY}`,
+    },
+    body: fd,
+  });
+  const responseData = await response.json();
+  console.log('response data 1', responseData);
+  let image_url = responseData.data[0].url;
+  console.log('response data 2', image_url);
+
+  const u2 = new URL('/api/proxy', location.href);
+  u2.searchParams.set('url', image_url);
+  image_url = u2.href;
+
+  const img = new Image();
+  await new Promise((accept, reject) => {
+    img.onload = accept;
+    img.onerror = reject;
+    img.crossOrigin = 'Anonymous';
+    img.src = image_url;
+  });
+  document.body.appendChild(img);
+
+  return image_url;
+};
 
 //
 
