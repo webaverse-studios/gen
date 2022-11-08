@@ -1790,7 +1790,7 @@ globalThis.testWorldGen = async image_url => {
     fd.append('file', blob);
     fd.append('task', 'vqa');
     const res = await fetch(`https://blip.webaverse.com/upload`, {
-      method: 'post',  
+      method: 'post',
       body: fd,
     });
     const j = await res.json();
