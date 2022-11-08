@@ -14,7 +14,7 @@ import {Configuration, OpenAIApi} from 'openai';
 
 //
 
-const OPENAI_API_KEY = ``;
+const OPENAI_API_KEY = process.env['OPENAI_KEY'];
 const prompts = {
   // map: `2D overhead view fantasy battle map scene, mysterious lush sakura forest, anime drawing, digital art`;
   map: `2D overhead view fantasy battle map scene, mysterious dinosaur robot factory, anime video game drawing, trending, winner, digital art`,
