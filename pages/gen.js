@@ -1876,11 +1876,11 @@ globalThis.testPotionSeed = async () => {
   } = createSeedImage(
     512, // w
     512, // h
-    64, // rw
-    64, // rh
+    100, // rw
+    100, // rh
     1, // p
     256, // n
-    'ellipse',
+    'rectangle', // shape
   );
 
   canvas.classList.add('mainCanvas');
@@ -1900,13 +1900,46 @@ globalThis.testPotionSeed = async () => {
   const maskBlob = await new Promise((accept, reject) => {
     maskCanvas.toBlob(accept, 'image/png');
   });
-  const name = 'potion';
-  const prompt = `video game item concept art render, trending on ArtStation, ${name}`;
+  // const prompt = `magical alien grass blades on a white background, studio ghibli anime style, digital art`;
+  // const prompt = `ancient magical cloudy potion antigravity on a white background, studio ghibli anime style, digital art`;
+  // const prompt = `high tech energy sword with hexagon pattern and mysterious glyphs on it, white background, video game item concept art render, trending on ArtStation, digital art`;
+  // const prompt = `juicy magical alien fruit, anime style, white background, digital art`;`
+  // const prompt = `huge square sword, anime style, rendered in unreal engine, white background, digital art`;
+  // const prompt = `cute little anime ghost pet with tiny legs on a white background, studio ghibli, digital art`;
+  // const prompt = `strange alien plant with flowers on a white background, studio ghibli anime style, digital art`;
+  // const prompt = `ancient high tech medkit on a white background, studio ghibli anime style, digital art`;
+  // const prompt = `ancient magical high tech book with digital symbols on it on a white background, studio ghibli anime style, digital art`;
+  const prompt = `ancient magical cloudy potion of terrible death soul on a white background, studio ghibli anime style, digital art`;
 
-  const img = await editImg(blob, maskBlob, prompt);
+  const response = await openai.createImage({
+    prompt,
+    n: 1,
+    size: "1024x1024",
+  });
+  let image_url = response.data.data[0].url;
+
+  const u2 = new URL('/api/proxy', location.href);
+  u2.searchParams.set('url', image_url);
+  image_url = u2.href;
+
+  const img = new Image();
+  await new Promise((accept, reject) => {
+    img.onload = accept;
+    img.onerror = reject;
+    img.crossOrigin = 'Anonymous';
+    img.src = image_url;
+  });
+  // const img = await editImg(blob, maskBlob, prompt);
   document.body.appendChild(img);
 
-  return image_url;
+  const pixelSize = 64;
+  const pixelCanvas = document.createElement('canvas');
+  pixelCanvas.width = pixelSize;
+  pixelCanvas.height = pixelSize;
+  const pixelContext = pixelCanvas.getContext('2d');
+  pixelContext.imageSmoothingEnabled = false;
+  pixelContext.drawImage(img, 0, 0, pixelSize, pixelSize);
+  document.body.appendChild(pixelCanvas);
 };
 
 //
