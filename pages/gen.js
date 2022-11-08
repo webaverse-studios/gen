@@ -19,7 +19,7 @@ const prompts = {
   // map: `2D overhead view fantasy battle map scene, mysterious lush sakura forest, anime drawing, digital art`;
   map: `2D overhead view fantasy battle map scene, mysterious dinosaur robot factory, anime video game drawing, trending, winner, digital art`,
   world: `anime screenshot, mysterious forest path with japanese dojo doorway, neon arrows, jungle labyrinth, metal ramps, lush vegetation, ancient technology, mystery creature, glowing magic, ghibli style, digital art`,
-  character: `full body, cute young anime girl wearing a hoodie and skirt, white background, studio ghibli style, digital art`,
+  character: `full body, young anime girl wearing a hoodie, white background, studio ghibli style, digital art`,
 };
 const labelClasses = ['person', 'floor', 'path', 'sidewalk', 'ground', 'road', 'runway', 'land', 'dirt', 'ceiling', 'field', 'river', 'water', 'sea', 'sky', 'mountain', 'leaves', 'wall', 'house', 'machine', 'rock', 'flower', 'door', 'gate', 'car', 'boat', 'animal', 'mat', 'grass', 'plant', 'metal', 'light', 'tree', 'wood', 'food', 'smoke', 'forest', 'shirt', 'pant', 'structure', 'bird', 'tunnel', 'cave', 'skyscraper', 'sign', 'stairs', 'box', 'sand', 'fruit', 'vegetable', 'barrier'];
 const groundBoost = 50;
@@ -1833,34 +1833,6 @@ globalThis.testWorldGen = async image_url => {
     _startLoop();
   };
   const renderManager = _startRender();
-
-  // console.log('got response 1');
-  /* const response2 = await openai.createImageVariation(
-    blob.stream(),
-    1,
-    "1024x1024",
-  ); */
-  /* const fd2 = new FormData();
-  fd2.append('image', blob);
-  fd2.append('n', 1);
-  fd2.append('size', '1024x1024');
-  const response2_ = await fetch('https://api.openai.com/v1/images/variations', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${OPENAI_API_KEY}`,
-    },
-    body: fd2,
-  });
-  const response2 = await response2_.json();
-  console.log('got response A', {response2});
-  const image_url2 = response2.data[0].url;
-  console.log('got response B', {image_url2}, {response2});
-  const u3 = new URL('/api/proxy', location.href);
-  u3.searchParams.set('url', image_url2);
-  const res2 = await fetch(u3);
-  const blob2 = await res2.blob();
-  const img2 = await blob2img(blob2);
-  document.body.appendChild(img2); */
 };
 
 //
