@@ -18,7 +18,11 @@ const OPENAI_API_KEY = ``;
 const prompts = {
   // map: `2D overhead view fantasy battle map scene, mysterious lush sakura forest, anime drawing, digital art`;
   map: `2D overhead view fantasy battle map scene, mysterious dinosaur robot factory, anime video game drawing, trending, winner, digital art`,
-  world: `anime screenshot, mysterious forest path with japanese dojo doorway, neon arrows, jungle labyrinth, metal ramps, lush vegetation, ancient technology, mystery creature, glowing magic, ghibli style, digital art`,
+  // world: `anime screenshot, mysterious forest path with japanese dojo doorway, neon arrows, jungle labyrinth, metal ramps, lush vegetation, ancient technology, mystery creature, glowing magic, ghibli style, digital art`,
+  // world: `anime screenshot, empty desert dunes with ancient technology buried sparsely, neon arrows, cactus, rusty metal sci fi building, ghibli style, digital art`,
+  // world: `bird's eye view, tropical jungle with sci fi metal gate, dinosaur, ghibli style, digital art`,
+  world: `side passage to a cave, jungle path with cement, sci fi metal gate, dinosaur, ghibli style, digital art`,
+  // world: `standing on a skyscraper at the solarpunk city, sakura trees, lush vegetation, ancient technology, ghibli style, digital art`,
   character: `full body, young anime girl wearing a hoodie, white background, studio ghibli style, digital art`,
 };
 const labelClasses = ['person', 'floor', 'path', 'sidewalk', 'ground', 'road', 'runway', 'land', 'dirt', 'ceiling', 'field', 'river', 'water', 'sea', 'sky', 'mountain', 'leaves', 'wall', 'house', 'machine', 'rock', 'flower', 'door', 'gate', 'car', 'boat', 'animal', 'mat', 'grass', 'plant', 'metal', 'light', 'tree', 'wood', 'food', 'smoke', 'forest', 'shirt', 'pant', 'structure', 'bird', 'tunnel', 'cave', 'skyscraper', 'sign', 'stairs', 'box', 'sand', 'fruit', 'vegetable', 'barrier'];
@@ -46,8 +50,9 @@ const vqaQueries = [
   `is the viewer looking up at the ceiling?`,
   `how many feet tall is the viewer?`,
 ];
-// const skyboxDistance = 5;
-const skyboxDistance = 100;
+const skyboxDistance = 5;
+// const skyboxDistance = 100;
+const skyboxScaleFactor = 5;
 
 const configuration = new Configuration({
   apiKey: OPENAI_API_KEY,
@@ -1374,7 +1379,7 @@ function drawLabelCanvas(img, boundingBoxLayers) {
   ctx.drawImage(img, 0, 0);
 
   //
-  window.boundingBoxLayers = boundingBoxLayers;
+  // window.boundingBoxLayers = boundingBoxLayers;
   for (let i = 0; i < boundingBoxLayers.length; i++) {
     const bboxes = boundingBoxLayers[i];
     ctx.strokeStyle = 'red';
@@ -1469,7 +1474,7 @@ function pointCloudArrayBuffer2canvas(arrayBuffer) {
   ctx.putImageData(imageData, 0, 0);
   return canvas;
 }
-function pointCloudArrayBufferToPositionAttributeArray(arrayBuffer, float32Array, scaleFactor) { // result in float32Array
+function pointCloudArrayBufferToPositionAttributeArray(arrayBuffer, float32Array, scaleFactor, raw) { // result in float32Array
   const numPixels = arrayBuffer.byteLength / pointcloudStride;
   const width = Math.sqrt(numPixels);
   const height = width;
@@ -1487,11 +1492,16 @@ function pointCloudArrayBufferToPositionAttributeArray(arrayBuffer, float32Array
     z *= -scaleFactor;
 
     if (z <= -skyboxDistance) {
-      const zoomFactor = 10;
-      x *= zoomFactor;
-      y *= zoomFactor;
-      z *= zoomFactor;
+      x *= skyboxScaleFactor;
+      y *= skyboxScaleFactor;
+      z *= skyboxScaleFactor;
     }
+
+    /* if (raw) {
+      y *= -1;
+      z *= -1;
+    } */
+
     float32Array[j + 0] = x;
     float32Array[j + 1] = y;
     float32Array[j + 2] = z;
@@ -1542,7 +1552,6 @@ function pointCloudArrayBufferToColorAttributeArray(labelImg, uint8Array) { // r
       const color = labelColors[r];
       if (!usedLabelColors.has(color)) {
         usedLabelColors.add(color);
-        console.log('add color', color);
       }
       uint8Array[j + 0] = color.r * 255;
       uint8Array[j + 1] = color.g * 255;
@@ -1660,16 +1669,11 @@ globalThis.testWorldGen = async image_url => {
   const labelImg = await blob2img(labelBlob);
   // document.body.appendChild(labelImg);
   const boundingBoxLayers = JSON.parse(labelHeaders['x-bounding-boxes']);
-  console.log('got bounding boxes', boundingBoxLayers);
+  // console.log('got bounding boxes', boundingBoxLayers);
   const labelCanvas = drawLabelCanvas(labelImg, boundingBoxLayers);
   document.body.appendChild(labelCanvas);
   // window.labelCanvas = labelCanvas;
-  console.log('found labels', labelClasses.filter((e, i) => boundingBoxLayers[i].length > 0));
-
-  // depth
-  // const depthBlob = await getDepth(blob);
-  // const depthImg = await blob2img(depthBlob);
-  // document.body.appendChild(depthImg);
+  // console.log('found labels', labelClasses.filter((e, i) => boundingBoxLayers[i].length > 0));
 
   // point cloud
   const {
@@ -1683,11 +1687,123 @@ globalThis.testWorldGen = async image_url => {
   // });
   document.body.appendChild(pointCloudCanvas);
 
-  // latch
-  // window.img = img;
-  // window.depthImg = depthImg;
-  window.pointCloudCanvas = pointCloudCanvas;
-  window.labelImg = labelImg;
+  // run ransac
+  let planesMesh = null;
+  {
+    const geometry = new THREE.PlaneBufferGeometry(1, 1, img.width - 1, img.height - 1);
+    pointCloudArrayBufferToPositionAttributeArray(pointCloudArrayBuffer, geometry.attributes.position.array, 1/img.width, true);
+
+    // keep only a fraction of the points
+    const fraction = 16;
+    let points = geometry.attributes.position.array;
+    let points2 = new Float32Array(points.length / fraction);
+    for (let i = 0; i < points2.length / 3; i++) {
+      const j = i * 3 * fraction;
+      points2[i*3+0] = points[j+0];
+      points2[i*3+1] = points[j+1];
+      points2[i*3+2] = points[j+2];
+    }
+    // shuffle points2
+    for (let i = 0; i < points2.length / 3; i++) {
+      const j = Math.floor(Math.random() * points2.length / 3);
+      const tmp = points2.slice(i*3, i*3+3);
+      points2.set(points2.slice(j*3, j*3+3), i*3);
+      points2.set(tmp, j*3);
+    }
+
+    console.time('ransac');
+    const res = await fetch(`https://depth.webaverse.com/ransac?n=${16}&threshold=${0.1}&init_n=${1500}`, {
+      method: 'POST',
+      body: points2.buffer,
+    });
+    console.timeEnd('ransac');
+    if (res.ok) {
+      const planesJson = await res.json();
+      console.log('planes', planesJson);
+
+      // draw the planes
+      const planeGeometry = new THREE.PlaneGeometry(1, 1);
+      const material = new THREE.MeshBasicMaterial({
+        color: 0xff0000,
+      });
+      planesMesh = new THREE.InstancedMesh(planeGeometry, material, planesJson.length);
+      planesMesh.frustumCulled = false;
+      planesMesh.count = 0;
+      for (let i = 0; i < planesJson.length; i++) {
+        const plane = planesJson[i];
+        const [planeEquation, planePointIndices] = plane; // XXX note the planeIndices are computed relative to the current points set after removing all previous planes; these are not global indices
+        
+        const normal = new THREE.Vector3(planeEquation[0], planeEquation[1], planeEquation[2]);
+        const distance = planeEquation[3];
+        
+        // cut out the plane points
+        const inlierPlaneFloats = [];
+        const outlierPlaneFloats = [];
+        for (let j = 0; j < points2.length; j += 3) {
+          if (planePointIndices.includes(j/3)) {
+            inlierPlaneFloats.push(points2[j], points2[j+1], points2[j+2]);
+          } else {
+            outlierPlaneFloats.push(points2[j], points2[j+1], points2[j+2]);
+          }
+        }
+
+        // compute the centroid
+        const centroid = new THREE.Vector3();
+        let count = 0;
+        for (let j = 0; j < inlierPlaneFloats.length; j += 3) {
+          centroid.x += inlierPlaneFloats[j];
+          centroid.y += inlierPlaneFloats[j+1];
+          centroid.z += inlierPlaneFloats[j+2];
+          count++;
+        }
+        centroid.divideScalar(count);
+
+        // console.log('got centroid', centroid);
+
+        planesMesh.setMatrixAt(i, new THREE.Matrix4().compose(
+          centroid,
+          new THREE.Quaternion().setFromRotationMatrix(
+            new THREE.Matrix4().lookAt(
+              normal,
+              new THREE.Vector3(0, 0, 0),
+              new THREE.Vector3(0, 1, 0),
+            )
+          ),
+          new THREE.Vector3(1, 1, 1)
+        ));
+
+        // latch new points
+        points2 = Float32Array.from(outlierPlaneFloats);
+        planesMesh.count++;
+      }
+      // update the instanced mesh
+      planesMesh.instanceMatrix.needsUpdate = true;
+    } else {
+      debugger;
+    }
+  }
+
+  // query the height
+  const _getPredictedHeight = async blob => {
+    const fd = new FormData();
+    fd.append('question', 'in feet, how high up is this?');
+    fd.append('file', blob);
+    fd.append('task', 'vqa');
+    const res = await fetch(`https://blip.webaverse.com/upload`, {
+      method: 'post',  
+      body: fd,
+    });
+    const j = await res.json();
+    const {Answer} = j;
+    const f = parseFloat(Answer);
+    if (!isNaN(f)) {
+      return f;
+    } else {
+      return null;
+    }
+  };
+  // const predictedHeight = await _getPredictedHeight(blob);
+  // console.log('got predicted height', predictedHeight);
 
   // start renderer
   const _startRender = () => {
@@ -1705,11 +1821,15 @@ globalThis.testWorldGen = async image_url => {
     // scene.background = new THREE.Color(0x0000FF);
     const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
 
+    // lights
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+    directionalLight.position.set(1, 2, 3);
+    scene.add(directionalLight);
+    
     const geometry = new THREE.PlaneBufferGeometry(1, 1, img.width - 1, img.height - 1);
-    pointCloudArrayBufferToPositionAttributeArray(pointCloudArrayBuffer, geometry.attributes.position.array, 1/img.width);
+    pointCloudArrayBufferToPositionAttributeArray(pointCloudArrayBuffer, geometry.attributes.position.array, 1/img.width, false);
     geometry.setAttribute('color', new THREE.BufferAttribute(new Uint8Array(pointCloudArrayBuffer.byteLength / pointcloudStride * 3), 3, true));
     pointCloudArrayBufferToColorAttributeArray(labelImg, geometry.attributes.color.array);
-    window.colors = geometry.attributes.color.array;
     const map = new THREE.Texture(img);
     map.needsUpdate = true;
     const material = new THREE.ShaderMaterial({
@@ -1763,9 +1883,7 @@ globalThis.testWorldGen = async image_url => {
     sceneMesh.frustumCulled = false;
     scene.add(sceneMesh);
 
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-    directionalLight.position.set(1, 2, 3);
-    scene.add(directionalLight);
+    scene.add(planesMesh);
 
     const cubeMesh = new THREE.Mesh(
       new THREE.BoxBufferGeometry(1, 1, 1),
@@ -1996,9 +2114,9 @@ const outpaintImage = async (img, prompt, specs) => {
     document.body.appendChild(canvas);
 
     const maskCanvas = document.createElement('canvas');
-    if (!maskCanvas.classList) {
-      debugger;
-    }
+    // if (!maskCanvas.classList) {
+    //   debugger;
+    // }
     maskCanvas.classList.add('maskCanvas-' + i);
     maskCanvas.width = w;
     maskCanvas.height = h;
