@@ -4,6 +4,8 @@ import { getDatasetSpecs } from "../../../../datasets/dataset-specs.js";
 import { cleanName } from "../../../../utils.js";
 import { generateImage } from "../../../../media/images/image-generator.js";
 
+//
+
 const globalImagePrompt = `trending on ArtStation`;
 
 //
