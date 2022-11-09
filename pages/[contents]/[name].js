@@ -210,6 +210,7 @@ const ContentObject = ({ type, title, content }) => {
                                                     editSection={editSection}
                                                     gallery={gallery}
                                                     index={i}
+                                                    key={i}
                                                 />
                                             );
                                         }
