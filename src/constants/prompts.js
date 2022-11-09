@@ -4,7 +4,7 @@ export const prompts = {
   // world: `anime screenshot, mysterious forest path with japanese dojo doorway, neon arrows, jungle labyrinth, metal ramps, lush vegetation, ancient technology, mystery creature, glowing magic, ghibli style, digital art`,
   // world: `anime screenshot, empty desert dunes with ancient technology buried sparsely, neon arrows, cactus, rusty metal sci fi building, ghibli style, digital art`,
   // world: `bird's eye view, tropical jungle with sci fi metal gate, dinosaur, ghibli style, digital art`,
-  world: `side passage to a cave, jungle path with cement, sci fi metal gate, dinosaur, ghibli style, digital art`,
+  world: `large jungle path, sci fi industrial metal gate and ramp, dinosaur, ghibli style, digital art`,
   // world: `standing on a skyscraper at the solarpunk city, sakura trees, lush vegetation, ancient technology, ghibli style, digital art`,
   character: `full body, young anime girl wearing a hoodie, white background, studio ghibli style, digital art`,
   // const prompt = `magical alien grass blades on a white background, studio ghibli anime style, digital art`;
