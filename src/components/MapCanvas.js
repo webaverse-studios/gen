@@ -71,7 +71,7 @@ const procGenManager = new ProcGenManager({
   chunkSize,
 });
 let procGenInstance = null;
-const useInstance = () => {
+const getInstance = () => {
   if (!procGenInstance) {
     procGenInstance = procGenManager.getInstance('lol');
   }
@@ -106,7 +106,7 @@ export const MapCanvas = ({
 
   // helpers
   const loadHeightfields = async (heightfieldsMesh, camera) => {
-    const instance = useInstance();
+    const instance = getInstance();
 
     const lodTrackerOptions = getLodTrackerOptions(camera);
     const lodTracker = await instance.createLodChunkTracker(lodTrackerOptions);
@@ -147,7 +147,7 @@ export const MapCanvas = ({
     return lodTracker;
   };
   const loadParcels = async parcelsMesh => {
-    const instance = useInstance();
+    const instance = getInstance();
     
     const minLod = 1;
     const maxLod = 6;
@@ -177,7 +177,7 @@ export const MapCanvas = ({
   //
 
   const updateLodTracker = (lodTracker, camera) => {
-    const instance = useInstance();
+    const instance = getInstance();
     const playerPosition = localVector.set(
       camera.position.x,
       0,
@@ -240,7 +240,7 @@ export const MapCanvas = ({
       scene.add(layer1Mesh);
       setLayer1Mesh(layer1Mesh);
       // heightfields
-      const instance = useInstance();
+      const instance = getInstance();
       const heightfieldsMesh = new HeightfieldsMesh({
         instance,
       });
