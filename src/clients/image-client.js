@@ -1,4 +1,5 @@
 import {Configuration, OpenAIApi} from 'openai';
+import {makePromise} from '../../utils.js';
 import {getFormData} from '../utils/http-utils.js';
 import {blob2img} from '../utils/convert-utils.js';
 import {OPENAI_API_KEY} from '../constants/auth.js';
@@ -9,7 +10,9 @@ const configuration = new Configuration({
 });
 const openai = new OpenAIApi(configuration);
 
-export const createImageBlob = async (prompt) => {
+//
+
+const createImageBlob = async (prompt) => {
   const response = await openai.createImage({
     prompt,
     n: 1,
@@ -17,9 +20,9 @@ export const createImageBlob = async (prompt) => {
   });
   let image_url = response.data.data[0].url;
 
-  const u2 = new URL('/api/proxy', location.href);
-  u2.searchParams.set('url', image_url);
-  image_url = u2.href;
+  // const u2 = new URL('/api/proxy', location.href);
+  // u2.searchParams.set('url', image_url);
+  // image_url = u2.href;
 
   const res = await fetch(image_url);
   const blob = await res.blob();
@@ -30,7 +33,7 @@ export const createImageBlob = async (prompt) => {
   const fd = makeEditImgFormData(blob, maskBlob, prompt);
   return editImgFormData(fd);
 }; */
-export const makeEditImgFormData = (blob, maskBlob, prompt) => {
+const makeEditImgFormData = (blob, maskBlob, prompt) => {
   const fd = getFormData({
     image: blob,
     mask: maskBlob,
@@ -40,7 +43,7 @@ export const makeEditImgFormData = (blob, maskBlob, prompt) => {
   });
   return fd;
 };
-export const editImgFormDataBlob = async (fd) => {
+const editImgFormDataBlob = async (fd) => {
   const response = await fetch(`https://api.openai.com/v1/images/edits`, {
     method: 'POST',
     headers: {
@@ -51,13 +54,57 @@ export const editImgFormDataBlob = async (fd) => {
   const responseData = await response.json();
   let image_url = responseData.data[0].url;
 
-  const u2 = new URL('/api/proxy', location.href);
-  u2.searchParams.set('url', image_url);
-  image_url = u2.href;
+  // const u2 = new URL('/api/proxy', location.href);
+  // u2.searchParams.set('url', image_url);
+  // image_url = u2.href;
 
   const res = await fetch(image_url);
   const blob = await res.blob();
   return blob;
+};
+const editRequestBlob = async req => {
+  // console.log('req 1', new Error().stack);
+  const contentType = req.headers['content-type'];
+  const arrayBuffer = await (async () => {
+    const bs = [];
+    const p = makePromise();
+    // cache the request data
+    req.on('data', b => {
+      // console.log('got req data', b.length);
+      bs.push(b);
+    });
+    req.on('end', async () => {
+      // console.log('got req end');
+      p.resolve(Buffer.concat(bs).buffer);
+    });
+    return await p;
+  })();
+  // console.log('req 2');
+  const response = await fetch(`https://api.openai.com/v1/images/edits`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${OPENAI_API_KEY}`,
+      'Content-Type': contentType,
+    },
+    // pipe the node stream to the fetch body
+    body: arrayBuffer,
+  });
+  if (response.ok) {
+    const responseData = await response.json();
+    let image_url = responseData.data[0].url;
+
+    // const u2 = new URL('/api/proxy', location.href);
+    // u2.searchParams.set('url', image_url);
+    // image_url = u2.href;
+
+    const res = await fetch(image_url);
+    const blob = await res.blob();
+    return blob;
+  } else {
+    const text = await response.text();
+    console.warn('got error response', text);
+    throw new Error(text);
+  }
 };
 
 export class ImageAiClient {
@@ -73,7 +120,7 @@ export class ImageAiClient {
     n = 1,
     size = '1024x1024',
   } = {}) {
-    const u = new URL('/api/image-ai/createImageBlob', location.href);
+    const u = new URL('/api/ai/image-ai/createImageBlob', location.href);
     u.searchParams.set('prompt', prompt);
     if (n !== undefined) {
       u.searchParams.set('n', n);
@@ -89,7 +136,7 @@ export class ImageAiClient {
     n = 1,
   } = {}) {
     const fd = makeEditImgFormData(blob, maskBlob, prompt);
-    const u = new URL('/api/image-ai/editImgBlob', location.href);
+    const u = new URL('/api/ai/image-ai/editImgBlob', location.href);
     u.searchParams.set('prompt', prompt);
     if (n !== undefined) {
       u.searchParams.set('n', n);
@@ -112,38 +159,49 @@ export class ImageAiServer {
     // nothing
   }
   async handleRequest(req, res) {
-    const match = req.url.match(/^\/api\/image-ai\/(.+)$/);
-    if (match) {
-      const method = match[1];
-      console.log('handle method', method);
-      switch (method) {
-        case 'createImageBlob': {
-          // read query string
-          const {prompt, n, size} = req.query;
-          const blob = await createImageBlob(prompt, {
-            n,
-            size,
-          });
-          const arrayBuffer = await blob.arrayBuffer();
-          const buffer = new Buffer(arrayBuffer);
-          res.setHeader('Content-Type', blob.type);
-          res.end(buffer);
-          break;
+    try {
+      const match = req.url.match(/^\/api\/ai\/image-ai\/([^\/\?]+)/);
+      if (match) {
+        const method = match[1];
+        console.log('handle method', method);
+        switch (method) {
+          case 'createImageBlob': {
+            // read query string
+            const {prompt, n, size} = req.query;
+            console.log('createImageBlob', {prompt, n, size});
+            const blob = await createImageBlob(prompt, {
+              n,
+              size,
+            });
+            const arrayBuffer = await blob.arrayBuffer();
+            const buffer = Buffer.from(arrayBuffer);
+            res.setHeader('Content-Type', blob.type);
+            console.warn('createImageBlob response', blob.type, buffer.length);
+            res.end(buffer);
+            break;
+          }
+          case 'editImgBlob': {
+            const blob = await editRequestBlob(req);
+            const arrayBuffer = await blob.arrayBuffer();
+            const buffer = Buffer.from(arrayBuffer);
+            res.setHeader('Content-Type', blob.type);
+            console.warn('editImgBlob response', blob.type, buffer.length);
+            res.end(buffer);
+            break;
+          }
+          default: {
+            console.warn('method not found', method);
+            res.send(404);
+            break;
+          }
         }
-        case 'editImgBlob': {
-          const {prompt} = req.query;
-          const {image, mask} = req.files;
-          const fd = makeEditImgFormData(image, mask, prompt);
-          const blob = await editImgFormDataBlob(fd);
-          const arrayBuffer = await blob.arrayBuffer();
-          const buffer = new Buffer(arrayBuffer);
-          res.setHeader('Content-Type', blob.type);
-          res.end(buffer);
-          break;
-        }
+      } else {
+        console.warn('image client had no url match', req.url);
+        res.send(404);
       }
-    } else {
-      res.send(404);
+    } catch (err) {
+      console.warn('image client error', err);
+      res.status(500).send(err.stack);
     }
   }
 }

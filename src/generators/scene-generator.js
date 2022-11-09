@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 
-import {createImageBlob} from '../clients/image-client.js';
+import {ImageAiClient} from '../clients/image-client.js';
 import {getLabel} from '../clients/perception-client.js';
 import {
   pointcloudStride,
@@ -14,6 +14,10 @@ import {
 import {prompts} from '../constants/prompts.js';
 import {blob2img} from '../utils/convert-utils.js';
 import {labelClasses} from '../constants/prompts.js';
+
+//
+
+const imageAiClient = new ImageAiClient();
 
 //
 
@@ -69,7 +73,7 @@ export class SceneGenerator {
 
     if (!(blob instanceof Blob)) {
       const prompt = (typeof blob === 'string' ? blob : '') || prompts.world;
-      blob = await createImageBlob(prompt);
+      blob = await imageAiClient.createImageBlob(prompt);
     }
 
     // canvas

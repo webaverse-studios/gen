@@ -1,5 +1,13 @@
-import { Ctx } from "./clients/context";
-
+export const makePromise = () => {
+    let resolve, reject;
+    const promise = new Promise((a, b) => {
+        resolve = a;
+        reject = b;
+    });
+    promise.resolve = resolve;
+    promise.reject = reject;
+    return promise;
+};
 export const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 export const capitalizeAllWords = (s) => {
     let words = s.split(/\s+/);

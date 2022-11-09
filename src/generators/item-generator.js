@@ -1,9 +1,15 @@
 import * as THREE from 'three';
-import {createImage} from '../clients/image-client.js';
+import {ImageAiClient} from '../clients/image-client.js';
 import materialColors from '../constants/material-colors.js';
 import {prompts} from '../constants/prompts.js';
 import {ColorScheme} from '../utils/color-scheme.js';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
+
+//
+
+const imageAiClient = new ImageAiClient();
+
+//
 
 const createSeedImage = (
   w, // width
@@ -157,7 +163,7 @@ export class ItemGenerator {
       maskCanvas.toBlob(accept, 'image/png');
     });
   
-    const img = await createImage(prompt);
+    const img = await imageAiClient.createImage(prompt);
     img.classList.add('img');
     document.body.appendChild(img);
 

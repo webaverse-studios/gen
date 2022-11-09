@@ -1,5 +1,11 @@
-import {createImage, editImg} from '../clients/image-client.js';
+import {ImageAiClient} from '../clients/image-client.js';
 import {prompts} from '../constants/prompts.js';
+
+//
+
+const imageAiClient = new ImageAiClient();
+
+//
 
 // spec is like [[0, 1], [2, 3]]
 export const outpaintImage = async (img, prompt, specs) => {
@@ -75,7 +81,7 @@ export const outpaintImage = async (img, prompt, specs) => {
     });
 
     // fetch from openai
-    const editedImg = await editImg(blob, maskBlob, prompt);
+    const editedImg = await imageAiClient.editImg(blob, maskBlob, prompt);
     editedImg.classList.add('editImg-' + i);
     document.body.appendChild(editedImg);
 
@@ -145,7 +151,7 @@ export class CharacterGenerator {
     u2.searchParams.set('url', image_url);
     image_url = u2.href; */
 
-    const img = await createImage(prompt);
+    const img = await imageAiClient.createImage(prompt);
     document.body.appendChild(img);
 
     const outpaintedCanvas = await outpaintImage(img, prompt, [
