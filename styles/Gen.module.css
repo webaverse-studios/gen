@@ -1,0 +1,17 @@
+.gen {
+
+}
+.gen .tabs {
+  display: flex;
+}
+.gen .tabs .tab {
+  text-decoration: underline;
+  color: #2196f3;
+  font-size: 40px;
+  cursor: pointer;
+}
+.gen .tabs .tab:hover {
+  /* color: #1e88e5; */
+  /* darker... */
+  color: #1976d2;
+}
