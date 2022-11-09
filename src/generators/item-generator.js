@@ -305,7 +305,7 @@ export class ItemGenerator {
       renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
       const scene = new THREE.Scene();
-      // scene.background = new THREE.Color(0x0000FF);
+      scene.background = new THREE.Color(0x000000);
       const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
       camera.position.x = 0.5;
       camera.position.y = 1;
