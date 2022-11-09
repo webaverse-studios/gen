@@ -3,7 +3,7 @@ import materialColors from '../constants/material-colors.js';
 
 const skyboxDistance = 5;
 const skyboxScaleFactor = 5;
-const pointcloudStride = 4 + 4 + 4 + 1 + 1 + 1;
+export const pointcloudStride = 4 + 4 + 4 + 1 + 1 + 1;
 
 export function pointCloudArrayBuffer2canvas(arrayBuffer) {
   // python_types = (float, float, float, int, int, int)
