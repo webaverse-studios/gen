@@ -65,7 +65,7 @@ export class CharacterGenerator {
       [0, -0.5],
       [0, 0.5],
     ]);
-    console.log('done outpainting', outpaintedCanvas);
+    // console.log('done outpainting', outpaintedCanvas);
     document.body.appendChild(outpaintedCanvas);
   }
 };
