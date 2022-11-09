@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import {createImage, outpaintImage} from '../clients/ai-client.js';
 import materialColors from '../constants/material-colors.js';
-// import {prompts} from '../constants/prompts.js';
+import {prompts} from '../constants/prompts.js';
 import {ColorScheme} from '../utils/color-scheme.js';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 
@@ -117,7 +117,7 @@ const createFullSeedImage = () => {
 const previewCanvasSize = 1024;
 
 export class ItemGenerator {
-  async generate() {
+  async generate(prompt = prompts.item) {
     const {
       canvas: imgCanvas,
       maskCanvas,
@@ -156,18 +156,6 @@ export class ItemGenerator {
     const maskBlob = await new Promise((accept, reject) => {
       maskCanvas.toBlob(accept, 'image/png');
     });
-    // const prompt = `magical alien grass blades on a white background, studio ghibli anime style, digital art`;
-    // const prompt = `ancient magical cloudy potion antigravity on a white background, studio ghibli anime style, digital art`;
-    // const prompt = `high tech energy sword with hexagon pattern and mysterious glyphs on it, white background, video game item concept art render, trending on ArtStation, digital art`;
-    // const prompt = `juicy magical alien fruit, anime style, white background, digital art`;`
-    // const prompt = `huge square sword, anime style, rendered in unreal engine, white background, digital art`;
-    // const prompt = `cute little anime ghost pet with tiny legs on a white background, studio ghibli, digital art`;
-    // const prompt = `strange alien plant with flowers on a white background, studio ghibli anime style, digital art`;
-    // const prompt = `ancient high tech medkit on a white background, studio ghibli anime style, digital art`;
-    // const prompt = `ancient magical high tech book with digital symbols on it on a white background, studio ghibli anime style, digital art`;
-    // const prompt = `ancient magical cloudy potion of terrible death soul on a white background, studio ghibli anime style, digital art`;
-    // const prompt = `fun magical anime item, lush vegetation, ancient technology, white background, digital art`;
-    const prompt = `small fun magical game console anime item with aura, white background, digital art`;
   
     const img = await createImage(prompt);
     img.classList.add('img');

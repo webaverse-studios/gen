@@ -2,7 +2,7 @@ import {createImage, outpaintImage} from '../clients/ai-client.js';
 import {prompts} from '../constants/prompts.js';
 
 export class CharacterGenerator {
-  async generate() {
+  async generate(prompt = prompts.character) {
     /* const {
       canvas,
       maskCanvas,
@@ -58,7 +58,6 @@ export class CharacterGenerator {
     u2.searchParams.set('url', image_url);
     image_url = u2.href; */
 
-    const prompt = prompts.character;
     const img = await createImage(prompt);
     document.body.appendChild(img);
 

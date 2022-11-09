@@ -67,8 +67,9 @@ export class SceneGenerator {
     }
     window.triggered = true;
 
-    if (!blob) {
-      blob = await createImageBlob(prompts.world);
+    if (!(blob instanceof Blob)) {
+      const prompt = (typeof blob === 'string' ? blob : '') || prompts.world;
+      blob = await createImageBlob(prompt);
     }
 
     // canvas
