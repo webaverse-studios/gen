@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 
-import {createImageBlob} from '../clients/ai-client.js';
+import {createImageBlob} from '../clients/image-client.js';
 import {getLabel} from '../clients/perception-client.js';
 import {
   pointcloudStride,

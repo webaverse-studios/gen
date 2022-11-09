@@ -1,4 +1,4 @@
-import {createImage, outpaintImage} from '../clients/ai-client.js';
+import {createImage, outpaintImage} from '../clients/image-client.js';
 import {prompts} from '../constants/prompts.js';
 
 export class CharacterGenerator {

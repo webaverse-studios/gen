@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import {createImage, outpaintImage} from '../clients/ai-client.js';
+import {createImage} from '../clients/image-client.js';
 import materialColors from '../constants/material-colors.js';
 import {prompts} from '../constants/prompts.js';
 import {ColorScheme} from '../utils/color-scheme.js';
