@@ -32,24 +32,3 @@ export async function getLabel(blob, {
     debugger;
   }
 }
-
-//
-
-// support darag and drop
-if (typeof window !== 'undefined') {
-  document.addEventListener('dragover', e => {
-    e.preventDefault();
-    e.stopPropagation();
-  });
-  document.addEventListener('drop', async e => {
-    e.preventDefault();
-    e.stopPropagation();
-    const files = e.dataTransfer.files;
-    const file = files[0];
-    if (file) {
-      const u = URL.createObjectURL(file);
-      await globalThis.testWorldGen(u);
-      URL.revokeObjectURL(u);
-    }
-  });
-}
