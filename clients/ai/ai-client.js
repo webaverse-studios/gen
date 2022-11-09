@@ -1,7 +1,5 @@
 import {model} from '../../constants/model-constants.js';
 
-console.log('got process.env', globalThis.process?.env);
-
 export function makeGenerateFn() {
   function getOpenAIKey() {
     const key = process.env.OPENAI_KEY;
