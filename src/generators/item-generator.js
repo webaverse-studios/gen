@@ -207,7 +207,7 @@ export class ItemGenerator {
         };
         const _colorEquals = (color1, color2) => {
           const distance = Math.abs(color1[0] - color2[0]) + Math.abs(color1[1] - color2[1]) + Math.abs(color1[2] - color2[2]);
-          return distance <= 10;
+          return distance <= 32;
         };
         const queue = [];
         const _floodFillInner = (x, y) => {
