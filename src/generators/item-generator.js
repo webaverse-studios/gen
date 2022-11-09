@@ -305,7 +305,7 @@ export class ItemGenerator {
       renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
       const scene = new THREE.Scene();
-      scene.background = new THREE.Color(0x000000);
+      // scene.background = new THREE.Color(0x000000);
       const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
       camera.position.x = 0.5;
       camera.position.y = 1;
@@ -314,7 +314,7 @@ export class ItemGenerator {
       camera.updateMatrixWorld();
 
       // lights
-      const directionalLight = new THREE.DirectionalLight(0xffffff, 2);
+      const directionalLight = new THREE.DirectionalLight(0xffffff, 3);
       directionalLight.position.set(3, 2, 3);
       directionalLight.castShadow = true;
       scene.add(directionalLight);
