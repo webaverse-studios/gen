@@ -65,20 +65,6 @@ const editImgFormDataBlob = async (fd) => {
 const editRequestBlob = async req => {
   // console.log('req 1', new Error().stack);
   const contentType = req.headers['content-type'];
-  const arrayBuffer = await (async () => {
-    const bs = [];
-    const p = makePromise();
-    // cache the request data
-    req.on('data', b => {
-      // console.log('got req data', b.length);
-      bs.push(b);
-    });
-    req.on('end', async () => {
-      // console.log('got req end');
-      p.resolve(Buffer.concat(bs).buffer);
-    });
-    return await p;
-  })();
   // console.log('req 2');
   const response = await fetch(`https://api.openai.com/v1/images/edits`, {
     method: 'POST',
@@ -87,7 +73,7 @@ const editRequestBlob = async req => {
       'Content-Type': contentType,
     },
     // pipe the node stream to the fetch body
-    body: arrayBuffer,
+    body: req,
   });
   if (response.ok) {
     const responseData = await response.json();
@@ -163,12 +149,10 @@ export class ImageAiServer {
       const match = req.url.match(/^\/api\/ai\/image-ai\/([^\/\?]+)/);
       if (match) {
         const method = match[1];
-        console.log('handle method', method);
         switch (method) {
           case 'createImageBlob': {
             // read query string
             const {prompt, n, size} = req.query;
-            console.log('createImageBlob', {prompt, n, size});
             const blob = await createImageBlob(prompt, {
               n,
               size,
@@ -176,7 +160,6 @@ export class ImageAiServer {
             const arrayBuffer = await blob.arrayBuffer();
             const buffer = Buffer.from(arrayBuffer);
             res.setHeader('Content-Type', blob.type);
-            console.warn('createImageBlob response', blob.type, buffer.length);
             res.end(buffer);
             break;
           }
@@ -185,7 +168,6 @@ export class ImageAiServer {
             const arrayBuffer = await blob.arrayBuffer();
             const buffer = Buffer.from(arrayBuffer);
             res.setHeader('Content-Type', blob.type);
-            console.warn('editImgBlob response', blob.type, buffer.length);
             res.end(buffer);
             break;
           }
