@@ -233,7 +233,7 @@ export class SceneGenerator {
       }
     };
     const predictedHeight = await _getPredictedHeight(blob);
-    console.log('got predicted height', predictedHeight);
+    // console.log('got predicted height', predictedHeight);
 
     // start renderer
     const _startRender = () => {
@@ -316,8 +316,23 @@ export class SceneGenerator {
       );
       sceneMesh.frustumCulled = false;
       scene.add(sceneMesh);
-      console.log('got mat', {sceneMesh, material, img})
-      window.sceneMesh = sceneMesh;
+
+      // set the floor mesh
+      const floorMesh = (() => {
+        const geometry = new THREE.PlaneGeometry(1, 1)
+          .rotateX(-Math.PI/2)
+        const material = new THREE.MeshBasicMaterial({
+          color: 0x808080,
+          transparent: true,
+          opacity: 0.1,
+        });
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.frustumCulled = false;
+        return mesh;
+      })();
+      floorMesh.position.y = -predictedHeight;
+      floorMesh.updateMatrixWorld();
+      scene.add(floorMesh);
 
       scene.add(planesMesh);
 
