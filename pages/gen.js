@@ -9,10 +9,6 @@ import styles from '../styles/Gen.module.css';
 
 //
 
-console.log('process.env', globalThis.process?.env);
-
-//
-
 const vqaQueries = [
   `is this birds eye view?`,
   `is the viewer looking up at the sky?`,

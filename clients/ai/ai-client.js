@@ -1,19 +1,13 @@
 import {model} from '../../constants/model-constants.js';
+import {OPENAI_API_KEY} from '../../src/constants/auth.js';
 
 export function makeGenerateFn() {
-  function getOpenAIKey() {
-    const key = process.env.OPENAI_KEY;
-    if (!key) {
-      return console.error("No openai key found");
-    }
-    return key;
-  }
-  async function query(openai_api_key, params = {}) {
+  async function query(params = {}) {
     const requestOptions = {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: "Bearer " + String(openai_api_key),
+        Authorization: "Bearer " + String(OPENAI_API_KEY),
       },
       body: JSON.stringify(params),
     };
@@ -37,8 +31,8 @@ export function makeGenerateFn() {
       return "returning from error";
     }
   }
-  async function openaiRequest(key, prompt, stop/*, needsRepetition*/) {
-    return await query(key, {
+  async function openaiRequest(prompt, stop/*, needsRepetition*/) {
+    return await query({
       // model: 'text-davinci-002',
       model,
       prompt,
@@ -51,10 +45,9 @@ export function makeGenerateFn() {
       best_of: 1,
     });
   }
-  const openAiKey = getOpenAIKey();
   
   return async (prompt, stop/*, needsRepetition = true*/) => {
-    return await openaiRequest(openAiKey, prompt, stop/*, needsRepetition*/);
+    return await openaiRequest(prompt, stop/*, needsRepetition*/);
   };
 }
 
