@@ -104,6 +104,8 @@ class SceneRenderer {
   constructor(element) {
     this.element = element;
 
+    this.prompt = null;
+
     // canvas
     const canvas = document.createElement('canvas');
     canvas.width = 1024;
@@ -205,6 +207,7 @@ class SceneRenderer {
   }
   setPackage(scenePackage) {
     const {
+      prompt,
       img,
       labelImg,
       pointCloudHeaders,
@@ -212,6 +215,8 @@ class SceneRenderer {
       planeMatrices,
       predictedHeight,
     } = scenePackage.spec;
+
+    this.prompt = prompt;
 
     // camera
     this.camera.fov = Number(pointCloudHeaders['x-fov']);
@@ -310,9 +315,8 @@ class SceneRenderer {
 //
 
 export class SceneGenerator {
-  async generate(blob) {
+  async generate(prompt, blob) {
     if (!(blob instanceof Blob)) {
-      const prompt = (typeof blob === 'string' ? blob : '') || prompts.world;
       blob = await imageAiClient.createImageBlob(prompt);
     }
 
@@ -461,6 +465,7 @@ export class SceneGenerator {
     // start renderer
     const _startRender = () => {
       return new ScenePackage({
+        prompt,
         img,
         labelImg,
         labelCanvas,

@@ -90,11 +90,8 @@ const SceneGeneratorComponent = () => {
     setBusy(true);
     try {
       file = await _sizeFile(file);
-      const scenePackage = await sceneGenerator.generate(file);
+      const scenePackage = await sceneGenerator.generate(prompt, file);
 
-      /* if (!canvasRef.current) {
-        debugger;
-      } */
       const sceneRenderer = sceneGenerator.createRenderer(canvasRef.current);
       sceneRenderer.setPackage(scenePackage);
 
