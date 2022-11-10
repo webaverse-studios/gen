@@ -82,9 +82,9 @@ const _cutSkybox = geometry => {
       newIndices[numIndices + 1] = b;
       newIndices[numIndices + 2] = c;
       numIndices += 3;
-    } else {
+    } /* else {
       console.log('cut point');
-    }
+    } */
   }
   // set the new indices
   geometry.setIndex(new THREE.BufferAttribute(newIndices.subarray(0, numIndices), 1));
