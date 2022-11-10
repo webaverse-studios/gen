@@ -165,10 +165,6 @@ class SceneRenderer {
       const _render = () => {
         if (this.renderer) {
           // update orbit controls
-          /* if (!this.controls) {
-            console.log('got this', this);
-            debugger;
-          } */
           this.controls.update();
           this.camera.updateMatrixWorld();
 
