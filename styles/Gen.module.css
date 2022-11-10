@@ -45,3 +45,41 @@
   background-color: #000;
   border-color: #000;
 }
+
+/* */
+
+.characterCreator {
+  display: flex;
+  align-items: center;
+}
+.characterCreator .arrow {
+  position: relative;
+  width: 105px;
+  height: 105px;
+  cursor: pointer;
+}
+.characterCreator .arrow:not(:hover) .img.light {
+  visibility: visible;
+}
+.characterCreator .arrow:hover .img.dark {
+  visibility: visible;
+}
+.characterCreator .arrow.left {
+  transform: scaleX(-1);
+}
+.characterCreator .arrow.right {
+}
+.characterCreator .arrow .img {
+  position: absolute;
+  width: 105px;
+  height: 105px;
+  visibility: hidden;
+}
+.characterCreator .arrow .img.light {
+}
+.characterCreator .arrow .img.dark {
+}
+.characterCreator .canvasWrap {
+  display: flex;
+  flex-direction: column;
+}

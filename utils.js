@@ -114,3 +114,7 @@ export const getGalleryArray = async (content) => {
     }
     return gallery;
 };
+
+export function mod(v, n) {
+    return ((v % n) + n) % n;
+}
