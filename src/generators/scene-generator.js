@@ -65,10 +65,7 @@ const blockEvent = e => {
   e.preventDefault();
   e.stopPropagation();
 };
-const _isPointInSkybox = (geometry, i) => {
-  const z = geometry.attributes.position.array[i * 3 + 2];
-  return z > -skyboxDistance;
-};
+const _isPointInSkybox = (geometry, i) => geometry.attributes.position.array[i * 3 + 2] > -skyboxDistance;
 const _cutSkybox = geometry => {
   // copy over only the triangles that are all on one side of the skybox bounds
   const newIndices = new geometry.index.array.constructor(geometry.index.array.length);
