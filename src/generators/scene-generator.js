@@ -13,7 +13,7 @@ import {
   skyboxDistance,
 } from '../clients/reconstruction-client.js';
 
-import {prompts} from '../constants/prompts.js';
+// import {prompts} from '../constants/prompts.js';
 import {blob2img} from '../utils/convert-utils.js';
 import {labelClasses} from '../constants/prompts.js';
 
