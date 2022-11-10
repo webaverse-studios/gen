@@ -1,5 +1,5 @@
 // import * as THREE from 'three';
-import {useState} from 'react';
+import {useState, useRef} from 'react';
 import {prompts} from '../../constants/prompts.js';
 import {SceneGenerator} from '../../generators/scene-generator.js';
 
@@ -81,13 +81,24 @@ const _sizeFile = async file => {
 const SceneGeneratorComponent = () => {
   const [step, setStep] = useState(1);
   const [prompt, setPrompt] = useState(prompts.world);
+  const [sceneRenderer, setSceneRenderer] = useState(null);
   const [busy, setBusy] = useState(false);
+
+  const canvasRef = useRef();
 
   const _addPanel = async file => {
     setBusy(true);
     try {
       file = await _sizeFile(file);
-      await sceneGenerator.generate(file); // XXX make this return the package, and keep the renderer separate
+      const scenePackage = await sceneGenerator.generate(file);
+
+      /* if (!canvasRef.current) {
+        debugger;
+      } */
+      const sceneRenderer = sceneGenerator.createRenderer(canvasRef.current);
+      sceneRenderer.setPackage(scenePackage);
+
+      setSceneRenderer(sceneRenderer);
       setStep(2);
     } finally {
       setBusy(false);
@@ -111,12 +122,14 @@ const SceneGeneratorComponent = () => {
     document.addEventListener('drop', drop);
     const keydown = e => {
       if (!e.repeat) {
+        console.log('got key', e.key);
         switch (e.key) {
           case ' ': {
             if (step === 2) {
               e.preventDefault();
               e.stopPropagation();
               // XXX re-render
+              console.log('re-render');
             }
             break;
           }
@@ -147,6 +160,7 @@ const SceneGeneratorComponent = () => {
         }
       }} />Upload File</a></div>
       <div>or, <b>Drag and Drop</b></div>
+      <div className={styles.canvasWrap} ref={canvasRef} />
     </div>
   );
 };
