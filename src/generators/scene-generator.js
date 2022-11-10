@@ -116,10 +116,10 @@ export class SceneGenerator {
       arrayBuffer: pointCloudArrayBuffer,
     } = await getPointCloud(blob);
     const pointCloudCanvas = pointCloudArrayBuffer2canvas(pointCloudArrayBuffer);
-    console.log('got point cloud', {
-      pointCloudHeaders,
-      pointCloudCanvas,
-    });
+    // console.log('got point cloud', {
+    //   pointCloudHeaders,
+    //   pointCloudCanvas,
+    // });
     document.body.appendChild(pointCloudCanvas);
 
     // run ransac
@@ -255,6 +255,8 @@ export class SceneGenerator {
       const scene = new THREE.Scene();
       // scene.background = new THREE.Color(0x0000FF);
       const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
+      camera.fov = Number(pointCloudHeaders['x-fov']);
+      camera.updateProjectionMatrix();
 
       // lights
       const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
