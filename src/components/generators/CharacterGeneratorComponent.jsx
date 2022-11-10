@@ -20,26 +20,7 @@ const vqaQueries = [
 
 //
 
-if (typeof window !== 'undefined') {
-  document.addEventListener('dragover', e => {
-    e.preventDefault();
-    e.stopPropagation();
-  });
-  document.addEventListener('drop', async e => {
-    e.preventDefault();
-    e.stopPropagation();
-    const files = e.dataTransfer.files;
-    const file = files[0];
-    if (file) {
-      // const u = URL.createObjectURL(file);
-      await sceneGenerator.generate(file);
-      // URL.revokeObjectURL(u);
-    }
-  });
-}
-
-//
-
+const numImages = 4;
 const CharacterGeneratorComponent = () => {
   const [prompt, setPrompt] = useState(prompts.character);
   
