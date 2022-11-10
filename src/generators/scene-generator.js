@@ -455,86 +455,148 @@ class SceneRenderer {
         fullscreenScene.autoUpdate = false;
 
         const fullscreenCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+        
+        // copy the renderer canvas
+        const swapCanvas = document.createElement('canvas');
+        swapCanvas.width = canvas.width;
+        swapCanvas.height = canvas.height;
+        const swapContext = swapCanvas.getContext('2d');
+        swapContext.drawImage(renderer.domElement, 0, 0);
 
-        // run a few times
-        for (let i = 0; i < 50; i++) {
-          const fullscreenGeometry = new THREE.PlaneBufferGeometry(2, 2);
-          const fullscreenMaterial = new THREE.ShaderMaterial({
-            uniforms: {
-              size: {
-                value: new THREE.Vector2(renderer.domElement.width, renderer.domElement.height),
-                needsUpdate: true,
-              },
-              map: {
-                value: new THREE.Texture(renderer.domElement),
-                needsUpdate: true,
-              },
+        const swapCanvasTexture = new THREE.Texture(swapCanvas);
+        swapCanvasTexture.needsUpdate = true;
+        swapCanvasTexture.minFilter = THREE.NearestFilter;
+        swapCanvasTexture.magFilter = THREE.NearestFilter;
+
+        const fullscreenGeometry = new THREE.PlaneBufferGeometry(2, 2);
+        const fullscreenMaterial = new THREE.ShaderMaterial({
+          uniforms: {
+            size: {
+              value: new THREE.Vector2(renderer.domElement.width, renderer.domElement.height),
+              needsUpdate: true,
             },
-            vertexShader: `\
-              varying vec2 vUv;
-              void main() {
-                vUv = uv;
-                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-              }
-            `,
-            fragmentShader: `\
-              varying vec2 vUv;
-              uniform sampler2D map;
+            map: {
+              value: swapCanvasTexture,
+              needsUpdate: true,
+            },
+          },
+          vertexShader: `\
+            varying vec2 vUv;
+            void main() {
+              vUv = uv;
+              gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+            }
+          `,
+          fragmentShader: `\
+            varying vec2 vUv;
+            uniform vec2 size;
+            uniform sampler2D map;
 
-              vec3 arr[9];
-              void bubbleSort() {
-                  bool swapped = true;
-                  int j = 0;
-                  float tmp;
-                  for (int c = 0; c < 3; c--)
-                  {
-                      if (!swapped)
-                          break;
-                      swapped = false;
-                      j++;
-                      for (int i = 0; i < 3; i++)
-                      {
-                          if (i >= 3 - j)
-                              break;
-                          if (arr[i] > arr[i + 1])
-                          {
-                              tmp = arr[i];
-                              arr[i] = arr[i + 1];
-                              arr[i + 1] = tmp;
-                              swapped = true;
-                          }
-                      }
-                  }
-              }
-
-              void main() {
-                vec4 color = texture2D(map, vUv);
-                if (map.a == 0.) {
-                  // sample 3x3 to find the most common color around ourselves
-                  int index = 0;
-                  for (int dy = -1; dy <= 1; dy++) {
-                    for (int dx = -1; dx <= 1; dx++) {
-                      vec3 c = texture2D(map, vUv + vec2(dx, dy) / size).rgb;
-                      arr[index] = c; // XXX need a struct
-                      index++;
-                    }
-                  }
-                  bubbleSort();
-                  gl_FragColor = vec4(arr[8], 1.);
-                } else {
-                  gl_FragColor = color;
+            vec3 colors[9];
+            // float distances[9];
+            float colorsCount[9];
+            void addColor(vec4 color, int dx, int dy) {
+              for (int i = 0; i < 9; i++) {
+                if (colors[i] == color.rgb) {
+                  colorsCount[i] += 1.;
+                  return;
+                } else if (colorsCount[i] == 0.) {
+                  colors[i] = color.rgb;
+                  colorsCount[i] = 1.;
+                  return;
                 }
               }
-            `,
-          });
-          const fullscreenMesh = new THREE.Mesh(fullscreenGeometry, fullscreenMaterial);
-          fullscreenMesh.frustumCulled = false;
+            }
+            vec3 getMostCommonColor() {
+              float maxCount = 0.;
+              vec3 maxColor = vec3(0.);
+              for (int i = 0; i < 9; i++) {
+                if (colorsCount[i] > maxCount) {
+                  maxCount = colorsCount[i];
+                  maxColor = colors[i];
+                }
+              }
+              return maxColor;
+            }
+            void bubbleSort() {
+                bool swapped = true;
+                int j = 0;
+                for (int c = 0; c < 3; c--)
+                {
+                    if (!swapped)
+                        break;
+                    swapped = false;
+                    j++;
+                    for (int i = 0; i < 3; i++)
+                    {
+                        if (i >= 3 - j)
+                            break;
+                        if (colorsCount[i] > colorsCount[i + 1])
+                        {
+                            vec3 tmpColor = colors[i];
+                            colors[i] = colors[i + 1];
+                            colors[i + 1] = tmpColor;
 
-          fullscreenScene.add(fullscreenMesh);
+                            float tmpColorsCount = colorsCount[i];
+                            colorsCount[i] = colorsCount[i + 1];
+                            colorsCount[i + 1] = tmpColorsCount;
 
-          // render the scene
+                            swapped = true;
+                        }
+                    }
+                }
+            }
+
+            void main() {
+              vec4 color = texture2D(map, vUv);
+              vec3 detectedColor = vec3(0.);
+              if (color.a == 0.) {
+                // accumulate the colors around us
+                for (int dy = -1; dy <= 1; dy += 2) {
+                  for (int dx = -1; dx <= 1; dx += 2) {
+                    vec4 c = texture2D(map, vUv + /* vec2(0.5) / size + */ vec2(dx, dy) / size);
+                    if (c.a > 0.) {
+                      addColor(c, dx, dy);
+                      detectedColor = c.rgb;
+                    }
+                  }
+                }
+                bubbleSort();
+                vec3 c = getMostCommonColor();
+                /* if (c == vec3(0.)) {
+                  c = vec3(0., 1., 0.);
+                } */
+                if (detectedColor == vec3(0.)) {
+                  gl_FragColor = color;
+                } else {
+                  // gl_FragColor = vec4(1., 0., 0., 1.);
+                  gl_FragColor = vec4(detectedColor, 1.); // XXX alpha = (size.x - (closestDistance + extraDistance)) / size.x
+                  // gl_FragColor = vec4(0., 1., 0., 1.);
+                }
+              } else {
+                gl_FragColor = color;
+              }
+            }
+          `,
+          transparent: true,
+          depthTest: false,
+          depthWrite: false,
+        });
+        const fullscreenMesh = new THREE.Mesh(fullscreenGeometry, fullscreenMaterial);
+        fullscreenMesh.frustumCulled = false;
+
+        fullscreenScene.add(fullscreenMesh);
+
+        // run a few times
+        console.time('scanRender');
+        const maxDistance = Math.ceil(1024 * Math.SQRT2);
+        for (let i = 0; i < maxDistance; i++) {
           renderer.render(fullscreenScene, fullscreenCamera);
+          // copy the result to the swap canvas
+          swapContext.drawImage(renderer.domElement, 0, 0);
+          swapCanvasTexture.needsUpdate = true;
         }
+        console.timeEnd('scanRender');
       }
       const canvas2 = document.createElement('canvas');
       canvas2.width = canvas.width;
