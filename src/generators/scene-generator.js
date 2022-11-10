@@ -8,7 +8,9 @@ import {
   getPointCloud,
   pointCloudArrayBuffer2canvas,
   pointCloudArrayBufferToPositionAttributeArray,
+  applySkybox,
   pointCloudArrayBufferToColorAttributeArray,
+  skyboxDistance,
 } from '../clients/reconstruction-client.js';
 
 import {prompts} from '../constants/prompts.js';
@@ -62,6 +64,33 @@ function drawLabelCanvas(img, boundingBoxLayers) {
 const blockEvent = e => {
   e.preventDefault();
   e.stopPropagation();
+};
+const _isPointInSkybox = (geometry, i) => {
+  const z = geometry.attributes.position.array[i * 3 + 2];
+  return z > -skyboxDistance;
+};
+const _cutSkybox = geometry => {
+  // copy over only the triangles that are all on one side of the skybox bounds
+  const newIndices = new geometry.index.array.constructor(geometry.index.array.length);
+  let numIndices = 0;
+  for (let i = 0; i < geometry.index.count; i += 3) {
+    const a = geometry.index.array[i + 0];
+    const b = geometry.index.array[i + 1];
+    const c = geometry.index.array[i + 2];
+    const aInSkybox = _isPointInSkybox(geometry, a);
+    const bInSkybox = _isPointInSkybox(geometry, b);
+    const cInSkybox = _isPointInSkybox(geometry, c);
+    if (aInSkybox === bInSkybox && bInSkybox === cInSkybox) {
+      newIndices[numIndices + 0] = a;
+      newIndices[numIndices + 1] = b;
+      newIndices[numIndices + 2] = c;
+      numIndices += 3;
+    } else {
+      console.log('cut point');
+    }
+  }
+  // set the new indices
+  geometry.setIndex(new THREE.BufferAttribute(newIndices.subarray(0, numIndices), 1));
 };
 
 //
@@ -193,9 +222,11 @@ class SceneRenderer {
 
     // scene mesh
     const geometry = new THREE.PlaneBufferGeometry(1, 1, img.width - 1, img.height - 1);
-    pointCloudArrayBufferToPositionAttributeArray(pointCloudArrayBuffer, geometry.attributes.position.array, 1/img.width, false);
+    pointCloudArrayBufferToPositionAttributeArray(pointCloudArrayBuffer, geometry.attributes.position.array, 1/img.width);
     geometry.setAttribute('color', new THREE.BufferAttribute(new Uint8Array(pointCloudArrayBuffer.byteLength / pointcloudStride * 3), 3, true));
     pointCloudArrayBufferToColorAttributeArray(labelImg, geometry.attributes.color.array);
+    _cutSkybox(geometry);
+    applySkybox(geometry.attributes.position.array);
     const map = new THREE.Texture(img);
     map.needsUpdate = true;
     /* const material = new THREE.ShaderMaterial({
@@ -323,7 +354,8 @@ export class SceneGenerator {
     const planeMatrices = [];
     {
       const geometry = new THREE.PlaneBufferGeometry(1, 1, img.width - 1, img.height - 1);
-      pointCloudArrayBufferToPositionAttributeArray(pointCloudArrayBuffer, geometry.attributes.position.array, 1/img.width, true);
+      pointCloudArrayBufferToPositionAttributeArray(pointCloudArrayBuffer, geometry.attributes.position.array, 1/img.width);
+      applySkybox(geometry.attributes.position.array);
 
       // keep only a fraction of the points
       const fraction = 16;

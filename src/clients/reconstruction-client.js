@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import materialColors from '../constants/material-colors.js';
 
-const skyboxDistance = 5;
-const skyboxScaleFactor = 5;
+export const skyboxDistance = 5;
+export const skyboxScaleFactor = 5;
 export const pointcloudStride = 4 + 4 + 4 + 1 + 1 + 1;
 
 export function pointCloudArrayBuffer2canvas(arrayBuffer) {
@@ -38,7 +38,7 @@ export function pointCloudArrayBuffer2canvas(arrayBuffer) {
   ctx.putImageData(imageData, 0, 0);
   return canvas;
 }
-export function pointCloudArrayBufferToPositionAttributeArray(arrayBuffer, float32Array, scaleFactor, raw) { // result in float32Array
+export function pointCloudArrayBufferToPositionAttributeArray(arrayBuffer, float32Array, scaleFactor) { // result in float32Array
   const numPixels = arrayBuffer.byteLength / pointcloudStride;
   const width = Math.sqrt(numPixels);
   const height = width;
@@ -55,23 +55,30 @@ export function pointCloudArrayBufferToPositionAttributeArray(arrayBuffer, float
     y *= -scaleFactor;
     z *= -scaleFactor;
 
-    if (z <= -skyboxDistance) {
-      x *= skyboxScaleFactor;
-      y *= skyboxScaleFactor;
-      z *= skyboxScaleFactor;
-    }
-
-    /* if (raw) {
-      y *= -1;
-      z *= -1;
-    } */
-
     float32Array[j + 0] = x;
     float32Array[j + 1] = y;
     float32Array[j + 2] = z;
   }
+}
 
-  return float32Array;
+export function applySkybox(float32Array) { // // result in float32Array
+  const numPixels = float32Array.length / 3;
+  const width = Math.sqrt(numPixels);
+  const height = width;
+  if (width * height !== numPixels) {
+    throw new Error('invalid point cloud dimensions');
+  }
+  for (let i = 0, j = 0; i < float32Array.length; i += 3, j += 1) {
+    const x = float32Array[i + 0];
+    const y = float32Array[i + 1];
+    const z = float32Array[i + 2];
+
+    if (z <= -skyboxDistance) {
+      float32Array[i + 0] *= skyboxScaleFactor;
+      float32Array[i + 1] *= skyboxScaleFactor;
+      float32Array[i + 2] *= skyboxScaleFactor;
+    }
+  }
 }
 
 export async function getPointCloud(blob) {
