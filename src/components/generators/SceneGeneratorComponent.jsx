@@ -45,6 +45,45 @@ const SceneGeneratorComponent = () => {
   const _addPanel = async file => {
     setBusy(true);
     try {
+      // raed the image
+      const image = await new Promise((accept, reject) => {
+        const img = new Image();
+        img.onload = () => {
+          accept(img);
+          cleanup();
+        };
+        img.onerror = err => {
+          reject(err);
+          cleanup();
+        };
+        img.crossOrigin = 'Anonymous';
+        const u = URL.createObjectURL(file);
+        img.src = u;
+        const cleanup = () => {
+          URL.revokeObjectURL(u);
+        };
+      });
+
+      // if necessary, resize the image via contain mode
+      if (image.width !== 1024 || image.height !== 1024) {
+        const canvas = document.createElement('canvas');
+        canvas.width = 1024;
+        canvas.height = 1024;
+        const ctx = canvas.getContext('2d');
+        // ctx.fillStyle = 'white';
+        // ctx.fillRect(0, 0, 1024, 1024);
+        const sx = Math.max(0, (image.width - image.height) / 2);
+        const sy = Math.max(0, (image.height - image.width) / 2);
+        const sw = Math.min(image.width, image.height);
+        const sh = Math.min(image.width, image.height);
+        ctx.drawImage(image, sx, sy, sw, sh, 0, 0, 1024, 1024);
+        file = await new Promise((accept, reject) => {
+          canvas.toBlob(blob => {
+            accept(blob);
+          });
+        });
+      }
+
       await sceneGenerator.generate(file);
     } finally {
       setBusy(false);
