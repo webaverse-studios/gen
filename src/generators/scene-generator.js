@@ -407,6 +407,7 @@ class SceneRenderer {
       const canvas = document.createElement('canvas');
       canvas.width = this.renderer.domElement.width;
       canvas.height = this.renderer.domElement.height;
+      document.body.appendChild(canvas);
 
       // create a copy of this.sceneMesh with a new material
       const sceneMesh2 = this.sceneMesh.clone();
@@ -416,7 +417,7 @@ class SceneRenderer {
           flat varying vec3 vColor;
           void main() {
             float fIndex = float(gl_VertexID);
-            float r = floor(fIndex / 65536);
+            float r = floor(fIndex / 65536.);
             fIndex -= r * 65536.;
             float g = floor(fIndex / 256.);
             fIndex -= g * 256.;
@@ -435,6 +436,7 @@ class SceneRenderer {
       this.scene.remove(this.sceneMesh);
       this.scene.add(sceneMesh2);
 
+      // create a new non-antialiased renderer
       const renderer = new THREE.WebGLRenderer({
         canvas,
         alpha: true,
@@ -442,11 +444,110 @@ class SceneRenderer {
         preserveDrawingBuffer: true,
       });
       renderer.render(this.scene, this.camera);
-      
-      this.scene.remove(sceneMesh2);
-      this.scene.add(this.sceneMesh);
 
-      return canvas;
+      // fill in the gaps in the canvas by re-rendering a full screen shader
+      { 
+        this.scene.remove(sceneMesh2);
+        this.scene.add(this.sceneMesh);
+
+        // set up the scene
+        const fullscreenScene = new THREE.Scene();
+        fullscreenScene.autoUpdate = false;
+
+        const fullscreenCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+
+        // run a few times
+        for (let i = 0; i < 50; i++) {
+          const fullscreenGeometry = new THREE.PlaneBufferGeometry(2, 2);
+          const fullscreenMaterial = new THREE.ShaderMaterial({
+            uniforms: {
+              size: {
+                value: new THREE.Vector2(renderer.domElement.width, renderer.domElement.height),
+                needsUpdate: true,
+              },
+              map: {
+                value: new THREE.Texture(renderer.domElement),
+                needsUpdate: true,
+              },
+            },
+            vertexShader: `\
+              varying vec2 vUv;
+              void main() {
+                vUv = uv;
+                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+              }
+            `,
+            fragmentShader: `\
+              varying vec2 vUv;
+              uniform sampler2D map;
+
+              vec3 arr[9];
+              void bubbleSort() {
+                  bool swapped = true;
+                  int j = 0;
+                  float tmp;
+                  for (int c = 0; c < 3; c--)
+                  {
+                      if (!swapped)
+                          break;
+                      swapped = false;
+                      j++;
+                      for (int i = 0; i < 3; i++)
+                      {
+                          if (i >= 3 - j)
+                              break;
+                          if (arr[i] > arr[i + 1])
+                          {
+                              tmp = arr[i];
+                              arr[i] = arr[i + 1];
+                              arr[i + 1] = tmp;
+                              swapped = true;
+                          }
+                      }
+                  }
+              }
+
+              void main() {
+                vec4 color = texture2D(map, vUv);
+                if (map.a == 0.) {
+                  // sample 3x3 to find the most common color around ourselves
+                  int index = 0;
+                  for (int dy = -1; dy <= 1; dy++) {
+                    for (int dx = -1; dx <= 1; dx++) {
+                      vec3 c = texture2D(map, vUv + vec2(dx, dy) / size).rgb;
+                      arr[index] = c; // XXX need a struct
+                      index++;
+                    }
+                  }
+                  bubbleSort();
+                  gl_FragColor = vec4(arr[8], 1.);
+                } else {
+                  gl_FragColor = color;
+                }
+              }
+            `,
+          });
+          const fullscreenMesh = new THREE.Mesh(fullscreenGeometry, fullscreenMaterial);
+          fullscreenMesh.frustumCulled = false;
+
+          fullscreenScene.add(fullscreenMesh);
+
+          // render the scene
+          renderer.render(fullscreenScene, fullscreenCamera);
+        }
+      }
+      const canvas2 = document.createElement('canvas');
+      canvas2.width = canvas.width;
+      canvas2.height = canvas.height;
+      const context2 = canvas2.getContext('2d');
+      context2.drawImage(canvas, 0, 0);
+      const imageData = context2.getImageData(0, 0, canvas.width, canvas.height);
+      // for (let y = 0; y < canvas.height; y++) {
+      //   for (let x = 0; x < canvas.width; x++) {          
+      //   }
+      // }
+
+      return canvas2;
     })();
     document.body.appendChild(movedCanvas);
 
