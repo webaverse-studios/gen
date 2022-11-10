@@ -464,6 +464,7 @@ class SceneRenderer {
         swapContext.drawImage(renderer.domElement, 0, 0);
 
         const swapCanvasTexture = new THREE.Texture(swapCanvas);
+        swapCanvasTexture.type = THREE.FloatType;
         swapCanvasTexture.needsUpdate = true;
         swapCanvasTexture.minFilter = THREE.NearestFilter;
         swapCanvasTexture.magFilter = THREE.NearestFilter;
@@ -493,16 +494,18 @@ class SceneRenderer {
             uniform sampler2D map;
 
             vec3 colors[9];
-            // float distances[9];
             float colorsCount[9];
             void addColor(vec4 color, int dx, int dy) {
+              float d = sqrt(float(dx*dx + dy*dy));
+
               for (int i = 0; i < 9; i++) {
                 if (colors[i] == color.rgb) {
-                  colorsCount[i] += 1.;
+                  // scale the count by distance
+                  colorsCount[i] += 2. - 1. / d;
                   return;
                 } else if (colorsCount[i] == 0.) {
                   colors[i] = color.rgb;
-                  colorsCount[i] = 1.;
+                  colorsCount[i] = 2. - 1. / d;
                   return;
                 }
               }
@@ -549,29 +552,49 @@ class SceneRenderer {
 
             void main() {
               vec4 color = texture2D(map, vUv);
-              vec3 detectedColor = vec3(0.);
               if (color.a == 0.) {
+
                 // accumulate the colors around us
                 for (int dy = -1; dy <= 1; dy += 2) {
-                  for (int dx = -1; dx <= 1; dx += 2) {
-                    vec4 c = texture2D(map, vUv + /* vec2(0.5) / size + */ vec2(dx, dy) / size);
-                    if (c.a > 0.) {
-                      addColor(c, dx, dy);
-                      detectedColor = c.rgb;
-                    }
+                  int dx = 0;
+                  vec4 c = texture2D(map, vUv + /* vec2(0.5) / size + */ vec2(dx, dy) / size);
+                  if (c.a > 0.) {
+                    addColor(c, dx, dy);
+                  }
+                }
+                for (int dx = -1; dx <= 1; dx += 2) {
+                  int dy = 0;
+                  vec4 c = texture2D(map, vUv + /* vec2(0.5) / size + */ vec2(dx, dy) / size);
+                  if (c.a > 0.) {
+                    addColor(c, dx, dy);
                   }
                 }
                 bubbleSort();
-                vec3 c = getMostCommonColor();
-                /* if (c == vec3(0.)) {
-                  c = vec3(0., 1., 0.);
-                } */
-                if (detectedColor == vec3(0.)) {
-                  gl_FragColor = color;
+
+                // get the closest color
+                vec3 commonColor = getMostCommonColor();
+
+                // get the distance to the closest color
+                float minDistance = 1e10;
+                for (int dx = -1; dx <= 1; dx += 2) {
+                  for (int dy = -1; dy <= 1; dy += 2) {
+                    vec4 c = texture2D(map, vUv + /* vec2(0.5) / size + */ vec2(dx, dy) / size);
+                    if (c.rgb == commonColor) {
+                      float decodedDistance = (1. - c.a) * size.x;
+                      float extraDistance = sqrt(float(dx * dx + dy * dy));
+                      float distance = decodedDistance - extraDistance;
+                      if (distance < minDistance) {
+                        minDistance = distance;
+                      }
+                    }
+                  }
+                }
+
+                if (commonColor == vec3(0.)) {
+                  gl_FragColor = vec4(commonColor, 0.);
                 } else {
-                  // gl_FragColor = vec4(1., 0., 0., 1.);
-                  gl_FragColor = vec4(detectedColor, 1.); // XXX alpha = (size.x - (closestDistance + extraDistance)) / size.x
-                  // gl_FragColor = vec4(0., 1., 0., 1.);
+                  // float a = a = (size.x - (closestDistance + extraDistance)) / size.x;
+                  gl_FragColor = vec4(commonColor, 1.);
                 }
               } else {
                 gl_FragColor = color;
