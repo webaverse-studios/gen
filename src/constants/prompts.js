@@ -6,7 +6,7 @@ export const prompts = {
   // world: `bird's eye view, tropical jungle with sci fi metal gate, dinosaur, ghibli style, digital art`,
   world: `large jungle path, sci fi industrial metal gate and ramp, dinosaur, ghibli style, digital art`,
   // world: `standing on a skyscraper at the solarpunk city, sakura trees, lush vegetation, ancient technology, ghibli style, digital art`,
-  character: `cute young anime girl wearing a hoodie, full body, white background, lines, digital art`,
+  character: `cute young anime girl wearing a hoodie, full body, white background, digital art`,
   // const prompt = `magical alien grass blades on a white background, studio ghibli anime style, digital art`;
   // const prompt = `ancient magical cloudy potion antigravity on a white background, studio ghibli anime style, digital art`;
   // const prompt = `high tech energy sword with hexagon pattern and mysterious glyphs on it, white background, video game item concept art render, trending on ArtStation, digital art`;
