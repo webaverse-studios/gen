@@ -125,8 +125,8 @@ const SceneGeneratorComponent = () => {
             if (step === 2) {
               e.preventDefault();
               e.stopPropagation();
-              // XXX re-render
-              console.log('re-render');
+
+              sceneRenderer.renderBackground();
             }
             break;
           }
@@ -140,7 +140,7 @@ const SceneGeneratorComponent = () => {
       document.removeEventListener('drop', drop);
       document.removeEventListener('keydown', keydown);
     };
-  }, []);
+  }, [sceneRenderer]);
 
   return (
     <div className={styles.generator}>

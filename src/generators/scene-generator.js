@@ -118,6 +118,7 @@ class SceneRenderer {
       canvas,
       alpha: true,
       antialias: true,
+      preserveDrawingBuffer: true,
     });
     this.renderer = renderer;
 
@@ -157,7 +158,7 @@ class SceneRenderer {
       }),
     );
     cubeMesh.frustumCulled = false;
-    scene.add(cubeMesh);
+    // scene.add(cubeMesh);
 
     this.listen();
 
@@ -303,8 +304,35 @@ class SceneRenderer {
       planesMesh.instanceMatrix.needsUpdate = true;
       return planesMesh;
     })();
-    this.scene.add(planesMesh);
+    // this.scene.add(planesMesh);
     this.planesMesh = planesMesh;
+  }
+  async renderBackground() {
+    const backgroundCanvas = document.createElement('canvas');
+    backgroundCanvas.classList.add('backgroundCanvas');
+    backgroundCanvas.width = this.renderer.domElement.width;
+    backgroundCanvas.height = this.renderer.domElement.height;
+    backgroundCanvas.style.cssText = `\
+      background: red;
+    `;
+    const backgroundContext = backgroundCanvas.getContext('2d');
+    backgroundContext.drawImage(this.renderer.domElement, 0, 0);
+    document.body.appendChild(backgroundCanvas);
+
+    const blob = await new Promise((accept, reject) => {
+      backgroundCanvas.toBlob(blob => {
+        accept(blob);
+      });
+    });
+    const maskBlob = blob; // same as blob
+
+    console.log('edit', [blob, maskBlob, this.prompt]);
+    const editedImg = await imageAiClient.editImg(blob, maskBlob, this.prompt);
+    editedImg.classList.add('editImg');
+    document.body.appendChild(editedImg);
+
+    // const imageData = backgroundContext.getImageData(0, 0, backgroundCanvas.width, backgroundCanvas.height);
+    // debugger;
   }
 }
 
