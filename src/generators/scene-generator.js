@@ -89,6 +89,47 @@ const _cutSkybox = geometry => {
   // set the new indices
   geometry.setIndex(new THREE.BufferAttribute(newIndices.subarray(0, numIndices), 1));
 };
+const _clipGeometryToMask = (geometry, maskCanvas) => {
+  // draw to canvas
+  const canvas = document.createElement('canvas');
+  canvas.width = maskCanvas.width;
+  canvas.height = maskCanvas.height;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(maskCanvas, 0, 0);
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+  const _isPointTransparent = i => {
+    const a = imageData.data[i * 4 + 3];
+    return a === 0;
+  };
+  // console.log('computing index', geometry.index.array.length);
+  {
+    const indices = [];
+    const gridX = maskCanvas.width;
+    const gridY = maskCanvas.height;
+    const gridX1 = gridX + 1;
+    const gridY1 = gridY + 1;
+    for (let iy = 0; iy < gridY; iy++) {
+      for (let ix = 0; ix < gridX; ix++) {
+        const a = ix + gridX1 * iy;
+        const b = ix + gridX1 * (iy + 1);
+        const c = (ix + 1) + gridX1 * (iy + 1);
+        const d = (ix + 1) + gridX1 * iy;
+
+        const aO = _isPointTransparent(a);
+        const bO = _isPointTransparent(b);
+        const cO = _isPointTransparent(c);
+        const dO = _isPointTransparent(d);
+
+        (aO || bO || cO) && indices.push(a, b, d);
+        (bO || cO || dO) && indices.push(b, c, d);
+      }
+    }
+    console.log('set index', indices);
+    // set the new indices on the geometry
+    geometry.setIndex(new THREE.BufferAttribute(Uint32Array.from(indices), 1));
+  }
+};
 
 //
 
@@ -308,6 +349,9 @@ class SceneRenderer {
     this.planesMesh = planesMesh;
   }
   async renderBackground() {
+    const cameraPosition = this.camera.position.clone();
+    const cameraQuaternion = this.camera.quaternion.clone();
+
     const backgroundCanvas = document.createElement('canvas');
     backgroundCanvas.classList.add('backgroundCanvas');
     backgroundCanvas.width = this.renderer.domElement.width;
@@ -325,16 +369,59 @@ class SceneRenderer {
       });
     });
     const maskBlob = blob; // same as blob
+    const maskImg = await blob2img(maskBlob);
 
-    console.log('edit', [blob, maskBlob, this.prompt]);
-    const editedImg = await imageAiClient.editImg(blob, maskBlob, this.prompt);
+    // console.log('edit', [blob, maskBlob, this.prompt]);
+    const editedImgBlob = await imageAiClient.editImgBlob(blob, maskBlob, this.prompt);
+    const editedImg = await blob2img(editedImgBlob);
     editedImg.classList.add('editImg');
     document.body.appendChild(editedImg);
 
-    // const imageData = backgroundContext.getImageData(0, 0, backgroundCanvas.width, backgroundCanvas.height);
-    // debugger;
+    // get point cloud
+    const {
+      headers: pointCloudHeaders,
+      arrayBuffer: pointCloudArrayBuffer,
+    } = await getPointCloud(blob);
+    const pointCloudCanvas = pointCloudArrayBuffer2canvas(pointCloudArrayBuffer);
+    document.body.appendChild(pointCloudCanvas);
+
+    const geometry = new THREE.PlaneBufferGeometry(1, 1, editedImg.width - 1, editedImg.height - 1);
+    pointCloudArrayBufferToPositionAttributeArray(pointCloudArrayBuffer, geometry.attributes.position.array, 1/editedImg.width);
+    // _clipGeometryToMask(geometry, maskImg);
+    geometry.computeVertexNormals();
+    const material = new THREE.MeshPhongMaterial({
+      color: 0xff0000,
+    });
+    const backgroundMesh = new THREE.Mesh(geometry, material);
+    backgroundMesh.position.copy(cameraPosition);
+    backgroundMesh.quaternion.copy(cameraQuaternion);
+    backgroundMesh.updateMatrixWorld();
+    backgroundMesh.frustumCulled = false;
+    this.scene.add(backgroundMesh);
+
+    const fov = Number(pointCloudHeaders['x-fov']);
+    this.camera.fov = fov;
+    this.camera.updateProjectionMatrix();
   }
 }
+
+//
+
+const _detectPlanes = async points => {
+  console.time('ransac');
+  const res = await fetch(`https://depth.webaverse.com/ransac?n=${16}&threshold=${0.1}&init_n=${1500}`, {
+    method: 'POST',
+    body: points,
+  });
+  if (res.ok) {
+    const planesJson = await res.json();
+    console.timeEnd('ransac');
+    return planesJson;
+  } else {
+    console.timeEnd('ransac');
+    throw new Error('failed to detect planes');
+  }
+};
 
 //
 
@@ -400,67 +487,56 @@ export class SceneGenerator {
         points2.set(tmp, j*3);
       }
 
-      console.time('ransac');
-      const res = await fetch(`https://depth.webaverse.com/ransac?n=${16}&threshold=${0.1}&init_n=${1500}`, {
-        method: 'POST',
-        body: points2.buffer,
-      });
-      console.timeEnd('ransac');
-      if (res.ok) {
-        const planesJson = await res.json();
-        console.log('planes', planesJson);
-
-
-        // draw the planes
-        for (let i = 0; i < planesJson.length; i++) {
-          const plane = planesJson[i];
-          const [planeEquation, planePointIndices] = plane; // XXX note the planeIndices are computed relative to the current points set after removing all previous planes; these are not global indices
-          
-          const normal = new THREE.Vector3(planeEquation[0], planeEquation[1], planeEquation[2]);
-          const distance = planeEquation[3];
-          
-          // cut out the plane points
-          const inlierPlaneFloats = [];
-          const outlierPlaneFloats = [];
-          for (let j = 0; j < points2.length; j += 3) {
-            if (planePointIndices.includes(j/3)) {
-              inlierPlaneFloats.push(points2[j], points2[j+1], points2[j+2]);
-            } else {
-              outlierPlaneFloats.push(points2[j], points2[j+1], points2[j+2]);
-            }
+      // detect planes
+      const planesJson = await _detectPlanes(points2);
+      console.log('planes', planesJson);
+      // draw detected planes
+      for (let i = 0; i < planesJson.length; i++) {
+        const plane = planesJson[i];
+        const [planeEquation, planePointIndices] = plane; // XXX note the planeIndices are computed relative to the current points set after removing all previous planes; these are not global indices
+        
+        const normal = new THREE.Vector3(planeEquation[0], planeEquation[1], planeEquation[2]);
+        const distance = planeEquation[3];
+        
+        // cut out the plane points
+        const inlierPlaneFloats = [];
+        const outlierPlaneFloats = [];
+        for (let j = 0; j < points2.length; j += 3) {
+          if (planePointIndices.includes(j/3)) {
+            inlierPlaneFloats.push(points2[j], points2[j+1], points2[j+2]);
+          } else {
+            outlierPlaneFloats.push(points2[j], points2[j+1], points2[j+2]);
           }
-
-          // compute the centroid
-          const centroid = new THREE.Vector3();
-          let count = 0;
-          for (let j = 0; j < inlierPlaneFloats.length; j += 3) {
-            centroid.x += inlierPlaneFloats[j];
-            centroid.y += inlierPlaneFloats[j+1];
-            centroid.z += inlierPlaneFloats[j+2];
-            count++;
-          }
-          centroid.divideScalar(count);
-
-          // console.log('got centroid', centroid);
-
-          const m = new THREE.Matrix4().compose(
-            centroid,
-            new THREE.Quaternion().setFromRotationMatrix(
-              new THREE.Matrix4().lookAt(
-                normal,
-                new THREE.Vector3(0, 0, 0),
-                new THREE.Vector3(0, 1, 0),
-              )
-            ),
-            new THREE.Vector3(1, 1, 1)
-          );
-          planeMatrices.push(m);
-
-          // latch new points
-          points2 = Float32Array.from(outlierPlaneFloats);
         }
-      } else {
-        debugger;
+
+        // compute the centroid
+        const centroid = new THREE.Vector3();
+        let count = 0;
+        for (let j = 0; j < inlierPlaneFloats.length; j += 3) {
+          centroid.x += inlierPlaneFloats[j];
+          centroid.y += inlierPlaneFloats[j+1];
+          centroid.z += inlierPlaneFloats[j+2];
+          count++;
+        }
+        centroid.divideScalar(count);
+
+        // console.log('got centroid', centroid);
+
+        const m = new THREE.Matrix4().compose(
+          centroid,
+          new THREE.Quaternion().setFromRotationMatrix(
+            new THREE.Matrix4().lookAt(
+              normal,
+              new THREE.Vector3(0, 0, 0),
+              new THREE.Vector3(0, 1, 0),
+            )
+          ),
+          new THREE.Vector3(1, 1, 1)
+        );
+        planeMatrices.push(m);
+
+        // latch new points
+        points2 = Float32Array.from(outlierPlaneFloats);
       }
     }
 
