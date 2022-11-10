@@ -1,7 +1,9 @@
 // import * as THREE from 'three';
-import {useState} from 'react';
+import {useState, useRef} from 'react';
+import classnames from 'classnames';
 import {prompts} from '../../constants/prompts.js';
 import {CharacterGenerator} from '../../generators/character-generator.js';
+import {mod} from '../../../utils.js';
 
 import styles from '../../../styles/Gen.module.css';
 
@@ -23,15 +25,47 @@ const vqaQueries = [
 const numImages = 4;
 const CharacterGeneratorComponent = () => {
   const [prompt, setPrompt] = useState(prompts.character);
+  const [bodyIndex, setBodyIndex] = useState(0);
+  const [step, setStep] = useState(1);
+  const [busy, setBusy] = useState(false);
   
+  const canvasRef = useRef();
+  
+  const _moveBody = delta => {
+    const nextBodyIndex = mod(bodyIndex + delta, numImages);
+    setBodyIndex(nextBodyIndex);
+  };
+
   return (
     <div className={styles.generator}>
       <input type="text" className={styles.input} value={prompt} onChange={e => {
         setPrompt(e.target.value);
-      }} placeholder={prompts.character} />
+      }} placeholder={prompts.character} disabled={busy} />
       <div className={styles.button} onClick={async () => {
-        await characterGenerator.generate(prompt);
-      }}>Generate</div>
+        setBusy(true);
+        try {
+          // console.log('render', prompt, canvasRef.current);
+          await characterGenerator.generate(prompt, canvasRef.current);
+          setStep(2);
+        } finally {
+          setBusy(false);
+        }
+      }} disabled={busy}>Generate</div>
+      <div className={styles.characterCreator}>
+        {step === 2 ? <div className={classnames(styles.arrow, styles.left)} onClick={async () => {
+          _moveBody(-1);
+        }}>
+          <img src="/images/light-arrow-01.png" className={classnames(styles.img, styles.light)} />
+          <img src="/images/light-arrow-02.png" className={classnames(styles.img, styles.dark)} />
+        </div> : null}
+        <div className={styles.canvasWrap} ref={canvasRef} />
+        {step === 2 ? <div className={classnames(styles.arrow, styles.right)} onClick={async () => {
+          _moveBody(1);
+        }}>
+          <img src="/images/light-arrow-01.png" className={classnames(styles.img, styles.light)} />
+          <img src="/images/light-arrow-02.png" className={classnames(styles.img, styles.dark)} />
+        </div> : null}
+      </div>
     </div>
   );
 };
