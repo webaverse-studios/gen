@@ -397,11 +397,30 @@ class SceneRenderer {
     backgroundMesh.quaternion.copy(cameraQuaternion);
     backgroundMesh.updateMatrixWorld();
     backgroundMesh.frustumCulled = false;
-    this.scene.add(backgroundMesh);
-
+    
     const fov = Number(pointCloudHeaders['x-fov']);
     this.camera.fov = fov;
     this.camera.updateProjectionMatrix();
+    
+    // re-render the canvas from this perspective
+    const movedCanvas = (() => {
+      const canvas = document.createElement('canvas');
+      canvas.width = this.renderer.domElement.width;
+      canvas.height = this.renderer.domElement.height;
+
+      const renderer = new THREE.WebGLRenderer({
+        canvas,
+        alpha: true,
+        // antialias: true,
+        preserveDrawingBuffer: true,
+      });
+      renderer.render(this.scene, this.camera);
+      
+      return canvas;
+    })();
+    document.body.appendChild(movedCanvas);
+
+    this.scene.add(backgroundMesh);
   }
 }
 
