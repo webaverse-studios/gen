@@ -408,6 +408,33 @@ class SceneRenderer {
       canvas.width = this.renderer.domElement.width;
       canvas.height = this.renderer.domElement.height;
 
+      // create a copy of this.sceneMesh with a new material
+      const sceneMesh2 = this.sceneMesh.clone();
+      sceneMesh2.material = new THREE.ShaderMaterial({
+        vertexShader: `\
+          // encode the vertex index into the color attribute
+          flat varying vec3 vColor;
+          void main() {
+            float fIndex = float(gl_VertexID);
+            float r = floor(fIndex / 65536);
+            fIndex -= r * 65536.;
+            float g = floor(fIndex / 256.);
+            fIndex -= g * 256.;
+            float b = fIndex;
+            vColor = vec3(r, g, b) / 255.;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `,
+        fragmentShader: `\
+          flat varying vec3 vColor;
+          void main() {
+            gl_FragColor = vec4(vColor, 1.);
+          }
+        `,
+      });
+      this.scene.remove(this.sceneMesh);
+      this.scene.add(sceneMesh2);
+
       const renderer = new THREE.WebGLRenderer({
         canvas,
         alpha: true,
@@ -416,6 +443,9 @@ class SceneRenderer {
       });
       renderer.render(this.scene, this.camera);
       
+      this.scene.remove(sceneMesh2);
+      this.scene.add(this.sceneMesh);
+
       return canvas;
     })();
     document.body.appendChild(movedCanvas);
