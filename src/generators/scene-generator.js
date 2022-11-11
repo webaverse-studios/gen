@@ -403,11 +403,10 @@ class SceneRenderer {
     this.camera.updateProjectionMatrix();
     
     // re-render the canvas from this perspective
-    const movedCanvas = (() => {
+    {
       const canvas = document.createElement('canvas');
       canvas.width = this.renderer.domElement.width;
       canvas.height = this.renderer.domElement.height;
-      document.body.appendChild(canvas);
 
       // create a copy of this.sceneMesh with a new material
       const sceneMesh2 = this.sceneMesh.clone();
@@ -444,6 +443,16 @@ class SceneRenderer {
         preserveDrawingBuffer: true,
       });
       renderer.render(this.scene, this.camera);
+
+      // copy and display the canvas for debugging
+      {
+        const canvas2 = document.createElement('canvas');
+        canvas2.width = canvas.width;
+        canvas2.height = canvas.height;
+        const context2 = canvas2.getContext('2d');
+        context2.drawImage(canvas, 0, 0);
+        document.body.appendChild(canvas2);
+      }
 
       // fill in the gaps in the canvas by re-rendering a full screen shader
       { 
@@ -493,109 +502,70 @@ class SceneRenderer {
             uniform vec2 size;
             uniform sampler2D map;
 
-            vec3 colors[9];
-            float colorsCount[9];
-            void addColor(vec4 color, int dx, int dy) {
-              float d = sqrt(float(dx*dx + dy*dy));
+            struct ColorPair {
+              vec3 color1;
+              float numColor1;
+              vec3 color2;
+              float numColor2;
+            };
+            ColorPair getMostCommonColorsInRadius(float f) {
+              // use the quarter circle with mirroring to get the most common colors
+              vec3 color1 = vec3(0.);
+              float numColor1 = 0.;
+              vec3 color2 = vec3(0.);
+              float numColor2 = 0.;
 
-              for (int i = 0; i < 9; i++) {
-                if (colors[i] == color.rgb) {
-                  // scale the count by distance
-                  colorsCount[i] += 2. - 1. / d;
-                  return;
-                } else if (colorsCount[i] == 0.) {
-                  colors[i] = color.rgb;
-                  colorsCount[i] = 2. - 1. / d;
-                  return;
-                }
-              }
-            }
-            vec3 getMostCommonColor() {
-              float maxCount = 0.;
-              vec3 maxColor = vec3(0.);
-              for (int i = 0; i < 9; i++) {
-                if (colorsCount[i] > maxCount) {
-                  maxCount = colorsCount[i];
-                  maxColor = colors[i];
-                }
-              }
-              return maxColor;
-            }
-            void bubbleSort() {
-                bool swapped = true;
-                int j = 0;
-                for (int c = 0; c < 3; c--)
-                {
-                    if (!swapped)
-                        break;
-                    swapped = false;
-                    j++;
-                    for (int i = 0; i < 3; i++)
-                    {
-                        if (i >= 3 - j)
-                            break;
-                        if (colorsCount[i] > colorsCount[i + 1])
-                        {
-                            vec3 tmpColor = colors[i];
-                            colors[i] = colors[i + 1];
-                            colors[i + 1] = tmpColor;
+              // sample points in an arc
+              const float maxSamples = 512.;
+              float w = f * 2. + 1.;
+              float numSamples = min(w * w, maxSamples);
+              for (float i = 0.; i < numSamples; i++) {
+                float angle = i / numSamples * 3.14159 / 2.;
+                vec2 duv = vec2(cos(angle), sin(angle)) * f;
 
-                            float tmpColorsCount = colorsCount[i];
-                            colorsCount[i] = colorsCount[i + 1];
-                            colorsCount[i + 1] = tmpColorsCount;
-
-                            swapped = true;
-                        }
+                vec4 color = texture2D(map, vUv + duv / size);
+                if (color.a > 0.) {
+                  if (color.rgb == color1 && numColor1 > 0.) {
+                    numColor1 += 1.;
+                    if (numColor1 > numColor2) {
+                      color2 = color1;
+                      numColor2 = numColor1;
+                      color1 = color.rgb;
+                      numColor1 = 1.;
                     }
+                  } else if (color.rgb == color2 && numColor2 > 0.) {
+                    numColor2 += 1.;
+                    if (numColor2 > numColor1) {
+                      color1 = color2;
+                      numColor1 = numColor2;
+                      color2 = color.rgb;
+                      numColor2 = 1.;
+                    }
+                  } else if (numColor1 == 0.) {
+                    color1 = color.rgb;
+                    numColor1 = 1.;
+                  } else if (numColor2 == 0.) {
+                    color2 = color.rgb;
+                    numColor2 = 1.;
+                  }
                 }
+              }
+              return ColorPair(color1, numColor1, color2, numColor2);
             }
-
+            
+            const float maxDistance = 512.;
+            
             void main() {
               vec4 color = texture2D(map, vUv);
               if (color.a == 0.) {
-
-                // accumulate the colors around us
-                for (int dy = -1; dy <= 1; dy += 2) {
-                  int dx = 0;
-                  vec4 c = texture2D(map, vUv + /* vec2(0.5) / size + */ vec2(dx, dy) / size);
-                  if (c.a > 0.) {
-                    addColor(c, dx, dy);
+                for (float radius = 0.; radius < maxDistance; radius += 1.) {
+                  ColorPair colorPair = getMostCommonColorsInRadius(radius);
+                  if (colorPair.numColor1 > 0.) {
+                    gl_FragColor = vec4(colorPair.color1, radius);
+                    return;
                   }
                 }
-                for (int dx = -1; dx <= 1; dx += 2) {
-                  int dy = 0;
-                  vec4 c = texture2D(map, vUv + /* vec2(0.5) / size + */ vec2(dx, dy) / size);
-                  if (c.a > 0.) {
-                    addColor(c, dx, dy);
-                  }
-                }
-                bubbleSort();
-
-                // get the closest color
-                vec3 commonColor = getMostCommonColor();
-
-                // get the distance to the closest color
-                float minDistance = 1e10;
-                for (int dx = -1; dx <= 1; dx += 2) {
-                  for (int dy = -1; dy <= 1; dy += 2) {
-                    vec4 c = texture2D(map, vUv + /* vec2(0.5) / size + */ vec2(dx, dy) / size);
-                    if (c.rgb == commonColor) {
-                      float decodedDistance = (1. - c.a) * size.x;
-                      float extraDistance = sqrt(float(dx * dx + dy * dy));
-                      float distance = decodedDistance - extraDistance;
-                      if (distance < minDistance) {
-                        minDistance = distance;
-                      }
-                    }
-                  }
-                }
-
-                if (commonColor == vec3(0.)) {
-                  gl_FragColor = vec4(commonColor, 0.);
-                } else {
-                  // float a = a = (size.x - (closestDistance + extraDistance)) / size.x;
-                  gl_FragColor = vec4(commonColor, 1.);
-                }
+                gl_FragColor = vec4(0.);
               } else {
                 gl_FragColor = color;
               }
@@ -612,29 +582,26 @@ class SceneRenderer {
 
         // run a few times
         console.time('scanRender');
-        const maxDistance = Math.ceil(1024 * Math.SQRT2);
-        for (let i = 0; i < maxDistance; i++) {
+        // const maxDistance = Math.ceil(1024 * Math.SQRT2);
+        for (let i = 0; i < 1; i++) {
           renderer.render(fullscreenScene, fullscreenCamera);
           // copy the result to the swap canvas
           swapContext.drawImage(renderer.domElement, 0, 0);
           swapCanvasTexture.needsUpdate = true;
         }
         console.timeEnd('scanRender');
-      }
-      const canvas2 = document.createElement('canvas');
-      canvas2.width = canvas.width;
-      canvas2.height = canvas.height;
-      const context2 = canvas2.getContext('2d');
-      context2.drawImage(canvas, 0, 0);
-      const imageData = context2.getImageData(0, 0, canvas.width, canvas.height);
-      // for (let y = 0; y < canvas.height; y++) {
-      //   for (let x = 0; x < canvas.width; x++) {          
-      //   }
-      // }
 
-      return canvas2;
-    })();
-    document.body.appendChild(movedCanvas);
+        document.body.appendChild(canvas);
+      }
+      // const canvas2 = document.createElement('canvas');
+      // canvas2.width = canvas.width;
+      // canvas2.height = canvas.height;
+      // const context2 = canvas2.getContext('2d');
+      // context2.drawImage(canvas, 0, 0);
+      // const imageData = context2.getImageData(0, 0, canvas.width, canvas.height);
+
+      // return canvas2;
+    }
 
     this.scene.add(backgroundMesh);
   }
