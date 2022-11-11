@@ -23,6 +23,127 @@ const imageAiClient = new ImageAiClient();
 
 //
 
+const floatImageData = imageData => {
+  const result = new Float32Array(
+    imageData.data.buffer,
+    imageData.data.byteOffset,
+    imageData.data.byteLength / Float32Array.BYTES_PER_ELEMENT
+  );
+  const {width, height} = imageData;
+  // flip Y
+  for (let y = 0; y < height / 2; y++) {
+    for (let x = 0; x < width; x++) {
+      const i = y * width + x;
+      const j = (height - 1 - y) * width + x;
+      const tmp = result[i];
+      result[i] = result[j];
+      result[j] = tmp;
+    }
+  }
+  return result;
+};
+const depthVertexShader = `\
+  precision highp float;
+  precision highp int;
+  /* uniform float uVertexOffset;
+  varying vec3 vViewPosition;
+  varying vec2 vUv;
+  varying vec2 vWorldUv;
+  varying vec3 vPos;
+  varying vec3 vNormal; */
+
+  void main() {
+    // vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+    // vec3 newPosition = position + normal * vec3( uVertexOffset, uVertexOffset, uVertexOffset );
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+
+    // vViewPosition = -mvPosition.xyz;
+    // vUv = uv;
+    // vPos = position;
+    // vNormal = normal;
+  }
+`;
+const depthFragmentShader = `\
+  // uniform vec3 uColor;
+  // uniform float uTime;
+  uniform float cameraNear;
+  uniform float cameraFar;
+
+  // varying vec3 vViewPosition;
+  // varying vec2 vUv;
+
+  // varying vec3 vPos;
+  // varying vec3 vNormal;
+
+  #define FLOAT_MAX  1.70141184e38
+  #define FLOAT_MIN  1.17549435e-38
+
+  lowp vec4 encode_float(highp float v) {
+    highp float av = abs(v);
+
+    //Handle special cases
+    if(av < FLOAT_MIN) {
+      return vec4(0.0, 0.0, 0.0, 0.0);
+    } else if(v > FLOAT_MAX) {
+      return vec4(127.0, 128.0, 0.0, 0.0) / 255.0;
+    } else if(v < -FLOAT_MAX) {
+      return vec4(255.0, 128.0, 0.0, 0.0) / 255.0;
+    }
+
+    highp vec4 c = vec4(0,0,0,0);
+
+    //Compute exponent and mantissa
+    highp float e = floor(log2(av));
+    highp float m = av * pow(2.0, -e) - 1.0;
+
+    //Unpack mantissa
+    c[1] = floor(128.0 * m);
+    m -= c[1] / 128.0;
+    c[2] = floor(32768.0 * m);
+    m -= c[2] / 32768.0;
+    c[3] = floor(8388608.0 * m);
+
+    //Unpack exponent
+    highp float ebias = e + 127.0;
+    c[0] = floor(ebias / 2.0);
+    ebias -= c[0] * 2.0;
+    c[1] += floor(ebias) * 128.0;
+
+    //Unpack sign bit
+    c[0] += 128.0 * step(0.0, -v);
+
+    //Scale back to range
+    return c / 255.0;
+  }
+
+  // note: the 0.1s here an there are voodoo related to precision
+  float decode_float(vec4 v) {
+    vec4 bits = v * 255.0;
+    float sign = mix(-1.0, 1.0, step(bits[3], 128.0));
+    float expo = floor(mod(bits[3] + 0.1, 128.0)) * 2.0 +
+                floor((bits[2] + 0.1) / 128.0) - 127.0;
+    float sig = bits[0] +
+                bits[1] * 256.0 +
+                floor(mod(bits[2] + 0.1, 128.0)) * 256.0 * 256.0;
+    return sign * (1.0 + sig / 8388607.0) * pow(2.0, expo);
+  }
+
+  float orthographicDepthToViewZ( const in float linearClipZ, const in float near, const in float far ) {
+    return linearClipZ * ( near - far ) - near;
+  }
+  float perspectiveDepthToViewZ( const in float invClipZ, const in float near, const in float far ) {
+    return ( near * far ) / ( ( far - near ) * invClipZ - far );
+  }
+
+  void main() {
+    float d = gl_FragCoord.z/gl_FragCoord.w;
+    float viewZ = perspectiveDepthToViewZ(d, cameraNear, cameraFar);
+    gl_FragColor = encode_float(viewZ).abgr;
+  }
+`;
+
+//
+
 function drawLabelCanvas(img, boundingBoxLayers) {
   const canvas = document.createElement('canvas');
   canvas.width = img.width;
@@ -442,7 +563,11 @@ class SceneRenderer {
         // antialias: true,
         preserveDrawingBuffer: true,
       });
-      renderer.render(this.scene, this.camera);
+
+      // render color
+      {
+        renderer.render(this.scene, this.camera);
+      }
 
       // copy and display the canvas for debugging
       {
@@ -452,6 +577,61 @@ class SceneRenderer {
         const context2 = canvas2.getContext('2d');
         context2.drawImage(canvas, 0, 0);
         document.body.appendChild(canvas2);
+      }
+
+      // render depth
+      {
+        const depthMaterial = new THREE.ShaderMaterial({
+          uniforms: {
+            cameraNear: {
+              value: 0,
+              needsUpdate: true,
+            },
+            cameraFar: {
+              value: 1,
+              needsUpdate: true,
+            },
+          },
+          vertexShader: depthVertexShader,
+          fragmentShader: depthFragmentShader,
+        });
+
+        const depthRenderTarget = new THREE.WebGLRenderTarget(
+          renderer.domElement.width,
+          renderer.domElement.height,
+          {
+            type: THREE.UnsignedByteType,
+            format: THREE.RGBAFormat,
+          }
+        );
+
+        const _renderOverrideMaterial = (renderTarget, overrideMaterial) => {
+          renderer.clear();
+          this.scene.overrideMaterial = overrideMaterial;
+  
+          renderer.setRenderTarget(renderTarget);
+          renderer.render(this.scene, this.camera);
+          renderer.setRenderTarget(null);
+          this.scene.overrideMaterial = null;
+          
+          const imageData = {
+            data: new Uint8Array(renderTarget.width * renderTarget.height * 4),
+            width: renderTarget.width,
+            height: renderTarget.height,
+          };
+          renderer.readRenderTargetPixels(renderTarget, 0, 0, renderTarget.width, renderTarget.height, imageData.data);
+          return imageData;
+        };
+        depthMaterial.uniforms.cameraNear.value = this.camera.near;
+        depthMaterial.uniforms.cameraNear.needsUpdate = true;
+        depthMaterial.uniforms.cameraFar.value = this.camera.far;
+        depthMaterial.uniforms.cameraFar.needsUpdate = true;
+        const depthFloatImageData = floatImageData(_renderOverrideMaterial(depthRenderTarget, depthMaterial));
+        for (let i = 0; i < depthFloatImageData.length; i++) {
+          if (depthFloatImageData[i] === this.camera.near) {
+            depthFloatImageData[i] = -this.camera.far;
+          }
+        }
       }
 
       // fill in the gaps in the canvas by re-rendering a full screen shader
