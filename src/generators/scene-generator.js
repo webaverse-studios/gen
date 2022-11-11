@@ -224,7 +224,6 @@ const _clipGeometryToMask = (geometry, maskCanvas) => {
     const a = imageData.data[i * 4 + 3];
     return a === 0;
   };
-  // console.log('computing index', geometry.index.array.length);
   {
     const indices = [];
     const gridX = maskCanvas.width;
@@ -247,7 +246,7 @@ const _clipGeometryToMask = (geometry, maskCanvas) => {
         (bO || cO || dO) && indices.push(b, c, d);
       }
     }
-    console.log('set index', indices);
+    // console.log('set index', indices);
     // set the new indices on the geometry
     geometry.setIndex(new THREE.BufferAttribute(Uint32Array.from(indices), 1));
   }
@@ -451,7 +450,7 @@ class SceneRenderer {
     `;
     const backgroundContext = backgroundCanvas.getContext('2d');
     backgroundContext.drawImage(this.renderer.domElement, 0, 0);
-    document.body.appendChild(backgroundCanvas);
+    this.element.appendChild(backgroundCanvas);
 
     const blob = await new Promise((accept, reject) => {
       backgroundCanvas.toBlob(blob => {
@@ -465,7 +464,7 @@ class SceneRenderer {
     const editedImgBlob = await imageAiClient.editImgBlob(blob, maskBlob, this.prompt);
     const editedImg = await blob2img(editedImgBlob);
     editedImg.classList.add('editImg');
-    document.body.appendChild(editedImg);
+    this.element.appendChild(editedImg);
 
     // get point cloud
     const {
@@ -473,11 +472,11 @@ class SceneRenderer {
       arrayBuffer: pointCloudArrayBuffer,
     } = await getPointCloud(blob);
     const pointCloudCanvas = pointCloudArrayBuffer2canvas(pointCloudArrayBuffer);
-    document.body.appendChild(pointCloudCanvas);
+    this.element.appendChild(pointCloudCanvas);
 
     const geometry = new THREE.PlaneBufferGeometry(1, 1, editedImg.width - 1, editedImg.height - 1);
     pointCloudArrayBufferToPositionAttributeArray(pointCloudArrayBuffer, geometry.attributes.position.array, 1/editedImg.width);
-    // _clipGeometryToMask(geometry, maskImg);
+    _clipGeometryToMask(geometry, maskImg);
     geometry.computeVertexNormals();
     const material = new THREE.MeshPhongMaterial({
       color: 0xff0000,
@@ -606,10 +605,6 @@ class SceneRenderer {
             depthFloatImageData[i] = -this.camera.far;
           }
         }
-        // globalThis.depthFloatImageData = depthFloatImageData;
-        /* if (!depthFloatImageData.some(n => n > 0)) {
-          debugger;
-        } */
 
         // done with this
         this.scene.remove(depthMesh);
@@ -861,7 +856,7 @@ export class SceneGenerator {
     // console.log('got bounding boxes', boundingBoxLayers);
     const labelCanvas = drawLabelCanvas(labelImg, boundingBoxLayers);
     document.body.appendChild(labelCanvas);
-    // console.log('found labels', labelClasses.filter((e, i) => boundingBoxLayers[i].length > 0));
+    globalThis.labelCanvas = labelCanvas;
 
     // point cloud
     const {
@@ -873,7 +868,7 @@ export class SceneGenerator {
     //   pointCloudHeaders,
     //   pointCloudCanvas,
     // });
-    // document.body.appendChild(pointCloudCanvas);
+    document.body.appendChild(pointCloudCanvas);
 
     // run ransac
     const planeMatrices = [];

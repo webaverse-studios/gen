@@ -23,7 +23,7 @@ const sceneGenerator = new SceneGenerator();
 
 //
 
-const Storyboard = () => {
+/* const Storyboard = () => {
   const [items, setItems] = useState([]);
 
   return (
@@ -35,7 +35,7 @@ const Storyboard = () => {
       ))}
     </div>
   )
-};
+}; */
 
 //
 
