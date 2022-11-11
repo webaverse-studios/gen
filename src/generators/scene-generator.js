@@ -20,6 +20,8 @@ import {labelClasses} from '../constants/prompts.js';
 //
 
 const imageAiClient = new ImageAiClient();
+// globalThis.depthCubes = [];
+// globalThis.depthCubesSkipped = [];
 
 //
 
@@ -128,16 +130,15 @@ const depthFragmentShader = `\
     return sign * (1.0 + sig / 8388607.0) * pow(2.0, expo);
   }
 
-  float orthographicDepthToViewZ( const in float linearClipZ, const in float near, const in float far ) {
-    return linearClipZ * ( near - far ) - near;
-  }
   float perspectiveDepthToViewZ( const in float invClipZ, const in float near, const in float far ) {
     return ( near * far ) / ( ( far - near ) * invClipZ - far );
   }
 
   void main() {
-    float d = gl_FragCoord.z/gl_FragCoord.w;
-    float viewZ = perspectiveDepthToViewZ(d, cameraNear, cameraFar);
+    // get the view Z
+    // first, we need to reconstruct the depth value in this fragment
+    float depth = gl_FragCoord.z;
+    float viewZ = perspectiveDepthToViewZ(depth, cameraNear, cameraFar);
     gl_FragColor = encode_float(viewZ).abgr;
   }
 `;
@@ -390,38 +391,6 @@ class SceneRenderer {
     applySkybox(geometry.attributes.position.array);
     const map = new THREE.Texture(img);
     map.needsUpdate = true;
-    /* const material = new THREE.ShaderMaterial({
-      uniforms: {
-        map: {
-          value: map,
-          needsUpdate: true,
-        },
-        uColorEnabled: {
-          value: 0,
-          needsUpdate: true,
-        },
-      },
-      side: THREE.DoubleSide,
-      vertexShader: `\
-        attribute vec3 color;
-        varying vec2 vUv;
-        varying vec3 vColor;
-        void main() {
-          vUv = uv;
-          vColor = color;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        }
-      `,
-      fragmentShader: `\
-        uniform sampler2D map;
-        uniform float uColorEnabled;
-        varying vec2 vUv;
-        varying vec3 vColor;
-        void main() {
-          gl_FragColor = vec4(1., 0., 0., 1.);
-        }
-      `,
-    }); */
     const sceneMesh = new THREE.Mesh(
       geometry,
       new THREE.MeshBasicMaterial({
@@ -525,9 +494,10 @@ class SceneRenderer {
     
     // re-render the canvas from this perspective
     {
-      const canvas = document.createElement('canvas');
-      canvas.width = this.renderer.domElement.width;
-      canvas.height = this.renderer.domElement.height;
+      const indexCanvas = document.createElement('canvas');
+      indexCanvas.classList.add('indexCanvas');
+      indexCanvas.width = this.renderer.domElement.width;
+      indexCanvas.height = this.renderer.domElement.height;
 
       // create a copy of this.sceneMesh with a new material
       const sceneMesh2 = this.sceneMesh.clone();
@@ -557,84 +527,143 @@ class SceneRenderer {
       this.scene.add(sceneMesh2);
 
       // create a new non-antialiased renderer
-      const renderer = new THREE.WebGLRenderer({
-        canvas,
+      const indexRenderer = new THREE.WebGLRenderer({
+        canvas: indexCanvas,
         alpha: true,
         // antialias: true,
         preserveDrawingBuffer: true,
       });
 
-      // render color
+      // render indices
       {
-        renderer.render(this.scene, this.camera);
+        indexRenderer.render(this.scene, this.camera);
       }
 
       // copy and display the canvas for debugging
       {
-        const canvas2 = document.createElement('canvas');
-        canvas2.width = canvas.width;
-        canvas2.height = canvas.height;
-        const context2 = canvas2.getContext('2d');
-        context2.drawImage(canvas, 0, 0);
-        document.body.appendChild(canvas2);
+        const indexCanvas2 = document.createElement('canvas');
+        indexCanvas2.width = indexCanvas.width;
+        indexCanvas2.height = indexCanvas.height;
+        const context2 = indexCanvas2.getContext('2d');
+        context2.drawImage(indexCanvas, 0, 0);
+        document.body.appendChild(indexCanvas2);
       }
 
       // render depth
       {
+        // for rendering depth
         const depthMaterial = new THREE.ShaderMaterial({
           uniforms: {
             cameraNear: {
-              value: 0,
+              value: this.camera.near,
               needsUpdate: true,
             },
             cameraFar: {
-              value: 1,
+              value: this.camera.far,
               needsUpdate: true,
             },
           },
           vertexShader: depthVertexShader,
           fragmentShader: depthFragmentShader,
         });
+        const depthMesh = this.sceneMesh.clone();
+        depthMesh.material = depthMaterial;
+        depthMesh.frustumCulled = false;
+        const depthScene = new THREE.Scene();
+        depthScene.autoUpdate = false;
+        depthScene.add(depthMesh);
 
         const depthRenderTarget = new THREE.WebGLRenderTarget(
-          renderer.domElement.width,
-          renderer.domElement.height,
+          this.renderer.domElement.width,
+          this.renderer.domElement.height,
           {
             type: THREE.UnsignedByteType,
             format: THREE.RGBAFormat,
           }
         );
 
-        const _renderOverrideMaterial = (renderTarget, overrideMaterial) => {
-          renderer.clear();
-          this.scene.overrideMaterial = overrideMaterial;
-  
-          renderer.setRenderTarget(renderTarget);
-          renderer.render(this.scene, this.camera);
-          renderer.setRenderTarget(null);
-          this.scene.overrideMaterial = null;
+        const _renderOverrideMaterial = (renderTarget) => {
+          this.renderer.setRenderTarget(renderTarget);
+          // this.scene.overrideMaterial = overrideMaterial;
+
+          this.renderer.clear();
+          this.renderer.render(depthScene, this.camera);
+          
+          // this.scene.overrideMaterial = null;
           
           const imageData = {
             data: new Uint8Array(renderTarget.width * renderTarget.height * 4),
             width: renderTarget.width,
             height: renderTarget.height,
           };
-          renderer.readRenderTargetPixels(renderTarget, 0, 0, renderTarget.width, renderTarget.height, imageData.data);
+          this.renderer.readRenderTargetPixels(renderTarget, 0, 0, renderTarget.width, renderTarget.height, imageData.data);
+          this.renderer.setRenderTarget(null);
           return imageData;
         };
-        depthMaterial.uniforms.cameraNear.value = this.camera.near;
-        depthMaterial.uniforms.cameraNear.needsUpdate = true;
-        depthMaterial.uniforms.cameraFar.value = this.camera.far;
-        depthMaterial.uniforms.cameraFar.needsUpdate = true;
-        const depthFloatImageData = floatImageData(_renderOverrideMaterial(depthRenderTarget, depthMaterial));
+        const depthFloatImageData = floatImageData(_renderOverrideMaterial(depthRenderTarget));
         for (let i = 0; i < depthFloatImageData.length; i++) {
           if (depthFloatImageData[i] === this.camera.near) {
             depthFloatImageData[i] = -this.camera.far;
           }
         }
+        // globalThis.depthFloatImageData = depthFloatImageData;
+        /* if (!depthFloatImageData.some(n => n > 0)) {
+          debugger;
+        } */
+
+        // done with this
+        this.scene.remove(depthMesh);
+
+        const setPositionFromViewZ = (() => {
+          const projInv = new THREE.Matrix4();
+        
+          return (screenPosition, camera, viewZ, position) => {
+            // get the inverse projection matrix of the camera
+            projInv.copy(camera.projectionMatrix)
+              .invert();
+            position
+              .set(
+                screenPosition.x * 2 - 1,
+                -(screenPosition.y) * 2 + 1,
+                0.5
+              )
+              .applyMatrix4(projInv);
+        
+            position.multiplyScalar(viewZ / position.z);
+            position.applyMatrix4(camera.matrixWorld);
+            return position;
+          };
+        })();
+
+        // render an instanced cubes mesh to show the depth
+        // const depthCubesGeometry = new THREE.BoxBufferGeometry(0.1, 0.1, 0.1);
+        const depthCubesGeometry = new THREE.BoxBufferGeometry(0.01, 0.01, 0.01);
+        const depthCubesMaterial = new THREE.MeshPhongMaterial({
+          color: 0x00FFFF,
+        });
+        const depthCubesMesh = new THREE.InstancedMesh(depthCubesGeometry, depthCubesMaterial, depthFloatImageData.length);
+        depthCubesMesh.frustumCulled = false;
+        this.scene.add(depthCubesMesh);
+
+        // set the matrices by projecting the depth from the perspective camera
+        const skipRatio = 8;
+        for (let i = 0; i < depthFloatImageData.length; i += skipRatio) {
+          const depth = depthFloatImageData[i]; // the orthographic depth
+          const viewZ = depth;
+          const x = (i % this.renderer.domElement.width) / this.renderer.domElement.width;
+          const y = Math.floor(i / this.renderer.domElement.width) / this.renderer.domElement.height;
+          const mousePosition = new THREE.Vector2(x, y);
+          const target = new THREE.Vector3();
+          setPositionFromViewZ(mousePosition, this.camera, viewZ, target);
+          const matrix = new THREE.Matrix4();
+          matrix.makeTranslation(target.x, target.y, target.z);
+          depthCubesMesh.setMatrixAt(i / skipRatio, matrix);
+        }
+        depthCubesMesh.count = depthFloatImageData.length;
+        depthCubesMesh.instanceMatrix.needsUpdate = true;
       }
 
-      // fill in the gaps in the canvas by re-rendering a full screen shader
+      // fill in the index canvas gaps
       { 
         this.scene.remove(sceneMesh2);
         this.scene.add(this.sceneMesh);
@@ -647,10 +676,10 @@ class SceneRenderer {
         
         // copy the renderer canvas
         const swapCanvas = document.createElement('canvas');
-        swapCanvas.width = canvas.width;
-        swapCanvas.height = canvas.height;
+        swapCanvas.width = indexCanvas.width;
+        swapCanvas.height = indexCanvas.height;
         const swapContext = swapCanvas.getContext('2d');
-        swapContext.drawImage(renderer.domElement, 0, 0);
+        swapContext.drawImage(indexCanvas, 0, 0);
 
         const swapCanvasTexture = new THREE.Texture(swapCanvas);
         swapCanvasTexture.type = THREE.FloatType;
@@ -662,7 +691,10 @@ class SceneRenderer {
         const fullscreenMaterial = new THREE.ShaderMaterial({
           uniforms: {
             size: {
-              value: new THREE.Vector2(renderer.domElement.width, renderer.domElement.height),
+              value: new THREE.Vector2(
+                this.renderer.domElement.width,
+                this.renderer.domElement.height,
+              ),
               needsUpdate: true,
             },
             map: {
@@ -760,18 +792,17 @@ class SceneRenderer {
 
         fullscreenScene.add(fullscreenMesh);
 
-        // run a few times
         console.time('scanRender');
         // const maxDistance = Math.ceil(1024 * Math.SQRT2);
-        for (let i = 0; i < 1; i++) {
-          renderer.render(fullscreenScene, fullscreenCamera);
+        // for (let i = 0; i < 1; i++) {
+          indexRenderer.render(fullscreenScene, fullscreenCamera);
           // copy the result to the swap canvas
-          swapContext.drawImage(renderer.domElement, 0, 0);
+          swapContext.drawImage(indexRenderer.domElement, 0, 0);
           swapCanvasTexture.needsUpdate = true;
-        }
+        // }
         console.timeEnd('scanRender');
 
-        document.body.appendChild(canvas);
+        document.body.appendChild(indexCanvas);
       }
       // const canvas2 = document.createElement('canvas');
       // canvas2.width = canvas.width;
@@ -829,7 +860,7 @@ export class SceneGenerator {
     const boundingBoxLayers = JSON.parse(labelHeaders['x-bounding-boxes']);
     // console.log('got bounding boxes', boundingBoxLayers);
     const labelCanvas = drawLabelCanvas(labelImg, boundingBoxLayers);
-    // document.body.appendChild(labelCanvas);
+    document.body.appendChild(labelCanvas);
     // console.log('found labels', labelClasses.filter((e, i) => boundingBoxLayers[i].length > 0));
 
     // point cloud

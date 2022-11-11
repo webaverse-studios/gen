@@ -1,6 +1,7 @@
 // import * as THREE from 'three';
 import {useState, useRef} from 'react';
 import {prompts} from '../../constants/prompts.js';
+import {ImageAiClient} from '../../clients/image-client.js';
 import {SceneGenerator} from '../../generators/scene-generator.js';
 
 import styles from '../../../styles/Gen.module.css';
@@ -8,6 +9,7 @@ import {useEffect} from 'react';
 
 //
 
+const imageAiClient = new ImageAiClient();
 const sceneGenerator = new SceneGenerator();
 
 //
@@ -89,6 +91,9 @@ const SceneGeneratorComponent = () => {
   const _addPanel = async file => {
     setBusy(true);
     try {
+      if (typeof file === 'string') {
+        file = await imageAiClient.createImageBlob(file);
+      }
       file = await _sizeFile(file);
       const scenePackage = await sceneGenerator.generate(prompt, file);
 
@@ -119,7 +124,7 @@ const SceneGeneratorComponent = () => {
     document.addEventListener('drop', drop);
     const keydown = e => {
       if (!e.repeat) {
-        console.log('got key', e.key);
+        // console.log('got key', e.key);
         switch (e.key) {
           case ' ': {
             if (step === 2) {
@@ -148,7 +153,7 @@ const SceneGeneratorComponent = () => {
         setPrompt(e.target.value);
       }} placeholder={prompts.character} disabled={busy} />
         <div className={styles.button} onClick={async () => {
-          await sceneGenerator.generate(prompt);
+          await _addPanel(prompt);
         }} disabled={busy}>Generate</div>
       <div>or, <a className={styles.fileUpload}><input type="file" onChange={async e => {
         const file = e.target.files[0];
