@@ -211,7 +211,7 @@ const _cutSkybox = geometry => {
   // set the new indices
   geometry.setIndex(new THREE.BufferAttribute(newIndices.subarray(0, numIndices), 1));
 };
-const _clipGeometryToMask = (geometry, maskCanvas) => {
+const _clipGeometryToMask = (geometry, widthSegments, heightSegments, maskCanvas) => {
   // draw to canvas
   const canvas = document.createElement('canvas');
   canvas.width = maskCanvas.width;
@@ -226,8 +226,8 @@ const _clipGeometryToMask = (geometry, maskCanvas) => {
   };
   {
     const indices = [];
-    const gridX = maskCanvas.width;
-    const gridY = maskCanvas.height;
+    const gridX = widthSegments;
+    const gridY = heightSegments;
     const gridX1 = gridX + 1;
     const gridY1 = gridY + 1;
     for (let iy = 0; iy < gridY; iy++) {
@@ -282,6 +282,7 @@ class SceneRenderer {
       antialias: true,
       preserveDrawingBuffer: true,
     });
+    renderer.setClearColor(0x000000, 0);
     this.renderer = renderer;
 
     const scene = new THREE.Scene();
@@ -319,6 +320,7 @@ class SceneRenderer {
         color: 0x00ff00,
       }),
     );
+    cubeMesh.name = 'cubeMesh';
     cubeMesh.frustumCulled = false;
     // scene.add(cubeMesh);
 
@@ -382,7 +384,9 @@ class SceneRenderer {
     this.camera.updateProjectionMatrix();
 
     // scene mesh
-    const geometry = new THREE.PlaneBufferGeometry(1, 1, img.width - 1, img.height - 1);
+    const widthSegments = img.width - 1;
+    const heightSegments = img.height - 1;
+    const geometry = new THREE.PlaneGeometry(1, 1, widthSegments, heightSegments);
     pointCloudArrayBufferToPositionAttributeArray(pointCloudArrayBuffer, geometry.attributes.position.array, 1/img.width);
     geometry.setAttribute('color', new THREE.BufferAttribute(new Uint8Array(pointCloudArrayBuffer.byteLength / pointcloudStride * 3), 3, true));
     pointCloudArrayBufferToColorAttributeArray(labelImg, geometry.attributes.color.array);
@@ -397,6 +401,7 @@ class SceneRenderer {
         map,
       }),
     );
+    sceneMesh.name = 'sceneMesh';
     sceneMesh.frustumCulled = false;
     this.scene.add(sceneMesh);
     this.sceneMesh = sceneMesh;
@@ -411,12 +416,13 @@ class SceneRenderer {
         opacity: 0.1,
       });
       const mesh = new THREE.Mesh(geometry, material);
+      mesh.name = 'floorMesh';
       mesh.frustumCulled = false;
       return mesh;
     })();
     floorMesh.position.y = -predictedHeight;
     floorMesh.updateMatrixWorld();
-    this.scene.add(floorMesh);
+    // this.scene.add(floorMesh);
     this.floorMesh = floorMesh;
 
     // planes mesh
@@ -426,6 +432,7 @@ class SceneRenderer {
         color: 0xff0000,
       });
       planesMesh = new THREE.InstancedMesh(planeGeometry, material, planeMatrices.length);
+      planesMesh.name = 'planesMesh';
       planesMesh.frustumCulled = false;
       for (let i = 0; i < planeMatrices.length; i++) {
         planesMesh.setMatrixAt(i, planeMatrices[i]);
@@ -474,14 +481,15 @@ class SceneRenderer {
     const pointCloudCanvas = pointCloudArrayBuffer2canvas(pointCloudArrayBuffer);
     this.element.appendChild(pointCloudCanvas);
 
-    const geometry = new THREE.PlaneBufferGeometry(1, 1, editedImg.width - 1, editedImg.height - 1);
+    const widthSegments = editedImg.width - 1;
+    const heightSegments = editedImg.height - 1;
+    const geometry = new THREE.PlaneGeometry(1, 1, widthSegments, heightSegments);
     pointCloudArrayBufferToPositionAttributeArray(pointCloudArrayBuffer, geometry.attributes.position.array, 1/editedImg.width);
-    _clipGeometryToMask(geometry, maskImg);
-    geometry.computeVertexNormals();
     const material = new THREE.MeshPhongMaterial({
       color: 0xff0000,
     });
     const backgroundMesh = new THREE.Mesh(geometry, material);
+    backgroundMesh.name = 'backgroundMesh';
     backgroundMesh.position.copy(cameraPosition);
     backgroundMesh.quaternion.copy(cameraQuaternion);
     backgroundMesh.updateMatrixWorld();
@@ -493,13 +501,34 @@ class SceneRenderer {
     
     // re-render the canvas from this perspective
     {
+      // create a non-anti-aliased renderer
+      const nonAaCanvas = document.createElement('canvas');
+      nonAaCanvas.width = this.renderer.domElement.width;
+      nonAaCanvas.height = this.renderer.domElement.height;
+      const nonAaRenderer = new THREE.WebGLRenderer({
+        canvas: nonAaCanvas,
+        alpha: true,
+        // antialias: true,
+        preserveDrawingBuffer: true,
+      });
+      nonAaRenderer.setClearColor(0x000000, 0);;
+
+      nonAaRenderer.render(this.scene, this.camera);
+      
+      _clipGeometryToMask(geometry, widthSegments, heightSegments, nonAaRenderer.domElement);
+      geometry.computeVertexNormals();
+    }
+
+    // index canvas
+    {
       const indexCanvas = document.createElement('canvas');
       indexCanvas.classList.add('indexCanvas');
       indexCanvas.width = this.renderer.domElement.width;
       indexCanvas.height = this.renderer.domElement.height;
 
-      // create a copy of this.sceneMesh with a new material
+      // for index rendering, create a copy of this.sceneMesh with a new material
       const sceneMesh2 = this.sceneMesh.clone();
+      sceneMesh2.name = 'sceneMesh2';
       sceneMesh2.material = new THREE.ShaderMaterial({
         vertexShader: `\
           // encode the vertex index into the color attribute
@@ -532,6 +561,7 @@ class SceneRenderer {
         // antialias: true,
         preserveDrawingBuffer: true,
       });
+      indexRenderer.setClearColor(0x000000, 0);
 
       // render indices
       {
@@ -566,6 +596,7 @@ class SceneRenderer {
           fragmentShader: depthFragmentShader,
         });
         const depthMesh = this.sceneMesh.clone();
+        depthMesh.name = 'depthMesh';
         depthMesh.material = depthMaterial;
         depthMesh.frustumCulled = false;
         const depthScene = new THREE.Scene();
@@ -637,6 +668,7 @@ class SceneRenderer {
           color: 0x00FFFF,
         });
         const depthCubesMesh = new THREE.InstancedMesh(depthCubesGeometry, depthCubesMaterial, depthFloatImageData.length);
+        depthCubesMesh.name = 'depthCubesMesh';
         depthCubesMesh.frustumCulled = false;
         this.scene.add(depthCubesMesh);
 
@@ -681,8 +713,10 @@ class SceneRenderer {
         swapCanvasTexture.needsUpdate = true;
         swapCanvasTexture.minFilter = THREE.NearestFilter;
         swapCanvasTexture.magFilter = THREE.NearestFilter;
+        swapCanvasTexture.wrapS = THREE.ClampToEdgeWrapping;
+        swapCanvasTexture.wrapT = THREE.ClampToEdgeWrapping;
 
-        const fullscreenGeometry = new THREE.PlaneBufferGeometry(2, 2);
+        const fullscreenGeometry = new THREE.PlaneGeometry(2, 2);
         const fullscreenMaterial = new THREE.ShaderMaterial({
           uniforms: {
             size: {
@@ -724,36 +758,54 @@ class SceneRenderer {
 
               // sample points in an arc
               const float maxSamples = 512.;
-              float w = f * 2. + 1.;
-              float numSamples = min(w * w, maxSamples);
+              // float w = f * 2. + 1.;
+              // float numSamples = min(w * w, maxSamples);
+              float numSamples = maxSamples;
               for (float i = 0.; i < numSamples; i++) {
-                float angle = i / numSamples * 3.14159 / 2.;
+                float angle = i / numSamples * 3.14159 * 2.;
                 vec2 duv = vec2(cos(angle), sin(angle)) * f;
+                vec2 uv = vUv + duv / size;
 
-                vec4 color = texture2D(map, vUv + duv / size);
-                if (color.a > 0.) {
-                  if (color.rgb == color1 && numColor1 > 0.) {
-                    numColor1 += 1.;
-                    if (numColor1 > numColor2) {
-                      color2 = color1;
-                      numColor2 = numColor1;
+                if (uv.x >= 0. && uv.x <= 1. && uv.y >= 0. && uv.y <= 1.) {
+                  vec4 color = texture2D(map, uv);
+                  if (color.a > 0.) {
+                    if (color.rgb == color1 && numColor1 > 0.) {
+                      numColor1 += 1.;
+                      if (numColor1 > numColor2) {
+                        // swap
+                        vec3 oldColor1 = color1;
+                        float oldNumColor1 = numColor1;
+                        vec3 oldColor2 = color2;
+                        float oldNumColor2 = numColor2;
+                        
+                        // do the swap
+                        color1 = oldColor2;
+                        numColor1 = oldNumColor2;
+                        color2 = oldColor1;
+                        numColor2 = oldNumColor1;
+                      }
+                    } else if (color.rgb == color2 && numColor2 > 0.) {
+                      numColor2 += 1.;
+                      if (numColor2 > numColor1) {
+                        // swap
+                        vec3 oldColor1 = color1;
+                        float oldNumColor1 = numColor1;
+                        vec3 oldColor2 = color2;
+                        float oldNumColor2 = numColor2;
+                        
+                        // do the swap
+                        color1 = oldColor2;
+                        numColor1 = oldNumColor2;
+                        color2 = oldColor1;
+                        numColor2 = oldNumColor1;
+                      }
+                    } else if (numColor1 == 0.) {
                       color1 = color.rgb;
                       numColor1 = 1.;
-                    }
-                  } else if (color.rgb == color2 && numColor2 > 0.) {
-                    numColor2 += 1.;
-                    if (numColor2 > numColor1) {
-                      color1 = color2;
-                      numColor1 = numColor2;
+                    } else if (numColor2 == 0.) {
                       color2 = color.rgb;
                       numColor2 = 1.;
                     }
-                  } else if (numColor1 == 0.) {
-                    color1 = color.rgb;
-                    numColor1 = 1.;
-                  } else if (numColor2 == 0.) {
-                    color2 = color.rgb;
-                    numColor2 = 1.;
                   }
                 }
               }
@@ -772,7 +824,7 @@ class SceneRenderer {
                     return;
                   }
                 }
-                gl_FragColor = vec4(0.);
+                gl_FragColor = vec4(1., 0., 1., 1.);
               } else {
                 gl_FragColor = color;
               }
@@ -783,6 +835,7 @@ class SceneRenderer {
           depthWrite: false,
         });
         const fullscreenMesh = new THREE.Mesh(fullscreenGeometry, fullscreenMaterial);
+        fullscreenMesh.name = 'fullscreenMesh';
         fullscreenMesh.frustumCulled = false;
 
         fullscreenScene.add(fullscreenMesh);
@@ -792,8 +845,8 @@ class SceneRenderer {
         // for (let i = 0; i < 1; i++) {
           indexRenderer.render(fullscreenScene, fullscreenCamera);
           // copy the result to the swap canvas
-          swapContext.drawImage(indexRenderer.domElement, 0, 0);
-          swapCanvasTexture.needsUpdate = true;
+          // swapContext.drawImage(indexRenderer.domElement, 0, 0);
+          // swapCanvasTexture.needsUpdate = true;
         // }
         console.timeEnd('scanRender');
 
@@ -873,7 +926,9 @@ export class SceneGenerator {
     // run ransac
     const planeMatrices = [];
     {
-      const geometry = new THREE.PlaneBufferGeometry(1, 1, img.width - 1, img.height - 1);
+      const widthSegments = img.width - 1;
+      const heightSegments = img.height - 1;
+      const geometry = new THREE.PlaneGeometry(1, 1, widthSegments, heightSegments);
       pointCloudArrayBufferToPositionAttributeArray(pointCloudArrayBuffer, geometry.attributes.position.array, 1/img.width);
       applySkybox(geometry.attributes.position.array);
 
