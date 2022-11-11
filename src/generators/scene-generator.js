@@ -571,6 +571,7 @@ class SceneRenderer {
       // copy and display the canvas for debugging
       {
         const indexCanvas2 = document.createElement('canvas');
+        indexCanvas2.classList.add('indexCanvas2');
         indexCanvas2.width = indexCanvas.width;
         indexCanvas2.height = indexCanvas.height;
         const context2 = indexCanvas2.getContext('2d');
@@ -702,22 +703,22 @@ class SceneRenderer {
         const fullscreenCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
         
         // copy the renderer canvas
-        const swapCanvas = document.createElement('canvas');
-        swapCanvas.width = indexCanvas.width;
-        swapCanvas.height = indexCanvas.height;
-        const swapContext = swapCanvas.getContext('2d');
+        const indexCanvas2 = document.createElement('canvas');
+        indexCanvas2.width = indexCanvas.width;
+        indexCanvas2.height = indexCanvas.height;
+        const swapContext = indexCanvas2.getContext('2d');
         swapContext.drawImage(indexCanvas, 0, 0);
 
-        const swapCanvasTexture = new THREE.Texture(swapCanvas);
-        swapCanvasTexture.type = THREE.FloatType;
-        swapCanvasTexture.needsUpdate = true;
-        swapCanvasTexture.minFilter = THREE.NearestFilter;
-        swapCanvasTexture.magFilter = THREE.NearestFilter;
-        swapCanvasTexture.wrapS = THREE.ClampToEdgeWrapping;
-        swapCanvasTexture.wrapT = THREE.ClampToEdgeWrapping;
+        const indexCanvas2Texture = new THREE.Texture(indexCanvas2);
+        indexCanvas2Texture.type = THREE.FloatType;
+        indexCanvas2Texture.needsUpdate = true;
+        indexCanvas2Texture.minFilter = THREE.NearestFilter;
+        indexCanvas2Texture.magFilter = THREE.NearestFilter;
+        indexCanvas2Texture.wrapS = THREE.ClampToEdgeWrapping;
+        indexCanvas2Texture.wrapT = THREE.ClampToEdgeWrapping;
 
         const fullscreenGeometry = new THREE.PlaneGeometry(2, 2);
-        const fullscreenMaterial = new THREE.ShaderMaterial({
+        const indexMaterial = new THREE.ShaderMaterial({
           uniforms: {
             size: {
               value: new THREE.Vector2(
@@ -726,8 +727,12 @@ class SceneRenderer {
               ),
               needsUpdate: true,
             },
+            direction: {
+              value: new THREE.Vector2(0, 0),
+              needsUpdate: true,
+            },
             map: {
-              value: swapCanvasTexture,
+              value: indexCanvas2Texture,
               needsUpdate: true,
             },
           },
@@ -741,90 +746,121 @@ class SceneRenderer {
           fragmentShader: `\
             varying vec2 vUv;
             uniform vec2 size;
+            uniform vec2 direction;
             uniform sampler2D map;
 
-            struct ColorPair {
-              vec3 color1;
-              float numColor1;
-              vec3 color2;
-              float numColor2;
-            };
-            ColorPair getMostCommonColorsInRadius(float f) {
-              // use the quarter circle with mirroring to get the most common colors
-              vec3 color1 = vec3(0.);
-              float numColor1 = 0.;
-              vec3 color2 = vec3(0.);
-              float numColor2 = 0.;
+            #define PI 3.1415926535897932384626433832795
 
-              // sample points in an arc
-              const float maxSamples = 512.;
-              // float w = f * 2. + 1.;
-              // float numSamples = min(w * w, maxSamples);
-              float numSamples = maxSamples;
-              for (float i = 0.; i < numSamples; i++) {
-                float angle = i / numSamples * 3.14159 * 2.;
-                vec2 duv = vec2(cos(angle), sin(angle)) * f;
-                vec2 uv = vUv + duv / size;
+            const int maxSamples = 512;
+            
+            vec3 bestColor = vec3(1., 0., 1.); // XXX should be white in production to minimize risk of color/index conflicts
+            float bestColorDistance = 1e10;
+            bool seenFlags[maxSamples];
+            int numSeenFlags = 0;
 
-                if (uv.x >= 0. && uv.x <= 1. && uv.y >= 0. && uv.y <= 1.) {
-                  vec4 color = texture2D(map, uv);
-                  if (color.a > 0.) {
-                    if (color.rgb == color1 && numColor1 > 0.) {
-                      numColor1 += 1.;
-                      if (numColor1 > numColor2) {
-                        // swap
-                        vec3 oldColor1 = color1;
-                        float oldNumColor1 = numColor1;
-                        vec3 oldColor2 = color2;
-                        float oldNumColor2 = numColor2;
-                        
-                        // do the swap
-                        color1 = oldColor2;
-                        numColor1 = oldNumColor2;
-                        color2 = oldColor1;
-                        numColor2 = oldNumColor1;
-                      }
-                    } else if (color.rgb == color2 && numColor2 > 0.) {
-                      numColor2 += 1.;
-                      if (numColor2 > numColor1) {
-                        // swap
-                        vec3 oldColor1 = color1;
-                        float oldNumColor1 = numColor1;
-                        vec3 oldColor2 = color2;
-                        float oldNumColor2 = numColor2;
-                        
-                        // do the swap
-                        color1 = oldColor2;
-                        numColor1 = oldNumColor2;
-                        color2 = oldColor1;
-                        numColor2 = oldNumColor1;
-                      }
-                    } else if (numColor1 == 0.) {
-                      color1 = color.rgb;
-                      numColor1 = 1.;
-                    } else if (numColor2 == 0.) {
-                      color2 = color.rgb;
-                      numColor2 = 1.;
+            void setSeenFlag(int index) {
+              seenFlags[index] = true;
+              numSeenFlags++;
+            }
+            void setColor(vec3 color, vec2 duvPixels, int i) {
+              float distanceAlongDirection = dot(duvPixels, direction);
+              if (distanceAlongDirection >= 0. && distanceAlongDirection < bestColorDistance) {
+                bestColor = color;
+                bestColorDistance = distanceAlongDirection;
+              }
+              setSeenFlag(i);
+            }
+            void scanRadius(float r, vec2 direction, float startAngle, float endAngle) {
+              // sample points in an arc of radius r
+              // the best color is defined as the one furthest in the given direction
+              // we stop looking once we see the first point in any given ray, to detect a bounding box
+              // direction is in [-1, 1] space
+              for (int i = 0; i < maxSamples; i++) {
+                if (!seenFlags[i]) {
+                  float angle = mix(startAngle, endAngle, float(i) / float(maxSamples));
+                  vec2 duvPixels = r * vec2(cos(angle), sin(angle));
+                  vec2 duv = duvPixels / size;
+                  vec2 uv = vUv + duv;
+
+                  if (uv.x >= 0. && uv.x <= 1. && uv.y >= 0. && uv.y <= 1.) {
+                    vec4 color = texture2D(map, uv);
+                    if (color.a > 0.) {
+                      setColor(color.rgb, duvPixels, i);
                     }
+                  } else {
+                    setSeenFlag(i);
                   }
                 }
               }
-              return ColorPair(color1, numColor1, color2, numColor2);
             }
             
             const float maxDistance = 512.;
             
             void main() {
+              /* // we start on the right and run counter clockwise
+              float startAngle = 0.;
+              float endAngle = PI * 2.;
+              if (direction.x < 0.) {
+                startAngle = PI * 0.5;
+                endAngle = PI * 3. * 0.5;
+              } else if (direction.x > 0.) {
+                startAngle = PI * 3. * 0.5;
+                endAngle = PI * 0.5;
+              } else if (direction.y < 0.) {
+                startAngle = 0.;
+                endAngle = PI;
+              } else if (direction.y > 0.) {
+                startAngle = PI;
+                endAngle = 0.;
+              } */
+              
               vec4 color = texture2D(map, vUv);
               if (color.a == 0.) {
-                for (float radius = 0.; radius < maxDistance; radius += 1.) {
-                  ColorPair colorPair = getMostCommonColorsInRadius(radius);
-                  if (colorPair.numColor1 > 0.) {
-                    gl_FragColor = vec4(colorPair.color1, radius);
-                    return;
+                /* // first unidirectional scan
+                for (float radius = 1.; radius < maxDistance; radius += 1.) {
+                  scanRadius(radius, direction, startAngle, endAngle);
+                  if (numSeenFlags >= maxSamples) {
+                    break;
                   }
-                }
-                gl_FragColor = vec4(1., 0., 1., 1.);
+                } */
+                // if the first scan failed, try a full scan
+                // if (numSeenFlags < maxSamples) {
+                  float startAngle2 = 0.;
+                  float endAngle2 = PI * 2.;
+                  if (direction.x < 0.) {
+                    startAngle2 = PI * 0.5;
+                    endAngle2 = PI * 3. * 0.5;
+                  } else if (direction.x > 0.) {
+                    startAngle2 = PI * 3. * 0.5;
+                    endAngle2 = PI * 3. * 0.5 + PI;
+                  } else if (direction.y < 0.) {
+                    startAngle2 = 0.;
+                    endAngle2 = PI;
+                  } else if (direction.y > 0.) {
+                    startAngle2 = PI;
+                    endAngle2 = PI + PI;
+                  }
+
+                  /* // have to reset the seen flags
+                  for (int i = 0; i < maxSamples; i++) {
+                    seenFlags[i] = false;
+                  }
+                  numSeenFlags = 0; */
+
+                  for (float radius = 1.; radius < maxDistance; radius += 1.) {
+                    scanRadius(radius, direction, startAngle2, endAngle2);
+                    if (numSeenFlags >= maxSamples) {
+                      break;
+                    }
+                  }
+                // }
+                
+                // encode the distance as alpha
+                vec2 directionAxis = abs(direction);
+                float sizeAlongDirectionAxis = dot(size, directionAxis);
+                float a = (sizeAlongDirectionAxis - bestColorDistance) / sizeAlongDirectionAxis;
+                // return the color
+                gl_FragColor = vec4(bestColor, a);
               } else {
                 gl_FragColor = color;
               }
@@ -834,32 +870,40 @@ class SceneRenderer {
           depthTest: false,
           depthWrite: false,
         });
-        const fullscreenMesh = new THREE.Mesh(fullscreenGeometry, fullscreenMaterial);
+        const fullscreenMesh = new THREE.Mesh(fullscreenGeometry, indexMaterial);
         fullscreenMesh.name = 'fullscreenMesh';
         fullscreenMesh.frustumCulled = false;
 
         fullscreenScene.add(fullscreenMesh);
 
-        console.time('scanRender');
-        // const maxDistance = Math.ceil(1024 * Math.SQRT2);
-        // for (let i = 0; i < 1; i++) {
+        const directions = [
+          [1, 0],
+          // [0, 1],
+          // [-1, 0],
+          // [0, -1],
+        ];
+        const scanCanvases = await Promise.all(directions.map(async ([directionX, directionY]) => {
+          indexMaterial.uniforms.direction.value.set(directionX, directionY);
+          indexMaterial.uniforms.direction.needsUpdate = true;
+          
+          console.time('scanRender');
           indexRenderer.render(fullscreenScene, fullscreenCamera);
-          // copy the result to the swap canvas
-          // swapContext.drawImage(indexRenderer.domElement, 0, 0);
-          // swapCanvasTexture.needsUpdate = true;
-        // }
-        console.timeEnd('scanRender');
+          console.timeEnd('scanRender');
 
-        document.body.appendChild(indexCanvas);
+          // capture the canvas image
+          const scanCanvas = document.createElement('canvas');
+          scanCanvas.classList.add('scanCanvas:' + [directionX, directionY].join(','));
+          scanCanvas.width = indexRenderer.domElement.width;
+          scanCanvas.height = indexRenderer.domElement.height;
+          scanCanvas.style.cssText = `\
+            background: red;
+          `;
+          const scanContext = scanCanvas.getContext('2d');
+          scanContext.drawImage(indexRenderer.domElement, 0, 0);
+          document.body.appendChild(scanCanvas);
+          return scanCanvas;
+        }));
       }
-      // const canvas2 = document.createElement('canvas');
-      // canvas2.width = canvas.width;
-      // canvas2.height = canvas.height;
-      // const context2 = canvas2.getContext('2d');
-      // context2.drawImage(canvas, 0, 0);
-      // const imageData = context2.getImageData(0, 0, canvas.width, canvas.height);
-
-      // return canvas2;
     }
 
     this.scene.add(backgroundMesh);
