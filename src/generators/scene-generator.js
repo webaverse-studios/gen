@@ -211,7 +211,56 @@ const _cutSkybox = geometry => {
   // set the new indices
   geometry.setIndex(new THREE.BufferAttribute(newIndices.subarray(0, numIndices), 1));
 };
-const _clipGeometryToMask = (geometry, widthSegments, heightSegments, maskImageData, indexImageDatas) => {
+// interpolate a point between a set of color points
+/* function calculateColor(x, y, colors) {
+  let total = 0;
+  for (let i = 0; i < colors.length; i++) {
+    let c = colors[i];
+    let d = distance(c.x, c.y, x, y);
+    if (d === 0) {
+        return c;
+    }
+    d = 1 / (d * d);
+    c.d = d;
+    total += d;
+  }
+  let r = 0, g = 0, b = 0;
+  for (let i = 0; i < colors.length; i++) {
+    let c = colors[i];
+    let ratio = c.d / total;
+    r += ratio * c.r;
+    g += ratio * c.g;
+    b += ratio * c.b;
+  }
+  r = Math.floor(r);
+  g = Math.floor(g);
+  b = Math.floor(b);
+  return {r:r,g:g,b:b};
+} */
+// same as above, but for a luminosity value
+function calculateAlpha(x, y, alphaSpecs /* : {x: number, y: number, a: number}[] */) {
+  let total = 0;
+  for (let i = 0; i < alphaSpecs.length; i++) {
+    let c = alphaSpecs[i];
+    let d = distance(c.x, c.y, x, y);
+    if (d === 0) {
+      return c;
+    }
+    d = 1 / (d * d);
+    c.d = d;
+    total += d;
+  }
+  let a = 0;
+  for (let i = 0; i < alphaSpecs.length; i++) {
+    let c = alphaSpecs[i];
+    let ratio = c.d / total;
+    a += ratio * c.alpha;
+  }
+  a = Math.floor(a);
+  // return {a:a};
+  return a;
+}
+const _clipGeometryToMask = (geometry, widthSegments, heightSegments, maskImageData, indexColorsAlphasArray) => {
   const _isPointTransparent = i => maskImageData.data[i * 4 + 3] === 0;
   {
     const indices = [];
@@ -238,11 +287,25 @@ const _clipGeometryToMask = (geometry, widthSegments, heightSegments, maskImageD
     }
     for (let ix = 0; ix < gridX1; ix++) {
       for (let iy = 0; iy < gridX1; iy++) {
-        const i = ix + gridX1 * iy;
+        const alphaSpecs = indexColorsAlphasArray.map(indexColorsAlphas => {
+          const {direction} = indexColorsAlphas;
+          const x = ix + direction[0]
+          const y = iy + direction[1];
 
-        const distanceSpec = indexImageDatas.map(indexImageData => {
-          const {direction} = indexImageData;
-          // const rgbaFloat = indexImageData.slice(i * 4, i * 4 + 4);
+          const index = x + gridX1 * y;
+          const color = indexColorsAlphas.slice(index * 4, index * 4 + 3);
+          const alpha = indexColorsAlphas[index * 4];
+
+          // XXX need to extract the Z of the given point and store it here
+          // XXX scale it by the alpha? no, blending is handled by the interpolation
+          // XXX alpha was only needed during the flood fill
+
+          return {
+            x,
+            y,
+            color,
+            alpha,
+          };
         });
       }
     }
@@ -688,7 +751,7 @@ class SceneRenderer {
     }
 
     // post-process index canvas
-    let indexImageDatas;
+    let indexColorsAlphasArray;
     { 
       // set up the scene
       const fullscreenScene = new THREE.Scene();
@@ -1043,25 +1106,29 @@ class SceneRenderer {
         }
         return indexColorsAlphas2;
       };
-      indexImageDatas = directions.map(direction => {
-        const [directionX, directionY] = direction;
-
+      
+      indexColorsAlphasArray = directions.map(direction => {
+        // const [directionX, directionY] = direction;
         const indexColorsAlphas2 = smearIndexColorAlphas(indexColorsAlphas, direction);
-        const scanCanvas = encodeIndexColorsAlphasToCanvas(indexColorsAlphas2);
-        scanCanvas.classList.add('indexImageDataCanvas:' + [directionX, directionY].join(','));
-        scanCanvas.direction = direction;
-        document.body.appendChild(scanCanvas);
-        return scanCanvas;
+        indexColorsAlphas2.direction = direction;
+        return indexColorsAlphas2;
+        // const scanCanvas = encodeIndexColorsAlphasToCanvas(indexColorsAlphas2);
+        // scanCanvas.classList.add('indexImageDataCanvas:' + [directionX, directionY].join(','));
+        // scanCanvas.direction = direction;
+        // document.body.appendChild(scanCanvas);
+        // return scanCanvas;
       });
       const sdfIndexImageData = (() => {
         const indexColorsAlphas2 = sdfIndexColorAlphas(indexColorsAlphas);
-        const scanCanvas = encodeIndexColorsAlphasToCanvas(indexColorsAlphas2);
-        scanCanvas.classList.add('sdfIndexImageDataCanvas');
-        document.body.appendChild(scanCanvas);
-        return scanCanvas;
+        indexColorsAlphas2.direction = direction;
+        return indexColorsAlphas2;
+        // const scanCanvas = encodeIndexColorsAlphasToCanvas(indexColorsAlphas2);
+        // scanCanvas.classList.add('sdfIndexImageDataCanvas');
+        // document.body.appendChild(scanCanvas);
+        // return scanCanvas;
       })();
-      indexImageDatas.push(sdfIndexImageData);
-      globalThis.indexImageDatas = indexImageDatas;
+      indexColorsAlphasArray.push(sdfIndexImageData);
+      globalThis.indexColorsAlphasArray = indexColorsAlphasArray;
     }
 
     // create background mesh
