@@ -238,7 +238,7 @@ const _cutSkybox = geometry => {
   return {r:r,g:g,b:b};
 } */
 // same as above, but for a luminosity value
-function calculateAlpha(x, y, alphaSpecs /* : {x: number, y: number, a: number}[] */) {
+function calculateValue(x, y, alphaSpecs /* : {x: number, y: number, a: number}[] */) {
   let total = 0;
   for (let i = 0; i < alphaSpecs.length; i++) {
     let c = alphaSpecs[i];
@@ -254,64 +254,196 @@ function calculateAlpha(x, y, alphaSpecs /* : {x: number, y: number, a: number}[
   for (let i = 0; i < alphaSpecs.length; i++) {
     let c = alphaSpecs[i];
     let ratio = c.d / total;
-    a += ratio * c.alpha;
+    a += ratio * c.value;
   }
   a = Math.floor(a);
   // return {a:a};
   return a;
 }
-const _clipGeometryToMask = (geometry, widthSegments, heightSegments, maskImageData, indexColorsAlphasArray) => {
+const _clipGeometryToMask = (geometry, widthSegments, heightSegments, oldGeometry, maskImageData, depthFloatImageData, indexColorsAlphasArray) => {
+  // check if the point was originally solid or a hole
   const _isPointTransparent = i => maskImageData.data[i * 4 + 3] === 0;
-  {
-    const indices = [];
-    const gridX = widthSegments;
-    const gridY = heightSegments;
-    const gridX1 = gridX + 1;
-    const gridY1 = gridY + 1;
-    for (let iy = 0; iy < gridY; iy++) {
-      for (let ix = 0; ix < gridX; ix++) {
-        const a = ix + gridX1 * iy;
-        const b = ix + gridX1 * (iy + 1);
-        const c = (ix + 1) + gridX1 * (iy + 1);
-        const d = (ix + 1) + gridX1 * iy;
-
-        const aO = _isPointTransparent(a);
-        const bO = _isPointTransparent(b);
-        const cO = _isPointTransparent(c);
-        const dO = _isPointTransparent(d);
-
-        // if one of the points was in the hole, render it
-        (aO || bO || cO) && indices.push(a, b, d);
-        (bO || cO || dO) && indices.push(b, c, d);
+  // get the array which has the brightest alphas at this index
+  const _getBrightestIndexColorAlpha = (indexColorsAlphasArray, index) => {
+    let bestIndexColorAlpha = null;
+    let bestIndexColorAlphaValue = -1;
+    for (let i = 0; i < indexColorsAlphasArray.length; i++) {
+      const indexColorAlpha = indexColorsAlphasArray[i];
+      const a = indexColorAlpha[index * 4 + 3];
+      if (a > bestIndexColorAlphaValue) {
+        bestIndexColorAlpha = indexColorAlpha;
+        bestIndexColorAlphaValue = a;
       }
     }
-    for (let ix = 0; ix < gridX1; ix++) {
-      for (let iy = 0; iy < gridX1; iy++) {
-        const alphaSpecs = indexColorsAlphasArray.map(indexColorsAlphas => {
-          const {direction} = indexColorsAlphas;
-          const x = ix + direction[0]
-          const y = iy + direction[1];
+    return bestIndexColorAlpha;
+  };
 
-          const index = x + gridX1 * y;
-          const color = indexColorsAlphas.slice(index * 4, index * 4 + 3);
-          const alpha = indexColorsAlphas[index * 4];
+  const positions = geometry.attributes.position.array.slice();
+  const indices = [];
+  const gridX = widthSegments;
+  const gridY = heightSegments;
+  const gridX1 = gridX + 1;
+  const gridY1 = gridY + 1;
+  const frontierPoints = new Set();
+  for (let iy = 0; iy < gridY; iy++) {
+    for (let ix = 0; ix < gridX; ix++) {
+      const a = ix + gridX1 * iy;
+      const b = ix + gridX1 * (iy + 1);
+      const c = (ix + 1) + gridX1 * (iy + 1);
+      const d = (ix + 1) + gridX1 * iy;
 
-          // XXX need to extract the Z of the given point and store it here
-          // XXX scale it by the alpha? no, blending is handled by the interpolation
-          // XXX alpha was only needed during the flood fill
+      const aO = _isPointTransparent(a);
+      const bO = _isPointTransparent(b);
+      const cO = _isPointTransparent(c);
+      const dO = _isPointTransparent(d);
 
-          return {
-            x,
-            y,
-            color,
-            alpha,
-          };
-        });
+      // if one of the points was in the hole, keep it; otherwise, discard it
+      // if a kept point neighbors a non-hole point, add it to the frontier set for welding
+      if (aO || bO || cO) {
+        indices.push(a, b, d);
+        if (!aO) {
+          frontierPoints.add(a);
+        }
+        if (!bO) {
+          frontierPoints.add(b);
+        }
+        if (!dO) {
+          frontierPoints.add(d);
+        }
+      }
+      if (bO || cO || dO) {
+        indices.push(b, c, d);
+        if (!bO) {
+          frontierPoints.add(b);
+        }
+        if (!cO) {
+          frontierPoints.add(c);
+        }
+        if (!dO) {
+          frontierPoints.add(d);
+        }
       }
     }
-    // set the new indices on the geometry
-    geometry.setIndex(new THREE.BufferAttribute(Uint32Array.from(indices), 1));
   }
+  for (let ix = 0; ix < gridX1; ix++) {
+    for (let iy = 0; iy < gridX1; iy++) {
+      const index = ix + gridX1 * iy;
+
+      // if it's a frontier point, we need to weld it to the nearest existing point in the old geometry
+      if (frontierPoints.has(index)) {
+        const brightestIndexColorAlpha = _getBrightestIndexColorAlpha(indexColorsAlphasArray, index);
+        const r = brightestIndexColorAlpha[index * 4 + 0];
+        const g = brightestIndexColorAlpha[index * 4 + 1];
+        const b = brightestIndexColorAlpha[index * 4 + 2];
+        // const a = brightestIndexColorAlpha[index * 4 + 3];
+
+        const screenX = r * gridX1;
+        const screenY = g * gridY1;
+        const vertexIndex = b;
+
+        // ensure screenX, screenY, vertexIndex are integers; throw if not
+        if (screenX !== Math.floor(screenX)) {
+          console.warn('invalid screenX', screenX);
+          debugger;
+          throw new Error('invalid screenX');
+        }
+        if (screenY !== Math.floor(screenY)) {
+          console.warn('invalid screenY', screenY);
+          debugger;
+          throw new Error('invalid screenY');
+        }
+        if (vertexIndex !== Math.floor(vertexIndex)) {
+          console.warn('invalid vertexIndex', vertexIndex);
+          debugger;
+          throw new Error('invalid vertexIndex');
+        }
+
+        const positionIndex = vertexIndex * 3;
+        const oldPositions = oldGeometry.attributes.position.array;
+        positions[index * 3 + 0] = oldPositions[positionIndex + 0];
+        positions[index * 3 + 1] = oldPositions[positionIndex + 1];
+        positions[index * 3 + 2] = oldPositions[positionIndex + 2];
+      } else {
+        // otherwise, we need to perform a 6-point interpolation across the index colors alphas array
+
+        // colect [{x, y, value}]
+        const alphaSpecs = indexColorsAlphasArray.map(indexColorsAlphas => {
+          const r = indexColorsAlphas[index * 4 + 0];
+          const g = indexColorsAlphas[index * 4 + 1];
+          const b = indexColorsAlphas[index * 4 + 2];
+          const a = indexColorsAlphas[index * 4 + 3];
+
+          const screenX = r * gridX1;
+          const screenY = g * gridY1;
+          const vertexIndex = b;
+
+          // ensure screenX, screenY, vertexIndex are integers; throw if not
+          if (screenX !== Math.floor(screenX)) {
+            console.warn('invalid screenX', screenX);
+            debugger;
+            throw new Error('invalid screenX');
+          }
+          if (screenY !== Math.floor(screenY)) {
+            console.warn('invalid screenY', screenY);
+            debugger;
+            throw new Error('invalid screenY');
+          }
+          if (vertexIndex !== Math.floor(vertexIndex)) {
+            console.warn('invalid vertexIndex', vertexIndex);
+            debugger;
+            throw new Error('invalid vertexIndex');
+          }
+
+          if (a > 0) { // if it's a solid point, get the viewZ from the depth float image data
+            const depthFloatIndex = screenX + screenY * gridX1;
+            const viewZ = depthFloatImageData[depthFloatIndex];
+
+            return {
+              x: screenX,
+              y: screenY,
+              value: viewZ,
+            };
+          } else { // else if it's a transparent point, pretend it's the destination geometry's local Z at the corner
+            const {direction} = indexColorsAlphas;
+
+            // snap the screen position
+            let screenX2 = ix / gridX1;
+            let screenY2 = iy / gridY1;
+            if (direction.x < 0) {
+              screenX2 = gridX1 - 1;
+            } else if (direction.x > 0) {
+              screenX2 = 0;
+            }
+            if (direction.y < 0) {
+              screenY2 = gridY1 - 1;
+            } else if (direction.y > 0) {
+              screenY2 = 0;
+            }
+
+            const viewZ = 0; // XXX need to get this from the rendered depth of the destination geometry
+
+            return {
+              x: screenX2,
+              y: screenY2,
+              value: viewZ,
+            };
+          }
+        });
+        // XXX add to the list of candidates a centroid point at the axis intersection of the other points
+        // XXX viewZ should come from the depth float image data of the new geometry
+        
+        const resolvedViewZ = calculateValue(ix, iy, alphaSpecs);
+        // XXX convert viewZ to worldZ
+        const worldZ = 0; // XXX
+        // positions[index * 3 + 0] = oldPositions[positionIndex + 0];
+        // positions[index * 3 + 1] = oldPositions[positionIndex + 1];
+        positions[index * 3 + 2] = worldZ;
+      }
+    }
+  }
+  // set the new positions and indices on the geometry
+  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geometry.setIndex(new THREE.BufferAttribute(Uint32Array.from(indices), 1));
 };
 
 //
@@ -527,7 +659,7 @@ class SceneRenderer {
       });
     });
     const maskBlob = blob; // same as blob
-    const maskImg = await blob2img(maskBlob);
+    // const maskImg = await blob2img(maskBlob);
 
     // console.log('edit', [blob, maskBlob, this.prompt]);
     const editedImgBlob = await imageAiClient.editImgBlob(blob, maskBlob, this.prompt);
@@ -703,14 +835,14 @@ class SceneRenderer {
       const setPositionFromViewZ = (() => {
         const projInv = new THREE.Matrix4();
       
-        return (screenPosition, camera, viewZ, position) => {
+        return (x, y, viewZ, camera, position) => {
           // get the inverse projection matrix of the camera
           projInv.copy(camera.projectionMatrix)
             .invert();
           position
             .set(
-              screenPosition.x * 2 - 1,
-              -(screenPosition.y) * 2 + 1,
+              x * 2 - 1,
+              -y * 2 + 1,
               0.5
             )
             .applyMatrix4(projInv);
@@ -735,13 +867,11 @@ class SceneRenderer {
       // set the matrices by projecting the depth from the perspective camera
       const skipRatio = 8;
       for (let i = 0; i < depthFloatImageData.length; i += skipRatio) {
-        const depth = depthFloatImageData[i]; // the orthographic depth
-        const viewZ = depth;
         const x = (i % this.renderer.domElement.width) / this.renderer.domElement.width;
         const y = Math.floor(i / this.renderer.domElement.width) / this.renderer.domElement.height;
-        const mousePosition = new THREE.Vector2(x, y);
-        const target = new THREE.Vector3();
-        setPositionFromViewZ(mousePosition, this.camera, viewZ, target);
+        const viewZ = depthFloatImageData[i];
+        const target  = setPositionFromViewZ(x, y, viewZ, this.camera, new THREE.Vector3());
+
         const matrix = new THREE.Matrix4();
         matrix.makeTranslation(target.x, target.y, target.z);
         depthCubesMesh.setMatrixAt(i / skipRatio, matrix);
@@ -1108,27 +1238,16 @@ class SceneRenderer {
       };
       
       indexColorsAlphasArray = directions.map(direction => {
-        // const [directionX, directionY] = direction;
         const indexColorsAlphas2 = smearIndexColorAlphas(indexColorsAlphas, direction);
         indexColorsAlphas2.direction = direction;
         return indexColorsAlphas2;
-        // const scanCanvas = encodeIndexColorsAlphasToCanvas(indexColorsAlphas2);
-        // scanCanvas.classList.add('indexImageDataCanvas:' + [directionX, directionY].join(','));
-        // scanCanvas.direction = direction;
-        // document.body.appendChild(scanCanvas);
-        // return scanCanvas;
       });
       const sdfIndexImageData = (() => {
         const indexColorsAlphas2 = sdfIndexColorAlphas(indexColorsAlphas);
-        indexColorsAlphas2.direction = direction;
+        indexColorsAlphas2.direction = [0, 0];
         return indexColorsAlphas2;
-        // const scanCanvas = encodeIndexColorsAlphasToCanvas(indexColorsAlphas2);
-        // scanCanvas.classList.add('sdfIndexImageDataCanvas');
-        // document.body.appendChild(scanCanvas);
-        // return scanCanvas;
       })();
       indexColorsAlphasArray.push(sdfIndexImageData);
-      globalThis.indexColorsAlphasArray = indexColorsAlphasArray;
     }
 
     // create background mesh
@@ -1147,7 +1266,7 @@ class SceneRenderer {
       backgroundMesh.updateMatrixWorld();
       backgroundMesh.frustumCulled = false;
 
-      _clipGeometryToMask(geometry, widthSegments, heightSegments, maskImageData, indexImageDatas);
+      _clipGeometryToMask(geometry, widthSegments, heightSegments, this.sceneMesh.geometry, maskImageData, depthFloatImageData, indexImageDatas);
       geometry.computeVertexNormals();
 
       this.scene.add(backgroundMesh);
