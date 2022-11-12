@@ -529,7 +529,7 @@ class SceneRenderer {
       preserveDrawingBuffer: true,
     });
     indexRenderer.setClearColor(0x000000, 0);
-    const indexContext = indexRenderer.getContext();
+    // const indexContext = indexRenderer.getContext();
 
     // float render target
     const indexRenderTarget = new THREE.WebGLRenderTarget(
@@ -956,22 +956,55 @@ class SceneRenderer {
       
       const directions = [
         [-1, 0],
-        // [1, 0],
+        [1, 0],
         // [0, 1],
         // [0, -1],
       ];
       const getIndex = (x, y) => (x + indexCanvas.width * y) * 4;
       const smearIndexColorAlphas = (indexColorsAlphas, direction) => {
         const indexColorsAlphas2 = new indexColorsAlphas.constructor(indexColorsAlphas.length);
-        // XXX make this directional
-        for (let dy = 0; dy < indexRenderer.domElement.height; dy++) {
-          const baseIndex = getIndex(0, dy);
-          // const r = indexColorsAlphas[baseIndex + 0];
-          // const a = indexColorsAlphas[baseIndex + 3];
-          let currentColor = indexColorsAlphas[baseIndex + 0];
-          let currentAlpha = indexColorsAlphas[baseIndex + 3];
-          for (let i = 0; i < indexRenderer.domElement.width; i++) {
-            const index = baseIndex + i * 4;
+        const genCoords = function*() {
+          if (direction[0] < 0) {
+            for (let dy = 0; dy < indexRenderer.domElement.height; dy++) {
+              for (let dx = indexRenderer.domElement.width - 1; dx >= 0; dx--) {
+                yield [dx, dy, dx === 0];
+              }
+            }
+          } else if (direction[0] > 0) {
+            for (let dy = 0; dy < indexRenderer.domElement.height; dy++) {
+              for (let dx = 0; dx < indexRenderer.domElement.width; dx++) {
+                yield [dx, dy, dx === indexRenderer.domElement.width - 1];
+              }
+            }
+          } else if (direction[1] < 0) {
+            for (let dx = 0; dx < indexRenderer.domElement.width; dx++) {
+              for (let dy = indexRenderer.domElement.height - 1; dy >= 0; dy--) {
+                yield [dx, dy, dy === 0];
+              }
+            }
+          } else if (direction[1] > 0) {
+            for (let dx = 0; dx < indexRenderer.domElement.width; dx++) {
+              for (let dy = 0; dy < indexRenderer.domElement.height; dy++) {
+                yield [dx, dy, dy === indexRenderer.domElement.height - 1];
+              }
+            }
+          } else {
+            throw new Error('invalid direction');
+          }
+        };
+        {
+          const coordsIter = genCoords();
+          let currentColor = -1;
+          let currentAlpha = -1;
+          for (const coord of coordsIter) {
+            const index = getIndex(coord[0], coord[1]);
+            const last = coord[2];
+
+            if (currentColor === -1) {
+              currentColor = indexColorsAlphas[index + 0];
+              currentAlpha = indexColorsAlphas[index + 3];
+            }
+
             const r = indexColorsAlphas[index + 0];
             const a = indexColorsAlphas[index + 3];
             if (a > 0) {
@@ -986,6 +1019,11 @@ class SceneRenderer {
             indexColorsAlphas2[index + 1] = currentColor;
             indexColorsAlphas2[index + 2] = currentColor;
             indexColorsAlphas2[index + 3] = currentAlpha;
+
+            if (last) {
+              currentColor = -1;
+              currentAlpha = -1;
+            }
           }
         }
         globalThis.indexColorsAlphas2 = indexColorsAlphas2;
