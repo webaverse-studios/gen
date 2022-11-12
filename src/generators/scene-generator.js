@@ -989,6 +989,60 @@ class SceneRenderer {
         // globalThis.indexColorsAlphas2 = indexColorsAlphas2;
         return indexColorsAlphas2;
       };
+      const sdfIndexColorAlphas = (indexColorsAlphas) => {
+        const indexColorsAlphas2 = indexColorsAlphas.slice();
+        const queue = [];
+        const _recursePoints = (x, y, parentColor, parentAlpha) => {
+          queue.push([x, y, parentColor, parentAlpha]);
+        };
+        const _handleRecursePoints = (x, y, parentColor, parentAlpha) => {
+          for (let dy = -1; dy <= 1; dy += 2) {
+            for (let dx = -1; dx <= 1; dx += 2) {
+              const ax = x + dx;
+              const ay = y + dy;
+              if (ax >= 0 && ax < indexRenderer.domElement.width && ay >= 0 && ay < indexRenderer.domElement.height) {
+                const index = getIndex(ax, ay);
+                // const r = indexColorsAlphas2[index + 0];
+                // const g = indexColorsAlphas2[index + 1];
+                // const b = indexColorsAlphas2[index + 2];
+                const a = indexColorsAlphas2[index + 3];
+
+                const parentDistance = Math.sqrt(dx*dx + dy*dy);
+                const newAlpha = parentAlpha - parentDistance * (1 / indexRenderer.domElement.width);
+
+                if (newAlpha > a) {
+                  indexColorsAlphas2[index + 0] = parentColor[0];
+                  indexColorsAlphas2[index + 1] = parentColor[1];
+                  indexColorsAlphas2[index + 2] = parentColor[2];
+                  indexColorsAlphas2[index + 3] = newAlpha;
+                  _recursePoints(ax, ay, indexColorsAlphas2.slice(index + 0, index + 3), indexColorsAlphas2[index + 3]);
+                }
+              }
+            }
+          }
+        };
+        for (let y = 0; y < indexRenderer.domElement.height; y++) {
+          for (let x = 0; x < indexRenderer.domElement.width; x++) {
+            const index = getIndex(x, y);
+            const r = indexColorsAlphas[index + 0];
+            const g = indexColorsAlphas[index + 1];
+            const b = indexColorsAlphas[index + 2];
+            const a = indexColorsAlphas[index + 3];
+            if (a > 0) {
+              indexColorsAlphas2[index + 0] = r;
+              indexColorsAlphas2[index + 1] = g;
+              indexColorsAlphas2[index + 2] = b;
+              indexColorsAlphas2[index + 3] = a;
+              _recursePoints(x, y, [r, g, b], a);
+            }
+          }
+        }
+        while (queue.length > 0) {
+          const [x, y, parentColor, parentAlpha] = queue.shift();
+          _handleRecursePoints(x, y, parentColor, parentAlpha);
+        }
+        return indexColorsAlphas2;
+      };
       indexImageDatas = directions.map(direction => {
         const [directionX, directionY] = direction;
 
@@ -999,6 +1053,14 @@ class SceneRenderer {
         document.body.appendChild(scanCanvas);
         return scanCanvas;
       });
+      const sdfIndexImageData = (() => {
+        const indexColorsAlphas2 = sdfIndexColorAlphas(indexColorsAlphas);
+        const scanCanvas = encodeIndexColorsAlphasToCanvas(indexColorsAlphas2);
+        scanCanvas.classList.add('sdfIndexImageDataCanvas');
+        document.body.appendChild(scanCanvas);
+        return scanCanvas;
+      })();
+      indexImageDatas.push(sdfIndexImageData);
       globalThis.indexImageDatas = indexImageDatas;
     }
 
