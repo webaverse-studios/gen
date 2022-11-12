@@ -753,7 +753,7 @@ class SceneRenderer {
       // render out the index colors and alphas
       const indexCanvas2 = encodeIndexColorsAlphasToCanvas(indexColorsAlphas);
       indexCanvas2.classList.add('indexCanvas2');
-      document.body.appendChild(indexCanvas2);
+      // document.body.appendChild(indexCanvas2);
 
       // create the float data texture from indexColorsAlphas
       const indexCanvas2Texture = new THREE.DataTexture(
@@ -929,7 +929,7 @@ class SceneRenderer {
 
       fullscreenScene.add(fullscreenMesh);
 
-      const indexColorsAlphas2Canvas = indexColorsAlphas => {
+      /* const indexColorsAlphas2Canvas = indexColorsAlphas => {
         const scanCanvas = document.createElement('canvas');
         scanCanvas.width = indexRenderer.domElement.width;
         scanCanvas.height = indexRenderer.domElement.height;
@@ -952,7 +952,7 @@ class SceneRenderer {
           imageData.data[i+2] = colorAlpha[2] * 255;
           imageData.data[i+3] = colorAlpha[3] * 255;
         }
-      };
+      }; */
       
       const directions = [
         [-1, 0],
@@ -960,13 +960,45 @@ class SceneRenderer {
         // [0, 1],
         // [0, -1],
       ];
+      const getIndex = (x, y) => (x + indexCanvas.width * y) * 4;
+      const smearIndexColorAlphas = (indexColorsAlphas, direction) => {
+        const indexColorsAlphas2 = new indexColorsAlphas.constructor(indexColorsAlphas.length);
+        // XXX make this directional
+        for (let dy = 0; dy < indexRenderer.domElement.height; dy++) {
+          const baseIndex = getIndex(0, dy);
+          // const r = indexColorsAlphas[baseIndex + 0];
+          // const a = indexColorsAlphas[baseIndex + 3];
+          let currentColor = indexColorsAlphas[baseIndex + 0];
+          let currentAlpha = indexColorsAlphas[baseIndex + 3];
+          for (let i = 0; i < indexRenderer.domElement.width; i++) {
+            const index = baseIndex + i * 4;
+            const r = indexColorsAlphas[index + 0];
+            const a = indexColorsAlphas[index + 3];
+            if (a > 0) {
+              currentColor = r;
+              currentAlpha = a;
+            } else {
+              currentAlpha -= 1 / indexRenderer.domElement.width;
+              currentAlpha = Math.max(currentAlpha, 0);
+            }
+            // write back
+            indexColorsAlphas2[index + 0] = currentColor;
+            indexColorsAlphas2[index + 1] = currentColor;
+            indexColorsAlphas2[index + 2] = currentColor;
+            indexColorsAlphas2[index + 3] = currentAlpha;
+          }
+        }
+        globalThis.indexColorsAlphas2 = indexColorsAlphas2;
+        return indexColorsAlphas2;
+      };
       indexImageDatas = directions.map(direction => {
         const [directionX, directionY] = direction;
-        
-        const scanCanvas = encodeIndexColorsAlphasToCanvas(indexColorsAlphas);
+
+        const indexColorsAlphas2 = smearIndexColorAlphas(indexColorsAlphas, direction);
+        const scanCanvas = encodeIndexColorsAlphasToCanvas(indexColorsAlphas2);
         scanCanvas.classList.add('indexImageDataCanvas:' + [directionX, directionY].join(','));
         scanCanvas.direction = direction;
-        // document.body.appendChild(scanCanvas);
+        document.body.appendChild(scanCanvas);
         return scanCanvas;
       });
       globalThis.indexImageDatas = indexImageDatas;
