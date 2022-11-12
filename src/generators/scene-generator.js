@@ -742,7 +742,6 @@ class SceneRenderer {
         const indexImageData2 = indexContext2.createImageData(indexCanvas.width, indexCanvas.height);
         encodeIndexColorsAlphasToRgba(indexColorsAlphas, indexImageData2.data);
         indexContext2.putImageData(indexImageData2, 0, 0);
-        console.log('encode to image data', indexImageData2);
         return indexCanvas2;
       };
 
