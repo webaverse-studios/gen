@@ -20,8 +20,6 @@ import {labelClasses} from '../constants/prompts.js';
 //
 
 const imageAiClient = new ImageAiClient();
-// globalThis.depthCubes = [];
-// globalThis.depthCubesSkipped = [];
 
 //
 
@@ -204,39 +202,11 @@ const _cutSkybox = geometry => {
       newIndices[numIndices + 1] = b;
       newIndices[numIndices + 2] = c;
       numIndices += 3;
-    } /* else {
-      console.log('cut point');
-    } */
+    }
   }
   // set the new indices
   geometry.setIndex(new THREE.BufferAttribute(newIndices.subarray(0, numIndices), 1));
 };
-// interpolate a point between a set of color points
-/* function calculateColor(x, y, colors) {
-  let total = 0;
-  for (let i = 0; i < colors.length; i++) {
-    let c = colors[i];
-    let d = distance(c.x, c.y, x, y);
-    if (d === 0) {
-        return c;
-    }
-    d = 1 / (d * d);
-    c.d = d;
-    total += d;
-  }
-  let r = 0, g = 0, b = 0;
-  for (let i = 0; i < colors.length; i++) {
-    let c = colors[i];
-    let ratio = c.d / total;
-    r += ratio * c.r;
-    g += ratio * c.g;
-    b += ratio * c.b;
-  }
-  r = Math.floor(r);
-  g = Math.floor(g);
-  b = Math.floor(b);
-  return {r:r,g:g,b:b};
-} */
 // same as above, but for a luminosity value
 function calculateValue(x, y, alphaSpecs /* : {x: number, y: number, a: number}[] */) {
   let total = 0;
@@ -854,7 +824,7 @@ class SceneRenderer {
       })();
 
       // render an instanced cubes mesh to show the depth
-      // const depthCubesGeometry = new THREE.BoxBufferGeometry(0.1, 0.1, 0.1);
+      // const depthCubesGeometry = new THREE.BoxBufferGeometry(1, 1, 1);
       const depthCubesGeometry = new THREE.BoxBufferGeometry(0.01, 0.01, 0.01);
       const depthCubesMaterial = new THREE.MeshPhongMaterial({
         color: 0x00FFFF,
@@ -921,7 +891,6 @@ class SceneRenderer {
       // extract the index colors and alphas
       const indexColorsAlphas = new Float32Array(indexCanvas.width * indexCanvas.height * 4);
       indexRenderer.readRenderTargetPixels(indexRenderTarget, 0, 0, indexCanvas.width, indexCanvas.height, indexColorsAlphas);
-      // globalThis.indexColorsAlphas = indexColorsAlphas;
 
       // render out the index colors and alphas
       const indexCanvas2 = encodeIndexColorsAlphasToCanvas(indexColorsAlphas);
@@ -1179,7 +1148,6 @@ class SceneRenderer {
             }
           }
         }
-        // globalThis.indexColorsAlphas2 = indexColorsAlphas2;
         return indexColorsAlphas2;
       };
       const sdfIndexColorAlphas = (indexColorsAlphas) => {
