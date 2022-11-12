@@ -497,25 +497,26 @@ class SceneRenderer {
     const sceneMesh2 = this.sceneMesh.clone();
     sceneMesh2.name = 'sceneMesh2';
     sceneMesh2.material = new THREE.ShaderMaterial({
-      vertexShader: `\
-        // encode the vertex index into the color attribute
-        flat varying vec3 vColor;
+      uniforms: {
+        resolution: {
+          value: new THREE.Vector2(indexCanvas.width, indexCanvas.height),
+          needsUpdate: true,
+        },
+      },
+      vertexShader: `
+        varying float vVertexId;
         void main() {
-          float fIndex = float(gl_VertexID);
-          // float r = floor(fIndex / 65536.);
-          // fIndex -= r * 65536.;
-          // float g = floor(fIndex / 256.);
-          // fIndex -= g * 256.;
-          // float b = fIndex;
-          // vColor = vec3(r, g, b) / 255.;
-          vColor = vec3(fIndex);
+          vVertexId = float(gl_VertexID);
           gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
         }
       `,
-      fragmentShader: `\
-        flat varying vec3 vColor;
+      fragmentShader: `
+        uniform vec2 resolution;
+        varying float vVertexId;
+
         void main() {
-          gl_FragColor = vec4(vColor, 1.);
+          vec2 uv = gl_FragCoord.xy / resolution;
+          gl_FragColor = vec4(uv, vVertexId, 1.0);
         }
       `,
     });
@@ -548,17 +549,6 @@ class SceneRenderer {
       indexRenderer.setRenderTarget(indexRenderTarget);
       indexRenderer.render(indexScene, this.camera);
     }
-
-    /* // display index canvas for debugging
-    {
-      const indexCanvas2 = document.createElement('canvas');
-      indexCanvas2.classList.add('indexCanvas2');
-      indexCanvas2.width = indexCanvas.width;
-      indexCanvas2.height = indexCanvas.height;
-      const context2 = indexCanvas2.getContext('2d');
-      context2.drawImage(indexCanvas, 0, 0);
-      document.body.appendChild(indexCanvas2);
-    } */
 
     // render color witohut antialiasing
     const nonAaCanvas = document.createElement('canvas');
@@ -704,29 +694,19 @@ class SceneRenderer {
       const fullscreenScene = new THREE.Scene();
       fullscreenScene.autoUpdate = false;
 
-      /* const getIndexColorAlphaFromRgba = (float32Array, i) => {
-        const r = float32Array[i + 0];
-        const a = float32Array[i + 3];
-        return [
-          r,
-          a,
-        ];
-      }; */
       const encodeIndexColorAlphaToRgba = (indexColor, alpha, uint8Array, i) => {
-        const r = Math.floor(indexColor / 65536.);
-        indexColor -= r * 65536.;
-        const g = Math.floor(indexColor / 256.);
-        indexColor -= g * 256.;
-        const b = Math.floor(indexColor);
+        const r = indexColor[0];
+        const g = indexColor[1];
+        const b = indexColor[2];
 
-        uint8Array[i + 0] = r;
-        uint8Array[i + 1] = g;
-        uint8Array[i + 2] = b;
+        uint8Array[i + 0] = r * 255;
+        uint8Array[i + 1] = g * 255;
+        uint8Array[i + 2] = b / (indexCanvas.width * indexCanvas.height) * 255;
         uint8Array[i + 3] = alpha * 255;
       };
       const encodeIndexColorsAlphasToRgba = (indexColorsAlphas, uint8Array) => {
         for (let i = 0; i < indexColorsAlphas.length; i += 4) {
-          const indexColor = indexColorsAlphas[i + 0];
+          const indexColor = indexColorsAlphas.slice(i + 0, i + 3);
           const alpha = indexColorsAlphas[i + 3];
           encodeIndexColorAlphaToRgba(indexColor, alpha, uint8Array, i);
         }
@@ -748,7 +728,7 @@ class SceneRenderer {
       // extract the index colors and alphas
       const indexColorsAlphas = new Float32Array(indexCanvas.width * indexCanvas.height * 4);
       indexRenderer.readRenderTargetPixels(indexRenderTarget, 0, 0, indexCanvas.width, indexCanvas.height, indexColorsAlphas);
-      globalThis.indexColorsAlphas = indexColorsAlphas;
+      // globalThis.indexColorsAlphas = indexColorsAlphas;
 
       // render out the index colors and alphas
       const indexCanvas2 = encodeIndexColorsAlphasToCanvas(indexColorsAlphas);
@@ -928,37 +908,12 @@ class SceneRenderer {
       fullscreenMesh.frustumCulled = false;
 
       fullscreenScene.add(fullscreenMesh);
-
-      /* const indexColorsAlphas2Canvas = indexColorsAlphas => {
-        const scanCanvas = document.createElement('canvas');
-        scanCanvas.width = indexRenderer.domElement.width;
-        scanCanvas.height = indexRenderer.domElement.height;
-        scanCanvas.style.cssText = `\
-          background: red;
-        `;
-        const scanContext = scanCanvas.getContext('2d');
-        scanContext.drawImage(indexRenderer.domElement, 0, 0);
-        const imageData = scanContext.getImageData(0, 0, scanCanvas.width, scanCanvas.height);
-
-        for (let i = 0; i < imageData.data.length; i += 4) {
-          const r = imageData.data[i+0];
-          const g = imageData.data[i+1];
-          const b = imageData.data[i+2];
-          const a = imageData.data[i+3];
-          const index = r | (g << 8) | (b << 16);
-          const colorAlpha = indexColorsAlphas[index];
-          imageData.data[i+0] = colorAlpha[0] * 255;
-          imageData.data[i+1] = colorAlpha[1] * 255;
-          imageData.data[i+2] = colorAlpha[2] * 255;
-          imageData.data[i+3] = colorAlpha[3] * 255;
-        }
-      }; */
       
       const directions = [
         [-1, 0],
         [1, 0],
-        // [0, 1],
-        // [0, -1],
+        [0, 1],
+        [0, -1],
       ];
       const getIndex = (x, y) => (x + indexCanvas.width * y) * 4;
       const smearIndexColorAlphas = (indexColorsAlphas, direction) => {
@@ -994,39 +949,44 @@ class SceneRenderer {
         };
         {
           const coordsIter = genCoords();
-          let currentColor = -1;
+          let currentColor = [-1, -1, -1];
           let currentAlpha = -1;
           for (const coord of coordsIter) {
             const index = getIndex(coord[0], coord[1]);
             const last = coord[2];
 
-            if (currentColor === -1) {
-              currentColor = indexColorsAlphas[index + 0];
+            if (currentAlpha === -1) {
+              currentColor[0] = indexColorsAlphas[index + 0];
+              currentColor[1] = indexColorsAlphas[index + 1];
+              currentColor[2] = indexColorsAlphas[index + 2];
               currentAlpha = indexColorsAlphas[index + 3];
             }
 
             const r = indexColorsAlphas[index + 0];
+            const g = indexColorsAlphas[index + 1];
+            const b = indexColorsAlphas[index + 2];
             const a = indexColorsAlphas[index + 3];
             if (a > 0) {
-              currentColor = r;
+              currentColor[0] = r;
+              currentColor[1] = g;
+              currentColor[2] = b;
               currentAlpha = a;
             } else {
               currentAlpha -= 1 / indexRenderer.domElement.width;
               currentAlpha = Math.max(currentAlpha, 0);
             }
             // write back
-            indexColorsAlphas2[index + 0] = currentColor;
-            indexColorsAlphas2[index + 1] = currentColor;
-            indexColorsAlphas2[index + 2] = currentColor;
+            indexColorsAlphas2[index + 0] = currentColor[0];
+            indexColorsAlphas2[index + 1] = currentColor[1];
+            indexColorsAlphas2[index + 2] = currentColor[2];
             indexColorsAlphas2[index + 3] = currentAlpha;
 
             if (last) {
-              currentColor = -1;
               currentAlpha = -1;
             }
           }
         }
-        globalThis.indexColorsAlphas2 = indexColorsAlphas2;
+        // globalThis.indexColorsAlphas2 = indexColorsAlphas2;
         return indexColorsAlphas2;
       };
       indexImageDatas = directions.map(direction => {
