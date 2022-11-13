@@ -230,7 +230,15 @@ function calculateValue(x, y, alphaSpecs /* : {x: number, y: number, a: number}[
   // return {a:a};
   return a;
 }
-const _clipGeometryToMask = (geometry, widthSegments, heightSegments, oldGeometry, maskImageData, depthFloatImageData, indexColorsAlphasArray) => {
+const _clipGeometryToMask = (
+  geometry,
+  widthSegments,
+  heightSegments,
+  oldGeometry,
+  maskImageData,
+  depthFloatImageData,
+  indexColorsAlphasArray
+) => {
   // check if the point was originally solid or a hole
   const _isPointTransparent = i => maskImageData.data[i * 4 + 3] === 0;
   // get the array which has the brightest alphas at this index
@@ -248,7 +256,7 @@ const _clipGeometryToMask = (geometry, widthSegments, heightSegments, oldGeometr
     return bestIndexColorAlpha;
   };
 
-  const positions = geometry.attributes.position.array.slice();
+  // const positions = geometry.attributes.position.array.slice();
   const indices = [];
   const gridX = widthSegments;
   const gridY = heightSegments;
@@ -295,7 +303,7 @@ const _clipGeometryToMask = (geometry, widthSegments, heightSegments, oldGeometr
       }
     }
   }
-  for (let ix = 0; ix < gridX1; ix++) {
+  /* for (let ix = 0; ix < gridX1; ix++) {
     for (let iy = 0; iy < gridX1; iy++) {
       const index = ix + gridX1 * iy;
 
@@ -412,7 +420,7 @@ const _clipGeometryToMask = (geometry, widthSegments, heightSegments, oldGeometr
     }
   }
   // set the new positions and indices on the geometry
-  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3)); */
   geometry.setIndex(new THREE.BufferAttribute(Uint32Array.from(indices), 1));
 };
 
@@ -427,7 +435,9 @@ class ScenePackage {
 //
 
 class SceneRenderer {
-  constructor(element) {
+  constructor(element, {
+    debug = false,
+  } = {}) {
     this.element = element;
 
     this.prompt = null;
@@ -487,6 +497,8 @@ class SceneRenderer {
     cubeMesh.name = 'cubeMesh';
     cubeMesh.frustumCulled = false;
     // scene.add(cubeMesh);
+
+    this.debug = debug;
 
     this.listen();
 
@@ -609,135 +621,159 @@ class SceneRenderer {
     this.planesMesh = planesMesh;
   }
   async renderBackground() {
-    const cameraPosition = this.camera.position.clone();
-    const cameraQuaternion = this.camera.quaternion.clone();
+    // render the mask image
+    console.time('maskImage');
+    let blob;
+    let maskBlob;
+    {
+      const backgroundCanvas = document.createElement('canvas');
+      backgroundCanvas.classList.add('backgroundCanvas');
+      backgroundCanvas.width = this.renderer.domElement.width;
+      backgroundCanvas.height = this.renderer.domElement.height;
+      backgroundCanvas.style.cssText = `\
+        background: red;
+      `;
+      const backgroundContext = backgroundCanvas.getContext('2d');
+      backgroundContext.drawImage(this.renderer.domElement, 0, 0);
+      this.element.appendChild(backgroundCanvas);
 
-    const backgroundCanvas = document.createElement('canvas');
-    backgroundCanvas.classList.add('backgroundCanvas');
-    backgroundCanvas.width = this.renderer.domElement.width;
-    backgroundCanvas.height = this.renderer.domElement.height;
-    backgroundCanvas.style.cssText = `\
-      background: red;
-    `;
-    const backgroundContext = backgroundCanvas.getContext('2d');
-    backgroundContext.drawImage(this.renderer.domElement, 0, 0);
-    this.element.appendChild(backgroundCanvas);
-
-    const blob = await new Promise((accept, reject) => {
-      backgroundCanvas.toBlob(blob => {
-        accept(blob);
+      blob = await new Promise((accept, reject) => {
+        backgroundCanvas.toBlob(blob => {
+          accept(blob);
+        });
       });
-    });
-    const maskBlob = blob; // same as blob
-    // const maskImg = await blob2img(maskBlob);
+      maskBlob = blob; // same as blob
+      // const maskImg = await blob2img(maskBlob);
+    }
+    console.timeEnd('maskImage');
 
-    // console.log('edit', [blob, maskBlob, this.prompt]);
-    const editedImgBlob = await imageAiClient.editImgBlob(blob, maskBlob, this.prompt);
-    const editedImg = await blob2img(editedImgBlob);
-    editedImg.classList.add('editImg');
-    this.element.appendChild(editedImg);
+    // edit the image
+    console.time('editImg');
+    let editedImgBlob;
+    let editedImg;
+    {
+      editedImgBlob = await imageAiClient.editImgBlob(blob, maskBlob, this.prompt);
+      editedImg = await blob2img(editedImgBlob);
+      editedImg.classList.add('editImg');
+      this.element.appendChild(editedImg);
+    }
+    console.timeEnd('editImg');
 
     // get point cloud
-    const {
-      headers: pointCloudHeaders,
-      arrayBuffer: pointCloudArrayBuffer,
-    } = await getPointCloud(blob);
-    const pointCloudCanvas = pointCloudArrayBuffer2canvas(pointCloudArrayBuffer);
-    this.element.appendChild(pointCloudCanvas);
-    
-    const fov = Number(pointCloudHeaders['x-fov']);
-    this.camera.fov = fov;
-    this.camera.updateProjectionMatrix();
-
-    // index canvas
-    const indexCanvas = document.createElement('canvas');
-    indexCanvas.classList.add('indexCanvas');
-    indexCanvas.width = this.renderer.domElement.width;
-    indexCanvas.height = this.renderer.domElement.height;
-
-    // for index rendering, create a copy of this.sceneMesh with a new material
-    const indexScene = new THREE.Scene();
-    indexScene.autoUpdate = false;
-
-    const sceneMesh2 = this.sceneMesh.clone();
-    sceneMesh2.name = 'sceneMesh2';
-    sceneMesh2.material = new THREE.ShaderMaterial({
-      uniforms: {
-        resolution: {
-          value: new THREE.Vector2(indexCanvas.width, indexCanvas.height),
-          needsUpdate: true,
-        },
-      },
-      vertexShader: `
-        varying float vVertexId;
-        void main() {
-          vVertexId = float(gl_VertexID);
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        }
-      `,
-      fragmentShader: `
-        uniform vec2 resolution;
-        varying float vVertexId;
-
-        void main() {
-          vec2 uv = gl_FragCoord.xy / resolution;
-          gl_FragColor = vec4(uv, vVertexId, 1.0);
-        }
-      `,
-    });
-    indexScene.add(sceneMesh2);
-
-    // create a new index renderer
-    const indexRenderer = new THREE.WebGLRenderer({
-      canvas: indexCanvas,
-      alpha: true,
-      // antialias: true,
-      preserveDrawingBuffer: true,
-    });
-    indexRenderer.setClearColor(0x000000, 0);
-    // const indexContext = indexRenderer.getContext();
-
-    // float render target
-    const indexRenderTarget = new THREE.WebGLRenderTarget(
-      this.renderer.domElement.width,
-      this.renderer.domElement.height,
-      {
-        minFilter: THREE.NearestFilter,
-        magFilter: THREE.NearestFilter,
-        format: THREE.RGBAFormat,
-        type: THREE.FloatType,
-      }
-    );
+    console.time('pointCloud');
+    let pointCloudHeaders;
+    let pointCloudArrayBuffer;
+    {
+      const pc = await getPointCloud(blob);
+      pointCloudHeaders = pc.headers;
+      pointCloudArrayBuffer = pc.arrayBuffer;
+      const pointCloudCanvas = pointCloudArrayBuffer2canvas(pointCloudArrayBuffer);
+      this.element.appendChild(pointCloudCanvas);
+      
+      const fov = Number(pointCloudHeaders['x-fov']);
+      this.camera.fov = fov;
+      this.camera.updateProjectionMatrix();
+    }
+    console.timeEnd('pointCloud');
 
     // render indices
+    console.time('renderIndices');
+    let indexCanvas;
+    let indexRenderer;
+    let indexRenderTarget;
+    let maskImageData;
     {
-      indexRenderer.setRenderTarget(indexRenderTarget);
-      indexRenderer.render(indexScene, this.camera);
-    }
+      indexCanvas = document.createElement('canvas');
+      indexCanvas.classList.add('indexCanvas');
+      indexCanvas.width = this.renderer.domElement.width;
+      indexCanvas.height = this.renderer.domElement.height;
 
-    // render color witohut antialiasing
-    const nonAaCanvas = document.createElement('canvas');
-    nonAaCanvas.width = this.renderer.domElement.width;
-    nonAaCanvas.height = this.renderer.domElement.height;
-    const nonAaRenderer = new THREE.WebGLRenderer({
-      canvas: nonAaCanvas,
-      alpha: true,
-      // antialias: true,
-      preserveDrawingBuffer: true,
-    });
-    nonAaRenderer.setClearColor(0x000000, 0);
-    nonAaRenderer.render(this.scene, this.camera);
-    const maskImageData = (() => {
-      const canvas = document.createElement('canvas');
-      canvas.width = nonAaRenderer.domElement.width;
-      canvas.height = nonAaRenderer.domElement.height;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(nonAaRenderer.domElement, 0, 0);
-      const imageData = ctx.getImageData(0, 0, nonAaRenderer.domElement.width, nonAaRenderer.domElement.height);
-      return imageData;
-    })();
+      const indexScene = new THREE.Scene();
+      indexScene.autoUpdate = false;
+
+      const sceneMesh2 = this.sceneMesh.clone();
+      sceneMesh2.name = 'sceneMesh2';
+      sceneMesh2.material = new THREE.ShaderMaterial({
+        uniforms: {
+          resolution: {
+            value: new THREE.Vector2(indexCanvas.width, indexCanvas.height),
+            needsUpdate: true,
+          },
+        },
+        vertexShader: `
+          varying float vVertexId;
+          void main() {
+            vVertexId = float(gl_VertexID);
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `,
+        fragmentShader: `
+          uniform vec2 resolution;
+          varying float vVertexId;
+
+          void main() {
+            vec2 uv = gl_FragCoord.xy / resolution;
+            gl_FragColor = vec4(uv, vVertexId, 1.0);
+          }
+        `,
+      });
+      indexScene.add(sceneMesh2);
+
+      // create a new index renderer
+      indexRenderer = new THREE.WebGLRenderer({
+        canvas: indexCanvas,
+        alpha: true,
+        // antialias: true,
+        preserveDrawingBuffer: true,
+      });
+      indexRenderer.setClearColor(0x000000, 0);
+      // const indexContext = indexRenderer.getContext();
+
+      // float render target
+      const indexRenderTarget = new THREE.WebGLRenderTarget(
+        this.renderer.domElement.width,
+        this.renderer.domElement.height,
+        {
+          minFilter: THREE.NearestFilter,
+          magFilter: THREE.NearestFilter,
+          format: THREE.RGBAFormat,
+          type: THREE.FloatType,
+        }
+      );
+
+      // render indices
+      {
+        indexRenderer.setRenderTarget(indexRenderTarget);
+        indexRenderer.render(indexScene, this.camera);
+      }
+
+      // render color witohut antialiasing
+      const nonAaCanvas = document.createElement('canvas');
+      nonAaCanvas.width = this.renderer.domElement.width;
+      nonAaCanvas.height = this.renderer.domElement.height;
+      const nonAaRenderer = new THREE.WebGLRenderer({
+        canvas: nonAaCanvas,
+        alpha: true,
+        // antialias: true,
+        preserveDrawingBuffer: true,
+      });
+      nonAaRenderer.setClearColor(0x000000, 0);
+      nonAaRenderer.render(this.scene, this.camera);
+      
+      maskImageData = (() => {
+        const canvas = document.createElement('canvas');
+        canvas.width = nonAaRenderer.domElement.width;
+        canvas.height = nonAaRenderer.domElement.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(nonAaRenderer.domElement, 0, 0);
+        const imageData = ctx.getImageData(0, 0, nonAaRenderer.domElement.width, nonAaRenderer.domElement.height);
+        return imageData;
+      })();
+    }
+    console.timeEnd('renderIndices');
 
     // render depth
+    console.time('renderDepth');
     let depthFloatImageData;
     {
       const depthMaterial = new THREE.ShaderMaterial({
@@ -799,8 +835,10 @@ class SceneRenderer {
       // done with this
       this.scene.remove(depthMesh);
     }
+    console.timeEnd('renderDepth');
 
     // display depth cubes
+    console.time('depthCubes');
     {
       const setPositionFromViewZ = (() => {
         const projInv = new THREE.Matrix4();
@@ -849,10 +887,12 @@ class SceneRenderer {
       depthCubesMesh.count = depthFloatImageData.length;
       depthCubesMesh.instanceMatrix.needsUpdate = true;
     }
+    console.timeEnd('depthCubes');
 
     // post-process index canvas
     let indexColorsAlphasArray;
-    { 
+    console.time('postProcess');
+    {
       // set up the scene
       const fullscreenScene = new THREE.Scene();
       fullscreenScene.autoUpdate = false;
@@ -892,185 +932,12 @@ class SceneRenderer {
       const indexColorsAlphas = new Float32Array(indexCanvas.width * indexCanvas.height * 4);
       indexRenderer.readRenderTargetPixels(indexRenderTarget, 0, 0, indexCanvas.width, indexCanvas.height, indexColorsAlphas);
 
-      // render out the index colors and alphas
-      const indexCanvas2 = encodeIndexColorsAlphasToCanvas(indexColorsAlphas);
-      indexCanvas2.classList.add('indexCanvas2');
-      // document.body.appendChild(indexCanvas2);
+      if (this.debug) {
+        const indexCanvas2 = encodeIndexColorsAlphasToCanvas(indexColorsAlphas);
+        indexCanvas2.classList.add('indexCanvas2');
+        document.body.appendChild(indexCanvas2);
+      }
 
-      // create the float data texture from indexColorsAlphas
-      const indexCanvas2Texture = new THREE.DataTexture(
-        indexColorsAlphas,
-        indexCanvas.width,
-        indexCanvas.height,
-        THREE.RGBAFormat,
-        THREE.FloatType,
-      );
-      indexCanvas2Texture.minFilter = THREE.NearestFilter;
-      indexCanvas2Texture.magFilter = THREE.NearestFilter;
-      indexCanvas2Texture.wrapS = THREE.ClampToEdgeWrapping;
-      indexCanvas2Texture.wrapT = THREE.ClampToEdgeWrapping;
-      indexCanvas2Texture.needsUpdate = true;
-
-      const fullscreenGeometry = new THREE.PlaneGeometry(2, 2);
-      const indexMaterial = new THREE.ShaderMaterial({
-        uniforms: {
-          size: {
-            value: new THREE.Vector2(
-              this.renderer.domElement.width,
-              this.renderer.domElement.height,
-            ),
-            needsUpdate: true,
-          },
-          direction: {
-            value: new THREE.Vector2(0, 0),
-            needsUpdate: true,
-          },
-          map: {
-            // value: indexCanvas2Texture,
-            value: indexRenderTarget,
-            needsUpdate: true,
-          },
-        },
-        vertexShader: `\
-          varying vec2 vUv;
-          void main() {
-            vUv = uv;
-            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-          }
-        `,
-        fragmentShader: `\
-          varying vec2 vUv;
-          uniform vec2 size;
-          uniform vec2 direction;
-          uniform sampler2D map;
-
-          #define PI 3.1415926535897932384626433832795
-
-          const int maxSamples = 512;
-          
-          vec3 bestColor = vec3(1., 0., 1.); // XXX should be white in production to minimize risk of color/index conflicts
-          float bestColorDistance = 1e10;
-          bool seenFlags[maxSamples];
-          int numSeenFlags = 0;
-
-          void setSeenFlag(int index) {
-            seenFlags[index] = true;
-            numSeenFlags++;
-          }
-          void setColor(vec3 color, vec2 duvPixels, int i) {
-            float distanceAlongDirection = dot(duvPixels, direction);
-            if (distanceAlongDirection >= 0. && distanceAlongDirection < bestColorDistance) {
-              bestColor = color;
-              bestColorDistance = distanceAlongDirection;
-            }
-            setSeenFlag(i);
-          }
-          void scanRadius(float r, vec2 direction, float startAngle, float endAngle) {
-            // sample points in an arc of radius r
-            // the best color is defined as the one furthest in the given direction
-            // we stop looking once we see the first point in any given ray, to detect a bounding box
-            // direction is in [-1, 1] space
-            for (int i = 0; i < maxSamples; i++) {
-              if (!seenFlags[i]) {
-                float angle = mix(startAngle, endAngle, float(i) / float(maxSamples));
-                vec2 duvPixels = r * vec2(cos(angle), sin(angle));
-                vec2 duv = duvPixels / size;
-                vec2 uv = vUv + duv;
-
-                if (uv.x >= 0. && uv.x <= 1. && uv.y >= 0. && uv.y <= 1.) {
-                  vec4 color = texture2D(map, uv);
-                  if (color.a > 0.) {
-                    setColor(color.rgb, duvPixels, i);
-                  }
-                } else {
-                  setSeenFlag(i);
-                }
-              }
-            }
-          }
-          
-          const float maxDistance = 512.;
-          
-          void main() {
-            /* // we start on the right and run counter clockwise
-            float startAngle = 0.;
-            float endAngle = PI * 2.;
-            if (direction.x < 0.) {
-              startAngle = PI * 0.5;
-              endAngle = PI * 3. * 0.5;
-            } else if (direction.x > 0.) {
-              startAngle = PI * 3. * 0.5;
-              endAngle = PI * 0.5;
-            } else if (direction.y < 0.) {
-              startAngle = 0.;
-              endAngle = PI;
-            } else if (direction.y > 0.) {
-              startAngle = PI;
-              endAngle = 0.;
-            } */
-            
-            vec4 color = texture2D(map, vUv);
-            if (color.a == 0.) {
-              /* // first unidirectional scan
-              for (float radius = 1.; radius < maxDistance; radius += 1.) {
-                scanRadius(radius, direction, startAngle, endAngle);
-                if (numSeenFlags >= maxSamples) {
-                  break;
-                }
-              } */
-              // if the first scan failed, try a full scan
-              // if (numSeenFlags < maxSamples) {
-                float startAngle2 = 0.;
-                float endAngle2 = PI * 2.;
-                if (direction.x < 0.) {
-                  startAngle2 = PI * 0.5;
-                  endAngle2 = PI * 3. * 0.5;
-                } else if (direction.x > 0.) {
-                  startAngle2 = PI * 3. * 0.5;
-                  endAngle2 = PI * 3. * 0.5 + PI;
-                } else if (direction.y < 0.) {
-                  startAngle2 = 0.;
-                  endAngle2 = PI;
-                } else if (direction.y > 0.) {
-                  startAngle2 = PI;
-                  endAngle2 = PI + PI;
-                }
-
-                /* // have to reset the seen flags
-                for (int i = 0; i < maxSamples; i++) {
-                  seenFlags[i] = false;
-                }
-                numSeenFlags = 0; */
-
-                for (float radius = 1.; radius < maxDistance; radius += 1.) {
-                  scanRadius(radius, direction, startAngle2, endAngle2);
-                  if (numSeenFlags >= maxSamples) {
-                    break;
-                  }
-                }
-              // }
-              
-              // encode the distance as alpha
-              vec2 directionAxis = abs(direction);
-              float sizeAlongDirectionAxis = dot(size, directionAxis);
-              float a = (sizeAlongDirectionAxis - bestColorDistance) / sizeAlongDirectionAxis;
-              // return the color
-              gl_FragColor = vec4(bestColor, a);
-            } else {
-              gl_FragColor = color;
-            }
-          }
-        `,
-        transparent: true,
-        depthTest: false,
-        depthWrite: false,
-      });
-      const fullscreenMesh = new THREE.Mesh(fullscreenGeometry, indexMaterial);
-      fullscreenMesh.name = 'fullscreenMesh';
-      fullscreenMesh.frustumCulled = false;
-
-      fullscreenScene.add(fullscreenMesh);
-      
       const directions = [
         [-1, 0],
         [1, 0],
@@ -1217,8 +1084,10 @@ class SceneRenderer {
       })();
       indexColorsAlphasArray.push(sdfIndexImageData);
     }
+    console.timeEnd('postProcess');
 
     // create background mesh
+    console.time('backgroundMesh');
     {
       const widthSegments = editedImg.width - 1;
       const heightSegments = editedImg.height - 1;
@@ -1229,17 +1098,27 @@ class SceneRenderer {
       });
       const backgroundMesh = new THREE.Mesh(geometry, material);
       backgroundMesh.name = 'backgroundMesh';
-      backgroundMesh.position.copy(cameraPosition);
-      backgroundMesh.quaternion.copy(cameraQuaternion);
+      backgroundMesh.position.copy(this.camera.position);
+      backgroundMesh.quaternion.copy(this.camera.quaternion);
       backgroundMesh.updateMatrixWorld();
       backgroundMesh.frustumCulled = false;
 
-      _clipGeometryToMask(geometry, widthSegments, heightSegments, this.sceneMesh.geometry, maskImageData, depthFloatImageData, indexImageDatas);
+      const oldGeometry = this.sceneMesh.geometry;
+      
+      _clipGeometryToMask(
+        geometry,
+        widthSegments,
+        heightSegments,
+        oldGeometry,
+        maskImageData,
+        depthFloatImageData,
+        indexColorsAlphasArray
+      );
       geometry.computeVertexNormals();
 
       this.scene.add(backgroundMesh);
     }
-
+    console.timeEnd('backgroundMesh');
   }
 }
 
