@@ -2,6 +2,7 @@ import {useState, useEffect} from 'react';
 // import {useRef} from 'react';
 
 import {StoryboardGeneratorComponent} from  './StoryboardGeneratorComponent.jsx';
+import {Storyboard2DRendererComponent} from  './Storyboard2DRendererComponent.jsx';
 import {Storyboard3DRendererComponent} from  './Storyboard3DRendererComponent.jsx';
 import styles from '../../../styles/StoryboardRenderer.module.css';
 
@@ -87,10 +88,13 @@ const StoryboardPlaceholderComponent = ({
 export const StoryboardRendererComponent = ({
   storyboard,
   panel,
+  layer,
   onPanelSelect = () => {},
 }) => {
   const _getEmpty = () => panel ? panel.isEmpty() : true;
+  const _getDimension = () => panel ? panel.getDimension() : 2;
   const [empty, setEmpty] = useState(_getEmpty);
+  const [dimension, setDimension] = useState(_getDimension);
 
   useEffect(() => {
     if (panel) {
@@ -117,10 +121,27 @@ export const StoryboardRendererComponent = ({
               panel={panel}
             />
           } else {
-            return <StoryboardLayerComponent
-              storyboard={storyboard}  
-              panel={panel}
-            />
+            if (layer) {
+              return <StoryboardLayerComponent
+                storyboard={storyboard}  
+                panel={panel}
+                layer={layer}
+              />
+            } else {
+              if (dimension === 2) {
+                return <Storyboard2DRendererComponent
+                  storyboard={storyboard}  
+                  panel={panel}
+                />
+              } else if (dimension === 3) {
+                return <Storyboard3DRendererComponent
+                  storyboard={storyboard}  
+                  panel={panel}
+                />
+              } else {
+                throw new Error('invalid dimension: ' + dimension);
+              }
+            }
           }
         } else {
           return <StoryboardPlaceholderComponent

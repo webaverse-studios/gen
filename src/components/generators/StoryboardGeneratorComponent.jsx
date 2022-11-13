@@ -19,6 +19,9 @@ export const StoryboardGeneratorComponent = ({
       };
       panel.addEventListener('busyupdate', onbusyupdate);
 
+      setBusy(panel.isBusy());
+      setBusyMessage(panel.getBusyMessage());
+
       return () => {
         panel.removeEventListener('busyupdate', onbusyupdate);
       };

@@ -1326,6 +1326,9 @@ export class Panel extends EventTarget {
       return '';
     }
   }
+  getDimension() {
+    return 2; // XXX or 3
+  }
 
   async setFile(file) {
     this.data.image = file;
