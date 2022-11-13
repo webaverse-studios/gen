@@ -1,3 +1,7 @@
+.storyboardGenerator {
+  width: inherit;
+  height: inherit;
+}
 .storyboardGenerator .input {
   min-width: 800px;
   margin-right: 30px;

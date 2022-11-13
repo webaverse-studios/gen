@@ -65,17 +65,22 @@ const SceneGeneratorComponent = () => {
 
   useEffect(() => {
     const paneladd = e => {
-      const newPanels = [...panels, e.data.panel];
-      setPanels(newPanels);
+      setPanels(storyboard.panels.slice());
     };
     storyboard.addEventListener('paneladd', paneladd);
     const panelremove = e => {
-      if (panel === e.data.panel) {
-        setPanel(null);
-      }
-
-      const newPanels = panels.filter(panel => panel !== e.data.panel);
+      const oldPanels = panels;
+      const newPanels = storyboard.panels.slice();
       setPanels(newPanels);
+
+      if (panel === e.data.panel) {
+        // select the next panel, if there is one
+        if (newPanels.length > 0) {
+          setPanel(newPanels[Math.min(oldPanels.indexOf(panel), newPanels.length - 1)]);
+        } else {
+          setPanel(null);
+        }
+      }
     };
     storyboard.addEventListener('panelremove', panelremove);
 

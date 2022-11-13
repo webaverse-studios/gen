@@ -90,7 +90,11 @@
   position: relative;
   display: inline-flex;
   font-weight: bold;
+  cursor: pointer;
   overflow: hidden;
+}
+.gen a:hover {
+  color: #1976d2;
 }
 .gen input[type="file"] {
   position: absolute;

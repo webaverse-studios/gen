@@ -15,6 +15,7 @@ const StoryboardPanel = ({
   const [busy, setBusy] = useState(panel ? panel.isBusy() : false);
   const [image, setImage] = useState(panel.renders.image);
 
+  // event handling
   useEffect(() => {
     if (panel) {
       const onbusyupdate = e => {
@@ -22,7 +23,10 @@ const StoryboardPanel = ({
       };
       panel.addEventListener('busyupdate', onbusyupdate);
       const onrenderupdate = e => {
-        
+        const {key, value} = e.data;
+        if (key === 'image') {
+          setImage(value);
+        }
       };
       panel.addEventListener('renderupdate', onrenderupdate);
 
@@ -33,15 +37,32 @@ const StoryboardPanel = ({
     }
   }, [panel, busy, image]);
 
+  // drag and drop
+  const dragover = e => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+  const drop = async e => {
+    e.preventDefault();
+    e.stopPropagation();
+    const files = e.dataTransfer.files;
+    const file = files[0];
+    if (file) {
+      panel.setFile(file);
+    }
+  };
+
   return (
     <div
       className={classnames(styles.panel, selected ? styles.selected : null)}
       onClick={onClick}
+      onDragOver={dragover}
+      onDrop={drop}
     >
       {(() => {
         if (busy) {
           return (
-            <PlaceholderImg className={styles.img} />
+            <PlaceholderImg className={classnames(styles.img, styles.icon)} />
           );
         } else if (image) {
           return (
@@ -79,31 +100,26 @@ export const StoryboardComponent = ({
   panels,
   onPanelSelect,
 }) => {
-  useEffect(() => {
-    const dragover = e => {
-      e.preventDefault();
-      e.stopPropagation();
-    };
-    document.addEventListener('dragover', dragover);
-    const drop = async e => {
-      e.preventDefault();
-      e.stopPropagation();
-      const files = e.dataTransfer.files;
-      const file = files[0];
-      if (file) {
-        await storyboard.addPanelFromFile(file);
-      }
-    };
-    document.addEventListener('drop', drop);
-
-    return () => {
-      document.removeEventListener('dragover', dragover);
-      document.removeEventListener('drop', drop);
-    };
-  }, []);
+  const dragover = e => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+  const drop = async e => {
+    e.preventDefault();
+    e.stopPropagation();
+    const files = e.dataTransfer.files;
+    const file = files[0];
+    if (file) {
+      await storyboard.addPanelFromFile(file);
+    }
+  };
 
   return (
-    <div className={styles.storyboard}>
+    <div
+      className={styles.storyboard}
+      onDragOver={dragover}
+      onDrop={drop}
+    >
       {panels.map((p, i) => (
         <StoryboardPanel
           storyboard={storyboard}
@@ -112,7 +128,7 @@ export const StoryboardComponent = ({
           onClick={e => {
             onPanelSelect(p);
           }}
-          key={i}
+          key={p.id}
         />
       ))}
       <StoryboardPanelPlaceholder

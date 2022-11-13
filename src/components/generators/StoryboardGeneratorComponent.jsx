@@ -8,13 +8,14 @@ export const StoryboardGeneratorComponent = ({
 }) => {
   const [prompt, setPrompt] = useState(prompts.world);
   const [busy, setBusy] = useState(panel ? panel.isBusy() : false);
+  const [busyMessage, setBusyMessage] = useState(panel ? panel.getBusyMessage() : '');
 
+  // busy tracking
   useEffect(() => {
     if (panel) {
-      // XXX add busy message support
-
       const onbusyupdate = e => {
-        setBusy(e.data.busy);
+        setBusy(panel.isBusy());
+        setBusyMessage(panel.getBusyMessage());
       };
       panel.addEventListener('busyupdate', onbusyupdate);
 
@@ -23,40 +24,49 @@ export const StoryboardGeneratorComponent = ({
       };
     }
   }, [panel, busy]);
-  /* const _addPanel = async file => {
-    setBusy(true);
-    try {
-      if (typeof file === 'string') {
-        file = await imageAiClient.createImageBlob(file);
+
+  // drag and drop
+  const dragover = e => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('got drag over');
+  };
+  const drop = async e => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!busy) {
+      const files = e.dataTransfer.files;
+      const file = files[0];
+      if (file) {
+        panel.setFile(file);
       }
-      file = await _resizeFile(file);
-      const scenePackage = await sceneGenerator.generate(prompt, file);
-
-      const sceneRenderer = sceneGenerator.createRenderer(canvasRef.current);
-      sceneRenderer.setPackage(scenePackage);
-
-      setSceneRenderer(sceneRenderer);
-      setStep(2);
-    } finally {
-      setBusy(false);
     }
-  }; */
+  };
 
   return (
-    <div className={styles.storyboardGenerator}>
-      <input type="text" className={styles.input} value={prompt} onChange={e => {
-        setPrompt(e.target.value);
-      }} placeholder={prompts.character} disabled={busy} />
-        <div className={styles.button} onClick={async () => {
-          await panel.setFromPrompt();
-        }} disabled={busy}>Generate</div>
-      <div>or, <a className={styles.fileUpload}><input type="file" onChange={async e => {
-        const file = e.target.files[0];
-        if (file) {
-          await panel.setFromFile(file);
-        }
-      }} />Upload File</a></div>
-      <div>or, <b>Drag and Drop</b></div>
+    <div
+      className={styles.storyboardGenerator}
+      onDragOver={dragover}
+      onDrop={drop}
+    >
+      {!busy ? <>
+        <input type="text" className={styles.input} value={prompt} onChange={e => {
+          setPrompt(e.target.value);
+        }} placeholder={prompts.character} disabled={busy} />
+          <div className={styles.button} onClick={async () => {
+            await panel.setFromPrompt(prompt);
+          }} disabled={busy}>Generate</div>
+        <div>or, <a className={styles.fileUpload}><input type="file" onChange={async e => {
+          const file = e.target.files[0];
+          if (file) {
+            panel.setFile(file);
+          }
+        }} />Upload File</a></div>
+        <div>or, <i>Drag and Drop</i></div>
+      </> : (
+        <div className={styles.busy}>{busyMessage}</div>
+      )}
     </div>
   );
 };

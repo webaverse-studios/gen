@@ -13,8 +13,8 @@ import {
   skyboxDistance,
 } from '../clients/reconstruction-client.js';
 
-// import {prompts} from '../constants/prompts.js';
 import {blob2img} from '../utils/convert-utils.js';
+import {makeId} from '../utils/id-utils.js';
 import {labelClasses} from '../constants/prompts.js';
 
 //
@@ -1305,6 +1305,7 @@ export class Panel extends EventTarget {
   constructor() {
     super();
 
+    this.id = makeId();
     this.data = {};
     this.renders = {};
 
@@ -1312,11 +1313,6 @@ export class Panel extends EventTarget {
     this.abortController = new AbortController();
   }
 
-  // XXX debugging
-  get busy() {
-    debugger;
-  }
-  
   isBusy() {
     return this.runningTasks.length > 0;
   }
@@ -1332,16 +1328,26 @@ export class Panel extends EventTarget {
   }
 
   async setFile(file) {
+    this.data.image = file;
+
+    // update render
     if (this.renders.image) {
       URL.revokeObjectURL(this.renders.image);
       delete this.renders.image;
     }
     this.renders.image = URL.createObjectURL(file);
+
+    this.dispatchEvent(new MessageEvent('renderupdate', {
+      data: {
+        key: 'image',
+        value: this.renders.image,
+      },
+    }))
   }
   async setFromPrompt(prompt) {
     this.task(async ({signal}) => {
       const blob = await imageAiClient.createImageBlob(prompt, {signal});
-      await this.setFile(blob);
+      this.setFile(blob);
     }, 'generating image');
   }
 
@@ -1432,18 +1438,15 @@ export class Storyboard extends EventTarget {
     panel.task(async ({signal}) => {
       const blob = await imageAiClient.createImageBlob(prompt, {signal});
       panel.setFile(blob);
-    });
+    }, 'generate image');
     this.#addPanelInternal(panel);
+    return panel;
   }
-  /* addPanelFromImage(img) {
-    const panel = new Panel();
-    panel.setImage(img);
-    this.panels.push(panel);
-  } */
   addPanelFromFile(file) {
     const panel = new Panel();
     panel.setFile(file);
     this.#addPanelInternal(panel);
+    return panel;
   }
   removePanel(panel) {
     this.#removePanelInternal(panel);
