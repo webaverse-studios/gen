@@ -81,7 +81,12 @@ const SceneGeneratorComponent = () => {
 
     const keydown = e => {
       if (e.key === 'Delete') {
-        storyboard.removePanel(panel);
+        if (panel) {
+          e.preventDefault();
+          e.stopPropagation();
+
+          storyboard.removePanel(panel);
+        }
       }
     };
     document.addEventListener('keydown', keydown);
