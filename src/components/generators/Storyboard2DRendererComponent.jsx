@@ -27,7 +27,7 @@ export const Storyboard2DRendererComponent = ({
     <div className={styles.storyboard2DRenderer}>
       <div className={styles.header}>
         <div className={styles.text}>Status: Not compiled</div>
-        <button class={styles.button} onClick={async e => {
+        <button className={styles.button} onClick={async e => {
           await panel.compile();
         }}>Compile</button>
       </div>
