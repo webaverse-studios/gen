@@ -20,6 +20,8 @@ import {labelClasses} from '../constants/prompts.js';
 //
 
 const imageAiClient = new ImageAiClient();
+const abortError = new Error();
+abortError.isAbortError = true;
 
 //
 
@@ -1126,7 +1128,7 @@ class SceneRenderer {
 
 const _detectPlanes = async points => {
   console.time('ransac');
-  const res = await fetch(`https://depth.webaverse.com/ransac?n=${16}&threshold=${0.1}&init_n=${1500}`, {
+  const res = await fetch(`https://depth.webaverse.com/ransac?n=${8}&threshold=${0.1}&init_n=${1500}`, {
     method: 'POST',
     body: points,
   });
@@ -1294,5 +1296,110 @@ export class SceneGenerator {
   }
   createRenderer(element) {
     return new SceneRenderer(element);
+  }
+}
+
+//
+
+export class Panel extends EventTarget {
+  constructor() {
+    super();
+
+    this.data = {};
+    this.renders = {};
+
+    this.running = false;
+    this.queue = [];
+    this.abortController = new AbortController();
+  }
+  get busy() {
+    debugger;
+  }
+  isBusy() {
+    return this.running;
+  }
+  isEmpty() {
+    return !('image' in this.data);
+  }
+  /* setImage(image) {
+    // XXX not implemented
+  } */
+  setFile(file) {
+    console.log('set file', file);
+    // XXX not implemented
+  }
+  task(fn) {
+    const {signal} = this.abortController;
+
+    if (!this.running) {
+      this.running = true;
+
+      this.dispatchEvent(new MessageEvent('busyupdate', {
+        data: {
+          busy: this.isBusy(),
+        },
+      }));
+
+      const _recurse = async fn => {
+        try {
+          await fn({
+            signal,
+          });
+        } finally {
+          if (this.queue.length > 0) {
+            const fn = this.queue.shift();
+            _recurse(fn);
+          } else {
+            this.running = false;
+            
+            this.dispatchEvent(new MessageEvent('busyupdate', {
+              data: {
+                busy: this.isBusy(),
+              },
+            }));
+          }
+        }
+      };
+      _recurse(fn);
+    } else {
+      this.queue.push(fn);
+    }
+  }
+  cancel() {
+    this.queue.length = 0;
+    this.abortController.abort(abortError);
+  }
+}
+
+//
+
+export class Storyboard extends EventTarget {
+  constructor() {
+    super();
+
+    this.panels = [];
+  }
+  addPanel() {
+    const panel = new Panel();
+    this.panels.push(panel);
+    return panel;
+  }
+  addPanelFromPrompt(prompt) {
+    const panel = new Panel();
+    panel.task(async ({signal}) => {
+      const blob = await imageAiClient.createImageBlob(prompt, {signal});
+      panel.setFile(blob);
+    });
+    this.panels.push(panel);
+  }
+  /* addPanelFromImage(img) {
+    const panel = new Panel();
+    panel.setImage(img);
+    this.panels.push(panel);
+  } */
+  addPanelFromFile(file) {
+    const panel = new Panel();
+    panel.setFile(file);
+    this.panels.push(panel);
   }
 }

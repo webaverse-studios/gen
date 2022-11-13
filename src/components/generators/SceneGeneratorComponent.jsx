@@ -1,16 +1,17 @@
 // import * as THREE from 'three';
-import {useState, useRef} from 'react';
-import {prompts} from '../../constants/prompts.js';
-import {ImageAiClient} from '../../clients/image-client.js';
-import {SceneGenerator} from '../../generators/scene-generator.js';
+import {useState, useRef, useEffect} from 'react';
+// import {prompts} from '../../constants/prompts.js';
+// import {ImageAiClient} from '../../clients/image-client.js';
+import {Storyboard} from '../../generators/scene-generator.js';
+import {StoryboardComponent} from './StoryboardComponent.jsx';
+import {StoryboardRendererComponent} from './StoryboardRendererComponent.jsx';
 
 import styles from '../../../styles/Gen.module.css';
-import {useEffect} from 'react';
 
 //
 
-const imageAiClient = new ImageAiClient();
-const sceneGenerator = new SceneGenerator();
+// const imageAiClient = new ImageAiClient();
+// const sceneGenerator = new SceneGenerator();
 
 //
 
@@ -23,23 +24,7 @@ const sceneGenerator = new SceneGenerator();
 
 //
 
-/* const Storyboard = () => {
-  const [items, setItems] = useState([]);
-
-  return (
-    <div className={styles.storyboard}>
-      {items.map(item => (
-        <div className={styles.storyboardItem}>
-          <img src={item} />
-        </div>
-      ))}
-    </div>
-  )
-}; */
-
-//
-
-const _sizeFile = async file => {
+const _resizeFile = async file => {
   // read the image
   const image = await new Promise((accept, reject) => {
     const img = new Image();
@@ -80,89 +65,34 @@ const _sizeFile = async file => {
   }
   return file;
 };
+const _makeStoryboard = () => {
+  const storyboard = new Storyboard();
+  return storyboard;
+};
 const SceneGeneratorComponent = () => {
-  const [step, setStep] = useState(1);
-  const [prompt, setPrompt] = useState(prompts.world);
-  const [sceneRenderer, setSceneRenderer] = useState(null);
-  const [busy, setBusy] = useState(false);
+  // const [step, setStep] = useState(1);
+  // const [sceneRenderer, setSceneRenderer] = useState(null);
+  const [storyboard, setStoryboard] = useState(_makeStoryboard);
+  const [panel, setPanel] = useState(null);
+  const [panels, setPanels] = useState([]);
 
-  const canvasRef = useRef();
-
-  const _addPanel = async file => {
-    setBusy(true);
-    try {
-      if (typeof file === 'string') {
-        file = await imageAiClient.createImageBlob(file);
-      }
-      file = await _sizeFile(file);
-      const scenePackage = await sceneGenerator.generate(prompt, file);
-
-      const sceneRenderer = sceneGenerator.createRenderer(canvasRef.current);
-      sceneRenderer.setPackage(scenePackage);
-
-      setSceneRenderer(sceneRenderer);
-      setStep(2);
-    } finally {
-      setBusy(false);
-    }
+  const onPanelSelect = panel => {
+    setPanel(panel);
   };
-  useEffect(() => {
-    const dragover = e => {
-      e.preventDefault();
-      e.stopPropagation();
-    };
-    document.addEventListener('dragover', dragover);
-    const drop = async e => {
-      e.preventDefault();
-      e.stopPropagation();
-      const files = e.dataTransfer.files;
-      const file = files[0];
-      if (file) {
-        await _addPanel(file);
-      }
-    };
-    document.addEventListener('drop', drop);
-    const keydown = e => {
-      if (!e.repeat) {
-        // console.log('got key', e.key);
-        switch (e.key) {
-          case ' ': {
-            if (step === 2) {
-              e.preventDefault();
-              e.stopPropagation();
-
-              sceneRenderer.renderBackground();
-            }
-            break;
-          }
-        }
-      }
-    };
-    document.addEventListener('keydown', keydown);
-
-    return () => {
-      document.removeEventListener('dragover', dragover);
-      document.removeEventListener('drop', drop);
-      document.removeEventListener('keydown', keydown);
-    };
-  }, [sceneRenderer]);
 
   return (
     <div className={styles.generator}>
-      <input type="text" className={styles.input} value={prompt} onChange={e => {
-        setPrompt(e.target.value);
-      }} placeholder={prompts.character} disabled={busy} />
-        <div className={styles.button} onClick={async () => {
-          await _addPanel(prompt);
-        }} disabled={busy}>Generate</div>
-      <div>or, <a className={styles.fileUpload}><input type="file" onChange={async e => {
-        const file = e.target.files[0];
-        if (file) {
-          await _addPanel(file);
-        }
-      }} />Upload File</a></div>
-      <div>or, <b>Drag and Drop</b></div>
-      <div className={styles.canvasWrap} ref={canvasRef} />
+      <StoryboardRendererComponent
+        storyboard={storyboard}
+        panel={panel}
+        onPanelSelect={onPanelSelect}
+      />
+      <StoryboardComponent
+        storyboard={storyboard}
+        panel={panel}
+        panels={panels}
+        onPanelSelect={onPanelSelect}
+      />
     </div>
   );
 };
