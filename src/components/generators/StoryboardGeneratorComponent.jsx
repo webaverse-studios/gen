@@ -29,7 +29,6 @@ export const StoryboardGeneratorComponent = ({
   const dragover = e => {
     e.preventDefault();
     e.stopPropagation();
-    console.log('got drag over');
   };
   const drop = async e => {
     e.preventDefault();
