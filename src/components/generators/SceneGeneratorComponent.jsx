@@ -1,17 +1,10 @@
 // import * as THREE from 'three';
 import {useState, useRef, useEffect} from 'react';
-// import {prompts} from '../../constants/prompts.js';
-// import {ImageAiClient} from '../../clients/image-client.js';
 import {Storyboard} from '../../generators/scene-generator.js';
 import {StoryboardComponent} from './StoryboardComponent.jsx';
 import {StoryboardRendererComponent} from './StoryboardRendererComponent.jsx';
 
-import styles from '../../../styles/Gen.module.css';
-
-//
-
-// const imageAiClient = new ImageAiClient();
-// const sceneGenerator = new SceneGenerator();
+import styles from '../../../styles/SceneGenerator.module.css';
 
 //
 
@@ -65,23 +58,37 @@ const _resizeFile = async file => {
   }
   return file;
 };
-const _makeStoryboard = () => {
-  const storyboard = new Storyboard();
-  return storyboard;
-};
 const SceneGeneratorComponent = () => {
   // const [step, setStep] = useState(1);
   // const [sceneRenderer, setSceneRenderer] = useState(null);
-  const [storyboard, setStoryboard] = useState(_makeStoryboard);
+  const [storyboard, setStoryboard] = useState(() => new Storyboard());
   const [panel, setPanel] = useState(null);
   const [panels, setPanels] = useState([]);
+
+  useEffect(() => {
+    const paneladd = e => {
+      const newPanels = [...panels, e.data.panel];
+      setPanels(newPanels);
+    };
+    storyboard.addEventListener('paneladd', paneladd);
+    const panelremove = e => {
+      const newPanels = panels.filter(panel => panel !== e.data.panel);
+      setPanels(newPanels);
+    };
+    storyboard.addEventListener('panelremove', panelremove);
+
+    return () => {
+      storyboard.removeEventListener('paneladd', paneladd);
+      storyboard.removeEventListener('panelremove', panelremove);
+    };
+  }, [storyboard, panels]);
 
   const onPanelSelect = panel => {
     setPanel(panel);
   };
 
   return (
-    <div className={styles.generator}>
+    <div className={styles.sceneGenerator}>
       <StoryboardRendererComponent
         storyboard={storyboard}
         panel={panel}

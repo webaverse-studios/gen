@@ -1,23 +1,48 @@
 import {useEffect} from 'react';
+import classnames from 'classnames';
 import styles from '../../../styles/Storyboard.module.css';
+
+//
 
 const StoryboardPanel = ({
   panel,
+  selected,
+  onClick,
 }) => {
   return (
-    <div className={styles.panel}>
-      Panel
+    <div
+      className={classnames(styles.panel, selected ? styles.selected : null)}
+      onClick={onClick}
+    >
+      {panel.renders.image ?
+        <img src={panel.renders.image} className={styles.img} />
+      :
+        <div className={styles.placeholder}></div>
+      }
     </div>  
   );
 };
+
+//
+
+const StoryboardPanelPlaceholder = ({
+  onClick,
+}) => {
+  return (
+    <div className={classnames(styles.panel, styles.add)} onClick={onClick}>
+      <img src="/images/plus.svg" className={styles.img} />
+    </div>
+  );
+}
+
+//
 
 export const StoryboardComponent = ({
   storyboard,
   panel,
   panels,
+  onPanelSelect,
 }) => {
-  // const [items, setItems] = useState([]);
-
   useEffect(() => {
     const dragover = e => {
       e.preventDefault();
@@ -43,11 +68,22 @@ export const StoryboardComponent = ({
 
   return (
     <div className={styles.storyboard}>
-      {panels.map(panel => (
+      {panels.map((p, i) => (
         <StoryboardPanel
-          panel={panel}
+          panel={p}
+          selected={p === panel}
+          onClick={e => {
+            onPanelSelect(p);
+          }}
+          key={i}
         />
       ))}
+      <StoryboardPanelPlaceholder
+        onClick={e => {
+          const panel = storyboard.addPanel();
+          onPanelSelect(panel);
+        }}
+      />
     </div>
   )
 };

@@ -11,8 +11,9 @@ export const StoryboardGeneratorComponent = ({
 
   useEffect(() => {
     if (panel) {
+      // XXX add busy message support
+
       const onbusyupdate = e => {
-        // console.log('got busy update', e);
         setBusy(e.data.busy);
       };
       panel.addEventListener('busyupdate', onbusyupdate);
@@ -47,12 +48,14 @@ export const StoryboardGeneratorComponent = ({
         setPrompt(e.target.value);
       }} placeholder={prompts.character} disabled={busy} />
         <div className={styles.button} onClick={async () => {
-          await storyboard.addPanelFromPrompt(prompt);
+          // await storyboard.addPanelFromPrompt(prompt);
+          await panel.setFromPrompt();
         }} disabled={busy}>Generate</div>
       <div>or, <a className={styles.fileUpload}><input type="file" onChange={async e => {
         const file = e.target.files[0];
         if (file) {
-          await storyboard.addPanelFromFile(file);
+          // await storyboard.addPanelFromFile(file);
+          await panel.setFromFile(file);
         }
       }} />Upload File</a></div>
       <div>or, <b>Drag and Drop</b></div>
