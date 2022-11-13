@@ -13,25 +13,18 @@ const StoryboardPanel = ({
   onClick,
 }) => {
   const [busy, setBusy] = useState(panel ? panel.isBusy() : false);
+  const [busyMessage, setBusyMessage] = useState(panel ? panel.getBusyMessage() : '');
   const [image, setImage] = useState(panel.renders.image);
 
-  // event handling
+  // image handling
   useEffect(() => {
     if (panel) {
-      const onbusyupdate = e => {
-        setBusy(e.data.busy);
-      };
-      panel.addEventListener('busyupdate', onbusyupdate);
       const onrenderupdate = e => {
-        const {key, value} = e.data;
-        if (key === 'image') {
-          setImage(value);
-        }
+        setImage(panel.renders.image);
       };
       panel.addEventListener('renderupdate', onrenderupdate);
 
       return () => {
-        panel.removeEventListener('busyupdate', onbusyupdate);
         panel.removeEventListener('renderupdate', onrenderupdate);
       };
     }

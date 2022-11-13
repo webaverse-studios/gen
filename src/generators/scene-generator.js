@@ -1144,159 +1144,146 @@ const _detectPlanes = async points => {
 
 //
 
-export class SceneGenerator {
-  async generate(prompt, blob) {
-    if (!(blob instanceof Blob)) {
-      blob = await imageAiClient.createImageBlob(prompt);
+async function compileVirtualScene(blob) {
+  // color
+  const img = await blob2img(blob);
+  img.classList.add('img');
+  document.body.appendChild(img);
+  
+  // label
+  const {
+    headers: labelHeaders,
+    blob: labelBlob,
+  } = await getLabel(blob, {
+    classes: labelClasses,
+    threshold: 0.0001,
+  });
+  const labelImg = await blob2img(labelBlob);
+  const boundingBoxLayers = JSON.parse(labelHeaders['x-bounding-boxes']);
+  const labelCanvas = drawLabelCanvas(labelImg, boundingBoxLayers);
+  document.body.appendChild(labelCanvas);
+
+  // point cloud
+  const {
+    headers: pointCloudHeaders,
+    arrayBuffer: pointCloudArrayBuffer,
+  } = await getPointCloud(blob);
+  const pointCloudCanvas = pointCloudArrayBuffer2canvas(pointCloudArrayBuffer);
+  document.body.appendChild(pointCloudCanvas);
+
+  // run ransac
+  const planeMatrices = [];
+  {
+    const widthSegments = img.width - 1;
+    const heightSegments = img.height - 1;
+    const geometry = new THREE.PlaneGeometry(1, 1, widthSegments, heightSegments);
+    pointCloudArrayBufferToPositionAttributeArray(pointCloudArrayBuffer, geometry.attributes.position.array, 1/img.width);
+    applySkybox(geometry.attributes.position.array);
+
+    // keep only a fraction of the points
+    const fraction = 16;
+    let points = geometry.attributes.position.array;
+    let points2 = new Float32Array(points.length / fraction);
+    for (let i = 0; i < points2.length / 3; i++) {
+      const j = i * 3 * fraction;
+      points2[i*3+0] = points[j+0];
+      points2[i*3+1] = points[j+1];
+      points2[i*3+2] = points[j+2];
+    }
+    // shuffle points2
+    for (let i = 0; i < points2.length / 3; i++) {
+      const j = Math.floor(Math.random() * points2.length / 3);
+      const tmp = points2.slice(i*3, i*3+3);
+      points2.set(points2.slice(j*3, j*3+3), i*3);
+      points2.set(tmp, j*3);
     }
 
-    // color
-    const img = await blob2img(blob);
-    img.classList.add('img');
-    document.body.appendChild(img);
-    
-    // label
-    const {
-      headers: labelHeaders,
-      blob: labelBlob,
-    } = await getLabel(blob, {
-      classes: labelClasses,
-      threshold: 0.0001,
+    // detect planes
+    const planesJson = await _detectPlanes(points2);
+    console.log('planes', planesJson);
+    // draw detected planes
+    for (let i = 0; i < planesJson.length; i++) {
+      const plane = planesJson[i];
+      const [planeEquation, planePointIndices] = plane; // XXX note the planeIndices are computed relative to the current points set after removing all previous planes; these are not global indices
+      
+      const normal = new THREE.Vector3(planeEquation[0], planeEquation[1], planeEquation[2]);
+      const distance = planeEquation[3];
+      
+      // cut out the plane points
+      const inlierPlaneFloats = [];
+      const outlierPlaneFloats = [];
+      for (let j = 0; j < points2.length; j += 3) {
+        if (planePointIndices.includes(j/3)) {
+          inlierPlaneFloats.push(points2[j], points2[j+1], points2[j+2]);
+        } else {
+          outlierPlaneFloats.push(points2[j], points2[j+1], points2[j+2]);
+        }
+      }
+
+      // compute the centroid
+      const centroid = new THREE.Vector3();
+      let count = 0;
+      for (let j = 0; j < inlierPlaneFloats.length; j += 3) {
+        centroid.x += inlierPlaneFloats[j];
+        centroid.y += inlierPlaneFloats[j+1];
+        centroid.z += inlierPlaneFloats[j+2];
+        count++;
+      }
+      centroid.divideScalar(count);
+
+      // console.log('got centroid', centroid);
+
+      const m = new THREE.Matrix4().compose(
+        centroid,
+        new THREE.Quaternion().setFromRotationMatrix(
+          new THREE.Matrix4().lookAt(
+            normal,
+            new THREE.Vector3(0, 0, 0),
+            new THREE.Vector3(0, 1, 0),
+          )
+        ),
+        new THREE.Vector3(1, 1, 1)
+      );
+      planeMatrices.push(m);
+
+      // latch new points
+      points2 = Float32Array.from(outlierPlaneFloats);
+    }
+  }
+
+  // query the height
+  const _getPredictedHeight = async blob => {
+    const fd = new FormData();
+    fd.append('question', 'in feet, how high up is this?');
+    fd.append('file', blob);
+    fd.append('task', 'vqa');
+    const res = await fetch(`https://blip.webaverse.com/upload`, {
+      method: 'post',
+      body: fd,
     });
-    const labelImg = await blob2img(labelBlob);
-    const boundingBoxLayers = JSON.parse(labelHeaders['x-bounding-boxes']);
-    const labelCanvas = drawLabelCanvas(labelImg, boundingBoxLayers);
-    document.body.appendChild(labelCanvas);
-
-    // point cloud
-    const {
-      headers: pointCloudHeaders,
-      arrayBuffer: pointCloudArrayBuffer,
-    } = await getPointCloud(blob);
-    const pointCloudCanvas = pointCloudArrayBuffer2canvas(pointCloudArrayBuffer);
-    document.body.appendChild(pointCloudCanvas);
-
-    // run ransac
-    const planeMatrices = [];
-    {
-      const widthSegments = img.width - 1;
-      const heightSegments = img.height - 1;
-      const geometry = new THREE.PlaneGeometry(1, 1, widthSegments, heightSegments);
-      pointCloudArrayBufferToPositionAttributeArray(pointCloudArrayBuffer, geometry.attributes.position.array, 1/img.width);
-      applySkybox(geometry.attributes.position.array);
-
-      // keep only a fraction of the points
-      const fraction = 16;
-      let points = geometry.attributes.position.array;
-      let points2 = new Float32Array(points.length / fraction);
-      for (let i = 0; i < points2.length / 3; i++) {
-        const j = i * 3 * fraction;
-        points2[i*3+0] = points[j+0];
-        points2[i*3+1] = points[j+1];
-        points2[i*3+2] = points[j+2];
-      }
-      // shuffle points2
-      for (let i = 0; i < points2.length / 3; i++) {
-        const j = Math.floor(Math.random() * points2.length / 3);
-        const tmp = points2.slice(i*3, i*3+3);
-        points2.set(points2.slice(j*3, j*3+3), i*3);
-        points2.set(tmp, j*3);
-      }
-
-      // detect planes
-      const planesJson = await _detectPlanes(points2);
-      console.log('planes', planesJson);
-      // draw detected planes
-      for (let i = 0; i < planesJson.length; i++) {
-        const plane = planesJson[i];
-        const [planeEquation, planePointIndices] = plane; // XXX note the planeIndices are computed relative to the current points set after removing all previous planes; these are not global indices
-        
-        const normal = new THREE.Vector3(planeEquation[0], planeEquation[1], planeEquation[2]);
-        const distance = planeEquation[3];
-        
-        // cut out the plane points
-        const inlierPlaneFloats = [];
-        const outlierPlaneFloats = [];
-        for (let j = 0; j < points2.length; j += 3) {
-          if (planePointIndices.includes(j/3)) {
-            inlierPlaneFloats.push(points2[j], points2[j+1], points2[j+2]);
-          } else {
-            outlierPlaneFloats.push(points2[j], points2[j+1], points2[j+2]);
-          }
-        }
-
-        // compute the centroid
-        const centroid = new THREE.Vector3();
-        let count = 0;
-        for (let j = 0; j < inlierPlaneFloats.length; j += 3) {
-          centroid.x += inlierPlaneFloats[j];
-          centroid.y += inlierPlaneFloats[j+1];
-          centroid.z += inlierPlaneFloats[j+2];
-          count++;
-        }
-        centroid.divideScalar(count);
-
-        // console.log('got centroid', centroid);
-
-        const m = new THREE.Matrix4().compose(
-          centroid,
-          new THREE.Quaternion().setFromRotationMatrix(
-            new THREE.Matrix4().lookAt(
-              normal,
-              new THREE.Vector3(0, 0, 0),
-              new THREE.Vector3(0, 1, 0),
-            )
-          ),
-          new THREE.Vector3(1, 1, 1)
-        );
-        planeMatrices.push(m);
-
-        // latch new points
-        points2 = Float32Array.from(outlierPlaneFloats);
-      }
+    const j = await res.json();
+    const {Answer} = j;
+    const f = parseFloat(Answer);
+    if (!isNaN(f)) {
+      return f;
+    } else {
+      return null;
     }
+  };
+  const predictedHeight = await _getPredictedHeight(blob);
+  // console.log('got predicted height', predictedHeight);
 
-    // query the height
-    const _getPredictedHeight = async blob => {
-      const fd = new FormData();
-      fd.append('question', 'in feet, how high up is this?');
-      fd.append('file', blob);
-      fd.append('task', 'vqa');
-      const res = await fetch(`https://blip.webaverse.com/upload`, {
-        method: 'post',
-        body: fd,
-      });
-      const j = await res.json();
-      const {Answer} = j;
-      const f = parseFloat(Answer);
-      if (!isNaN(f)) {
-        return f;
-      } else {
-        return null;
-      }
-    };
-    const predictedHeight = await _getPredictedHeight(blob);
-    // console.log('got predicted height', predictedHeight);
-
-    // start renderer
-    const _startRender = () => {
-      return new ScenePackage({
-        prompt,
-        img,
-        labelImg,
-        labelCanvas,
-        pointCloudHeaders,
-        pointCloudArrayBuffer,
-        pointCloudCanvas,
-        planeMatrices,
-        predictedHeight,
-      });
-    };
-    return _startRender();
-  }
-  createRenderer(element) {
-    return new SceneRenderer(element);
-  }
+  // return result
+  return {
+    img,
+    labelImg,
+    labelCanvas,
+    pointCloudHeaders,
+    pointCloudArrayBuffer,
+    pointCloudCanvas,
+    planeMatrices,
+    predictedHeight,
+  };
 }
 
 //
@@ -1327,7 +1314,7 @@ export class Panel extends EventTarget {
     }
   }
   getDimension() {
-    return 2; // XXX or 3
+    return ('meshes' in this.data) ? 3 : 2;
   }
 
   async setFile(file) {
@@ -1348,13 +1335,20 @@ export class Panel extends EventTarget {
     }))
   }
   async setFromPrompt(prompt) {
-    this.task(async ({signal}) => {
+    await this.task(async ({signal}) => {
       const blob = await imageAiClient.createImageBlob(prompt, {signal});
       this.setFile(blob);
     }, 'generating image');
   }
 
-  task(fn, message) {
+  async compile() {
+    await this.task(async ({signal}) => {
+      const compileResult = await compileVirtualScene(this.data.image);
+      console.log('got compile result', compileResult);
+    }, 'compiling');
+  }
+
+  async task(fn, message) {
     const {signal} = this.abortController;
 
     const task = {
@@ -1369,23 +1363,21 @@ export class Panel extends EventTarget {
       },
     }));
 
-    (async () =>{
-      try {
-        await fn({
-          signal,
-        });
-      } finally {
-        const index = this.runningTasks.indexOf(task);
-        this.runningTasks.splice(index, 1);
-        
-        this.dispatchEvent(new MessageEvent('busyupdate', {
-          data: {
-            busy: this.isBusy(),
-            message: this.getBusyMessage(),
-          },
-        }));
-      }
-    })();
+    try {
+      await fn({
+        signal,
+      });
+    } finally {
+      const index = this.runningTasks.indexOf(task);
+      this.runningTasks.splice(index, 1);
+      
+      this.dispatchEvent(new MessageEvent('busyupdate', {
+        data: {
+          busy: this.isBusy(),
+          message: this.getBusyMessage(),
+        },
+      }));
+    }
   }
   cancel() {
     this.abortController.abort(abortError);
@@ -1441,7 +1433,7 @@ export class Storyboard extends EventTarget {
     panel.task(async ({signal}) => {
       const blob = await imageAiClient.createImageBlob(prompt, {signal});
       panel.setFile(blob);
-    }, 'generate image');
+    }, 'generating image');
     this.#addPanelInternal(panel);
     return panel;
   }

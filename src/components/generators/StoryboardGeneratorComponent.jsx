@@ -7,26 +7,6 @@ export const StoryboardGeneratorComponent = ({
   panel,
 }) => {
   const [prompt, setPrompt] = useState(prompts.world);
-  const [busy, setBusy] = useState(panel ? panel.isBusy() : false);
-  const [busyMessage, setBusyMessage] = useState(panel ? panel.getBusyMessage() : '');
-
-  // busy tracking
-  useEffect(() => {
-    if (panel) {
-      const onbusyupdate = e => {
-        setBusy(panel.isBusy());
-        setBusyMessage(panel.getBusyMessage());
-      };
-      panel.addEventListener('busyupdate', onbusyupdate);
-
-      setBusy(panel.isBusy());
-      setBusyMessage(panel.getBusyMessage());
-
-      return () => {
-        panel.removeEventListener('busyupdate', onbusyupdate);
-      };
-    }
-  }, [panel, busy]);
 
   // drag and drop
   const dragover = e => {
@@ -37,7 +17,7 @@ export const StoryboardGeneratorComponent = ({
     e.preventDefault();
     e.stopPropagation();
 
-    if (!busy) {
+    if (!panel.isBusy()) {
       const files = e.dataTransfer.files;
       const file = files[0];
       if (file) {
@@ -52,23 +32,19 @@ export const StoryboardGeneratorComponent = ({
       onDragOver={dragover}
       onDrop={drop}
     >
-      {!busy ? <>
-        <input type="text" className={styles.input} value={prompt} onChange={e => {
-          setPrompt(e.target.value);
-        }} placeholder={prompts.character} disabled={busy} />
-          <div className={styles.button} onClick={async () => {
-            await panel.setFromPrompt(prompt);
-          }} disabled={busy}>Generate</div>
-        <div>or, <a className={styles.fileUpload}><input type="file" onChange={async e => {
-          const file = e.target.files[0];
-          if (file) {
-            panel.setFile(file);
-          }
-        }} />Upload File</a></div>
-        <div>or, <i>Drag and Drop</i></div>
-      </> : (
-        <div className={styles.busy}>{busyMessage}</div>
-      )}
+      <input type="text" className={styles.input} value={prompt} onChange={e => {
+        setPrompt(e.target.value);
+      }} placeholder={prompts.character} />
+        <div className={styles.button} onClick={async () => {
+          await panel.setFromPrompt(prompt);
+        }}>Generate</div>
+      <div>or, <a className={styles.fileUpload}><input type="file" onChange={async e => {
+        const file = e.target.files[0];
+        if (file) {
+          panel.setFile(file);
+        }
+      }} />Upload File</a></div>
+      <div>or, <i>Drag and Drop</i></div>
     </div>
   );
 };

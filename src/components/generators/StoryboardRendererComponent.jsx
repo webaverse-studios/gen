@@ -93,9 +93,31 @@ export const StoryboardRendererComponent = ({
 }) => {
   const _getEmpty = () => panel ? panel.isEmpty() : true;
   const _getDimension = () => panel ? panel.getDimension() : 2;
+
+  const [busy, setBusy] = useState(panel ? panel.isBusy() : false);
+  const [busyMessage, setBusyMessage] = useState(panel ? panel.getBusyMessage() : '');
   const [empty, setEmpty] = useState(_getEmpty);
   const [dimension, setDimension] = useState(_getDimension);
 
+  // busy tracking
+  useEffect(() => {
+    if (panel) {
+      const onbusyupdate = e => {
+        setBusy(panel.isBusy());
+        setBusyMessage(panel.getBusyMessage());
+      };
+      panel.addEventListener('busyupdate', onbusyupdate);
+
+      setBusy(panel.isBusy());
+      setBusyMessage(panel.getBusyMessage());
+
+      return () => {
+        panel.removeEventListener('busyupdate', onbusyupdate);
+      };
+    }
+  }, [panel, busy]);
+
+  // empty tracking
   useEffect(() => {
     if (panel) {
       const onrenderupdate = e => {
@@ -114,40 +136,44 @@ export const StoryboardRendererComponent = ({
   return (
     <div className={styles.storyboardRenderer}>
       {(() => {
-        if (panel) {
-          if (empty) {
-            return <StoryboardGeneratorComponent
-              storyboard={storyboard}
-              panel={panel}
-            />
-          } else {
-            if (layer) {
-              return <StoryboardLayerComponent
-                storyboard={storyboard}  
+        if (busy) {
+          return <div className={styles.busy}>{busyMessage}</div>
+        } else {
+          if (panel) {
+            if (empty) {
+              return <StoryboardGeneratorComponent
+                storyboard={storyboard}
                 panel={panel}
-                layer={layer}
               />
             } else {
-              if (dimension === 2) {
-                return <Storyboard2DRendererComponent
+              if (layer) {
+                return <StoryboardLayerComponent
                   storyboard={storyboard}  
                   panel={panel}
-                />
-              } else if (dimension === 3) {
-                return <Storyboard3DRendererComponent
-                  storyboard={storyboard}  
-                  panel={panel}
+                  layer={layer}
                 />
               } else {
-                throw new Error('invalid dimension: ' + dimension);
+                if (dimension === 2) {
+                  return <Storyboard2DRendererComponent
+                    storyboard={storyboard}  
+                    panel={panel}
+                  />
+                } else if (dimension === 3) {
+                  return <Storyboard3DRendererComponent
+                    storyboard={storyboard}  
+                    panel={panel}
+                  />
+                } else {
+                  throw new Error('invalid dimension: ' + dimension);
+                }
               }
             }
+          } else {
+            return <StoryboardPlaceholderComponent
+              storyboard={storyboard}
+              onPanelSelect={onPanelSelect}
+            />
           }
-        } else {
-          return <StoryboardPlaceholderComponent
-            storyboard={storyboard}
-            onPanelSelect={onPanelSelect}
-          />
         }
       })()}      
     </div>
