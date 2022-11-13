@@ -28,6 +28,8 @@
 .storyboard .panel .img {
   width: 100%;
   height: 100%;
+  /* padding: 30px; */
+}
+.storyboard .panel .icon {
   padding: 30px;
-  /* object-fit: cover; */
 }

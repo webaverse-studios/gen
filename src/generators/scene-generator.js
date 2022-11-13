@@ -1331,15 +1331,18 @@ export class Panel extends EventTarget {
     }
   }
 
-  setFile(file) {
-    console.log('set file', file);
-    // XXX not implemented
+  async setFile(file) {
+    if (this.renders.image) {
+      URL.revokeObjectURL(this.renders.image);
+      delete this.renders.image;
+    }
+    this.renders.image = URL.createObjectURL(file);
   }
   async setFromPrompt(prompt) {
     this.task(async ({signal}) => {
       const blob = await imageAiClient.createImageBlob(prompt, {signal});
-      this.setFile(blob);
-    });
+      await this.setFile(blob);
+    }, 'generating image');
   }
 
   task(fn, message) {
@@ -1378,6 +1381,14 @@ export class Panel extends EventTarget {
   cancel() {
     this.abortController.abort(abortError);
   }
+  destroy() {
+    this.cancel();
+
+    if (this.renders.image) {
+      URL.revokeObjectURL(this.renders.image);
+      delete this.renders.image;
+    }
+  }
 }
 
 //
@@ -1400,6 +1411,8 @@ export class Storyboard extends EventTarget {
     const i = this.panels.indexOf(panel);
     if (i !== -1) {
       this.panels.splice(i, 1);
+      panel.destroy();
+
       this.dispatchEvent(new MessageEvent('panelremove', {
         data: {
           panel,

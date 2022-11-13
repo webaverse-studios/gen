@@ -13,7 +13,7 @@ const StoryboardPanel = ({
   onClick,
 }) => {
   const [busy, setBusy] = useState(panel ? panel.isBusy() : false);
-  // const [busyMessage, setBusyMessage] = useState(panel ? panel.getBusyMessage() : false);
+  const [image, setImage] = useState(panel.renders.image);
 
   useEffect(() => {
     if (panel) {
@@ -21,12 +21,17 @@ const StoryboardPanel = ({
         setBusy(e.data.busy);
       };
       panel.addEventListener('busyupdate', onbusyupdate);
+      const onrenderupdate = e => {
+        
+      };
+      panel.addEventListener('renderupdate', onrenderupdate);
 
       return () => {
         panel.removeEventListener('busyupdate', onbusyupdate);
+        panel.removeEventListener('renderupdate', onrenderupdate);
       };
     }
-  }, [panel, busy]);
+  }, [panel, busy, image]);
 
   return (
     <div
@@ -38,14 +43,14 @@ const StoryboardPanel = ({
           return (
             <PlaceholderImg className={styles.img} />
           );
-        } else if (panel.renders.image) {
+        } else if (image) {
           return (
-            <img src={panel.renders.image} className={styles.img} />
+            <img src={image} className={styles.img} />
           );
         } else {
           return (
             <div className={styles.placeholder}>
-              <img className={styles.img} src='/images/missing-file.svg' />
+              <img src='/images/missing-file.svg' className={classnames(styles.img, styles.icon)} />
             </div>
           );
         }
@@ -61,7 +66,7 @@ const StoryboardPanelPlaceholder = ({
 }) => {
   return (
     <div className={classnames(styles.panel, styles.add)} onClick={onClick}>
-      <img src="/images/plus.svg" className={styles.img} />
+      <img src="/images/plus.svg" className={classnames(styles.img, styles.icon)} />
     </div>
   );
 }
