@@ -29,7 +29,7 @@ const ItemGeneratorComponent = () => {
         setPrompt(e.target.value);
       }} placeholder={prompts.item} />
       <div className={styles.button} onClick={async () => {
-        await itemGenerator.generate(prompt);
+        await itemGenerator.generate(prompt); // XXX split this into generate and render
       }}>Generate</div>
     </div>
   );

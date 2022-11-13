@@ -44,7 +44,7 @@ const CharacterGeneratorComponent = () => {
       <div className={styles.button} onClick={async () => {
         setBusy(true);
         try {
-          await characterGenerator.generate(prompt, canvasRef.current);
+          await characterGenerator.generate(prompt, canvasRef.current); // XXX split this into generate and render
           setStep(2);
         } finally {
           setBusy(false);
