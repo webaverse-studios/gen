@@ -26,6 +26,14 @@ export const Storyboard3DRendererComponent = ({
   document.addEventListener('keydown', keydown);
 
   return (
-    <div className={styles.canvasWrap} ref={canvasRef} />
+    <div className={styles.storyboard2DRenderer}>
+      <div className={styles.header}>
+        <div className={styles.text}>Status: Not compiled</div>
+        <button class={styles.button} onClick={async e => {
+          await panel.compile();
+        }}></button>
+      </div>
+      <div className={styles.canvasWrap} ref={canvasRef} />
+    </div>
   );
 };

@@ -25,6 +25,12 @@ export const Storyboard2DRendererComponent = ({
 
   return (
     <div className={styles.storyboard2DRenderer}>
+      <div className={styles.header}>
+        <div className={styles.text}>Status: Not compiled</div>
+        <button class={styles.button} onClick={async e => {
+          await panel.compile();
+        }}>Compile</button>
+      </div>
       <img src={image} className={styles.img} />
     </div>
   );
