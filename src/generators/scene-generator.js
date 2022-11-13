@@ -935,7 +935,7 @@ class SceneRenderer {
       if (this.debug) {
         const indexCanvas2 = encodeIndexColorsAlphasToCanvas(indexColorsAlphas);
         indexCanvas2.classList.add('indexCanvas2');
-        document.body.appendChild(indexCanvas2);
+        this.element.appendChild(indexCanvas2);
       }
 
       const directions = [
@@ -1150,7 +1150,8 @@ export class SceneGenerator {
 
     // color
     const img = await blob2img(blob);
-    // document.body.appendChild(img);
+    img.classList.add('img');
+    document.body.appendChild(img);
     
     // label
     const {
@@ -1162,10 +1163,8 @@ export class SceneGenerator {
     });
     const labelImg = await blob2img(labelBlob);
     const boundingBoxLayers = JSON.parse(labelHeaders['x-bounding-boxes']);
-    // console.log('got bounding boxes', boundingBoxLayers);
     const labelCanvas = drawLabelCanvas(labelImg, boundingBoxLayers);
     document.body.appendChild(labelCanvas);
-    globalThis.labelCanvas = labelCanvas;
 
     // point cloud
     const {
@@ -1173,10 +1172,6 @@ export class SceneGenerator {
       arrayBuffer: pointCloudArrayBuffer,
     } = await getPointCloud(blob);
     const pointCloudCanvas = pointCloudArrayBuffer2canvas(pointCloudArrayBuffer);
-    // console.log('got point cloud', {
-    //   pointCloudHeaders,
-    //   pointCloudCanvas,
-    // });
     document.body.appendChild(pointCloudCanvas);
 
     // run ransac
