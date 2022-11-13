@@ -1379,9 +1379,17 @@ export class Storyboard extends EventTarget {
 
     this.panels = [];
   }
+  #addPanelInternal(panel) {
+    this.panels.push(panel);
+    this.dispatchEvent(new MessageEvent('paneladd', {
+      data: {
+        panel,
+      },
+    }));
+  }
   addPanel() {
     const panel = new Panel();
-    this.panels.push(panel);
+    this.#addPanelInternal(panel);
     return panel;
   }
   addPanelFromPrompt(prompt) {
@@ -1390,7 +1398,7 @@ export class Storyboard extends EventTarget {
       const blob = await imageAiClient.createImageBlob(prompt, {signal});
       panel.setFile(blob);
     });
-    this.panels.push(panel);
+    this.#addPanelInternal(panel);
   }
   /* addPanelFromImage(img) {
     const panel = new Panel();
@@ -1400,6 +1408,6 @@ export class Storyboard extends EventTarget {
   addPanelFromFile(file) {
     const panel = new Panel();
     panel.setFile(file);
-    this.panels.push(panel);
+    this.#addPanelInternal(panel);
   }
 }
