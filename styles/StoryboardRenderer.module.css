@@ -1,0 +1,19 @@
+.storyboardRenderer {
+  width: 1024px;
+  height: 1024px;
+}
+.storyboardRenderer .panelPlaceholder {
+  display: flex;
+  width: inherit;
+  height: inherit;
+  padding: 50px;
+  background-image: url('/images/transparent.svg');
+  /* repeat */
+  background-repeat: repeat;
+  /* center */
+  background-size: 16px;
+  background-position: center;
+  /* justify-content: center; */
+  /* align-items: center; */
+  flex-direction: column;
+}
