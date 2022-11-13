@@ -1,8 +1,12 @@
-import styles from '../../../styles/Storyboard3dRenderer.module.css';
+import {useRef} from 'react';
+
+import styles from '../../../styles/Storyboard3DRenderer.module.css';
 
 export const Storyboard3DRendererComponent = ({
   panel,
 }) => {
+  const canvasRef = useRef();
+
   const keydown = e => {
     if (!e.repeat) {
       // console.log('got key', e.key);

@@ -1,5 +1,5 @@
 // import * as THREE from 'three';
-import {useState, useRef, useEffect} from 'react';
+import {useState, useEffect} from 'react';
 import {Storyboard} from '../../generators/scene-generator.js';
 import {StoryboardComponent} from './StoryboardComponent.jsx';
 import {StoryboardRendererComponent} from './StoryboardRendererComponent.jsx';
@@ -59,8 +59,6 @@ const _resizeFile = async file => {
   return file;
 };
 const SceneGeneratorComponent = () => {
-  // const [step, setStep] = useState(1);
-  // const [sceneRenderer, setSceneRenderer] = useState(null);
   const [storyboard, setStoryboard] = useState(() => new Storyboard());
   const [panel, setPanel] = useState(null);
   const [panels, setPanels] = useState([]);
@@ -72,16 +70,28 @@ const SceneGeneratorComponent = () => {
     };
     storyboard.addEventListener('paneladd', paneladd);
     const panelremove = e => {
+      if (panel === e.data.panel) {
+        setPanel(null);
+      }
+
       const newPanels = panels.filter(panel => panel !== e.data.panel);
       setPanels(newPanels);
     };
     storyboard.addEventListener('panelremove', panelremove);
 
+    const keydown = e => {
+      if (e.key === 'Delete') {
+        storyboard.removePanel(panel);
+      }
+    };
+    document.addEventListener('keydown', keydown);
+
     return () => {
       storyboard.removeEventListener('paneladd', paneladd);
       storyboard.removeEventListener('panelremove', panelremove);
+      document.removeEventListener('keydown', keydown);
     };
-  }, [storyboard, panels]);
+  }, [storyboard, panel, panels]);
 
   const onPanelSelect = panel => {
     setPanel(panel);

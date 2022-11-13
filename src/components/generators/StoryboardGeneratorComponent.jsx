@@ -48,13 +48,11 @@ export const StoryboardGeneratorComponent = ({
         setPrompt(e.target.value);
       }} placeholder={prompts.character} disabled={busy} />
         <div className={styles.button} onClick={async () => {
-          // await storyboard.addPanelFromPrompt(prompt);
           await panel.setFromPrompt();
         }} disabled={busy}>Generate</div>
       <div>or, <a className={styles.fileUpload}><input type="file" onChange={async e => {
         const file = e.target.files[0];
         if (file) {
-          // await storyboard.addPanelFromFile(file);
           await panel.setFromFile(file);
         }
       }} />Upload File</a></div>

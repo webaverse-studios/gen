@@ -1,24 +1,55 @@
-import {useEffect} from 'react';
+import {useState, useEffect} from 'react';
 import classnames from 'classnames';
+
+import {PlaceholderImg} from '../placeholders/PlaceholderImg.jsx';
 import styles from '../../../styles/Storyboard.module.css';
 
 //
 
 const StoryboardPanel = ({
+  storyboard,
   panel,
   selected,
   onClick,
 }) => {
+  const [busy, setBusy] = useState(panel ? panel.isBusy() : false);
+  // const [busyMessage, setBusyMessage] = useState(panel ? panel.getBusyMessage() : false);
+
+  useEffect(() => {
+    if (panel) {
+      const onbusyupdate = e => {
+        setBusy(e.data.busy);
+      };
+      panel.addEventListener('busyupdate', onbusyupdate);
+
+      return () => {
+        panel.removeEventListener('busyupdate', onbusyupdate);
+      };
+    }
+  }, [panel, busy]);
+
   return (
     <div
       className={classnames(styles.panel, selected ? styles.selected : null)}
       onClick={onClick}
     >
-      {panel.renders.image ?
-        <img src={panel.renders.image} className={styles.img} />
-      :
-        <div className={styles.placeholder}></div>
-      }
+      {(() => {
+        if (busy) {
+          return (
+            <PlaceholderImg className={styles.img} />
+          );
+        } else if (panel.renders.image) {
+          return (
+            <img src={panel.renders.image} className={styles.img} />
+          );
+        } else {
+          return (
+            <div className={styles.placeholder}>
+              <img className={styles.img} src='/images/missing-file.svg' />
+            </div>
+          );
+        }
+      })()}
     </div>  
   );
 };
@@ -70,6 +101,7 @@ export const StoryboardComponent = ({
     <div className={styles.storyboard}>
       {panels.map((p, i) => (
         <StoryboardPanel
+          storyboard={storyboard}
           panel={p}
           selected={p === panel}
           onClick={e => {

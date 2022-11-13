@@ -1308,65 +1308,74 @@ export class Panel extends EventTarget {
     this.data = {};
     this.renders = {};
 
-    this.running = false;
-    this.queue = [];
+    this.runningTasks = [];
     this.abortController = new AbortController();
   }
+
+  // XXX debugging
   get busy() {
     debugger;
   }
+  
   isBusy() {
-    return this.running;
+    return this.runningTasks.length > 0;
   }
   isEmpty() {
     return !('image' in this.data);
   }
-  /* setImage(image) {
-    // XXX not implemented
-  } */
+  getBusyMessage() {
+    if (this.runningTasks.length > 0) {
+      return this.runningTasks[0].message;
+    } else {
+      return '';
+    }
+  }
+
   setFile(file) {
     console.log('set file', file);
     // XXX not implemented
   }
-  task(fn) {
+  async setFromPrompt(prompt) {
+    this.task(async ({signal}) => {
+      const blob = await imageAiClient.createImageBlob(prompt, {signal});
+      this.setFile(blob);
+    });
+  }
+
+  task(fn, message) {
     const {signal} = this.abortController;
 
-    if (!this.running) {
-      this.running = true;
+    const task = {
+      message,
+    };
+    this.runningTasks.push(task);
 
-      this.dispatchEvent(new MessageEvent('busyupdate', {
-        data: {
-          busy: this.isBusy(),
-        },
-      }));
+    this.dispatchEvent(new MessageEvent('busyupdate', {
+      data: {
+        busy: this.isBusy(),
+        message: this.getBusyMessage(),
+      },
+    }));
 
-      const _recurse = async fn => {
-        try {
-          await fn({
-            signal,
-          });
-        } finally {
-          if (this.queue.length > 0) {
-            const fn = this.queue.shift();
-            _recurse(fn);
-          } else {
-            this.running = false;
-            
-            this.dispatchEvent(new MessageEvent('busyupdate', {
-              data: {
-                busy: this.isBusy(),
-              },
-            }));
-          }
-        }
-      };
-      _recurse(fn);
-    } else {
-      this.queue.push(fn);
-    }
+    (async () =>{
+      try {
+        await fn({
+          signal,
+        });
+      } finally {
+        const index = this.runningTasks.indexOf(task);
+        this.runningTasks.splice(index, 1);
+        
+        this.dispatchEvent(new MessageEvent('busyupdate', {
+          data: {
+            busy: this.isBusy(),
+            message: this.getBusyMessage(),
+          },
+        }));
+      }
+    })();
   }
   cancel() {
-    this.queue.length = 0;
     this.abortController.abort(abortError);
   }
 }
@@ -1386,6 +1395,19 @@ export class Storyboard extends EventTarget {
         panel,
       },
     }));
+  }
+  #removePanelInternal(panel) {
+    const i = this.panels.indexOf(panel);
+    if (i !== -1) {
+      this.panels.splice(i, 1);
+      this.dispatchEvent(new MessageEvent('panelremove', {
+        data: {
+          panel,
+        },
+      }));
+    } else {
+      throw new Error('panel not found');
+    }
   }
   addPanel() {
     const panel = new Panel();
@@ -1409,5 +1431,8 @@ export class Storyboard extends EventTarget {
     const panel = new Panel();
     panel.setFile(file);
     this.#addPanelInternal(panel);
+  }
+  removePanel(panel) {
+    this.#removePanelInternal(panel);
   }
 }

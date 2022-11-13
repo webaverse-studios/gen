@@ -1,6 +1,8 @@
-import {useState} from 'react';
-import {useRef} from 'react';
+// import {useState} from 'react';
+// import {useRef} from 'react';
+
 import {StoryboardGeneratorComponent} from  './StoryboardGeneratorComponent.jsx';
+import {Storyboard3DRendererComponent} from  './Storyboard3DRendererComponent.jsx';
 import styles from '../../../styles/StoryboardRenderer.module.css';
 
 export const StoryboardRendererComponent = ({
@@ -8,7 +10,6 @@ export const StoryboardRendererComponent = ({
   panel,
   onPanelSelect = () => {},
 }) => {
-  const canvasRef = useRef();
 
   return (
     <div className={styles.storyboardRenderer}>
@@ -17,9 +18,9 @@ export const StoryboardRendererComponent = ({
           if (panel.isEmpty()) {
             return <StoryboardGeneratorComponent
               storyboard={storyboard}
+              panel={panel}
             />;
           } else {
-            <div className={styles.canvasWrap} ref={canvasRef} />
           }
         } else {
           return <div className={styles.panelPlaceholder}>
@@ -29,7 +30,14 @@ export const StoryboardRendererComponent = ({
               e.stopPropagation();
               const panel = storyboard.addPanel();
               onPanelSelect(panel);
-            }}>create a new one</a></div>
+            }}><b>Create New Panel</b></a></div>
+            <div>or, <a className={styles.fileUpload}><input type="file" onChange={async e => {
+              const file = e.target.files[0];
+              if (file) {
+                await storyboard.addPanelFromFile(file);
+              }
+            }} />Upload File</a></div>
+            <div>or, <b>Drag and Drop</b></div>
           </div>
         }
       })()}      
