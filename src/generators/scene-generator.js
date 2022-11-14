@@ -1442,6 +1442,9 @@ export class Panel extends EventTarget {
       }
     }, 'compiling');
   }
+  outmesh(renderer) {
+    console.log('outmesh', renderer);
+  }
 
   createRenderer(canvas, opts) {
     return new PanelRenderer(canvas, this, opts);
