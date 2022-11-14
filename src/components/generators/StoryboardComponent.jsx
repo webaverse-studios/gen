@@ -2,6 +2,7 @@ import {useState, useEffect} from 'react';
 import classnames from 'classnames';
 
 import {PlaceholderImg} from '../placeholders/PlaceholderImg.jsx';
+import {BlobRenderer} from '../renderers/BlobRenderer.jsx';
 import styles from '../../../styles/Storyboard.module.css';
 
 //
@@ -14,18 +15,19 @@ const StoryboardPanel = ({
 }) => {
   const [busy, setBusy] = useState(panel ? panel.isBusy() : false);
   const [busyMessage, setBusyMessage] = useState(panel ? panel.getBusyMessage() : '');
-  const [image, setImage] = useState(panel.renders.image);
+  const _getImage = () => panel.getData('image');
+  const [image, setImage] = useState(_getImage);
 
   // image handling
   useEffect(() => {
     if (panel) {
-      const onrenderupdate = e => {
-        setImage(panel.renders.image);
+      const onupdate = e => {
+        setImage(_getImage());
       };
-      panel.addEventListener('renderupdate', onrenderupdate);
+      panel.addEventListener('update', onupdate);
 
       return () => {
-        panel.removeEventListener('renderupdate', onrenderupdate);
+        panel.removeEventListener('update', onupdate);
       };
     }
   }, [panel, busy, image]);
@@ -59,7 +61,7 @@ const StoryboardPanel = ({
           );
         } else if (image) {
           return (
-            <img src={image} className={styles.img} />
+            <BlobRenderer srcObject={image} className={styles.img} />
           );
         } else {
           return (

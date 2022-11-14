@@ -1293,18 +1293,57 @@ export class Panel extends EventTarget {
     super();
 
     this.id = makeId();
-    this.data = {};
-    this.renders = {};
 
     this.runningTasks = [];
     this.abortController = new AbortController();
+  }
+  #data = [];
+
+  getDataSpec(key) {
+    return this.#data.find(item => item.key === key);
+  }
+  getData(key) {
+    const item = this.getDataSpec(key);
+    return item?.value;
+  }
+  setData(key, value, type) {
+    let item = this.getDataSpec(key);
+    if (!item) {
+      item = {
+        key,
+        type,
+        value,
+      };
+      this.#data.push(item);
+    } else {
+      item.value = value;
+    }
+    this.dispatchEvent(new MessageEvent('update', {
+      data: {
+        key,
+      },
+    }));
+  }
+  deleteData(key) {
+    const index = this.#data.findIndex(item => item.key === key);
+    if (index !== -1) {
+      this.#data.splice(index, 1);
+    }
+    this.dispatchEvent(new MessageEvent('update', {
+      data: {
+        key,
+      },
+    }));
+  }
+  hasData(key) {
+    return this.#data.some(item => item.key === key);
   }
 
   isBusy() {
     return this.runningTasks.length > 0;
   }
   isEmpty() {
-    return !('image' in this.data);
+    return !this.hasData('image');
   }
   getBusyMessage() {
     if (this.runningTasks.length > 0) {
@@ -1317,22 +1356,8 @@ export class Panel extends EventTarget {
     return ('meshes' in this.data) ? 3 : 2;
   }
 
-  async setFile(file) {
-    this.data.image = file;
-
-    // update render
-    if (this.renders.image) {
-      URL.revokeObjectURL(this.renders.image);
-      delete this.renders.image;
-    }
-    this.renders.image = URL.createObjectURL(file);
-
-    this.dispatchEvent(new MessageEvent('renderupdate', {
-      data: {
-        key: 'image',
-        value: this.renders.image,
-      },
-    }))
+  setFile(file) {
+    this.setData('image', file, 'imageFile');
   }
   async setFromPrompt(prompt) {
     await this.task(async ({signal}) => {
@@ -1384,11 +1409,6 @@ export class Panel extends EventTarget {
   }
   destroy() {
     this.cancel();
-
-    if (this.renders.image) {
-      URL.revokeObjectURL(this.renders.image);
-      delete this.renders.image;
-    }
   }
 }
 

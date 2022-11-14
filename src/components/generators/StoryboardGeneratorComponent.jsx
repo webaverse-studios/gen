@@ -2,6 +2,8 @@ import {useState, useEffect} from 'react';
 import styles from '../../../styles/StoryboardGenerator.module.css';
 import {prompts} from '../../constants/prompts.js';
 
+//
+
 export const StoryboardGeneratorComponent = ({
   storyboard,
   panel,

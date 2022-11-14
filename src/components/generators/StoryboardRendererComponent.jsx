@@ -4,6 +4,8 @@ import {useState, useEffect} from 'react';
 import {StoryboardGeneratorComponent} from  './StoryboardGeneratorComponent.jsx';
 import {Storyboard2DRendererComponent} from  './Storyboard2DRendererComponent.jsx';
 import {Storyboard3DRendererComponent} from  './Storyboard3DRendererComponent.jsx';
+import {BlobRenderer} from '../renderers/BlobRenderer.jsx';
+
 import styles from '../../../styles/StoryboardRenderer.module.css';
 
 //
@@ -12,9 +14,8 @@ const StoryboardLayerComponent = ({
   storyboard,
   panel,
 }) => {
-  const [image, setImage] = useState(panel.renders.image);
-
-  const _getImage = () => panel.renders.image;
+  const _getImage = () => panel.getData('image');
+  const [image, setImage] = useState(_getImage);
 
   useEffect(() => {
     const onrenderupdate = e => {
@@ -31,7 +32,7 @@ const StoryboardLayerComponent = ({
 
   return (
     <div className={styles.layer}>
-      <img src={image} className={styles.img} />
+      <BlobRenderer srcObject={image} className={styles.img} />
     </div>
   );
 };
@@ -120,15 +121,15 @@ export const StoryboardRendererComponent = ({
   // empty tracking
   useEffect(() => {
     if (panel) {
-      const onrenderupdate = e => {
+      const onupdate = e => {
         setEmpty(_getEmpty());
       };
-      panel.addEventListener('renderupdate', onrenderupdate);
+      panel.addEventListener('update', onupdate);
       
       setEmpty(_getEmpty());
 
       return () => {
-        panel.removeEventListener('renderupdate', onrenderupdate);
+        panel.removeEventListener('update', onupdate);
       };
     }
   }, [panel]);
