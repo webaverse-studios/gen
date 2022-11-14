@@ -1338,6 +1338,9 @@ export class Panel extends EventTarget {
   hasData(key) {
     return this.#data.some(item => item.key === key);
   }
+  hasDataMatch(regex) {
+    return this.#data.some(item => regex.test(item.key));
+  }
 
   isBusy() {
     return this.runningTasks.length > 0;
@@ -1353,7 +1356,7 @@ export class Panel extends EventTarget {
     }
   }
   getDimension() {
-    return ('meshes' in this.data) ? 3 : 2;
+    return this.hasDataMatch(/^layer1/) ? 3 : 2;
   }
 
   setFile(file) {
@@ -1368,7 +1371,8 @@ export class Panel extends EventTarget {
 
   async compile() {
     await this.task(async ({signal}) => {
-      const compileResult = await compileVirtualScene(this.data.image);
+      const image = this.getData('image');
+      const compileResult = await compileVirtualScene(image);
       console.log('got compile result', compileResult);
     }, 'compiling');
   }
