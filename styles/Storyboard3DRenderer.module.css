@@ -1,3 +1,21 @@
 .storyboard3DRenderer {
   
 }
+
+.storyboard3DRenderer .header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.storyboard3DRenderer .header .button {
+  display: inline-block;
+  font-size: 30px;
+  padding: 10px;
+  border: 3px solid currentColor;
+  cursor: pointer;
+}
+.storyboard3DRenderer .header .button:hover {
+  color: #FFF;
+  background-color: #000;
+  border-color: #000;
+}

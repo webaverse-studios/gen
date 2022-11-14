@@ -1,15 +1,44 @@
+import { useEffect } from 'react';
 import {useRef} from 'react';
 
+import {panelSize, layer1Specs} from '../../generators/scene-generator.js';
 import styles from '../../../styles/Storyboard3DRenderer.module.css';
 
-export const Storyboard3DRendererComponent = ({
+//
+
+const Panel3DCanvas = ({
   panel,
 }) => {
   const canvasRef = useRef();
 
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (canvas) {
+      const renderer = panel.createRenderer(canvas);
+
+      return () => {
+        renderer.destroy();
+      };
+    }
+  }, [canvasRef.current]);
+  
+  return (
+    <canvas
+      className={styles.canvas}
+      width={panelSize}
+      height={panelSize}
+      ref={canvasRef}
+    />
+  );
+};
+
+//
+
+export const Storyboard3DRendererComponent = ({
+  panel,
+}) => {
   const keydown = e => {
     if (!e.repeat) {
-      // console.log('got key', e.key);
       switch (e.key) {
         case ' ': {
           if (step === 2) {
@@ -26,14 +55,26 @@ export const Storyboard3DRendererComponent = ({
   document.addEventListener('keydown', keydown);
 
   return (
-    <div className={styles.storyboard2DRenderer}>
+    <div className={styles.storyboard3DRenderer}>
       <div className={styles.header}>
-        <div className={styles.text}>Status: Not compiled</div>
-        <button class={styles.button} onClick={async e => {
+        <div className={styles.text}>Status: Compiled</div>
+        <button className={styles.button} onClick={async e => {
           await panel.compile();
-        }}></button>
+        }}>Recompile</button>
       </div>
-      <div className={styles.canvasWrap} ref={canvasRef} />
+      <Panel3DCanvas
+        panel={panel}
+      />
+      <div className={styles.layers}>
+        {layer1Specs.map(({name, type}) => {
+          return (
+            <div
+              className={styles.layer}
+              key={name}
+            >{name}</div>
+          );
+        })}
+      </div>
     </div>
   );
 };

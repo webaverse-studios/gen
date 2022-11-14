@@ -108,11 +108,13 @@ export const StoryboardRendererComponent = ({
       const onbusyupdate = e => {
         setBusy(panel.isBusy());
         setBusyMessage(panel.getBusyMessage());
+        setDimension(panel.getDimension());
       };
       panel.addEventListener('busyupdate', onbusyupdate);
 
       setBusy(panel.isBusy());
       setBusyMessage(panel.getBusyMessage());
+      setDimension(panel.getDimension());
 
       return () => {
         panel.removeEventListener('busyupdate', onbusyupdate);

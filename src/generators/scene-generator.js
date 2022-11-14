@@ -19,13 +19,41 @@ import {labelClasses} from '../constants/prompts.js';
 
 //
 
+export const panelSize = 1024;
 export const mainImageKey = 'layer0/image';
+export const layer1Specs = [
+  {
+    name: 'labelImageData',
+    type: 'arrayBuffer',
+  },
+  {
+    name: 'pointCloudHeaders',
+    type: 'json',
+  },
+  {
+    name: 'pointCloud',
+    type: 'arrayBuffer',
+  },
+  {
+    name: 'boundingBoxLayers',
+    type: 'json',
+  },
+  {
+    name: 'planeMatrices',
+    type: 'json',
+  },
+  {
+    name: 'predictedHeight',
+    type: 'json',
+  },
+];
 
 //
 
 const imageAiClient = new ImageAiClient();
 const abortError = new Error();
 abortError.isAbortError = true;
+const localMatrix = new THREE.Matrix4();
 
 //
 
@@ -431,28 +459,22 @@ const _clipGeometryToMask = (
 
 //
 
-class ScenePackage {
-  constructor(spec) {
-    this.spec = spec;
-  }
-}
-
-//
-
-class SceneRenderer {
-  constructor(element, {
+class PanelRenderer extends EventTarget {
+  constructor(canvas, panel, {
     debug = false,
   } = {}) {
-    this.element = element;
+    super();
 
+    this.canvas = canvas;
+    this.panel = panel;
+    this.debug = debug;
+    
     this.prompt = null;
 
     // canvas
-    const canvas = document.createElement('canvas');
-    canvas.width = 1024;
-    canvas.height = 1024;
+    canvas.width = panelSize;
+    canvas.height = panelSize;
     canvas.classList.add('canvas');
-    this.element.appendChild(canvas);
 
     // renderer
     const renderer = new THREE.WebGLRenderer({
@@ -503,78 +525,35 @@ class SceneRenderer {
     cubeMesh.frustumCulled = false;
     // scene.add(cubeMesh);
 
-    this.debug = debug;
-
-    this.listen();
-
-    const _startLoop = () => {
-      const _render = () => {
-        if (this.renderer) {
-          // update orbit controls
-          this.controls.update();
-          this.camera.updateMatrixWorld();
-
-          // render
-          this.renderer.render(scene, camera);
-        }
-      };
-      const _loop = () => {
-        requestAnimationFrame(_loop);
-        _render();
-      };
-      _loop();
-    };
-    _startLoop();
-  }
-  listen() {
-    document.addEventListener('keydown', e => {
-      if (!e.repeat) {
-        // page up
-        if (e.key === 'PageUp') {
-          this.sceneMesh.material.uniforms.uColorEnabled.value = 1;
-          this.sceneMesh.material.uniforms.uColorEnabled.needsUpdate = true;
-          blockEvent(e);
-        } else if (e.key === 'PageDown') {
-          this.sceneMesh.material.uniforms.uColorEnabled.value = 0;
-          this.sceneMesh.material.uniforms.uColorEnabled.needsUpdate = true;
-          blockEvent(e);
-        }
-      }
-    });
-    const canvas = this.renderer.domElement;
-    canvas.addEventListener('mousedown', blockEvent);
-    canvas.addEventListener('mouseup', blockEvent);
-    canvas.addEventListener('click', blockEvent);
-    canvas.addEventListener('wheel', blockEvent);
-  }
-  setPackage(scenePackage) {
-    const {
-      prompt,
-      img,
-      labelImg,
-      pointCloudHeaders,
-      pointCloudArrayBuffer,
-      planeMatrices,
-      predictedHeight,
-    } = scenePackage.spec;
-
-    this.prompt = prompt;
+    // read the mesh from the panel
+    const imgBlob = panel.getData(mainImageKey);
+    const labelImageData = panel.getData('layer1/labelImageData');
+    const pointCloudHeaders = panel.getData('layer1/pointCloudHeaders');
+    const pointCloudArrayBuffer = panel.getData('layer1/pointCloud');
+    const planeMatrices = panel.getData('layer1/planeMatrices');
+    const predictedHeight = panel.getData('layer1/predictedHeight');
+    // console.log('got panel datas', panel.getDatas());
 
     // camera
     this.camera.fov = Number(pointCloudHeaders['x-fov']);
     this.camera.updateProjectionMatrix();
 
     // scene mesh
-    const widthSegments = img.width - 1;
-    const heightSegments = img.height - 1;
+    const widthSegments = this.canvas.width - 1;
+    const heightSegments = this.canvas.height - 1;
     const geometry = new THREE.PlaneGeometry(1, 1, widthSegments, heightSegments);
-    pointCloudArrayBufferToPositionAttributeArray(pointCloudArrayBuffer, geometry.attributes.position.array, 1/img.width);
+    pointCloudArrayBufferToPositionAttributeArray(pointCloudArrayBuffer, geometry.attributes.position.array, 1/this.canvas.width);
     geometry.setAttribute('color', new THREE.BufferAttribute(new Uint8Array(pointCloudArrayBuffer.byteLength / pointcloudStride * 3), 3, true));
-    pointCloudArrayBufferToColorAttributeArray(labelImg, geometry.attributes.color.array);
+    pointCloudArrayBufferToColorAttributeArray(labelImageData, geometry.attributes.color.array);
     _cutSkybox(geometry);
     applySkybox(geometry.attributes.position.array);
-    const map = new THREE.Texture(img);
-    map.needsUpdate = true;
+    const map = new THREE.Texture();
+    (async () => { // load the texture image
+      map.image = await createImageBitmap(imgBlob, {
+        imageOrientation: 'flipY',
+      });
+      map.needsUpdate = true;
+    })();
     const sceneMesh = new THREE.Mesh(
       geometry,
       new THREE.MeshBasicMaterial({
@@ -624,6 +603,67 @@ class SceneRenderer {
     })();
     // this.scene.add(planesMesh);
     this.planesMesh = planesMesh;
+
+    // bootstrap
+    this.listen();
+    this.animate();
+  }
+  listen() {
+    const keydown = e => {
+      if (!e.repeat) {
+        // page up
+        if (e.key === 'PageUp') {
+          this.sceneMesh.material.uniforms.uColorEnabled.value = 1;
+          this.sceneMesh.material.uniforms.uColorEnabled.needsUpdate = true;
+          blockEvent(e);
+        } else if (e.key === 'PageDown') {
+          this.sceneMesh.material.uniforms.uColorEnabled.value = 0;
+          this.sceneMesh.material.uniforms.uColorEnabled.needsUpdate = true;
+          blockEvent(e);
+        }
+      }
+    };
+    document.addEventListener('keydown', keydown);
+
+    const canvas = this.renderer.domElement;
+    canvas.addEventListener('mousedown', blockEvent);
+    canvas.addEventListener('mouseup', blockEvent);
+    canvas.addEventListener('click', blockEvent);
+    canvas.addEventListener('wheel', blockEvent);
+
+    this.addEventListener('destroy', e => {
+      document.removeEventListener('keydown', keydown);
+
+      canvas.removeEventListener('mousedown', blockEvent);
+      canvas.removeEventListener('mouseup', blockEvent);
+      canvas.removeEventListener('click', blockEvent);
+      canvas.removeEventListener('wheel', blockEvent);
+    });
+  }
+  animate() {
+    const _startLoop = () => {
+      const _render = () => {
+        if (this.renderer) {
+          // update orbit controls
+          this.controls.update();
+          this.camera.updateMatrixWorld();
+
+          // render
+          this.renderer.render(this.scene, this.camera);
+        }
+      };
+      let frame;
+      const _loop = () => {
+        frame = requestAnimationFrame(_loop);
+        _render();
+      };
+      _loop();
+
+      this.addEventListener('destroy', e => {
+        cancelAnimationFrame(frame);
+      });
+    };
+    _startLoop();
   }
   async renderBackground() {
     // render the mask image
@@ -1125,6 +1165,9 @@ class SceneRenderer {
     }
     console.timeEnd('backgroundMesh');
   }
+  destroy() {
+    this.dispatchEvent(new MessageEvent('destroy'));
+  }
 }
 
 //
@@ -1162,8 +1205,16 @@ async function compileVirtualScene(blob) {
     threshold: 0.0001,
   });
   const labelImg = await blob2img(labelBlob);
+  const labelImageData = (() => {
+    const canvas = document.createElement('canvas');
+    canvas.width = labelImg.width;
+    canvas.height = labelImg.height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(labelImg, 0, 0);
+    return ctx.getImageData(0, 0, canvas.width, canvas.height).data.buffer;
+  })();
   const boundingBoxLayers = JSON.parse(labelHeaders['x-bounding-boxes']);
-  const labelCanvas = drawLabelCanvas(labelImg, boundingBoxLayers);
+  // const labelCanvas = drawLabelCanvas(labelImg, boundingBoxLayers);
   // document.body.appendChild(labelCanvas);
 
   // point cloud
@@ -1277,9 +1328,9 @@ async function compileVirtualScene(blob) {
 
   // return result
   return {
-    label: labelBlob,
+    labelImageData,
     pointCloudHeaders,
-    pointCloudArrayBuffer,
+    pointCloud: pointCloudArrayBuffer,
     boundingBoxLayers,
     planeMatrices,
     predictedHeight,
@@ -1299,6 +1350,9 @@ export class Panel extends EventTarget {
   }
   #data = [];
 
+  getDatas() {
+    return this.#data;
+  }
   getDataSpec(key) {
     return this.#data.find(item => item.key === key);
   }
@@ -1373,8 +1427,17 @@ export class Panel extends EventTarget {
     await this.task(async ({signal}) => {
       const image = this.getData(mainImageKey);
       const compileResult = await compileVirtualScene(image);
-      console.log('got compile result', compileResult);
+      // console.log('got compile result', compileResult);
+
+      for (const {name, type} of layer1Specs) {
+        this.setData('layer1/' + name, compileResult[name], type);
+      }
     }, 'compiling');
+  }
+
+  createRenderer(canvas, opts) {
+    console.log('create renderer', this.isEmpty(), structuredClone(this.getDatas()));
+    return new PanelRenderer(canvas, this, opts);
   }
 
   async task(fn, message) {
