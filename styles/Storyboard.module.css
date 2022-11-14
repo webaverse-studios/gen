@@ -49,3 +49,34 @@
   left: 0;
   padding: 30px;
 }
+
+/* */
+
+.storyboard .buttons {
+  display: flex;
+  padding: 3px;
+}
+.storyboard .button {
+  display: flex;
+  font-size: 30px;
+  padding: 10px;
+  justify-content: center;
+  border: 3px solid currentColor;
+  flex: 1;
+  cursor: pointer;
+}
+.storyboard .button:hover {
+  color: #FFF;
+  background-color: #000;
+  border-color: #000;
+}
+.storyboard .button + .button {
+  margin-left: 10px;
+}
+.storyboard .button:hover .img {
+  filter: invert(100%);
+}
+.storyboard .button .img {
+  width: 20px;
+  height: 20px;
+}

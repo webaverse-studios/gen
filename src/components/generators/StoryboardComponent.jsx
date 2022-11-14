@@ -140,6 +140,20 @@ export const StoryboardComponent = ({
       onDragOver={dragover}
       onDrop={drop}
     >
+      <div className={styles.buttons}>
+        <button className={styles.button} onClick={e => {
+          e.preventDefault();
+          e.stopPropagation();
+        }}>
+          <img src='/images/download.svg' className={styles.img} />
+        </button>
+        <button className={styles.button} onClick={e => {
+          e.preventDefault();
+          e.stopPropagation();
+        }}>
+          <img src='/images/upload.svg' className={styles.img} />
+        </button>
+      </div>
       {panels.map((p, i) => (
         <StoryboardPanel
           storyboard={storyboard}
