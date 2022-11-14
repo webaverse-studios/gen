@@ -1,9 +1,8 @@
-import {align4} from './util.mjs';
+import {align4} from './memory-utils.js';
 
 const ADDENDUM_TYPES = (() => {
   let iota = 0;
   const result = new Map();
-  result.set(ArrayBuffer, ++iota);
   result.set(Uint8Array, ++iota);
   result.set(Uint16Array, ++iota);
   result.set(Uint32Array, ++iota);
@@ -12,27 +11,54 @@ const ADDENDUM_TYPES = (() => {
   result.set(Int32Array, ++iota);
   result.set(Float32Array, ++iota);
   result.set(Float64Array, ++iota);
+  result.set(ArrayBuffer, ++iota);
   return result;
 })();
-const ADDENDUM_CONSTRUCTORS = [
-  null, // start at 1
-  ArrayBuffer,
-  Uint8Array,
-  Uint16Array,
-  Uint32Array,
-  Int8Array,
-  Int16Array,
-  Int32Array,
-  Float32Array,
-  Float64Array,
-];
+const ADDENDUM_CONSTRUCTORS = (() => {
+  const _construct = constructor =>
+    (buffer, offset, byteLength) =>
+      new constructor(buffer, offset, byteLength / constructor.BYTES_PER_ELEMENT)
+  return [
+    null, // start at 1
+    _construct(Uint8Array),
+    _construct(Uint16Array),
+    _construct(Uint32Array),
+    _construct(Int8Array),
+    _construct(Int16Array),
+    _construct(Int32Array),
+    _construct(Float32Array),
+    _construct(Float64Array),
+    (buffer, offset, byteLength) => buffer.slice(offset, offset + byteLength), // ArrayBuffer
+  ];
+})();
+const ADDENDUM_SERIALIZERS = (() => {
+  const _serializedTypedArray = (typedArray, uint8Array, index) => {
+    uint8Array.set(new Uint8Array(typedArray.buffer, addtypedArrayndum.byteOffset, typedArray.byteLength), index);
+  };
+  _serializedTypedArray.getSize = typedArray => align4(typedArray.byteLength);
+  const _serializeArrayBuffer = (arrayBuffer, uint8Array, index) => {
+    uint8Array.set(new Uint8Array(arrayBuffer), index);
+  };
+  _serializeArrayBuffer.getSize = arrayBuffer => align4(arrayBuffer.byteLength);
+  return [
+    null, // start at 1
+    _serializedTypedArray, // Uint8Array
+    _serializedTypedArray, // Uint16Array
+    _serializedTypedArray, // Uint32Array
+    _serializedTypedArray, // Int8Array
+    _serializedTypedArray, // Int16Array
+    _serializedTypedArray, // Int32Array
+    _serializedTypedArray, // Float32Array
+    _serializedTypedArray, // Float64Array
+    _serializeArrayBuffer, // ArrayBuffer
+  ];
+})();
 
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
 let textUint8Array = new Uint8Array(4 * 1024 * 1024); // 4 MB
 
 const encodableConstructors = [
-  ArrayBuffer,
   Uint8Array,
   Uint16Array,
   Uint32Array,
@@ -41,6 +67,7 @@ const encodableConstructors = [
   Int32Array,
   Float32Array,
   Float64Array,
+  ArrayBuffer,
 ];
 const _isAddendumEncodable = o =>
   encodableConstructors.includes(
@@ -98,8 +125,13 @@ function zbencode(o) {
     totalSize += Uint32Array.BYTES_PER_ELEMENT; // index
     totalSize += Uint32Array.BYTES_PER_ELEMENT; // type
     totalSize += Uint32Array.BYTES_PER_ELEMENT; // length
-    totalSize += addendum.byteLength; // data
-    totalSize = align4(totalSize);
+    
+    // totalSize += addendum.byteLength; // data
+    const addendumType = addendumTypes[i];
+    const Serializer = ADDENDUM_SERIALIZERS[addendumType];
+    const addendumByteLength = Serializer.getSize(addendum);
+    totalSize += addendumByteLength;
+    // totalSize = align4(totalSize);
   }
   
   const ab = new ArrayBuffer(totalSize);
@@ -130,12 +162,14 @@ function zbencode(o) {
       dataView.setUint32(index, addendumType, true);
       index += Uint32Array.BYTES_PER_ELEMENT;
       
-      dataView.setUint32(index, addendum.byteLength, true);
+      const Serializer = ADDENDUM_SERIALIZERS[addendumType];
+      const addendumByteLength = Serializer.getSize(addendum);
+
+      dataView.setUint32(index, addendumByteLength, true);
       index += Uint32Array.BYTES_PER_ELEMENT;
-      
-      uint8Array.set(new Uint8Array(addendum.buffer, addendum.byteOffset, addendum.byteLength), index);
-      index += addendum.byteLength;
-      index = align4(index);
+
+      Serializer(addendum, uint8Array, index);
+      index += addendumByteLength;
     }
   }
   return uint8Array;
@@ -166,19 +200,19 @@ function zbdecode(uint8Array) {
     const addendumType = dataView.getUint32(index, true);
     index += Uint32Array.BYTES_PER_ELEMENT;
     
-    const addendumLength = dataView.getUint32(index, true);
+    const addendumByteLength = dataView.getUint32(index, true);
     index += Uint32Array.BYTES_PER_ELEMENT;
     
     const TypedArrayCons = ADDENDUM_CONSTRUCTORS[addendumType];
     /* if (!TypedArrayCons) {
       console.warn('failed to find typed array cons for', addendumType);
     } */
-    const addendum = new TypedArrayCons(
+    const addendum = TypedArrayCons(
       uint8Array.buffer,
       uint8Array.byteOffset + index,
-      addendumLength / TypedArrayCons.BYTES_PER_ELEMENT
+      addendumByteLength
     );
-    index += addendumLength;
+    index += addendumByteLength;
     index = align4(index);
     
     addendums[i] = addendum;
