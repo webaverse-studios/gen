@@ -5,11 +5,15 @@ import styles from '../../../styles/Storyboard2DRenderer.module.css';
 
 //
 
+import {mainImageKey} from '../../generators/scene-generator.js';
+
+//
+
 export const Storyboard2DRendererComponent = ({
   storyboard,
   panel,
 }) => {
-  const _getImage = () => panel.getData('image');
+  const _getImage = () => panel.getData(mainImageKey);
   const [image, setImage] = useState(_getImage);
 
   useEffect(() => {

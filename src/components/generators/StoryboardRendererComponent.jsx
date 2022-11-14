@@ -6,6 +6,8 @@ import {Storyboard2DRendererComponent} from  './Storyboard2DRendererComponent.js
 import {Storyboard3DRendererComponent} from  './Storyboard3DRendererComponent.jsx';
 import {BlobRenderer} from '../renderers/BlobRenderer.jsx';
 
+import {mainImageKey} from '../../generators/scene-generator.js';
+
 import styles from '../../../styles/StoryboardRenderer.module.css';
 
 //
@@ -14,7 +16,7 @@ const StoryboardLayerComponent = ({
   storyboard,
   panel,
 }) => {
-  const _getImage = () => panel.getData('image');
+  const _getImage = () => panel.getData(mainImageKey);
   const [image, setImage] = useState(_getImage);
 
   useEffect(() => {

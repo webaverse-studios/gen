@@ -19,6 +19,10 @@ import {labelClasses} from '../constants/prompts.js';
 
 //
 
+export const mainImageKey = 'layer0/image';
+
+//
+
 const imageAiClient = new ImageAiClient();
 const abortError = new Error();
 abortError.isAbortError = true;
@@ -1346,7 +1350,7 @@ export class Panel extends EventTarget {
     return this.runningTasks.length > 0;
   }
   isEmpty() {
-    return !this.hasData('image');
+    return !this.hasData(mainImageKey);
   }
   getBusyMessage() {
     if (this.runningTasks.length > 0) {
@@ -1360,7 +1364,7 @@ export class Panel extends EventTarget {
   }
 
   setFile(file) {
-    this.setData('image', file, 'imageFile');
+    this.setData(mainImageKey, file, 'imageFile');
   }
   async setFromPrompt(prompt) {
     await this.task(async ({signal}) => {
@@ -1371,7 +1375,7 @@ export class Panel extends EventTarget {
 
   async compile() {
     await this.task(async ({signal}) => {
-      const image = this.getData('image');
+      const image = this.getData(mainImageKey);
       const compileResult = await compileVirtualScene(image);
       console.log('got compile result', compileResult);
     }, 'compiling');

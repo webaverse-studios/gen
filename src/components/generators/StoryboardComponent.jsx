@@ -7,6 +7,10 @@ import styles from '../../../styles/Storyboard.module.css';
 
 //
 
+import {mainImageKey} from '../../generators/scene-generator.js';
+
+//
+
 const StoryboardPanel = ({
   storyboard,
   panel,
@@ -15,7 +19,7 @@ const StoryboardPanel = ({
 }) => {
   const [busy, setBusy] = useState(panel ? panel.isBusy() : false);
   const [busyMessage, setBusyMessage] = useState(panel ? panel.getBusyMessage() : '');
-  const _getImage = () => panel.getData('image');
+  const _getImage = () => panel.getData(mainImageKey);
   const [image, setImage] = useState(_getImage);
 
   // image handling
