@@ -646,14 +646,12 @@ class PanelRenderer extends EventTarget {
   animate() {
     const _startLoop = () => {
       const _render = () => {
-        if (this.renderer) {
-          // update orbit controls
-          this.controls.update();
-          this.camera.updateMatrixWorld();
+        // update orbit controls
+        this.controls.update();
+        this.camera.updateMatrixWorld();
 
-          // render
-          this.renderer.render(this.scene, this.camera);
-        }
+        // render
+        this.renderer.render(this.scene, this.camera);
       };
       let frame;
       const _loop = () => {
