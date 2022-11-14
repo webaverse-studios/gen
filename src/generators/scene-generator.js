@@ -613,7 +613,7 @@ class SceneRenderer {
       planesMesh.name = 'planesMesh';
       planesMesh.frustumCulled = false;
       for (let i = 0; i < planeMatrices.length; i++) {
-        planesMesh.setMatrixAt(i, planeMatrices[i]);
+        planesMesh.setMatrixAt(i, localMatrix.fromArray(planeMatrices[i]));
       }
       planesMesh.count = planeMatrices.length;
       planesMesh.instanceMatrix.needsUpdate = true;
@@ -1244,7 +1244,7 @@ async function compileVirtualScene(blob) {
         ),
         new THREE.Vector3(1, 1, 1)
       );
-      planeMatrices.push(m);
+      planeMatrices.push(m.toArray());
 
       // latch new points
       points2 = Float32Array.from(outlierPlaneFloats);
