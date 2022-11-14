@@ -1346,15 +1346,16 @@ async function compileVirtualScene(arrayBuffer) {
 //
 
 export class Panel extends EventTarget {
-  constructor() {
+  constructor(data = []) {
     super();
 
     this.id = makeId();
+    this.#data = data;
 
     this.runningTasks = [];
     this.abortController = new AbortController();
   }
-  #data = [];
+  #data;
 
   getDatas() {
     return this.#data;
@@ -1516,8 +1517,8 @@ export class Storyboard extends EventTarget {
       throw new Error('panel not found');
     }
   }
-  addPanel() {
-    const panel = new Panel();
+  addPanel(data) {
+    const panel = new Panel(data);
     this.#addPanelInternal(panel);
     return panel;
   }

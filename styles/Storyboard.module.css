@@ -57,12 +57,14 @@
   padding: 3px;
 }
 .storyboard .button {
+  position: relative;
   display: flex;
   font-size: 30px;
   padding: 10px;
   justify-content: center;
   border: 3px solid currentColor;
   flex: 1;
+  overflow: hidden;
   cursor: pointer;
 }
 .storyboard .button:hover {

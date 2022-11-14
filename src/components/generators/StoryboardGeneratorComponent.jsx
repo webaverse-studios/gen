@@ -40,11 +40,14 @@ export const StoryboardGeneratorComponent = ({
         <div className={styles.button} onClick={async () => {
           await panel.setFromPrompt(prompt);
         }}>Generate</div>
-      <div>or, <a className={styles.fileUpload}><input type="file" onChange={async e => {
+      <div>or, <a className={styles.fileUpload}><input type="file" onChange={e => {
         const file = e.target.files[0];
         if (file) {
-          await panel.setFile(file);
+          (async () => {
+            await panel.setFile(file);
+          })();
         }
+        e.target.value = null;
       }} />Upload File</a></div>
       <div>or, <i>Drag and Drop</i></div>
     </div>

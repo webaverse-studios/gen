@@ -75,12 +75,15 @@ const StoryboardPlaceholderComponent = ({
         const panel = storyboard.addPanel();
         onPanelSelect(panel);
       }}><b>Create New Panel</b></a></div>
-      <div>or, <a className={styles.fileUpload}><input type="file" onChange={async e => {
+      <div>or, <a className={styles.fileUpload}><input type="file" onChange={e => {
         const file = e.target.files[0];
         if (file) {
-          const panel = await storyboard.addPanelFromFile(file);
-          onPanelSelect(panel);
+          (async () => {
+            const panel = await storyboard.addPanelFromFile(file);
+            onPanelSelect(panel);
+          })();
         }
+        e.target.value = null;
       }} />Upload File</a></div>
       <div>or, <i>Drag and Drop</i></div>
     </div>

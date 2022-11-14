@@ -2,15 +2,15 @@ import {useState, useEffect} from 'react';
 import classnames from 'classnames';
 
 import {PlaceholderImg} from '../placeholders/PlaceholderImg.jsx';
-// import {BlobRenderer} from '../renderers/BlobRenderer.jsx';
 import {ArrayBufferRenderer} from '../renderers/ArrayBufferRenderer.jsx';
-import {zbencode} from '../../utils/encoding.mjs';
+import {zbencode, zbdecode} from '../../utils/encoding.mjs';
 import {downloadFile} from '../../utils/http-utils.js';
 import styles from '../../../styles/Storyboard.module.css';
 
 //
 
 import {mainImageKey} from '../../generators/scene-generator.js';
+const textDecoder = new TextDecoder();
 
 //
 
@@ -122,6 +122,7 @@ export const StoryboardComponent = ({
   panel,
   panels,
   onPanelSelect,
+  onPanelsLoad,
 }) => {
   const dragover = e => {
     e.preventDefault();
@@ -150,19 +151,37 @@ export const StoryboardComponent = ({
 
           const panelDatas = panels.map(panel => panel.getDatas());
           const arrayBuffer = zbencode(panelDatas);
-          console.log('got panel datas', panelDatas, arrayBuffer);
-          // const blob = new Blob([arrayBuffer], {
-          //   type: 'application/octet-stream',
-          // });
-          // downloadFile(blob, 'storyboard.str');
+          const blob = new Blob([
+            'WVSB',
+            arrayBuffer,
+          ], {
+            type: 'application/octet-stream',
+          });
+          downloadFile(blob, 'storyboard.wvs');
         }}>
           <img src='/images/download.svg' className={styles.img} />
         </button>
-        <button className={styles.button} onClick={e => {
-          e.preventDefault();
-          e.stopPropagation();
-        }}>
+        <button className={styles.button}>
           <img src='/images/upload.svg' className={styles.img} />
+          <input type="file" onChange={e => {
+            const file = e.target.files[0];
+            if (file) {
+              (async () => {
+                const arrayBuffer = await file.arrayBuffer();
+                // check that the first bytes are 'WVSB'
+                const firstBytes = new Uint8Array(arrayBuffer, 0, 4);
+                const firstBytesString = textDecoder.decode(firstBytes);
+                if (firstBytesString === 'WVSB') {
+                  const uint8Array = new Uint8Array(arrayBuffer, 4);
+                  const panelDatas = zbdecode(uint8Array);
+                  onPanelsLoad(panelDatas);
+                } else {
+                  console.warn('got invalid file', file);
+                }
+              })();
+            }
+            e.target.value = null;
+          }} />
         </button>
       </div>
       {panels.map((p, i) => (

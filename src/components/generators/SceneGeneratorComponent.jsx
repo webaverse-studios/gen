@@ -106,6 +106,16 @@ const SceneGeneratorComponent = () => {
   const onPanelSelect = panel => {
     setPanel(panel);
   };
+  const onPanelsLoad = newPanelDatas => {
+    const oldPanels = panels;
+    for (const panel of oldPanels) {
+      storyboard.removePanel(panel);
+    }
+    const newPanels = newPanelDatas.map(panelData => storyboard.addPanel(panelData));
+    if (newPanels.length > 0) {
+      setPanel(newPanels[0]);
+    }
+  };
 
   return (
     <div className={styles.sceneGenerator}>
@@ -119,6 +129,7 @@ const SceneGeneratorComponent = () => {
         panel={panel}
         panels={panels}
         onPanelSelect={onPanelSelect}
+        onPanelsLoad={onPanelsLoad}
       />
     </div>
   );
