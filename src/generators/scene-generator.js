@@ -21,6 +21,7 @@ import {labelClasses} from '../constants/prompts.js';
 
 export const panelSize = 1024;
 export const mainImageKey = 'layer0/image';
+export const promptKey = 'layer0/prompt';
 export const layer1Specs = [
   {
     name: 'labelImageData',
@@ -469,8 +470,6 @@ class PanelRenderer extends EventTarget {
     this.panel = panel;
     this.debug = debug;
     
-    this.prompt = null;
-
     // canvas
     canvas.width = panelSize;
     canvas.height = panelSize;
@@ -669,7 +668,12 @@ class PanelRenderer extends EventTarget {
     };
     _startLoop();
   }
-  async renderBackground() {
+  async renderOutmesh(panel) {
+    const prompt = panel.getData('prompt');
+    if (!prompt) {
+      throw new Error('no prompt, so cannot outmesh');
+    }
+
     // render the mask image
     let blob;
     let maskBlob;
@@ -700,7 +704,7 @@ class PanelRenderer extends EventTarget {
     let editedImgBlob;
     let editedImg;
     {
-      editedImgBlob = await imageAiClient.editImgBlob(blob, maskBlob, this.prompt);
+      editedImgBlob = await imageAiClient.editImgBlob(blob, maskBlob, prompt);
       editedImg = await blob2img(editedImgBlob);
       editedImg.classList.add('editImg');
       this.element.appendChild(editedImg);
@@ -1420,14 +1424,15 @@ export class Panel extends EventTarget {
     return this.hasDataMatch(/^layer1/) ? 3 : 2;
   }
 
-  async setFile(file) {
+  async setFile(file, prompt = '') {
     const arrayBuffer = await file.arrayBuffer();
     this.setData(mainImageKey, arrayBuffer, 'imageFile');
+    this.setData(promptKey, prompt, 'text');
   }
   async setFromPrompt(prompt) {
     await this.task(async ({signal}) => {
       const blob = await imageAiClient.createImageBlob(prompt, {signal});
-      await this.setFile(blob);
+      await this.setFile(blob, prompt);
     }, 'generating image');
   }
 
@@ -1442,8 +1447,9 @@ export class Panel extends EventTarget {
       }
     }, 'compiling');
   }
-  outmesh(renderer) {
+  async outmesh(renderer) {
     console.log('outmesh', renderer);
+    const outmeshResult = await renderer.renderOutmesh(this);
   }
 
   createRenderer(canvas, opts) {
@@ -1529,7 +1535,7 @@ export class Storyboard extends EventTarget {
     const panel = new Panel();
     panel.task(async ({signal}) => {
       const blob = await imageAiClient.createImageBlob(prompt, {signal});
-      await panel.setFile(blob);
+      await panel.setFile(blob, prompt);
     }, 'generating image');
     this.#addPanelInternal(panel);
     return panel;

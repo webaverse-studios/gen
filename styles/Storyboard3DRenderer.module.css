@@ -2,6 +2,8 @@
   
 }
 
+/* */
+
 .storyboard3DRenderer .header {
   display: flex;
   align-items: center;
@@ -18,4 +20,12 @@
   color: #FFF;
   background-color: #000;
   border-color: #000;
+}
+
+/* */
+
+.storyboard3DRenderer .header input[type="text"] {
+  min-width: 500px;
+  padding: 10px;
+  font-size: 24px;
 }
