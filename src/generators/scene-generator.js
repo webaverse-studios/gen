@@ -668,7 +668,6 @@ class PanelRenderer extends EventTarget {
   }
   async renderBackground() {
     // render the mask image
-    console.time('maskImage');
     let blob;
     let maskBlob;
     {

@@ -63,8 +63,6 @@ const StoryboardPanel = ({
     }
   };
 
-  console.log('render busy', busy);
-
   return (
     <div
       className={classnames(
