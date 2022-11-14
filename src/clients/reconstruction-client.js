@@ -5,7 +5,7 @@ export const skyboxDistance = 5;
 export const skyboxScaleFactor = 5;
 export const pointcloudStride = 4 + 4 + 4 + 1 + 1 + 1;
 
-export function pointCloudArrayBuffer2canvas(arrayBuffer) {
+export function drawPointCloudCanvas(arrayBuffer) {
   // python_types = (float, float, float, int, int, int)
   // npy_types = [('x', 'f4'), ('y', 'f4'), ('z', 'f4'), ('red', 'u1'), ('green', 'u1'), ('blue', 'u1')]
   const numPixels = arrayBuffer.byteLength / pointcloudStride;

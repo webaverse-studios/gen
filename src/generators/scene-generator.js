@@ -6,7 +6,7 @@ import {getLabel} from '../clients/perception-client.js';
 import {
   pointcloudStride,
   getPointCloud,
-  pointCloudArrayBuffer2canvas,
+  drawPointCloudCanvas,
   pointCloudArrayBufferToPositionAttributeArray,
   applySkybox,
   pointCloudArrayBufferToColorAttributeArray,
@@ -146,9 +146,6 @@ const depthFragmentShader = `\
     gl_FragColor = encode_float(viewZ).abgr;
   }
 `;
-
-//
-
 function drawLabelCanvas(img, boundingBoxLayers) {
   const canvas = document.createElement('canvas');
   canvas.width = img.width;
@@ -160,7 +157,6 @@ function drawLabelCanvas(img, boundingBoxLayers) {
   ctx.drawImage(img, 0, 0);
 
   //
-  // window.boundingBoxLayers = boundingBoxLayers;
   for (let i = 0; i < boundingBoxLayers.length; i++) {
     const bboxes = boundingBoxLayers[i];
     ctx.strokeStyle = 'red';
@@ -187,6 +183,9 @@ function drawLabelCanvas(img, boundingBoxLayers) {
 
   return canvas;
 }
+
+//
+
 const blockEvent = e => {
   e.preventDefault();
   e.stopPropagation();
@@ -673,7 +672,7 @@ class SceneRenderer {
       const pc = await getPointCloud(blob);
       pointCloudHeaders = pc.headers;
       pointCloudArrayBuffer = pc.arrayBuffer;
-      const pointCloudCanvas = pointCloudArrayBuffer2canvas(pointCloudArrayBuffer);
+      const pointCloudCanvas = drawPointCloudCanvas(pointCloudArrayBuffer);
       this.element.appendChild(pointCloudCanvas);
       
       const fov = Number(pointCloudHeaders['x-fov']);
@@ -1152,7 +1151,7 @@ async function compileVirtualScene(blob) {
   // color
   const img = await blob2img(blob);
   img.classList.add('img');
-  document.body.appendChild(img);
+  // document.body.appendChild(img);
   
   // label
   const {
@@ -1165,15 +1164,15 @@ async function compileVirtualScene(blob) {
   const labelImg = await blob2img(labelBlob);
   const boundingBoxLayers = JSON.parse(labelHeaders['x-bounding-boxes']);
   const labelCanvas = drawLabelCanvas(labelImg, boundingBoxLayers);
-  document.body.appendChild(labelCanvas);
+  // document.body.appendChild(labelCanvas);
 
   // point cloud
   const {
     headers: pointCloudHeaders,
     arrayBuffer: pointCloudArrayBuffer,
   } = await getPointCloud(blob);
-  const pointCloudCanvas = pointCloudArrayBuffer2canvas(pointCloudArrayBuffer);
-  document.body.appendChild(pointCloudCanvas);
+  const pointCloudCanvas = drawPointCloudCanvas(pointCloudArrayBuffer);
+  // document.body.appendChild(pointCloudCanvas);
 
   // run ransac
   const planeMatrices = [];
@@ -1204,7 +1203,6 @@ async function compileVirtualScene(blob) {
 
     // detect planes
     const planesJson = await _detectPlanes(points2);
-    console.log('planes', planesJson);
     // draw detected planes
     for (let i = 0; i < planesJson.length; i++) {
       const plane = planesJson[i];
@@ -1279,12 +1277,10 @@ async function compileVirtualScene(blob) {
 
   // return result
   return {
-    img,
-    labelImg,
-    labelCanvas,
+    label: labelBlob,
     pointCloudHeaders,
     pointCloudArrayBuffer,
-    pointCloudCanvas,
+    boundingBoxLayers,
     planeMatrices,
     predictedHeight,
   };

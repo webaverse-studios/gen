@@ -6,8 +6,7 @@
   display: flex;
   width: inherit;
   height: inherit;
-  padding: 50px;
-  background-image: url('/images/transparent.svg');
+  /* padding: 50px; */
   /* repeat */
   background-repeat: repeat;
   /* center */
