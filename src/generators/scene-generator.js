@@ -529,7 +529,7 @@ class PanelRenderer extends EventTarget {
     // scene.add(cubeMesh);
 
     // read the mesh from the panel
-    const imgBlob = panel.getData(mainImageKey);
+    const imgArrayBuffer = panel.getData(mainImageKey);
     const labelImageData = panel.getData('layer1/labelImageData');
     const pointCloudHeaders = panel.getData('layer1/pointCloudHeaders');
     const pointCloudArrayBuffer = panel.getData('layer1/pointCloud');
@@ -552,6 +552,9 @@ class PanelRenderer extends EventTarget {
     applySkybox(geometry.attributes.position.array);
     const map = new THREE.Texture();
     (async () => { // load the texture image
+      const imgBlob = new Blob([imgArrayBuffer], {
+        type: 'image/jpeg',
+      });
       map.image = await createImageBitmap(imgBlob, {
         imageOrientation: 'flipY',
       });
@@ -1190,8 +1193,11 @@ const _detectPlanes = async points => {
 
 //
 
-async function compileVirtualScene(blob) {
+async function compileVirtualScene(arrayBuffer) {
   // color
+  const blob = new Blob([arrayBuffer], {
+    type: 'image/png',
+  });
   const img = await blob2img(blob);
   img.classList.add('img');
   // document.body.appendChild(img);
@@ -1413,13 +1419,14 @@ export class Panel extends EventTarget {
     return this.hasDataMatch(/^layer1/) ? 3 : 2;
   }
 
-  setFile(file) {
-    this.setData(mainImageKey, file, 'imageFile');
+  async setFile(file) {
+    const arrayBuffer = await file.arrayBuffer();
+    this.setData(mainImageKey, arrayBuffer, 'imageFile');
   }
   async setFromPrompt(prompt) {
     await this.task(async ({signal}) => {
       const blob = await imageAiClient.createImageBlob(prompt, {signal});
-      this.setFile(blob);
+      await this.setFile(blob);
     }, 'generating image');
   }
 
@@ -1518,14 +1525,16 @@ export class Storyboard extends EventTarget {
     const panel = new Panel();
     panel.task(async ({signal}) => {
       const blob = await imageAiClient.createImageBlob(prompt, {signal});
-      panel.setFile(blob);
+      await panel.setFile(blob);
     }, 'generating image');
     this.#addPanelInternal(panel);
     return panel;
   }
   addPanelFromFile(file) {
     const panel = new Panel();
-    panel.setFile(file);
+    panel.task(async ({signal}) => {
+      await panel.setFile(file);
+    }, 'adding image');
     this.#addPanelInternal(panel);
     return panel;
   }

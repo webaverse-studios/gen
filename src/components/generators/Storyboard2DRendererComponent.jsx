@@ -1,5 +1,6 @@
 import {useState, useEffect} from 'react';
-import {BlobRenderer} from '../renderers/BlobRenderer.jsx';
+// import {BlobRenderer} from '../renderers/BlobRenderer.jsx';
+import {ArrayBufferRenderer} from '../renderers/ArrayBufferRenderer.jsx';
 
 import styles from '../../../styles/Storyboard2DRenderer.module.css';
 
@@ -37,7 +38,7 @@ export const Storyboard2DRendererComponent = ({
           await panel.compile();
         }}>Compile</button>
       </div>
-      <BlobRenderer srcObject={image} className={styles.img} />
+      <ArrayBufferRenderer srcObject={image} className={styles.img} />
     </div>
   );
 };

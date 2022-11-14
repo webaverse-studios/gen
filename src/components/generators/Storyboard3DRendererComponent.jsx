@@ -1,5 +1,4 @@
-import { useEffect } from 'react';
-import {useRef} from 'react';
+import {useRef, useEffect} from 'react';
 
 import {panelSize, layer1Specs} from '../../generators/scene-generator.js';
 import styles from '../../../styles/Storyboard3DRenderer.module.css';

@@ -4,7 +4,8 @@ import {useState, useEffect} from 'react';
 import {StoryboardGeneratorComponent} from  './StoryboardGeneratorComponent.jsx';
 import {Storyboard2DRendererComponent} from  './Storyboard2DRendererComponent.jsx';
 import {Storyboard3DRendererComponent} from  './Storyboard3DRendererComponent.jsx';
-import {BlobRenderer} from '../renderers/BlobRenderer.jsx';
+// import {BlobRenderer} from '../renderers/BlobRenderer.jsx';
+import {ArrayBufferRenderer} from '../renderers/ArrayBufferRenderer.jsx';
 
 import {mainImageKey} from '../../generators/scene-generator.js';
 
@@ -34,7 +35,7 @@ const StoryboardLayerComponent = ({
 
   return (
     <div className={styles.layer}>
-      <BlobRenderer srcObject={image} className={styles.img} />
+      <ArrayBufferRenderer srcObject={image} className={styles.img} />
     </div>
   );
 };

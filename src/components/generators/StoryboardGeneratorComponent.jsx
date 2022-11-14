@@ -23,7 +23,7 @@ export const StoryboardGeneratorComponent = ({
       const files = e.dataTransfer.files;
       const file = files[0];
       if (file) {
-        panel.setFile(file);
+        await panel.setFile(file);
       }
     }
   };
@@ -43,7 +43,7 @@ export const StoryboardGeneratorComponent = ({
       <div>or, <a className={styles.fileUpload}><input type="file" onChange={async e => {
         const file = e.target.files[0];
         if (file) {
-          panel.setFile(file);
+          await panel.setFile(file);
         }
       }} />Upload File</a></div>
       <div>or, <i>Drag and Drop</i></div>

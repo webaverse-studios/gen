@@ -2,7 +2,10 @@ import {useState, useEffect} from 'react';
 import classnames from 'classnames';
 
 import {PlaceholderImg} from '../placeholders/PlaceholderImg.jsx';
-import {BlobRenderer} from '../renderers/BlobRenderer.jsx';
+// import {BlobRenderer} from '../renderers/BlobRenderer.jsx';
+import {ArrayBufferRenderer} from '../renderers/ArrayBufferRenderer.jsx';
+import {zbencode} from '../../utils/encoding.mjs';
+import {downloadFile} from '../../utils/http-utils.js';
 import styles from '../../../styles/Storyboard.module.css';
 
 //
@@ -59,7 +62,7 @@ const StoryboardPanel = ({
     const files = e.dataTransfer.files;
     const file = files[0];
     if (file) {
-      panel.setFile(file);
+      await panel.setFile(file);
     }
   };
 
@@ -86,7 +89,7 @@ const StoryboardPanel = ({
       {(() => {
         if (image) {
           return (
-            <BlobRenderer srcObject={image} className={classnames(styles.img, styles.preview)} />
+            <ArrayBufferRenderer srcObject={image} className={classnames(styles.img, styles.preview)} />
           );
         } else if (!busy) {
           return (
@@ -144,6 +147,14 @@ export const StoryboardComponent = ({
         <button className={styles.button} onClick={e => {
           e.preventDefault();
           e.stopPropagation();
+
+          const panelDatas = panels.map(panel => panel.getDatas());
+          const arrayBuffer = zbencode(panelDatas);
+          console.log('got panel datas', panelDatas, arrayBuffer);
+          // const blob = new Blob([arrayBuffer], {
+          //   type: 'application/octet-stream',
+          // });
+          // downloadFile(blob, 'storyboard.str');
         }}>
           <img src='/images/download.svg' className={styles.img} />
         </button>
