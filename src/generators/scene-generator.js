@@ -485,6 +485,9 @@ class PanelRenderer extends EventTarget {
     });
     renderer.setClearColor(0x000000, 0);
     this.renderer = renderer;
+    this.addEventListener('destroy', e => {
+      this.renderer.dispose();
+    });
 
     const scene = new THREE.Scene();
     // scene.background = new THREE.Color(0x0000FF);
@@ -1436,7 +1439,6 @@ export class Panel extends EventTarget {
   }
 
   createRenderer(canvas, opts) {
-    console.log('create renderer', this.isEmpty(), structuredClone(this.getDatas()));
     return new PanelRenderer(canvas, this, opts);
   }
 

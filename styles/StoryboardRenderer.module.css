@@ -12,7 +12,5 @@
   /* center */
   background-size: 16px;
   background-position: center;
-  /* justify-content: center; */
-  /* align-items: center; */
   flex-direction: column;
 }

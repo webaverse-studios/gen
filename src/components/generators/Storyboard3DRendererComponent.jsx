@@ -13,14 +13,14 @@ const Panel3DCanvas = ({
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (canvas) {
+    if (canvas && panel.getDimension() === 3) {
       const renderer = panel.createRenderer(canvas);
 
       return () => {
         renderer.destroy();
       };
     }
-  }, [canvasRef.current]);
+  }, [panel, canvasRef.current]);
   
   return (
     <canvas
@@ -37,22 +37,24 @@ const Panel3DCanvas = ({
 export const Storyboard3DRendererComponent = ({
   panel,
 }) => {
-  const keydown = e => {
-    if (!e.repeat) {
-      switch (e.key) {
-        case ' ': {
-          if (step === 2) {
-            e.preventDefault();
-            e.stopPropagation();
-
-            sceneRenderer.renderBackground();
+  /* useEffect(() => {
+    const keydown = e => {
+      if (!e.repeat) {
+        switch (e.key) {
+          case ' ': {
+            if (step === 2) {
+              e.preventDefault();
+              e.stopPropagation();
+  
+              sceneRenderer.renderBackground();
+            }
+            break;
           }
-          break;
         }
       }
-    }
-  };
-  document.addEventListener('keydown', keydown);
+    };
+    document.addEventListener('keydown', keydown);
+  }, [panel]); */
 
   return (
     <div className={styles.storyboard3DRenderer}>
