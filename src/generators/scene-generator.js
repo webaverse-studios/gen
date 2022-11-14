@@ -48,6 +48,24 @@ export const layer1Specs = [
     type: 'json',
   },
 ];
+export const layer2Specs = [
+  {
+    name: 'maskImg',
+    type: 'imageFile',
+  },
+  {
+    name: 'editedImg',
+    type: 'imageFile',
+  },
+  {
+    name: 'pointCloud',
+    type: 'arrayBuffer',
+  },
+  {
+    name: 'depthFloatImageData',
+    type: 'arrayBuffer',
+  },
+];
 
 //
 
@@ -669,7 +687,7 @@ class PanelRenderer extends EventTarget {
     _startLoop();
   }
   async renderOutmesh(panel) {
-    const prompt = panel.getData('prompt');
+    const prompt = panel.getData(promptKey);
     if (!prompt) {
       throw new Error('no prompt, so cannot outmesh');
     }
@@ -677,6 +695,7 @@ class PanelRenderer extends EventTarget {
     // render the mask image
     let blob;
     let maskBlob;
+    let maskImgArrayBuffer;
     {
       const backgroundCanvas = document.createElement('canvas');
       backgroundCanvas.classList.add('backgroundCanvas');
@@ -687,7 +706,7 @@ class PanelRenderer extends EventTarget {
       `;
       const backgroundContext = backgroundCanvas.getContext('2d');
       backgroundContext.drawImage(this.renderer.domElement, 0, 0);
-      this.element.appendChild(backgroundCanvas);
+      // this.element.appendChild(backgroundCanvas);
 
       blob = await new Promise((accept, reject) => {
         backgroundCanvas.toBlob(blob => {
@@ -695,6 +714,7 @@ class PanelRenderer extends EventTarget {
         });
       });
       maskBlob = blob; // same as blob
+      maskImgArrayBuffer = await blob.arrayBuffer();
       // const maskImg = await blob2img(maskBlob);
     }
     console.timeEnd('maskImage');
@@ -702,12 +722,14 @@ class PanelRenderer extends EventTarget {
     // edit the image
     console.time('editImg');
     let editedImgBlob;
+    let editedImgArrayBuffer;
     let editedImg;
     {
       editedImgBlob = await imageAiClient.editImgBlob(blob, maskBlob, prompt);
+      editedImgArrayBuffer = await editedImgBlob.arrayBuffer();
       editedImg = await blob2img(editedImgBlob);
       editedImg.classList.add('editImg');
-      this.element.appendChild(editedImg);
+      // this.element.appendChild(editedImg);
     }
     console.timeEnd('editImg');
 
@@ -719,8 +741,8 @@ class PanelRenderer extends EventTarget {
       const pc = await getPointCloud(blob);
       pointCloudHeaders = pc.headers;
       pointCloudArrayBuffer = pc.arrayBuffer;
-      const pointCloudCanvas = drawPointCloudCanvas(pointCloudArrayBuffer);
-      this.element.appendChild(pointCloudCanvas);
+      // const pointCloudCanvas = drawPointCloudCanvas(pointCloudArrayBuffer);
+      // this.element.appendChild(pointCloudCanvas);
       
       const fov = Number(pointCloudHeaders['x-fov']);
       this.camera.fov = fov;
@@ -922,7 +944,7 @@ class PanelRenderer extends EventTarget {
       const depthCubesMesh = new THREE.InstancedMesh(depthCubesGeometry, depthCubesMaterial, depthFloatImageData.length);
       depthCubesMesh.name = 'depthCubesMesh';
       depthCubesMesh.frustumCulled = false;
-      this.scene.add(depthCubesMesh);
+      // this.scene.add(depthCubesMesh);
 
       // set the matrices by projecting the depth from the perspective camera
       const skipRatio = 8;
@@ -987,7 +1009,7 @@ class PanelRenderer extends EventTarget {
       if (this.debug) {
         const indexCanvas2 = encodeIndexColorsAlphasToCanvas(indexColorsAlphas);
         indexCanvas2.classList.add('indexCanvas2');
-        this.element.appendChild(indexCanvas2);
+        // this.element.appendChild(indexCanvas2);
       }
 
       const directions = [
@@ -1168,9 +1190,17 @@ class PanelRenderer extends EventTarget {
       );
       geometry.computeVertexNormals();
 
-      this.scene.add(backgroundMesh);
+      // this.scene.add(backgroundMesh);
     }
     console.timeEnd('backgroundMesh');
+
+    // return result
+    return {
+      maskImg: maskImgArrayBuffer,
+      editedImg: editedImgArrayBuffer,
+      pointCloud: pointCloudArrayBuffer,
+      depthFloatImageData,
+    };
   }
   destroy() {
     this.dispatchEvent(new MessageEvent('destroy'));
@@ -1515,10 +1545,21 @@ export class Panel extends EventTarget {
     }, 'compiling');
   }
   async outmesh(renderer) {
-    console.log('outmesh start', renderer);
+    // console.log('outmesh start', renderer);
     try {
       const outmeshResult = await renderer.renderOutmesh(this);
-      console.log('outmesh end', outmeshResult);
+      // console.log('outmesh end 1', outmeshResult);
+      const {
+        maskImg,
+        editedImg,
+        pointCloud,
+        depthFloatImageData,
+      } = outmeshResult;
+      // console.log('outmesh end 2', outmeshResult);
+
+      for (const {name, type} of layer2Specs) {
+        this.setData('layer2/' + name, outmeshResult[name], type);
+      }
     } catch(err) {
       console.warn(err);
     }
