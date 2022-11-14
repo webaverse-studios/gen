@@ -134,7 +134,8 @@ export const StoryboardComponent = ({
     const files = e.dataTransfer.files;
     const file = files[0];
     if (file) {
-      await storyboard.addPanelFromFile(file);
+      const panel = await storyboard.addPanelFromFile(file);
+      onPanelSelect(panel);
     }
   };
 

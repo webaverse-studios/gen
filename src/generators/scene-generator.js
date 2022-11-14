@@ -1197,6 +1197,83 @@ const _detectPlanes = async points => {
 
 //
 
+const _getPredictedHeight = async blob => {
+  const fd = new FormData();
+  fd.append('question', 'in feet, how high up is this?');
+  fd.append('file', blob);
+  fd.append('task', 'vqa');
+  const res = await fetch(`https://blip.webaverse.com/upload`, {
+    method: 'post',
+    body: fd,
+  });
+  const j = await res.json();
+  const {Answer} = j;
+  const f = parseFloat(Answer);
+  if (!isNaN(f)) {
+    return f;
+  } else {
+    return null;
+  }
+};
+const _getImageCaption = async blob => {
+  const fd = new FormData();
+  fd.append('file', blob);
+  fd.append('task', 'image_captioning');
+  const res = await fetch(`https://blip.webaverse.com/upload`, {
+    method: 'post',
+    body: fd,
+  });
+  const j = await res.json();
+  const {Caption} = j;
+  return Caption;
+};
+
+//
+
+const _resizeFile = async file => {
+  // read the image
+  const image = await new Promise((accept, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      accept(img);
+      cleanup();
+    };
+    img.onerror = err => {
+      reject(err);
+      cleanup();
+    };
+    img.crossOrigin = 'Anonymous';
+    const u = URL.createObjectURL(file);
+    img.src = u;
+    const cleanup = () => {
+      URL.revokeObjectURL(u);
+    };
+  });
+
+  // if necessary, resize the image via contain mode
+  if (image.width !== 1024 || image.height !== 1024) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1024;
+    canvas.height = 1024;
+    const ctx = canvas.getContext('2d');
+    // ctx.fillStyle = 'white';
+    // ctx.fillRect(0, 0, 1024, 1024);
+    const sx = Math.max(0, (image.width - image.height) / 2);
+    const sy = Math.max(0, (image.height - image.width) / 2);
+    const sw = Math.min(image.width, image.height);
+    const sh = Math.min(image.width, image.height);
+    ctx.drawImage(image, sx, sy, sw, sh, 0, 0, 1024, 1024);
+    file = await new Promise((accept, reject) => {
+      canvas.toBlob(blob => {
+        accept(blob);
+      });
+    });
+  }
+  return file;
+};
+
+//
+
 async function compileVirtualScene(arrayBuffer) {
   // color
   const blob = new Blob([arrayBuffer], {
@@ -1315,24 +1392,6 @@ async function compileVirtualScene(arrayBuffer) {
   }
 
   // query the height
-  const _getPredictedHeight = async blob => {
-    const fd = new FormData();
-    fd.append('question', 'in feet, how high up is this?');
-    fd.append('file', blob);
-    fd.append('task', 'vqa');
-    const res = await fetch(`https://blip.webaverse.com/upload`, {
-      method: 'post',
-      body: fd,
-    });
-    const j = await res.json();
-    const {Answer} = j;
-    const f = parseFloat(Answer);
-    if (!isNaN(f)) {
-      return f;
-    } else {
-      return null;
-    }
-  };
   const predictedHeight = await _getPredictedHeight(blob);
   // console.log('got predicted height', predictedHeight);
 
@@ -1424,10 +1483,18 @@ export class Panel extends EventTarget {
     return this.hasDataMatch(/^layer1/) ? 3 : 2;
   }
 
-  async setFile(file, prompt = '') {
-    const arrayBuffer = await file.arrayBuffer();
-    this.setData(mainImageKey, arrayBuffer, 'imageFile');
-    this.setData(promptKey, prompt, 'text');
+  async setFile(file, prompt) {
+    file = await _resizeFile(file, panelSize, panelSize);
+    (async () => {
+      const arrayBuffer = await file.arrayBuffer();
+      this.setData(mainImageKey, arrayBuffer, 'imageFile');
+    })();
+    (async () => {
+      if (!prompt) {
+        prompt = await _getImageCaption(file);
+      }
+      this.setData(promptKey, prompt, 'text');
+    })();
   }
   async setFromPrompt(prompt) {
     await this.task(async ({signal}) => {
@@ -1448,8 +1515,13 @@ export class Panel extends EventTarget {
     }, 'compiling');
   }
   async outmesh(renderer) {
-    console.log('outmesh', renderer);
-    const outmeshResult = await renderer.renderOutmesh(this);
+    console.log('outmesh start', renderer);
+    try {
+      const outmeshResult = await renderer.renderOutmesh(this);
+      console.log('outmesh end', outmeshResult);
+    } catch(err) {
+      console.warn(err);
+    }
   }
 
   createRenderer(canvas, opts) {

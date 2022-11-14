@@ -15,16 +15,19 @@ export const Storyboard2DRendererComponent = ({
   panel,
 }) => {
   const _getImage = () => panel.getData(mainImageKey);
-  const [prompt, setPrompt] = useState(panel.getData(promptKey));
+  const _getPrompt = () => panel.getData(promptKey) ?? '';
+  const [prompt, setPrompt] = useState(_getPrompt);
   const [image, setImage] = useState(_getImage);
 
   useEffect(() => {
     const onupdate = e => {
       setImage(_getImage());
+      setPrompt(_getPrompt());
     };
     panel.addEventListener('update', onupdate);
 
     setImage(_getImage());
+    setPrompt(_getPrompt());
 
     return () => {
       panel.removeEventListener('update', onupdate);

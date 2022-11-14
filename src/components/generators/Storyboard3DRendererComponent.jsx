@@ -66,7 +66,21 @@ const Panel3DCanvas = ({
 export const Storyboard3DRendererComponent = ({
   panel,
 }) => {
-  const [prompt, setPrompt] = useState(panel.getData(promptKey));
+  const _getPrompt = () => panel.getData(promptKey) ?? '';
+  const [prompt, setPrompt] = useState(_getPrompt);
+
+  useEffect(() => {
+    const onupdate = e => {
+      setPrompt(_getPrompt());
+    };
+    panel.addEventListener('update', onupdate);
+
+    setPrompt(_getPrompt());
+
+    return () => {
+      panel.removeEventListener('update', onupdate);
+    };
+  }, [panel]);
 
   return (
     <div className={styles.storyboard3DRenderer}>
