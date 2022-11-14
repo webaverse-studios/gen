@@ -17,20 +17,32 @@ const StoryboardPanel = ({
   selected,
   onClick,
 }) => {
-  const [busy, setBusy] = useState(panel ? panel.isBusy() : false);
-  const [busyMessage, setBusyMessage] = useState(panel ? panel.getBusyMessage() : '');
+  const _getBusy = () => panel ? panel.isBusy() : false;
+  const _getBusyMessage = () => panel ? panel.getBusyMessage() : '';
   const _getImage = () => panel.getData(mainImageKey);
+  const [busy, setBusy] = useState(_getBusy);
+  const [busyMessage, setBusyMessage] = useState(_getBusyMessage);
   const [image, setImage] = useState(_getImage);
 
   // image handling
   useEffect(() => {
     if (panel) {
+      const onbusyupdate = e => {
+        setBusy(_getBusy());
+        setBusyMessage(_getBusyMessage());
+      };
+      panel.addEventListener('busyupdate', onbusyupdate);
       const onupdate = e => {
         setImage(_getImage());
       };
       panel.addEventListener('update', onupdate);
 
+      setBusy(_getBusy());
+      setBusyMessage(_getBusyMessage());
+      setImage(_getImage());
+
       return () => {
+        panel.removeEventListener('busyupdate', onbusyupdate);
         panel.removeEventListener('update', onupdate);
       };
     }
@@ -51,9 +63,15 @@ const StoryboardPanel = ({
     }
   };
 
+  console.log('render busy', busy);
+
   return (
     <div
-      className={classnames(styles.panel, selected ? styles.selected : null)}
+      className={classnames(
+        styles.panel,
+        selected ? styles.selected : null,
+        busy ? styles.busy : null,
+      )}
       onClick={onClick}
       onDragOver={dragover}
       onDrop={drop}
@@ -63,11 +81,16 @@ const StoryboardPanel = ({
           return (
             <PlaceholderImg className={classnames(styles.img, styles.icon)} />
           );
-        } else if (image) {
-          return (
-            <BlobRenderer srcObject={image} className={styles.img} />
-          );
         } else {
+          return null;
+        }
+      })()}
+      {(() => {
+        if (image) {
+          return (
+            <BlobRenderer srcObject={image} className={classnames(styles.img, styles.preview)} />
+          );
+        } else if (!busy) {
           return (
             <div className={styles.placeholder}>
               <img src='/images/missing-file.svg' className={classnames(styles.img, styles.icon)} />
