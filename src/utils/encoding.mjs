@@ -121,7 +121,9 @@ function zbencode(o) {
   totalSize += sb.byteLength; // data
   totalSize = align4(totalSize);
   totalSize += Uint32Array.BYTES_PER_ELEMENT; // count
-  for (const addendum of addendums) {
+  for (let i = 0; i < addendums.length; i++) {
+    const addendum = addendums[i];
+    
     totalSize += Uint32Array.BYTES_PER_ELEMENT; // index
     totalSize += Uint32Array.BYTES_PER_ELEMENT; // type
     totalSize += Uint32Array.BYTES_PER_ELEMENT; // length
