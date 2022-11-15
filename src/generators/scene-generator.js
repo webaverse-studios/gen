@@ -493,7 +493,7 @@ class PanelRenderer extends EventTarget {
     this.panel = panel;
     this.debug = debug;
 
-    this.layerScene = [];
+    this.layerScenes = [];
 
     // canvas
     canvas.width = panelSize;
