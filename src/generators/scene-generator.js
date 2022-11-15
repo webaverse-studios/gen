@@ -704,6 +704,7 @@ class PanelRenderer extends EventTarget {
     }
 
     // render the mask image
+    console.time('maskImage');
     let blob;
     let maskBlob;
     let maskImgArrayBuffer;
