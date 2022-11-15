@@ -58,6 +58,10 @@ export const layer2Specs = [
     type: 'imageFile',
   },
   {
+    name: 'pointCloudHeaders',
+    type: 'json',
+  },
+  {
     name: 'pointCloud',
     type: 'arrayBuffer',
   },
@@ -755,10 +759,6 @@ class PanelRenderer extends EventTarget {
       pointCloudArrayBuffer = pc.arrayBuffer;
       // const pointCloudCanvas = drawPointCloudCanvas(pointCloudArrayBuffer);
       // this.element.appendChild(pointCloudCanvas);
-      
-      const fov = Number(pointCloudHeaders['x-fov']);
-      this.camera.fov = fov;
-      this.camera.updateProjectionMatrix();
     }
     console.timeEnd('pointCloud');
 
@@ -1122,15 +1122,54 @@ class PanelRenderer extends EventTarget {
       })();
       indexColorsAlphasArray.push(sdfIndexImageData);
     }
-    console.timeEnd('postProcess');
+    console.timeEnd('postProcess')
+
+    // return result
+    return {
+      maskImg: maskImgArrayBuffer,
+      editedImg: editedImgArrayBuffer,
+      pointCloudHeaders,
+      pointCloud: pointCloudArrayBuffer,
+      depthFloatImageData,
+      indexColorsAlphasArray,
+    };
+  }
+  createOutmeshLayer(layerEntries) {
+    const _getLayerEntry = key => layerEntries.find(layerEntry => layerEntry.key.endsWith('/' + key))?.value;
+    const maskImg = _getLayerEntry('maskImg');
+    const editedImg = _getLayerEntry('editedImg');
+    const pointCloudHeaders = _getLayerEntry('pointCloudHeaders');
+    const pointCloud = _getLayerEntry('pointCloud');
+    const depthFloatImageData = _getLayerEntry('depthFloatImageData');
+    const indexColorsAlphasArray = _getLayerEntry('indexColorsAlphasArray');
+    console.log('got data', {
+      maskImg,
+      editedImg,
+      pointCloudHeaders,
+      pointCloud,
+      depthFloatImageData,
+      indexColorsAlphasArray,
+    })
+
+    const layerScene = new THREE.Scene();
+    layerScene.autoUpdate = false;
 
     // create background mesh
-    console.time('backgroundMesh');
-    {
-      const widthSegments = editedImg.width - 1;
-      const heightSegments = editedImg.height - 1;
+    (async () => {
+      console.time('backgroundMesh');
+      const maskImgBlob = new Blob([maskImg], {type: 'image/png'});
+      const maskImageBitmap = await createImageBitmap(maskImgBlob);
+      const canvas = document.createElement('canvas');
+      canvas.width = maskImageBitmap.width;
+      canvas.height = maskImageBitmap.height;
+      const context = canvas.getContext('2d');
+      context.drawImage(maskImageBitmap, 0, 0);
+      const maskImageData = context.getImageData(0, 0, canvas.width, canvas.height);
+      
+      const widthSegments = panelSize - 1;
+      const heightSegments = panelSize - 1;
       const geometry = new THREE.PlaneGeometry(1, 1, widthSegments, heightSegments);
-      pointCloudArrayBufferToPositionAttributeArray(pointCloudArrayBuffer, geometry.attributes.position.array, 1/editedImg.width);
+      pointCloudArrayBufferToPositionAttributeArray(pointCloud, geometry.attributes.position.array, 1 / panelSize);
       const material = new THREE.MeshPhongMaterial({
         color: 0xff0000,
       });
@@ -1154,28 +1193,9 @@ class PanelRenderer extends EventTarget {
       );
       geometry.computeVertexNormals();
 
-      // this.scene.add(backgroundMesh);
-    }
-    console.timeEnd('backgroundMesh');
-
-    // return result
-    return {
-      maskImg: maskImgArrayBuffer,
-      editedImg: editedImgArrayBuffer,
-      pointCloud: pointCloudArrayBuffer,
-      depthFloatImageData,
-      indexColorsAlphasArray,
-    };
-  }
-  createOutmeshLayer(layerEntries) {
-    const _getLayerEntry = key => layerEntries.find(layerEntry => layerEntry.key.endsWith('/' + key))?.value;
-    const maskImg = _getLayerEntry('maskImg');
-    const editedImg = _getLayerEntry('editedImg');
-    const pointCloud = _getLayerEntry('pointCloud');
-    const depthFloatImageData = _getLayerEntry('depthFloatImageData');
-
-    const layerScene = new THREE.Scene();
-    layerScene.autoUpdate = false;
+      layerScene.add(backgroundMesh);
+      console.timeEnd('backgroundMesh');
+    })();
 
     // display depth cubes
     console.time('depthCubes');
@@ -1229,6 +1249,15 @@ class PanelRenderer extends EventTarget {
     }
     console.timeEnd('depthCubes');
 
+    // set fov
+    console.time('fov');
+    {
+      const fov = Number(pointCloudHeaders['x-fov']);
+      this.camera.fov = fov;
+      this.camera.updateProjectionMatrix();
+    }
+    console.timeEnd('fov');
+
     return layerScene;
   }
   updateOutmeshLayers() {
@@ -1257,12 +1286,7 @@ class PanelRenderer extends EventTarget {
         let layerScene = this.layerScenes[i];
         if (!layerScene) {
           const layerDatas = layers[i];
-          try {
-            layerScene = this.createOutmeshLayer(layerDatas);
-          } catch(err) {
-            console.warn(err);
-            debugger;
-          }
+          layerScene = this.createOutmeshLayer(layerDatas);
           this.scene.add(layerScene);
           this.layerScenes[i] = layerScene;
         }
