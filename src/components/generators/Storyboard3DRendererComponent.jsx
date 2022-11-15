@@ -1,7 +1,7 @@
 import {useState, useRef, useEffect} from 'react';
 import classnames from 'classnames';
 
-import {panelSize, layer1Specs} from '../../generators/scene-generator.js';
+import {panelSize, layer1Specs, layer2Specs} from '../../generators/scene-generator.js';
 import styles from '../../../styles/Storyboard3DRenderer.module.css';
 
 //
@@ -84,6 +84,8 @@ export const Storyboard3DRendererComponent = ({
     };
   }, [panel]);
 
+  const layersArray = panel.getDataLayersMatchingSpecs([layer1Specs, layer2Specs]);
+
   return (
     <div className={styles.storyboard3DRenderer}>
       <div className={styles.header}>
@@ -99,25 +101,30 @@ export const Storyboard3DRendererComponent = ({
       <Panel3DCanvas
         panel={panel}
       />
-      <div className={styles.layers}>
-        <div
-          className={classnames(styles.layer, layer === null ? styles.selected : null)}
-          onClick={e => {
-            setLayer(null);
-          }}
-        >3D</div>
-        {layer1Specs.map(({name, type}) => {
+      {layersArray.map((layers, layerIndex) => {
+        if (layers) {
           return (
             <div
-              className={classnames(styles.layer, layer === name ? styles.selected : null)}
-              onClick={e => {
-                setLayer(name);
-              }}
-              key={name}
-            >{name}</div>
+              className={styles.layers}
+              key={layerIndex}
+            >
+              {layers.map(({key, type}) => {
+                return (
+                  <div
+                    className={classnames(styles.layer, layer === key ? styles.selected : null)}
+                    onClick={e => {
+                      setLayer(layer !== key ? key : null);
+                    }}
+                    key={key}
+                  >{key}</div>
+                );
+              })}
+            </div>
           );
-        })}
-      </div>
+        } else {
+          return null;
+        }
+      })}
     </div>
   );
 };

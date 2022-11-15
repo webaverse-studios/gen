@@ -1261,27 +1261,10 @@ class PanelRenderer extends EventTarget {
     return layerScene;
   }
   updateOutmeshLayers() {
-    const startLayer = 2;
-    const maxLayers = 10;
-    const _getDataLayers = () => {
-      const layers = [];
-      for (let i = startLayer; i < maxLayers; i++) {
-        const layerDatas = this.panel.getDatas().filter(({key}) => {
-          return key.startsWith('layer' + i + '/');
-        });
-        if (layer2Specs.every(spec => {
-          return layerDatas.some(({key}) => key.endsWith('/' + spec.name));
-        })) {
-          layers[i] = layerDatas;
-        } else {
-          break;
-        }
-      }
-      return layers;
-    }
-    const layers = _getDataLayers();
+    const layers = this.panel.getDataLayersMatchingSpec(layer2Specs);
 
     const _addNewLayers = () => {
+      const startLayer = 2;
       for (let i = startLayer; i < layers.length; i++) {
         let layerScene = this.layerScenes[i];
         if (!layerScene) {
@@ -1595,6 +1578,26 @@ export class Panel extends EventTarget {
   }
   hasDataMatch(regex) {
     return this.#data.some(item => regex.test(item.key));
+  }
+  getDataLayersMatchingSpec(layersSpecs) {
+    return this.getDataLayersMatchingSpecs([layersSpecs]);
+  }
+  getDataLayersMatchingSpecs(layersSpecsArray) {
+    const maxLayers = 10;
+    const layers = [];
+    for (let i = 0; i < maxLayers; i++) {
+      const layerDatas = this.getDatas().filter(({key}) => {
+        return key.startsWith('layer' + i + '/');
+      });
+      if (layersSpecsArray.some(layersSpecs =>
+        layersSpecs.every(spec => {
+          return layerDatas.some(({key}) => key.endsWith('/' + spec.name));
+        })
+      )) {
+        layers[i] = layerDatas;
+      }
+    }
+    return layers;
   }
 
   isBusy() {
