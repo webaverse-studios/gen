@@ -662,7 +662,7 @@ class PanelRenderer extends EventTarget {
     canvas.addEventListener('wheel', blockEvent);
 
     this.panel.addEventListener('update', e => {
-      this.renderer.updateOutmeshLayers();
+      this.updateOutmeshLayers();
     });
 
     this.addEventListener('destroy', e => {
