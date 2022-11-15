@@ -964,7 +964,6 @@ class PanelRenderer extends EventTarget {
 
       // extract the index colors and alphas
       const indexColorsAlphas = new Float32Array(indexCanvas.width * indexCanvas.height * 4);
-      console.log('index render target', indexRenderTarget);
       indexRenderer.readRenderTargetPixels(indexRenderTarget, 0, 0, indexCanvas.width, indexCanvas.height, indexColorsAlphas);
 
       if (this.debug) {
@@ -1053,7 +1052,11 @@ class PanelRenderer extends EventTarget {
         return indexColorsAlphas2;
       };
       const sdfIndexColorAlphas = (indexColorsAlphas) => {
-        const indexColorsAlphas2 = indexColorsAlphas.slice();
+        return indexColorsAlphas;
+        // XXX use:
+        // XXX https://github.com/bzztbomb/three_js_outline/blob/trunk/lib/jfaOutline.js#L68
+        // XXX https://www.shadertoy.com/view/4syGWK
+        /* const indexColorsAlphas2 = indexColorsAlphas.slice();
         const queue = [];
         const _recursePoints = (x, y, parentColor, parentAlpha) => {
           queue.push([x, y, parentColor, parentAlpha]);
@@ -1104,7 +1107,7 @@ class PanelRenderer extends EventTarget {
           const [x, y, parentColor, parentAlpha] = queue.shift();
           _handleRecursePoints(x, y, parentColor, parentAlpha);
         }
-        return indexColorsAlphas2;
+        return indexColorsAlphas2; */
       };
       
       indexColorsAlphasArray = directions.map(direction => {
