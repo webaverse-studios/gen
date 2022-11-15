@@ -1168,13 +1168,11 @@ class PanelRenderer extends EventTarget {
     };
   }
   createOutmeshLayer(layerEntries) {
-    const _getLayerEntry = key => layerEntries.find(layerEntry => layerEntry.key === key)?.value;
+    const _getLayerEntry = key => layerEntries.find(layerEntry => layerEntry.key.endsWith('/' + key))?.value;
     const maskImg = _getLayerEntry('maskImg');
     const editedImg = _getLayerEntry('editedImg');
     const pointCloud = _getLayerEntry('pointCloud');
     const depthFloatImageData = _getLayerEntry('depthFloatImageData');
-
-    console.log('createOutmeshLayer 1', {maskImg, editedImg, pointCloud, depthFloatImageData});
 
     const layerScene = new THREE.Scene();
     layerScene.autoUpdate = false;
@@ -1212,7 +1210,7 @@ class PanelRenderer extends EventTarget {
       const depthCubesMesh = new THREE.InstancedMesh(depthCubesGeometry, depthCubesMaterial, depthFloatImageData.length);
       depthCubesMesh.name = 'depthCubesMesh';
       depthCubesMesh.frustumCulled = false;
-      // this.scene.add(depthCubesMesh);
+      layerScene.add(depthCubesMesh);
 
       // set the matrices by projecting the depth from the perspective camera
       const skipRatio = 8;
@@ -1231,43 +1229,55 @@ class PanelRenderer extends EventTarget {
     }
     console.timeEnd('depthCubes');
 
-    console.log('createOutmeshLayer 2');
-
     return layerScene;
   }
-  getDataLayers() {
-    const layers = [];
-
-    const maxLayers = 10;
-    for (let i = 0; i < maxLayers; i++) {
-      const layerEntries = this.getDatas().find(({key, type, value}) => {
-        return key.startsWith('layer' + i);
-      });
-      if (layerDatas.length > 0) {
-        layers.push(layerEntries);
-      } else {
-        break;
-      }
-    }
-    return layers;
-  }
   updateOutmeshLayers() {
-    const layers = this.getDataLayers();
-    // add new layers
-    for (let i = 0; i < layers.length; i++) {
-      let layerScene = this.layerScenes[i];
-      if (!layerScene) {
-        layerScene = this.createOutmeshLayer(layerEntries);
-        this.scene.add(layerScene);
-        this.layerScenes[i] = layerScene;
+    const startLayer = 2;
+    const maxLayers = 10;
+    const _getDataLayers = () => {
+      const layers = [];
+      for (let i = startLayer; i < maxLayers; i++) {
+        const layerDatas = this.panel.getDatas().filter(({key}) => {
+          return key.startsWith('layer' + i + '/');
+        });
+        if (layer2Specs.every(spec => {
+          return layerDatas.some(({key}) => key.endsWith('/' + spec.name));
+        })) {
+          layers[i] = layerDatas;
+        } else {
+          break;
+        }
       }
+      return layers;
     }
-    // remove old layers
-    for (let i = layers.length; i < this.layerScenes.length; i++) {
-      const layerScene = this.layerScenes[i];
-      this.scene.remove(layerScene);
-    }
-    this.layerScenes.length = layers.length;
+    const layers = _getDataLayers();
+
+    const _addNewLayers = () => {
+      for (let i = startLayer; i < layers.length; i++) {
+        let layerScene = this.layerScenes[i];
+        if (!layerScene) {
+          const layerDatas = layers[i];
+          try {
+            layerScene = this.createOutmeshLayer(layerDatas);
+          } catch(err) {
+            console.warn(err);
+            debugger;
+          }
+          this.scene.add(layerScene);
+          this.layerScenes[i] = layerScene;
+        }
+      }
+    };
+    _addNewLayers();
+
+    const _removeOldLayers = () => {
+      for (let i = layers.length; i < this.layerScenes.length; i++) {
+        const layerScene = this.layerScenes[i];
+        this.scene.remove(layerScene);
+      }
+      this.layerScenes.length = layers.length;
+    };
+    _removeOldLayers();
   }
   destroy() {
     this.dispatchEvent(new MessageEvent('destroy'));
