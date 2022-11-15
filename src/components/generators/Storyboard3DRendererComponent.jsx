@@ -1,4 +1,5 @@
 import {useState, useRef, useEffect} from 'react';
+import classnames from 'classnames';
 
 import {panelSize, layer1Specs} from '../../generators/scene-generator.js';
 import styles from '../../../styles/Storyboard3DRenderer.module.css';
@@ -68,6 +69,7 @@ export const Storyboard3DRendererComponent = ({
 }) => {
   const _getPrompt = () => panel.getData(promptKey) ?? '';
   const [prompt, setPrompt] = useState(_getPrompt);
+  const [layer, setLayer] = useState(null);
 
   useEffect(() => {
     const onupdate = e => {
@@ -98,10 +100,19 @@ export const Storyboard3DRendererComponent = ({
         panel={panel}
       />
       <div className={styles.layers}>
+        <div
+          className={classnames(styles.layer, layer === null ? styles.selected : null)}
+          onClick={e => {
+            setLayer(null);
+          }}
+        >3D</div>
         {layer1Specs.map(({name, type}) => {
           return (
             <div
-              className={styles.layer}
+              className={classnames(styles.layer, layer === name ? styles.selected : null)}
+              onClick={e => {
+                setLayer(name);
+              }}
               key={name}
             >{name}</div>
           );
