@@ -621,7 +621,7 @@ class PanelRenderer extends EventTarget {
       const material = new THREE.MeshBasicMaterial({
         color: 0xff0000,
       });
-      planesMesh = new THREE.InstancedMesh(planeGeometry, material, planeMatrices.length);
+      const planesMesh = new THREE.InstancedMesh(planeGeometry, material, planeMatrices.length);
       planesMesh.name = 'planesMesh';
       planesMesh.frustumCulled = false;
       for (let i = 0; i < planeMatrices.length; i++) {
