@@ -29,7 +29,7 @@ const Panel3DCanvas = ({
     }
   }, [panel, canvasRef.current]);
 
-  // track snapshot outmesh
+  // listen for snapshot outmesh keys
   useEffect(() => {
     const keydown = e => {
       if (!e.repeat) {

@@ -65,6 +65,10 @@ export const layer2Specs = [
     name: 'depthFloatImageData',
     type: 'arrayBuffer',
   },
+  {
+    name: 'indexColorsAlphasArray',
+    type: 'json',
+  },
 ];
 
 //
@@ -72,6 +76,7 @@ export const layer2Specs = [
 const imageAiClient = new ImageAiClient();
 const abortError = new Error();
 abortError.isAbortError = true;
+
 const localMatrix = new THREE.Matrix4();
 
 //
@@ -487,7 +492,9 @@ class PanelRenderer extends EventTarget {
     this.canvas = canvas;
     this.panel = panel;
     this.debug = debug;
-    
+
+    this.layerScene = [];
+
     // canvas
     canvas.width = panelSize;
     canvas.height = panelSize;
@@ -654,6 +661,10 @@ class PanelRenderer extends EventTarget {
     canvas.addEventListener('click', blockEvent);
     canvas.addEventListener('wheel', blockEvent);
 
+    this.panel.addEventListener('update', e => {
+      this.renderer.updateOutmeshLayers();
+    });
+
     this.addEventListener('destroy', e => {
       document.removeEventListener('keydown', keydown);
 
@@ -804,7 +815,7 @@ class PanelRenderer extends EventTarget {
       // const indexContext = indexRenderer.getContext();
 
       // float render target
-      const indexRenderTarget = new THREE.WebGLRenderTarget(
+      indexRenderTarget = new THREE.WebGLRenderTarget(
         this.renderer.domElement.width,
         this.renderer.domElement.height,
         {
@@ -911,58 +922,6 @@ class PanelRenderer extends EventTarget {
     }
     console.timeEnd('renderDepth');
 
-    // display depth cubes
-    console.time('depthCubes');
-    {
-      const setPositionFromViewZ = (() => {
-        const projInv = new THREE.Matrix4();
-      
-        return (x, y, viewZ, camera, position) => {
-          // get the inverse projection matrix of the camera
-          projInv.copy(camera.projectionMatrix)
-            .invert();
-          position
-            .set(
-              x * 2 - 1,
-              -y * 2 + 1,
-              0.5
-            )
-            .applyMatrix4(projInv);
-      
-          position.multiplyScalar(viewZ / position.z);
-          position.applyMatrix4(camera.matrixWorld);
-          return position;
-        };
-      })();
-
-      // render an instanced cubes mesh to show the depth
-      // const depthCubesGeometry = new THREE.BoxBufferGeometry(1, 1, 1);
-      const depthCubesGeometry = new THREE.BoxBufferGeometry(0.01, 0.01, 0.01);
-      const depthCubesMaterial = new THREE.MeshPhongMaterial({
-        color: 0x00FFFF,
-      });
-      const depthCubesMesh = new THREE.InstancedMesh(depthCubesGeometry, depthCubesMaterial, depthFloatImageData.length);
-      depthCubesMesh.name = 'depthCubesMesh';
-      depthCubesMesh.frustumCulled = false;
-      // this.scene.add(depthCubesMesh);
-
-      // set the matrices by projecting the depth from the perspective camera
-      const skipRatio = 8;
-      for (let i = 0; i < depthFloatImageData.length; i += skipRatio) {
-        const x = (i % this.renderer.domElement.width) / this.renderer.domElement.width;
-        const y = Math.floor(i / this.renderer.domElement.width) / this.renderer.domElement.height;
-        const viewZ = depthFloatImageData[i];
-        const target  = setPositionFromViewZ(x, y, viewZ, this.camera, new THREE.Vector3());
-
-        const matrix = new THREE.Matrix4();
-        matrix.makeTranslation(target.x, target.y, target.z);
-        depthCubesMesh.setMatrixAt(i / skipRatio, matrix);
-      }
-      depthCubesMesh.count = depthFloatImageData.length;
-      depthCubesMesh.instanceMatrix.needsUpdate = true;
-    }
-    console.timeEnd('depthCubes');
-
     // post-process index canvas
     let indexColorsAlphasArray;
     console.time('postProcess');
@@ -1004,6 +963,7 @@ class PanelRenderer extends EventTarget {
 
       // extract the index colors and alphas
       const indexColorsAlphas = new Float32Array(indexCanvas.width * indexCanvas.height * 4);
+      console.log('index render target', indexRenderTarget);
       indexRenderer.readRenderTargetPixels(indexRenderTarget, 0, 0, indexCanvas.width, indexCanvas.height, indexColorsAlphas);
 
       if (this.debug) {
@@ -1200,7 +1160,110 @@ class PanelRenderer extends EventTarget {
       editedImg: editedImgArrayBuffer,
       pointCloud: pointCloudArrayBuffer,
       depthFloatImageData,
+      indexColorsAlphasArray,
     };
+  }
+  createOutmeshLayer(layerEntries) {
+    const _getLayerEntry = key => layerEntries.find(layerEntry => layerEntry.key === key)?.value;
+    const maskImg = _getLayerEntry('maskImg');
+    const editedImg = _getLayerEntry('editedImg');
+    const pointCloud = _getLayerEntry('pointCloud');
+    const depthFloatImageData = _getLayerEntry('depthFloatImageData');
+
+    console.log('createOutmeshLayer 1', {maskImg, editedImg, pointCloud, depthFloatImageData});
+
+    const layerScene = new THREE.Scene();
+    layerScene.autoUpdate = false;
+
+    // display depth cubes
+    console.time('depthCubes');
+    {
+      const setPositionFromViewZ = (() => {
+        const projInv = new THREE.Matrix4();
+      
+        return (x, y, viewZ, camera, position) => {
+          // get the inverse projection matrix of the camera
+          projInv.copy(camera.projectionMatrix)
+            .invert();
+          position
+            .set(
+              x * 2 - 1,
+              -y * 2 + 1,
+              0.5
+            )
+            .applyMatrix4(projInv);
+      
+          position.multiplyScalar(viewZ / position.z);
+          position.applyMatrix4(camera.matrixWorld);
+          return position;
+        };
+      })();
+
+      // render an instanced cubes mesh to show the depth
+      // const depthCubesGeometry = new THREE.BoxBufferGeometry(1, 1, 1);
+      const depthCubesGeometry = new THREE.BoxBufferGeometry(0.01, 0.01, 0.01);
+      const depthCubesMaterial = new THREE.MeshPhongMaterial({
+        color: 0x00FFFF,
+      });
+      const depthCubesMesh = new THREE.InstancedMesh(depthCubesGeometry, depthCubesMaterial, depthFloatImageData.length);
+      depthCubesMesh.name = 'depthCubesMesh';
+      depthCubesMesh.frustumCulled = false;
+      // this.scene.add(depthCubesMesh);
+
+      // set the matrices by projecting the depth from the perspective camera
+      const skipRatio = 8;
+      for (let i = 0; i < depthFloatImageData.length; i += skipRatio) {
+        const x = (i % this.renderer.domElement.width) / this.renderer.domElement.width;
+        const y = Math.floor(i / this.renderer.domElement.width) / this.renderer.domElement.height;
+        const viewZ = depthFloatImageData[i];
+        const target  = setPositionFromViewZ(x, y, viewZ, this.camera, new THREE.Vector3());
+
+        const matrix = new THREE.Matrix4();
+        matrix.makeTranslation(target.x, target.y, target.z);
+        depthCubesMesh.setMatrixAt(i / skipRatio, matrix);
+      }
+      depthCubesMesh.count = depthFloatImageData.length;
+      depthCubesMesh.instanceMatrix.needsUpdate = true;
+    }
+    console.timeEnd('depthCubes');
+
+    console.log('createOutmeshLayer 2');
+
+    return layerScene;
+  }
+  getDataLayers() {
+    const layers = [];
+
+    const maxLayers = 10;
+    for (let i = 0; i < maxLayers; i++) {
+      const layerEntries = this.getDatas().find(({key, type, value}) => {
+        return key.startsWith('layer' + i);
+      });
+      if (layerDatas.length > 0) {
+        layers.push(layerEntries);
+      } else {
+        break;
+      }
+    }
+    return layers;
+  }
+  updateOutmeshLayers() {
+    const layers = this.getDataLayers();
+    // add new layers
+    for (let i = 0; i < layers.length; i++) {
+      let layerScene = this.layerScenes[i];
+      if (!layerScene) {
+        layerScene = this.createOutmeshLayer(layerEntries);
+        this.scene.add(layerScene);
+        this.layerScenes[i] = layerScene;
+      }
+    }
+    // remove old layers
+    for (let i = layers.length; i < this.layerScenes.length; i++) {
+      const layerScene = this.layerScenes[i];
+      this.scene.remove(layerScene);
+    }
+    this.layerScenes.length = layers.length;
   }
   destroy() {
     this.dispatchEvent(new MessageEvent('destroy'));
@@ -1548,14 +1611,12 @@ export class Panel extends EventTarget {
     // console.log('outmesh start', renderer);
     try {
       const outmeshResult = await renderer.renderOutmesh(this);
-      // console.log('outmesh end 1', outmeshResult);
-      const {
-        maskImg,
-        editedImg,
-        pointCloud,
-        depthFloatImageData,
-      } = outmeshResult;
-      // console.log('outmesh end 2', outmeshResult);
+      // const {
+      //   maskImg,
+      //   editedImg,
+      //   pointCloud,
+      //   depthFloatImageData,
+      // } = outmeshResult;
 
       for (const {name, type} of layer2Specs) {
         this.setData('layer2/' + name, outmeshResult[name], type);
