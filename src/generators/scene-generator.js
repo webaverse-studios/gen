@@ -1,5 +1,28 @@
 import * as THREE from 'three';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
+import PolynomialRegression from 'ml-regression-polynomial';
+import regression from 'regression';
+
+// const x = [50, 50, 50, 70, 70, 70, 80, 80, 80, 90, 90, 90, 100, 100, 100];
+// const y = [3.3, 2.8, 2.9, 2.3, 2.6, 2.1, 2.5, 2.9, 2.4, 3.0, 3.1, 2.8, 3.3, 3.5, 3.0];
+// const degree = 5; // setup the maximum degree of the polynomial
+// const regression = new PolynomialRegression(x, y, degree);
+// console.log(regression.predict(80));
+
+// import regression from 'regression';
+// const result = regression.linear([[0, 1], [32, 67], [12, 79]]);
+// const gradient = result.equation[0];
+// const yIntercept = result.equation[1];
+
+/* globalThis.testPrediction = () => {
+  const data = [[0,1],[32, 67], [12, 30], [40, 79]];
+  // const result = regression.polynomial(data, {
+  //   order: 3,
+  // });
+  const result = regression.exponential(data);
+  console.log('predict', result.predict(30));
+  return result;
+}; */
 
 import {ImageAiClient} from '../clients/image-client.js';
 import {getLabel} from '../clients/perception-client.js';
@@ -81,6 +104,7 @@ const imageAiClient = new ImageAiClient();
 const abortError = new Error();
 abortError.isAbortError = true;
 
+const localVector = new THREE.Vector3();
 const localMatrix = new THREE.Matrix4();
 
 //
@@ -202,6 +226,33 @@ const depthFragmentShader = `\
     gl_FragColor = encode_float(viewZ).abgr;
   }
 `;
+const setCameraViewPositionFromViewZ = (() => {
+  const projInv = new THREE.Matrix4();
+
+  return (x, y, viewZ, projectionMatrix, position) => {
+    // projInv.copy(projectionMatrix).invert();
+    // localVector.set(x, y, viewZ).applyMatrix4(projInv);
+    // position.set(localVector.x, localVector.y, localVector.z);
+    // return position;
+
+    // get the inverse projection matrix of the camera
+    projInv.copy(projectionMatrix)
+      .invert();
+    position
+      .set(
+        x * 2 - 1,
+        -y * 2 + 1,
+        0.5
+      )
+      .applyMatrix4(projInv);
+
+    position.multiplyScalar(viewZ / position.z);
+    return position;
+  };
+})();
+
+//
+
 function drawLabelCanvas(img, boundingBoxLayers) {
   const canvas = document.createElement('canvas');
   canvas.width = img.width;
@@ -713,19 +764,20 @@ class PanelRenderer extends EventTarget {
     let maskBlob;
     let maskImgArrayBuffer;
     {
-      const backgroundCanvas = document.createElement('canvas');
-      backgroundCanvas.classList.add('backgroundCanvas');
-      backgroundCanvas.width = this.renderer.domElement.width;
-      backgroundCanvas.height = this.renderer.domElement.height;
-      backgroundCanvas.style.cssText = `\
+      const maskCanvas = document.createElement('canvas');
+      maskCanvas.classList.add('maskCanvas');
+      maskCanvas.width = this.renderer.domElement.width;
+      maskCanvas.height = this.renderer.domElement.height;
+      maskCanvas.style.cssText = `\
         background: red;
       `;
-      const backgroundContext = backgroundCanvas.getContext('2d');
+      const backgroundContext = maskCanvas.getContext('2d');
       backgroundContext.drawImage(this.renderer.domElement, 0, 0);
-      // this.element.appendChild(backgroundCanvas);
+      // this.element.appendChild(maskCanvas);
+      document.body.appendChild(maskCanvas);
 
       blob = await new Promise((accept, reject) => {
-        backgroundCanvas.toBlob(blob => {
+        maskCanvas.toBlob(blob => {
           accept(blob);
         });
       });
@@ -746,6 +798,7 @@ class PanelRenderer extends EventTarget {
       editedImg = await blob2img(editedImgBlob);
       editedImg.classList.add('editImg');
       // this.element.appendChild(editedImg);
+      document.body.appendChild(editedImg);
     }
     console.timeEnd('editImg');
 
@@ -754,7 +807,7 @@ class PanelRenderer extends EventTarget {
     let pointCloudHeaders;
     let pointCloudArrayBuffer;
     {
-      const pc = await getPointCloud(blob);
+      const pc = await getPointCloud(editedImgBlob);
       pointCloudHeaders = pc.headers;
       pointCloudArrayBuffer = pc.arrayBuffer;
       // const pointCloudCanvas = drawPointCloudCanvas(pointCloudArrayBuffer);
@@ -1135,6 +1188,12 @@ class PanelRenderer extends EventTarget {
     };
   }
   createOutmeshLayer(layerEntries) {
+    if (!globalThis.outmeshing) {
+      globalThis.outmeshing = true;
+    } else {
+      console.warn('already outmeshing');
+      debugger;
+    }
     const _getLayerEntry = key => layerEntries.find(layerEntry => layerEntry.key.endsWith('/' + key))?.value;
     const maskImg = _getLayerEntry('maskImg');
     const editedImg = _getLayerEntry('editedImg');
@@ -1149,10 +1208,23 @@ class PanelRenderer extends EventTarget {
       pointCloud,
       depthFloatImageData,
       indexColorsAlphasArray,
-    })
+    });
 
     const layerScene = new THREE.Scene();
     layerScene.autoUpdate = false;
+
+    // set fov
+    console.time('fov');
+    const oldCameraProjectionMatrix = this.camera.projectionMatrix.clone();
+    const oldCameraProjectionMatrixInverse = oldCameraProjectionMatrix.clone().invert();
+    {
+      const fov = Number(pointCloudHeaders['x-fov']);
+      this.camera.fov = fov;
+      this.camera.updateProjectionMatrix();
+    }
+    const newCameraProjectionMatrix = this.camera.projectionMatrix.clone();
+    const newCameraProjectionMatrixInverse = newCameraProjectionMatrix.clone().invert();
+    console.timeEnd('fov');
 
     // create background mesh
     (async () => {
@@ -1164,12 +1236,14 @@ class PanelRenderer extends EventTarget {
       canvas.height = maskImageBitmap.height;
       const context = canvas.getContext('2d');
       context.drawImage(maskImageBitmap, 0, 0);
-      const maskImageData = context.getImageData(0, 0, canvas.width, canvas.height);
+      // const maskImageData = context.getImageData(0, 0, canvas.width, canvas.height);
       
       const widthSegments = panelSize - 1;
       const heightSegments = panelSize - 1;
+      // geometry is camera-relative
       const geometry = new THREE.PlaneGeometry(1, 1, widthSegments, heightSegments);
       pointCloudArrayBufferToPositionAttributeArray(pointCloud, geometry.attributes.position.array, 1 / panelSize);
+      geometry.computeVertexNormals();
       const material = new THREE.MeshPhongMaterial({
         color: 0xff0000,
       });
@@ -1180,9 +1254,115 @@ class PanelRenderer extends EventTarget {
       backgroundMesh.updateMatrixWorld();
       backgroundMesh.frustumCulled = false;
 
-      const oldGeometry = this.sceneMesh.geometry;
-      
-      _clipGeometryToMask(
+      // copy the geometry, including the attributes
+      const geometry2 = geometry.clone();
+      const material2 = new THREE.MeshPhongMaterial({
+        color: 0x0000ff,
+      });
+      const backgroundMesh2 = new THREE.Mesh(geometry2, material2);
+      backgroundMesh2.name = 'backgroundMesh2';
+      backgroundMesh2.position.copy(this.camera.position);
+      backgroundMesh2.quaternion.copy(this.camera.quaternion);
+      backgroundMesh2.updateMatrixWorld();
+      backgroundMesh2.frustumCulled = false;
+      console.timeEnd('backgroundMesh');
+
+      // retarget z
+      // remove all of the places there is no overlap (mask img blank)
+      console.time('retargetZ');
+      const oldPoints = [];
+      const newPoints = [];
+      const oldZValues = [];
+      const newZValues = [];
+      const _projectZ = (() => {
+        const localVector = new THREE.Vector3();
+
+        // apply the projection matrix and return the resulting z value
+        return (point, projectionMatrix) => {
+          localVector.copy(point);
+          localVector.applyMatrix4(projectionMatrix);
+          return localVector.z;
+        };
+      })();
+      for (let y = 0; y < panelSize; y++) {
+        for (let x = 0; x < panelSize; x++) {
+          const i = y * panelSize + x;
+          const viewZ = depthFloatImageData[i]; // mostly negative
+          const oldPoint = setCameraViewPositionFromViewZ(x, y, viewZ, oldCameraProjectionMatrix, new THREE.Vector3());
+          // oldPoint.applyMatrix4(camera.matrixWorld);
+          const newPoint = new THREE.Vector3().fromArray(geometry.attributes.position.array, i * 3);
+
+          oldPoints.push(oldPoint);
+          newPoints.push(newPoint);
+
+          if (oldPoint.z < 0) { // if the point is valid, add it to the remap training set
+            oldZValues.push(_projectZ(oldPoint, oldCameraProjectionMatrix));
+            newZValues.push(_projectZ(newPoint, newCameraProjectionMatrix));
+          }
+        }
+      }
+      console.timeEnd('retargetZ');
+      globalThis.newZValues = newZValues;
+      globalThis.oldZValues = oldZValues;
+
+      console.time('predictZ');
+      // predict from the old space to the new space
+
+      /* const degree = 3; // setup the maximum degree of the polynomial
+      const regression = new PolynomialRegression(newZValues, oldZValues, degree);
+      for (let y = 0; y < panelSize; y++) {
+        for (let x = 0; x < panelSize; x++) {
+          const i = y * panelSize + x;
+
+          // predict from the new point to the old
+          const screenPoint = localVector.fromArray(geometry.attributes.position.array, i * 3);
+          screenPoint.applyMatrix4(newCameraProjectionMatrix);
+
+          const predictedViewZ = 1 / regression.predict(1 / screenPoint.z);
+
+          // remap the screen point
+          screenPoint.z = predictedViewZ;
+          screenPoint.applyMatrix4(newCameraProjectionMatrixInverse);
+          screenPoint.toArray(geometry.attributes.position.array, i * 3);
+        }
+      } */
+
+      const regressionData = (() => {
+        const data = Array(newZValues.length);
+        for (let i = 0; i < newZValues.length; i++) {
+          const newZValue = newZValues[i];
+          const oldZValue = oldZValues[i];
+          data[i] = [newZValue, oldZValue];
+        }
+        return data;
+      })();
+      const degree = 2; // setup the maximum degree of the polynomial
+      const r = regression.power(regressionData, {
+      // const r = regression.exponential(regressionData, {
+      // const r = regression.logarithmic(regressionData, {
+      // const r = regression.polynomial(regressionData, {
+        order: degree,
+        precision: 10,
+      });
+      for (let y = 0; y < panelSize; y++) {
+        for (let x = 0; x < panelSize; x++) {
+          const i = y * panelSize + x;
+
+          // predict from the new point to the old
+          const screenPoint = localVector.fromArray(geometry.attributes.position.array, i * 3);
+          screenPoint.applyMatrix4(newCameraProjectionMatrix);
+
+          const predictedViewZ = r.predict(screenPoint.z)[1];
+
+          // remap the screen point
+          screenPoint.z = predictedViewZ;
+          screenPoint.applyMatrix4(newCameraProjectionMatrixInverse);
+          screenPoint.toArray(geometry.attributes.position.array, i * 3);
+        }
+      }
+      console.timeEnd('predictZ');
+
+      /* _clipGeometryToMask(
         geometry,
         widthSegments,
         heightSegments,
@@ -1190,37 +1370,16 @@ class PanelRenderer extends EventTarget {
         maskImageData,
         depthFloatImageData,
         indexColorsAlphasArray
-      );
+      ); */
       geometry.computeVertexNormals();
 
       layerScene.add(backgroundMesh);
-      console.timeEnd('backgroundMesh');
+      layerScene.add(backgroundMesh2);
     })();
 
     // display depth cubes
     console.time('depthCubes');
     {
-      const setPositionFromViewZ = (() => {
-        const projInv = new THREE.Matrix4();
-      
-        return (x, y, viewZ, camera, position) => {
-          // get the inverse projection matrix of the camera
-          projInv.copy(camera.projectionMatrix)
-            .invert();
-          position
-            .set(
-              x * 2 - 1,
-              -y * 2 + 1,
-              0.5
-            )
-            .applyMatrix4(projInv);
-      
-          position.multiplyScalar(viewZ / position.z);
-          position.applyMatrix4(camera.matrixWorld);
-          return position;
-        };
-      })();
-
       // render an instanced cubes mesh to show the depth
       // const depthCubesGeometry = new THREE.BoxBufferGeometry(1, 1, 1);
       const depthCubesGeometry = new THREE.BoxBufferGeometry(0.01, 0.01, 0.01);
@@ -1233,30 +1392,23 @@ class PanelRenderer extends EventTarget {
       layerScene.add(depthCubesMesh);
 
       // set the matrices by projecting the depth from the perspective camera
-      const skipRatio = 8;
-      for (let i = 0; i < depthFloatImageData.length; i += skipRatio) {
+      const depthRenderSkipRatio = 8;
+      for (let i = 0; i < depthFloatImageData.length; i += depthRenderSkipRatio) {
         const x = (i % this.renderer.domElement.width) / this.renderer.domElement.width;
         const y = Math.floor(i / this.renderer.domElement.width) / this.renderer.domElement.height;
         const viewZ = depthFloatImageData[i];
-        const target  = setPositionFromViewZ(x, y, viewZ, this.camera, new THREE.Vector3());
+        const target = setCameraViewPositionFromViewZ(x, y, viewZ, oldCameraProjectionMatrix, localVector);
+        target.applyMatrix4(this.camera.matrixWorld);
 
-        const matrix = new THREE.Matrix4();
-        matrix.makeTranslation(target.x, target.y, target.z);
-        depthCubesMesh.setMatrixAt(i / skipRatio, matrix);
+        localMatrix.makeTranslation(target.x, target.y, target.z);
+        depthCubesMesh.setMatrixAt(i / depthRenderSkipRatio, localMatrix);
       }
       depthCubesMesh.count = depthFloatImageData.length;
       depthCubesMesh.instanceMatrix.needsUpdate = true;
     }
     console.timeEnd('depthCubes');
 
-    // set fov
-    console.time('fov');
-    {
-      const fov = Number(pointCloudHeaders['x-fov']);
-      this.camera.fov = fov;
-      this.camera.updateProjectionMatrix();
-    }
-    console.timeEnd('fov');
+    globalThis.outmeshing = false;
 
     return layerScene;
   }
