@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 import PolynomialRegression from 'ml-regression-polynomial';
 import regression from 'regression';
+import Heap from 'heap-js';
 import alea from '../utils/alea.js';
 
 // const x = [50, 50, 50, 70, 70, 70, 80, 80, 80, 90, 90, 90, 100, 100, 100];
@@ -1047,8 +1048,34 @@ class PanelRenderer extends EventTarget {
 
       console.time('extendZ');
       {
-        const queue = [];
-        const seenPoints = new Uint8Array(panelSize * panelSize);
+        // sort by numValidNeighbors, low to high
+        const entryEquals = (a, b) => a.i === b.i;
+        const entryCompare = (a, b) => b.numValidNeighbors - a.numValidNeighbors;
+        const queue = new Heap(entryCompare);
+        const _getNumValidNeighbors = (x, y, i) => {
+          let numValidNeighbors = 0;
+          for (let dy = -1; dy <= 1; dy++) {
+            for (let dx = -1; dx <= 1; dx++) {
+              if (dx === 0 && dy === 0) {
+                continue;
+              }
+
+              const ax = x + dx;
+              const ay = y + dy;
+
+              if (ax >= 0 && ax < panelSize && ay >= 0 && ay < panelSize) {
+                const i2 = ay * panelSize + ax;
+                const neighborZ = projectionDepthFloatImageData[i2];
+
+                if (_isValidZDepth(neighborZ)) { // if the neighbor point is valid
+                  numValidNeighbors++;
+                }
+              }
+            }
+          }
+          return numValidNeighbors;
+        };
+        const queueEntries = new Map();
         for (let y = 0; y < panelSize; y++) {
           for (let x = 0; x < panelSize; x++) {
             const i = y * panelSize + x;
@@ -1056,41 +1083,20 @@ class PanelRenderer extends EventTarget {
             const oldZ = projectionDepthFloatImageData[i];
 
             if (!_isValidZDepth(oldZ)) { // if the current point is invalid
-              let neighborValid = false;
-              for (let dy = -1; dy <= 1; dy++) {
-                for (let dx = -1; dx <= 1; dx++) {
-                  if (dx === 0 && dy === 0) {
-                    continue;
-                  }
-    
-                  const ax = x + dx;
-                  const ay = y + dy;
-    
-                  if (ax >= 0 && ax < panelSize && ay >= 0 && ay < panelSize) {
-                    const i2 = ay * panelSize + ax;
-                    const neighborZ = projectionDepthFloatImageData[i2];
-
-                    if (_isValidZDepth(neighborZ)) { // if the neighbor point is valid
-                      neighborValid = true;
-                      break;
-                    }
-                  }
-                }
-                if (neighborValid) {
-                  break;
-                }
-              }
-              if (neighborValid) {
-                queue.push([x, y, i]);
-                seenPoints[i] = 1;
+              const numValidNeighbors = _getNumValidNeighbors(x, y, i);
+              if (numValidNeighbors > 0) {
+                const entry = {x, y, i, numValidNeighbors};
+                queue.push(entry);
+                queueEntries.set(i, entry);
               }
             }
           }
         }
-        while (queue.length > 0) {
+        for (const entry of queue) {
           // select a random index from the queue
           // const [x, y, i] = queue.splice(Math.floor(rng() * queue.length), 1)[0];
-          const [x, y, i] = queue.shift();
+          // const [x, y, i] = queue.shift();
+          const {x, y, i, numValidNeighbors} = entry;
           
           const validNeighbors = [];
           const invalidNeighbors = [];
@@ -1168,10 +1174,22 @@ class PanelRenderer extends EventTarget {
           
           // recurse on unseen invalid neighbors
           for (const [ax, ay, i2] of invalidNeighbors) {
-            if (!seenPoints[i2]) {
-              queue.push([ax, ay, i2]);
-              seenPoints[i2] = 1;
+            const numValidNeighbors = _getNumValidNeighbors(ax, ay, i2);
+            
+            let entry = queueEntries.get(i2);
+            if (entry) {
+              queue.remove(entry, entryEquals);
+              entry.numValidNeighbors = numValidNeighbors;
+            } else {
+              entry = {
+                x: ax,
+                y: ay,
+                i: i2,
+                numValidNeighbors,
+              };
+              queueEntries.set(i2, entry);
             }
+            queue.add(entry);
           }
         }
 
