@@ -73,11 +73,11 @@ export function applySkybox(float32Array) { // // result in float32Array
     const y = float32Array[i + 1];
     const z = float32Array[i + 2];
 
-    if (z <= -skyboxDistance) {
-      float32Array[i + 0] *= skyboxScaleFactor;
-      float32Array[i + 1] *= skyboxScaleFactor;
-      float32Array[i + 2] *= skyboxScaleFactor;
-    }
+    // if (z <= -skyboxDistance) {
+    //   float32Array[i + 0] *= skyboxScaleFactor;
+    //   float32Array[i + 1] *= skyboxScaleFactor;
+    //   float32Array[i + 2] *= skyboxScaleFactor;
+    // }
   }
 }
 
