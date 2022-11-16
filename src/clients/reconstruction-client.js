@@ -42,9 +42,9 @@ export function pointCloudArrayBufferToPositionAttributeArray(arrayBuffer, float
   const numPixels = arrayBuffer.byteLength / pointcloudStride;
   const width = Math.sqrt(numPixels);
   const height = width;
-  if (width * height !== numPixels) {
-    throw new Error('invalid point cloud dimensions');
-  }
+  // if (width * height !== numPixels) {
+  //   throw new Error('invalid point cloud dimensions');
+  // }
   const dataView = new DataView(arrayBuffer);
   for (let i = 0, j = 0; i < arrayBuffer.byteLength; i += pointcloudStride, j += 3) {
     let x = dataView.getFloat32(i + 0, true);
@@ -73,11 +73,11 @@ export function applySkybox(float32Array) { // // result in float32Array
     const y = float32Array[i + 1];
     const z = float32Array[i + 2];
 
-    // if (z <= -skyboxDistance) {
-    //   float32Array[i + 0] *= skyboxScaleFactor;
-    //   float32Array[i + 1] *= skyboxScaleFactor;
-    //   float32Array[i + 2] *= skyboxScaleFactor;
-    // }
+    if (z <= -skyboxDistance) {
+      float32Array[i + 0] *= skyboxScaleFactor;
+      float32Array[i + 1] *= skyboxScaleFactor;
+      float32Array[i + 2] *= skyboxScaleFactor;
+    }
   }
 }
 

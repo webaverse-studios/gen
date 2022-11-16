@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 import PolynomialRegression from 'ml-regression-polynomial';
 import regression from 'regression';
+import alea from '../utils/alea.js';
 
 // const x = [50, 50, 50, 70, 70, 70, 80, 80, 80, 90, 90, 90, 100, 100, 100];
 // const y = [3.3, 2.8, 2.9, 2.3, 2.6, 2.1, 2.5, 2.9, 2.4, 3.0, 3.1, 2.8, 3.3, 3.5, 3.0];
@@ -92,10 +93,10 @@ export const layer2Specs = [
     name: 'depthFloatImageData',
     type: 'arrayBuffer',
   },
-  {
-    name: 'indexColorsAlphasArray',
-    type: 'json',
-  },
+  // {
+  //   name: 'indexColorsAlphasArray',
+  //   type: 'json',
+  // },
 ];
 
 //
@@ -105,6 +106,8 @@ const abortError = new Error();
 abortError.isAbortError = true;
 
 const localVector = new THREE.Vector3();
+const localVector2 = new THREE.Vector3();
+const localVector3 = new THREE.Vector3();
 const localMatrix = new THREE.Matrix4();
 
 //
@@ -544,6 +547,8 @@ class PanelRenderer extends EventTarget {
   } = {}) {
     super();
 
+    console.log('create renderer', new Error().stack);
+
     this.canvas = canvas;
     this.panel = panel;
     this.debug = debug;
@@ -627,8 +632,8 @@ class PanelRenderer extends EventTarget {
     pointCloudArrayBufferToPositionAttributeArray(pointCloudArrayBuffer, geometry.attributes.position.array, 1/this.canvas.width);
     geometry.setAttribute('color', new THREE.BufferAttribute(new Uint8Array(pointCloudArrayBuffer.byteLength / pointcloudStride * 3), 3, true));
     pointCloudArrayBufferToColorAttributeArray(labelImageData, geometry.attributes.color.array);
-    _cutSkybox(geometry);
-    applySkybox(geometry.attributes.position.array);
+    // _cutSkybox(geometry);
+    // applySkybox(geometry.attributes.position.array);
     const map = new THREE.Texture();
     (async () => { // load the texture image
       const imgBlob = new Blob([imgArrayBuffer], {
@@ -716,9 +721,10 @@ class PanelRenderer extends EventTarget {
     canvas.addEventListener('click', blockEvent);
     canvas.addEventListener('wheel', blockEvent);
 
-    this.panel.addEventListener('update', e => {
+    const update = e => {
       this.updateOutmeshLayers();
-    });
+    };
+    this.panel.addEventListener('update', update);
 
     this.addEventListener('destroy', e => {
       document.removeEventListener('keydown', keydown);
@@ -727,6 +733,8 @@ class PanelRenderer extends EventTarget {
       canvas.removeEventListener('mouseup', blockEvent);
       canvas.removeEventListener('click', blockEvent);
       canvas.removeEventListener('wheel', blockEvent);
+
+      this.panel.removeEventListener('update', update);
     });
   }
   animate() {
@@ -815,101 +823,13 @@ class PanelRenderer extends EventTarget {
     }
     console.timeEnd('pointCloud');
 
-    // render indices
-    console.time('renderIndices');
-    let indexCanvas;
-    let indexRenderer;
-    let indexRenderTarget;
-    let maskImageData;
+    // set fov
+    console.time('fov');
     {
-      indexCanvas = document.createElement('canvas');
-      indexCanvas.classList.add('indexCanvas');
-      indexCanvas.width = this.renderer.domElement.width;
-      indexCanvas.height = this.renderer.domElement.height;
-
-      const indexScene = new THREE.Scene();
-      indexScene.autoUpdate = false;
-
-      const sceneMesh2 = this.sceneMesh.clone();
-      sceneMesh2.name = 'sceneMesh2';
-      sceneMesh2.material = new THREE.ShaderMaterial({
-        uniforms: {
-          resolution: {
-            value: new THREE.Vector2(indexCanvas.width, indexCanvas.height),
-            needsUpdate: true,
-          },
-        },
-        vertexShader: `
-          varying float vVertexId;
-          void main() {
-            vVertexId = float(gl_VertexID);
-            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-          }
-        `,
-        fragmentShader: `
-          uniform vec2 resolution;
-          varying float vVertexId;
-
-          void main() {
-            vec2 uv = gl_FragCoord.xy / resolution;
-            gl_FragColor = vec4(uv, vVertexId, 1.0);
-          }
-        `,
-      });
-      indexScene.add(sceneMesh2);
-
-      // create a new index renderer
-      indexRenderer = new THREE.WebGLRenderer({
-        canvas: indexCanvas,
-        alpha: true,
-        // antialias: true,
-        preserveDrawingBuffer: true,
-      });
-      indexRenderer.setClearColor(0x000000, 0);
-      // const indexContext = indexRenderer.getContext();
-
-      // float render target
-      indexRenderTarget = new THREE.WebGLRenderTarget(
-        this.renderer.domElement.width,
-        this.renderer.domElement.height,
-        {
-          minFilter: THREE.NearestFilter,
-          magFilter: THREE.NearestFilter,
-          format: THREE.RGBAFormat,
-          type: THREE.FloatType,
-        }
-      );
-
-      // render indices
-      {
-        indexRenderer.setRenderTarget(indexRenderTarget);
-        indexRenderer.render(indexScene, this.camera);
-      }
-
-      // render color witohut antialiasing
-      const nonAaCanvas = document.createElement('canvas');
-      nonAaCanvas.width = this.renderer.domElement.width;
-      nonAaCanvas.height = this.renderer.domElement.height;
-      const nonAaRenderer = new THREE.WebGLRenderer({
-        canvas: nonAaCanvas,
-        alpha: true,
-        // antialias: true,
-        preserveDrawingBuffer: true,
-      });
-      nonAaRenderer.setClearColor(0x000000, 0);
-      nonAaRenderer.render(this.scene, this.camera);
-      
-      maskImageData = (() => {
-        const canvas = document.createElement('canvas');
-        canvas.width = nonAaRenderer.domElement.width;
-        canvas.height = nonAaRenderer.domElement.height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(nonAaRenderer.domElement, 0, 0);
-        const imageData = ctx.getImageData(0, 0, nonAaRenderer.domElement.width, nonAaRenderer.domElement.height);
-        return imageData;
-      })();
+      this.camera.fov = Number(pointCloudHeaders['x-fov']);
+      this.camera.updateProjectionMatrix();
     }
-    console.timeEnd('renderIndices');
+    console.timeEnd('fov');
 
     // render depth
     console.time('renderDepth');
@@ -965,217 +885,13 @@ class PanelRenderer extends EventTarget {
         return imageData;
       };
       depthFloatImageData = floatImageData(_renderOverrideMaterial(depthRenderTarget));
-      for (let i = 0; i < depthFloatImageData.length; i++) {
+      /* for (let i = 0; i < depthFloatImageData.length; i++) {
         if (depthFloatImageData[i] === this.camera.near) {
           depthFloatImageData[i] = -this.camera.far;
         }
-      }
-
-      // done with this
-      this.scene.remove(depthMesh);
+      } */
     }
     console.timeEnd('renderDepth');
-
-    // post-process index canvas
-    let indexColorsAlphasArray;
-    console.time('postProcess');
-    {
-      // set up the scene
-      const fullscreenScene = new THREE.Scene();
-      fullscreenScene.autoUpdate = false;
-
-      const encodeIndexColorAlphaToRgba = (indexColor, alpha, uint8Array, i) => {
-        const r = indexColor[0];
-        const g = indexColor[1];
-        const b = indexColor[2];
-
-        uint8Array[i + 0] = r * 255;
-        uint8Array[i + 1] = g * 255;
-        uint8Array[i + 2] = b / (indexCanvas.width * indexCanvas.height) * 255;
-        uint8Array[i + 3] = alpha * 255;
-      };
-      const encodeIndexColorsAlphasToRgba = (indexColorsAlphas, uint8Array) => {
-        for (let i = 0; i < indexColorsAlphas.length; i += 4) {
-          const indexColor = indexColorsAlphas.slice(i + 0, i + 3);
-          const alpha = indexColorsAlphas[i + 3];
-          encodeIndexColorAlphaToRgba(indexColor, alpha, uint8Array, i);
-        }
-      };
-      const encodeIndexColorsAlphasToCanvas = indexColorsAlphas => {
-        const indexCanvas2 = document.createElement('canvas');
-        indexCanvas2.width = indexCanvas.width;
-        indexCanvas2.height = indexCanvas.height;
-        indexCanvas2.style.cssText = `\
-          background: red;
-        `;
-        const indexContext2 = indexCanvas2.getContext('2d');
-        const indexImageData2 = indexContext2.createImageData(indexCanvas.width, indexCanvas.height);
-        encodeIndexColorsAlphasToRgba(indexColorsAlphas, indexImageData2.data);
-        indexContext2.putImageData(indexImageData2, 0, 0);
-        return indexCanvas2;
-      };
-
-      // extract the index colors and alphas
-      const indexColorsAlphas = new Float32Array(indexCanvas.width * indexCanvas.height * 4);
-      indexRenderer.readRenderTargetPixels(indexRenderTarget, 0, 0, indexCanvas.width, indexCanvas.height, indexColorsAlphas);
-
-      if (this.debug) {
-        const indexCanvas2 = encodeIndexColorsAlphasToCanvas(indexColorsAlphas);
-        indexCanvas2.classList.add('indexCanvas2');
-        // this.element.appendChild(indexCanvas2);
-      }
-
-      const directions = [
-        [-1, 0],
-        [1, 0],
-        [0, 1],
-        [0, -1],
-      ];
-      const getIndex = (x, y) => (x + indexCanvas.width * y) * 4;
-      const smearIndexColorAlphas = (indexColorsAlphas, direction) => {
-        const indexColorsAlphas2 = new indexColorsAlphas.constructor(indexColorsAlphas.length);
-        const genCoords = function*() {
-          if (direction[0] < 0) {
-            for (let dy = 0; dy < indexRenderer.domElement.height; dy++) {
-              for (let dx = indexRenderer.domElement.width - 1; dx >= 0; dx--) {
-                yield [dx, dy, dx === 0];
-              }
-            }
-          } else if (direction[0] > 0) {
-            for (let dy = 0; dy < indexRenderer.domElement.height; dy++) {
-              for (let dx = 0; dx < indexRenderer.domElement.width; dx++) {
-                yield [dx, dy, dx === indexRenderer.domElement.width - 1];
-              }
-            }
-          } else if (direction[1] < 0) {
-            for (let dx = 0; dx < indexRenderer.domElement.width; dx++) {
-              for (let dy = indexRenderer.domElement.height - 1; dy >= 0; dy--) {
-                yield [dx, dy, dy === 0];
-              }
-            }
-          } else if (direction[1] > 0) {
-            for (let dx = 0; dx < indexRenderer.domElement.width; dx++) {
-              for (let dy = 0; dy < indexRenderer.domElement.height; dy++) {
-                yield [dx, dy, dy === indexRenderer.domElement.height - 1];
-              }
-            }
-          } else {
-            throw new Error('invalid direction');
-          }
-        };
-        {
-          const coordsIter = genCoords();
-          let currentColor = [-1, -1, -1];
-          let currentAlpha = -1;
-          for (const coord of coordsIter) {
-            const index = getIndex(coord[0], coord[1]);
-            const last = coord[2];
-
-            if (currentAlpha === -1) {
-              currentColor[0] = indexColorsAlphas[index + 0];
-              currentColor[1] = indexColorsAlphas[index + 1];
-              currentColor[2] = indexColorsAlphas[index + 2];
-              currentAlpha = indexColorsAlphas[index + 3];
-            }
-
-            const r = indexColorsAlphas[index + 0];
-            const g = indexColorsAlphas[index + 1];
-            const b = indexColorsAlphas[index + 2];
-            const a = indexColorsAlphas[index + 3];
-            if (a > 0) {
-              currentColor[0] = r;
-              currentColor[1] = g;
-              currentColor[2] = b;
-              currentAlpha = a;
-            } else {
-              currentAlpha -= 1 / indexRenderer.domElement.width;
-              currentAlpha = Math.max(currentAlpha, 0);
-            }
-            // write back
-            indexColorsAlphas2[index + 0] = currentColor[0];
-            indexColorsAlphas2[index + 1] = currentColor[1];
-            indexColorsAlphas2[index + 2] = currentColor[2];
-            indexColorsAlphas2[index + 3] = currentAlpha;
-
-            if (last) {
-              currentAlpha = -1;
-            }
-          }
-        }
-        return indexColorsAlphas2;
-      };
-      const sdfIndexColorAlphas = (indexColorsAlphas) => {
-        return indexColorsAlphas;
-        // XXX use:
-        // XXX https://github.com/bzztbomb/three_js_outline/blob/trunk/lib/jfaOutline.js#L68
-        // XXX https://www.shadertoy.com/view/4syGWK
-        /* const indexColorsAlphas2 = indexColorsAlphas.slice();
-        const queue = [];
-        const _recursePoints = (x, y, parentColor, parentAlpha) => {
-          queue.push([x, y, parentColor, parentAlpha]);
-        };
-        const _handleRecursePoints = (x, y, parentColor, parentAlpha) => {
-          for (let dy = -1; dy <= 1; dy += 2) {
-            for (let dx = -1; dx <= 1; dx += 2) {
-              const ax = x + dx;
-              const ay = y + dy;
-              if (ax >= 0 && ax < indexRenderer.domElement.width && ay >= 0 && ay < indexRenderer.domElement.height) {
-                const index = getIndex(ax, ay);
-                // const r = indexColorsAlphas2[index + 0];
-                // const g = indexColorsAlphas2[index + 1];
-                // const b = indexColorsAlphas2[index + 2];
-                const a = indexColorsAlphas2[index + 3];
-
-                const parentDistance = Math.sqrt(dx*dx + dy*dy);
-                const newAlpha = parentAlpha - parentDistance * (1 / indexRenderer.domElement.width);
-
-                if (newAlpha > a) {
-                  indexColorsAlphas2[index + 0] = parentColor[0];
-                  indexColorsAlphas2[index + 1] = parentColor[1];
-                  indexColorsAlphas2[index + 2] = parentColor[2];
-                  indexColorsAlphas2[index + 3] = newAlpha;
-                  _recursePoints(ax, ay, indexColorsAlphas2.slice(index + 0, index + 3), indexColorsAlphas2[index + 3]);
-                }
-              }
-            }
-          }
-        };
-        for (let y = 0; y < indexRenderer.domElement.height; y++) {
-          for (let x = 0; x < indexRenderer.domElement.width; x++) {
-            const index = getIndex(x, y);
-            const r = indexColorsAlphas[index + 0];
-            const g = indexColorsAlphas[index + 1];
-            const b = indexColorsAlphas[index + 2];
-            const a = indexColorsAlphas[index + 3];
-            if (a > 0) {
-              indexColorsAlphas2[index + 0] = r;
-              indexColorsAlphas2[index + 1] = g;
-              indexColorsAlphas2[index + 2] = b;
-              indexColorsAlphas2[index + 3] = a;
-              _recursePoints(x, y, [r, g, b], a);
-            }
-          }
-        }
-        while (queue.length > 0) {
-          const [x, y, parentColor, parentAlpha] = queue.shift();
-          _handleRecursePoints(x, y, parentColor, parentAlpha);
-        }
-        return indexColorsAlphas2; */
-      };
-      
-      indexColorsAlphasArray = directions.map(direction => {
-        const indexColorsAlphas2 = smearIndexColorAlphas(indexColorsAlphas, direction);
-        indexColorsAlphas2.direction = direction;
-        return indexColorsAlphas2;
-      });
-      const sdfIndexImageData = (() => {
-        const indexColorsAlphas2 = sdfIndexColorAlphas(indexColorsAlphas);
-        indexColorsAlphas2.direction = [0, 0];
-        return indexColorsAlphas2;
-      })();
-      indexColorsAlphasArray.push(sdfIndexImageData);
-    }
-    console.timeEnd('postProcess')
 
     // return result
     return {
@@ -1184,14 +900,14 @@ class PanelRenderer extends EventTarget {
       pointCloudHeaders,
       pointCloud: pointCloudArrayBuffer,
       depthFloatImageData,
-      indexColorsAlphasArray,
+      // indexColorsAlphasArray,
     };
   }
   createOutmeshLayer(layerEntries) {
     if (!globalThis.outmeshing) {
-      globalThis.outmeshing = true;
+      globalThis.outmeshing = 1;
     } else {
-      console.warn('already outmeshing');
+      console.warn('already outmeshing: ' + globalThis.outmeshing);
       debugger;
     }
     const _getLayerEntry = key => layerEntries.find(layerEntry => layerEntry.key.endsWith('/' + key))?.value;
@@ -1200,31 +916,18 @@ class PanelRenderer extends EventTarget {
     const pointCloudHeaders = _getLayerEntry('pointCloudHeaders');
     const pointCloud = _getLayerEntry('pointCloud');
     const depthFloatImageData = _getLayerEntry('depthFloatImageData');
-    const indexColorsAlphasArray = _getLayerEntry('indexColorsAlphasArray');
+    // const indexColorsAlphasArray = _getLayerEntry('indexColorsAlphasArray');
     console.log('got data', {
       maskImg,
       editedImg,
       pointCloudHeaders,
       pointCloud,
       depthFloatImageData,
-      indexColorsAlphasArray,
+      // indexColorsAlphasArray,
     });
 
     const layerScene = new THREE.Scene();
     layerScene.autoUpdate = false;
-
-    // set fov
-    console.time('fov');
-    const oldCameraProjectionMatrix = this.camera.projectionMatrix.clone();
-    const oldCameraProjectionMatrixInverse = oldCameraProjectionMatrix.clone().invert();
-    {
-      const fov = Number(pointCloudHeaders['x-fov']);
-      this.camera.fov = fov;
-      this.camera.updateProjectionMatrix();
-    }
-    const newCameraProjectionMatrix = this.camera.projectionMatrix.clone();
-    const newCameraProjectionMatrixInverse = newCameraProjectionMatrix.clone().invert();
-    console.timeEnd('fov');
 
     // create background mesh
     (async () => {
@@ -1236,7 +939,7 @@ class PanelRenderer extends EventTarget {
       canvas.height = maskImageBitmap.height;
       const context = canvas.getContext('2d');
       context.drawImage(maskImageBitmap, 0, 0);
-      // const maskImageData = context.getImageData(0, 0, canvas.width, canvas.height);
+      const maskImageData = context.getImageData(0, 0, canvas.width, canvas.height);
       
       const widthSegments = panelSize - 1;
       const heightSegments = panelSize - 1;
@@ -1246,121 +949,184 @@ class PanelRenderer extends EventTarget {
       geometry.computeVertexNormals();
       const material = new THREE.MeshPhongMaterial({
         color: 0xff0000,
+        transparent: true,
+        opacity: 0.8,
       });
       const backgroundMesh = new THREE.Mesh(geometry, material);
       backgroundMesh.name = 'backgroundMesh';
       backgroundMesh.position.copy(this.camera.position);
       backgroundMesh.quaternion.copy(this.camera.quaternion);
-      backgroundMesh.updateMatrixWorld();
+      backgroundMesh.scale.copy(this.camera.scale);
+      backgroundMesh.matrix.copy(this.camera.matrix);
+      backgroundMesh.matrixWorld.copy(this.camera.matrixWorld);
       backgroundMesh.frustumCulled = false;
 
       // copy the geometry, including the attributes
       const geometry2 = geometry.clone();
       const material2 = new THREE.MeshPhongMaterial({
         color: 0x0000ff,
+        transparent: true,
+        opacity: 0.4,
       });
       const backgroundMesh2 = new THREE.Mesh(geometry2, material2);
       backgroundMesh2.name = 'backgroundMesh2';
       backgroundMesh2.position.copy(this.camera.position);
       backgroundMesh2.quaternion.copy(this.camera.quaternion);
-      backgroundMesh2.updateMatrixWorld();
+      backgroundMesh2.scale.copy(this.camera.scale);
+      backgroundMesh2.matrix.copy(this.camera.matrix);
+      backgroundMesh2.matrixWorld.copy(this.camera.matrixWorld);
       backgroundMesh2.frustumCulled = false;
       console.timeEnd('backgroundMesh');
 
-      // retarget z
-      // remove all of the places there is no overlap (mask img blank)
-      console.time('retargetZ');
-      const oldPoints = [];
-      const newPoints = [];
-      const oldZValues = [];
-      const newZValues = [];
-      const _projectZ = (() => {
-        const localVector = new THREE.Vector3();
+      console.time('extendZ');
+      {
+        const rng = alea('lol');
 
-        // apply the projection matrix and return the resulting z value
-        return (point, projectionMatrix) => {
-          localVector.copy(point);
-          localVector.applyMatrix4(projectionMatrix);
-          return localVector.z;
-        };
-      })();
-      for (let y = 0; y < panelSize; y++) {
-        for (let x = 0; x < panelSize; x++) {
-          const i = y * panelSize + x;
-          const viewZ = depthFloatImageData[i]; // mostly negative
-          const oldPoint = setCameraViewPositionFromViewZ(x, y, viewZ, oldCameraProjectionMatrix, new THREE.Vector3());
-          // oldPoint.applyMatrix4(camera.matrixWorld);
-          const newPoint = new THREE.Vector3().fromArray(geometry.attributes.position.array, i * 3);
+        const wrappedPositions = geometry.attributes.position.array.slice();
 
-          oldPoints.push(oldPoint);
-          newPoints.push(newPoint);
+        const worldDepthFloatImageData = new Float32Array(depthFloatImageData.length);
+        for (let y = 0; y < panelSize; y++) {
+          for (let x = 0; x < panelSize; x++) {
+            const i = y * panelSize + x;
 
-          if (oldPoint.z < 0) { // if the point is valid, add it to the remap training set
-            oldZValues.push(_projectZ(oldPoint, oldCameraProjectionMatrix));
-            newZValues.push(_projectZ(newPoint, newCameraProjectionMatrix));
+            const px = x / panelSize;
+            const py = y / panelSize;
+
+            const viewZ = depthFloatImageData[i]; // mostly negative
+            const worldPoint = setCameraViewPositionFromViewZ(px, py, viewZ, this.camera.projectionMatrix, localVector);
+
+            worldDepthFloatImageData[i] = worldPoint.z;
           }
         }
+        // globalThis.worldDepthFloatImageData = worldDepthFloatImageData.slice();
+
+        const queue = [];
+        const seenPoints = new Uint8Array(panelSize * panelSize);
+        for (let y = 0; y < panelSize; y++) {
+          for (let x = 0; x < panelSize; x++) {
+            const i = y * panelSize + x;
+
+            const oldZ = worldDepthFloatImageData[i];
+
+            if (oldZ >= 0) { // if the current point is invalid
+              let neighborValid = false;
+              for (let dy = -1; dy <= 1; dy++) {
+                for (let dx = -1; dx <= 1; dx++) {
+                  if (dx === 0 && dy === 0) {
+                    continue;
+                  }
+    
+                  const ax = x + dx;
+                  const ay = y + dy;
+    
+                  if (ax >= 0 && ax < panelSize && ay >= 0 && ay < panelSize) {
+                    const i2 = ay * panelSize + ax;
+                    const neighborZ = worldDepthFloatImageData[i2];
+
+                    if (neighborZ < 0) { // if the neighbor point is valid
+                      neighborValid = true;
+                      break;
+                    }
+                  }
+                }
+                if (neighborValid) {
+                  break;
+                }
+              }
+              if (neighborValid) {
+                queue.push([x, y, i]);
+                seenPoints[i] = 1;
+              }
+            }
+          }
+        }
+        while (queue.length > 0) {
+          // select a random index from the queue
+          const [x, y, i] = queue.splice(Math.floor(rng() * queue.length), 1)[0];
+          
+          const validNeighbors = [];
+          const invalidNeighbors = [];
+          for (let dy = -1; dy <= 1; dy++) {
+            for (let dx = -1; dx <= 1; dx++) {
+              if (dx === 0 && dy === 0) {
+                continue;
+              }
+
+              const ax = x + dx;
+              const ay = y + dy;
+
+              if (ax >= 0 && ax < panelSize && ay >= 0 && ay < panelSize) {
+                const i2 = ay * panelSize + ax;
+                const neighborZ = worldDepthFloatImageData[i2];
+                
+                if (neighborZ < 0) {
+                  validNeighbors.push([dx, dy, i2]);
+                } else {
+                  invalidNeighbors.push([ax, ay, i2]);
+                }
+              }
+            }
+          }
+          if (validNeighbors.length === 0) { // XXX
+            console.warn('had no valid neighbors!');
+            debugger;
+          }
+
+          // rebase new geometry contributions from neighbors on top of the existing mesh
+          const newLocalPoint = localVector2.fromArray(geometry.attributes.position.array, i * 3);
+          let totalFactor = 0;
+          const contributions = validNeighbors.map(neighborSpec => {
+            const [dx, dy, i2] = neighborSpec;
+
+            const newRemotePoint = localVector3.fromArray(geometry.attributes.position.array, i2 * 3);
+            const deltaZ = newLocalPoint.z - newRemotePoint.z;
+
+            const neighborPointZ = worldDepthFloatImageData[i2];
+            if (neighborPointZ >= 0) {
+              console.warn('neighbor point was not valid');
+              debugger;
+            }
+            const predictedZ = neighborPointZ + deltaZ;
+
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            const factor = 1 / distance;
+            totalFactor += factor;
+            
+            return {
+              predictedZ,
+              factor,
+              deltaZ,
+              neighborPointZ,
+            };
+          });
+          let totalPredictedZ = 0;
+          for (const {predictedZ, factor} of contributions) {
+            totalPredictedZ += predictedZ * factor;
+          }
+          if (totalPredictedZ >= 0) { // XXX
+            console.warn('totalPredictedZ >= 0');
+            debugger;
+          }
+          totalPredictedZ /= totalFactor;
+
+          // set the new point z
+          wrappedPositions[i * 3 + 2] = totalPredictedZ;
+          worldDepthFloatImageData[i] = totalPredictedZ;
+          maskImageData.data[i * 4 + 3] = 1;
+          
+          // recurse on unseen invalid neighbors
+          for (const [ax, ay, i2] of invalidNeighbors) {
+            if (!seenPoints[i2]) {
+              queue.push([ax, ay, i2]);
+              seenPoints[i2] = 1;
+            }
+          }
+        }
+
+        // replace positions with wrapped positions
+        geometry.setAttribute('position', new THREE.BufferAttribute(wrappedPositions, 3));
       }
-      console.timeEnd('retargetZ');
-      globalThis.newZValues = newZValues;
-      globalThis.oldZValues = oldZValues;
-
-      console.time('predictZ');
-      // predict from the old space to the new space
-
-      /* const degree = 3; // setup the maximum degree of the polynomial
-      const regression = new PolynomialRegression(newZValues, oldZValues, degree);
-      for (let y = 0; y < panelSize; y++) {
-        for (let x = 0; x < panelSize; x++) {
-          const i = y * panelSize + x;
-
-          // predict from the new point to the old
-          const screenPoint = localVector.fromArray(geometry.attributes.position.array, i * 3);
-          screenPoint.applyMatrix4(newCameraProjectionMatrix);
-
-          const predictedViewZ = 1 / regression.predict(1 / screenPoint.z);
-
-          // remap the screen point
-          screenPoint.z = predictedViewZ;
-          screenPoint.applyMatrix4(newCameraProjectionMatrixInverse);
-          screenPoint.toArray(geometry.attributes.position.array, i * 3);
-        }
-      } */
-
-      const regressionData = (() => {
-        const data = Array(newZValues.length);
-        for (let i = 0; i < newZValues.length; i++) {
-          const newZValue = newZValues[i];
-          const oldZValue = oldZValues[i];
-          data[i] = [newZValue, oldZValue];
-        }
-        return data;
-      })();
-      const degree = 2; // setup the maximum degree of the polynomial
-      const r = regression.power(regressionData, {
-      // const r = regression.exponential(regressionData, {
-      // const r = regression.logarithmic(regressionData, {
-      // const r = regression.polynomial(regressionData, {
-        order: degree,
-        precision: 10,
-      });
-      for (let y = 0; y < panelSize; y++) {
-        for (let x = 0; x < panelSize; x++) {
-          const i = y * panelSize + x;
-
-          // predict from the new point to the old
-          const screenPoint = localVector.fromArray(geometry.attributes.position.array, i * 3);
-          screenPoint.applyMatrix4(newCameraProjectionMatrix);
-
-          const predictedViewZ = r.predict(screenPoint.z)[1];
-
-          // remap the screen point
-          screenPoint.z = predictedViewZ;
-          screenPoint.applyMatrix4(newCameraProjectionMatrixInverse);
-          screenPoint.toArray(geometry.attributes.position.array, i * 3);
-        }
-      }
-      console.timeEnd('predictZ');
+      console.timeEnd('extendZ');
 
       /* _clipGeometryToMask(
         geometry,
@@ -1393,27 +1159,28 @@ class PanelRenderer extends EventTarget {
 
       // set the matrices by projecting the depth from the perspective camera
       const depthRenderSkipRatio = 8;
+      depthCubesMesh.count = 0;
       for (let i = 0; i < depthFloatImageData.length; i += depthRenderSkipRatio) {
         const x = (i % this.renderer.domElement.width) / this.renderer.domElement.width;
         const y = Math.floor(i / this.renderer.domElement.width) / this.renderer.domElement.height;
         const viewZ = depthFloatImageData[i];
-        const target = setCameraViewPositionFromViewZ(x, y, viewZ, oldCameraProjectionMatrix, localVector);
+        const target = setCameraViewPositionFromViewZ(x, y, viewZ, this.camera.projectionMatrix, localVector);
         target.applyMatrix4(this.camera.matrixWorld);
 
         localMatrix.makeTranslation(target.x, target.y, target.z);
         depthCubesMesh.setMatrixAt(i / depthRenderSkipRatio, localMatrix);
+        depthCubesMesh.count++;
       }
-      depthCubesMesh.count = depthFloatImageData.length;
       depthCubesMesh.instanceMatrix.needsUpdate = true;
     }
     console.timeEnd('depthCubes');
-
-    globalThis.outmeshing = false;
 
     return layerScene;
   }
   updateOutmeshLayers() {
     const layers = this.panel.getDataLayersMatchingSpec(layer2Specs);
+
+    console.log('update outmesh layers', layers.length, this.layerScenes.length);
 
     const _addNewLayers = () => {
       const startLayer = 2;
@@ -1421,7 +1188,9 @@ class PanelRenderer extends EventTarget {
         let layerScene = this.layerScenes[i];
         if (!layerScene) {
           const layerDatas = layers[i];
+          console.log ('pre add layer scene', i, layerDatas);
           layerScene = this.createOutmeshLayer(layerDatas);
+          console.log('add layer scene', i, layerScene);
           this.scene.add(layerScene);
           this.layerScenes[i] = layerScene;
         }
@@ -1432,11 +1201,15 @@ class PanelRenderer extends EventTarget {
     const _removeOldLayers = () => {
       for (let i = layers.length; i < this.layerScenes.length; i++) {
         const layerScene = this.layerScenes[i];
+        console.log('remove layer scene', i, layerScene);
         this.scene.remove(layerScene);
       }
+      console.log('set layer scenes', layers.length);
       this.layerScenes.length = layers.length;
     };
     _removeOldLayers();
+
+    console.log('ending layer scenes length', this.layerScenes.length);
   }
   destroy() {
     this.dispatchEvent(new MessageEvent('destroy'));
@@ -1585,7 +1358,7 @@ async function compileVirtualScene(arrayBuffer) {
     const heightSegments = img.height - 1;
     const geometry = new THREE.PlaneGeometry(1, 1, widthSegments, heightSegments);
     pointCloudArrayBufferToPositionAttributeArray(pointCloudArrayBuffer, geometry.attributes.position.array, 1/img.width);
-    applySkybox(geometry.attributes.position.array);
+    // applySkybox(geometry.attributes.position.array);
 
     // keep only a fraction of the points
     const fraction = 16;
