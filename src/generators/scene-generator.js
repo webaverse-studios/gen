@@ -322,6 +322,52 @@ const _cutSkybox = geometry => {
   // set the new indices
   geometry.setIndex(new THREE.BufferAttribute(newIndices.subarray(0, numIndices), 1));
 };
+const _isPointMasked = (maskImageData, i) => maskImageData.data[i * 4 + 3] > 0;
+const _cutMask = (geometry, maskImageData) => {
+  // copy over only the triangles that are not completely masked
+  const newIndices = new geometry.index.array.constructor(geometry.index.array.length);
+  let numIndices = 0;
+  for (let i = 0; i < geometry.index.count; i += 3) {
+    const a = geometry.index.array[i + 0];
+    const b = geometry.index.array[i + 1];
+    const c = geometry.index.array[i + 2];
+    const aMasked = _isPointMasked(maskImageData, a);
+    const bMasked = _isPointMasked(maskImageData, b);
+    const cMasked = _isPointMasked(maskImageData, c);
+    // if not all are masked, then keep the triangle
+    if (!(aMasked && bMasked && cMasked)) {
+      newIndices[numIndices + 0] = a;
+      newIndices[numIndices + 1] = b;
+      newIndices[numIndices + 2] = c;
+      numIndices += 3;
+    }
+  }
+  // set the new indices
+  geometry.setIndex(new THREE.BufferAttribute(newIndices.subarray(0, numIndices), 1));
+};
+const _isValidZDepth = z => z >= 0 && z <= 1;
+const _cutDepth = (geometry, projectionDepthFloatImageData) => {
+  // copy over only the triangles that are not completely far
+  const newIndices = new geometry.index.array.constructor(geometry.index.array.length);
+  let numIndices = 0;
+  for (let i = 0; i < geometry.index.count; i += 3) {
+    const a = geometry.index.array[i + 0];
+    const b = geometry.index.array[i + 1];
+    const c = geometry.index.array[i + 2];
+    const aValid = _isValidZDepth(projectionDepthFloatImageData[a]);
+    const bValid = _isValidZDepth(projectionDepthFloatImageData[b]);
+    const cValid = _isValidZDepth(projectionDepthFloatImageData[c]);
+    // if not all are valid, then keep the triangle
+    if (!(aValid && bValid && cValid)) {
+      newIndices[numIndices + 0] = a;
+      newIndices[numIndices + 1] = b;
+      newIndices[numIndices + 2] = c;
+      numIndices += 3;
+    }
+  }
+  // set the new indices
+  geometry.setIndex(new THREE.BufferAttribute(newIndices.subarray(0, numIndices), 1));
+};
 // same as above, but for a luminosity value
 function calculateValue(x, y, alphaSpecs /* : {x: number, y: number, a: number}[] */) {
   let total = 0;
@@ -946,6 +992,7 @@ class PanelRenderer extends EventTarget {
       // geometry is camera-relative
       const geometry = new THREE.PlaneGeometry(1, 1, widthSegments, heightSegments);
       pointCloudArrayBufferToPositionAttributeArray(pointCloud, geometry.attributes.position.array, 1 / panelSize);
+      // _cutMask(geometry, maskImageData);
       geometry.computeVertexNormals();
       const material = new THREE.MeshPhongMaterial({
         color: 0xff0000,
@@ -960,6 +1007,26 @@ class PanelRenderer extends EventTarget {
       backgroundMesh.matrix.copy(this.camera.matrix);
       backgroundMesh.matrixWorld.copy(this.camera.matrixWorld);
       backgroundMesh.frustumCulled = false;
+
+      console.time('cutDepth');
+      const wrappedPositions = geometry.attributes.position.array.slice();
+      const projectionDepthFloatImageData = new Float32Array(depthFloatImageData.length);
+      for (let y = 0; y < panelSize; y++) {
+        for (let x = 0; x < panelSize; x++) {
+          const i = y * panelSize + x;
+
+          const px = x / panelSize;
+          const py = y / panelSize;
+
+          const viewZ = depthFloatImageData[i]; // mostly negative
+          const worldPoint = setCameraViewPositionFromViewZ(px, py, viewZ, this.camera.projectionMatrix, localVector);
+          const projectionPoint = worldPoint.applyMatrix4(this.camera.projectionMatrix);
+
+          projectionDepthFloatImageData[i] = projectionPoint.z;
+        }
+      }
+      _cutDepth(geometry, projectionDepthFloatImageData);
+      console.timeEnd('cutDepth');
 
       // copy the geometry, including the attributes
       const geometry2 = geometry.clone();
@@ -980,35 +1047,15 @@ class PanelRenderer extends EventTarget {
 
       console.time('extendZ');
       {
-        const rng = alea('lol');
-
-        const wrappedPositions = geometry.attributes.position.array.slice();
-
-        const worldDepthFloatImageData = new Float32Array(depthFloatImageData.length);
-        for (let y = 0; y < panelSize; y++) {
-          for (let x = 0; x < panelSize; x++) {
-            const i = y * panelSize + x;
-
-            const px = x / panelSize;
-            const py = y / panelSize;
-
-            const viewZ = depthFloatImageData[i]; // mostly negative
-            const worldPoint = setCameraViewPositionFromViewZ(px, py, viewZ, this.camera.projectionMatrix, localVector);
-
-            worldDepthFloatImageData[i] = worldPoint.z;
-          }
-        }
-        // globalThis.worldDepthFloatImageData = worldDepthFloatImageData.slice();
-
         const queue = [];
         const seenPoints = new Uint8Array(panelSize * panelSize);
         for (let y = 0; y < panelSize; y++) {
           for (let x = 0; x < panelSize; x++) {
             const i = y * panelSize + x;
 
-            const oldZ = worldDepthFloatImageData[i];
+            const oldZ = projectionDepthFloatImageData[i];
 
-            if (oldZ >= 0) { // if the current point is invalid
+            if (!_isValidZDepth(oldZ)) { // if the current point is invalid
               let neighborValid = false;
               for (let dy = -1; dy <= 1; dy++) {
                 for (let dx = -1; dx <= 1; dx++) {
@@ -1021,9 +1068,9 @@ class PanelRenderer extends EventTarget {
     
                   if (ax >= 0 && ax < panelSize && ay >= 0 && ay < panelSize) {
                     const i2 = ay * panelSize + ax;
-                    const neighborZ = worldDepthFloatImageData[i2];
+                    const neighborZ = projectionDepthFloatImageData[i2];
 
-                    if (neighborZ < 0) { // if the neighbor point is valid
+                    if (_isValidZDepth(neighborZ)) { // if the neighbor point is valid
                       neighborValid = true;
                       break;
                     }
@@ -1042,7 +1089,8 @@ class PanelRenderer extends EventTarget {
         }
         while (queue.length > 0) {
           // select a random index from the queue
-          const [x, y, i] = queue.splice(Math.floor(rng() * queue.length), 1)[0];
+          // const [x, y, i] = queue.splice(Math.floor(rng() * queue.length), 1)[0];
+          const [x, y, i] = queue.shift();
           
           const validNeighbors = [];
           const invalidNeighbors = [];
@@ -1057,9 +1105,9 @@ class PanelRenderer extends EventTarget {
 
               if (ax >= 0 && ax < panelSize && ay >= 0 && ay < panelSize) {
                 const i2 = ay * panelSize + ax;
-                const neighborZ = worldDepthFloatImageData[i2];
+                const neighborZ = projectionDepthFloatImageData[i2];
                 
-                if (neighborZ < 0) {
+                if (_isValidZDepth(neighborZ)) {
                   validNeighbors.push([dx, dy, i2]);
                 } else {
                   invalidNeighbors.push([ax, ay, i2]);
@@ -1074,15 +1122,17 @@ class PanelRenderer extends EventTarget {
 
           // rebase new geometry contributions from neighbors on top of the existing mesh
           const newLocalPoint = localVector2.fromArray(geometry.attributes.position.array, i * 3);
+          newLocalPoint.applyMatrix4(this.camera.projectionMatrix);
           let totalFactor = 0;
           const contributions = validNeighbors.map(neighborSpec => {
             const [dx, dy, i2] = neighborSpec;
 
             const newRemotePoint = localVector3.fromArray(geometry.attributes.position.array, i2 * 3);
+            newRemotePoint.applyMatrix4(this.camera.projectionMatrix);
             const deltaZ = newLocalPoint.z - newRemotePoint.z;
 
-            const neighborPointZ = worldDepthFloatImageData[i2];
-            if (neighborPointZ >= 0) {
+            const neighborPointZ = projectionDepthFloatImageData[i2];
+            if (!_isValidZDepth(neighborPointZ)) {
               console.warn('neighbor point was not valid');
               debugger;
             }
@@ -1103,16 +1153,18 @@ class PanelRenderer extends EventTarget {
           for (const {predictedZ, factor} of contributions) {
             totalPredictedZ += predictedZ * factor;
           }
-          if (totalPredictedZ >= 0) { // XXX
-            console.warn('totalPredictedZ >= 0');
+          totalPredictedZ /= totalFactor;
+          if (!_isValidZDepth(totalPredictedZ)) { // XXX
+            console.warn('totalPredictedZ ended up invalid', totalPredictedZ);
             debugger;
           }
-          totalPredictedZ /= totalFactor;
 
           // set the new point z
-          wrappedPositions[i * 3 + 2] = totalPredictedZ;
-          worldDepthFloatImageData[i] = totalPredictedZ;
-          maskImageData.data[i * 4 + 3] = 1;
+          newLocalPoint.z = totalPredictedZ;
+          newLocalPoint.applyMatrix4(this.camera.projectionMatrixInverse);
+          newLocalPoint.toArray(wrappedPositions, i * 3);
+          projectionDepthFloatImageData[i] = totalPredictedZ;
+          // maskImageData.data[i * 4 + 3] = 1;
           
           // recurse on unseen invalid neighbors
           for (const [ax, ay, i2] of invalidNeighbors) {
@@ -1577,12 +1629,6 @@ export class Panel extends EventTarget {
     // console.log('outmesh start', renderer);
     try {
       const outmeshResult = await renderer.renderOutmesh(this);
-      // const {
-      //   maskImg,
-      //   editedImg,
-      //   pointCloud,
-      //   depthFloatImageData,
-      // } = outmeshResult;
 
       for (const {name, type} of layer2Specs) {
         this.setData('layer2/' + name, outmeshResult[name], type);
