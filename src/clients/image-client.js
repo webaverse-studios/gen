@@ -88,7 +88,7 @@ const editRequestBlob = async req => {
     return blob;
   } else {
     const text = await response.text();
-    console.warn('got error response', text);
+    console.warn('got error response', text, response.headers);
     throw new Error(text);
   }
 };
