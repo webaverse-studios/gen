@@ -993,8 +993,10 @@ class PanelRenderer extends EventTarget {
         targets.push(
           new THREE.WebGLRenderTarget(this.renderer.domElement.width, this.renderer.domElement.height, {
             type: THREE.FloatType,
-            magFilter: THREE.LinearFilter,
-            minFilter: THREE.LinearFilter,
+            // magFilter: THREE.LinearFilter,
+            // minFilter: THREE.LinearFilter,
+            magFilter: THREE.NearestFilter,
+            minFilter: THREE.NearestFilter,
           })
         );
       }

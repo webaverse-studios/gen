@@ -225,13 +225,20 @@ export class JFAOutline {
 
 const reconstructionPass = fullScreenPass_1.fullScreenPass(`
 uniform sampler2D tex;
-// uniform float jumpOffset;
+uniform sampler2D oldDepthTexture;
+uniform sampler2D newDepthTexture;
 
 void main() {
   vec2 uv = gl_FragCoord.xy / iResolution;
   vec4 rgba = texture2D(tex, uv);
-  rgba.rg *= 255. / iResolution.x;
-  gl_FragColor = rgba;
+  vec2 texPosition = rgba.xy;
+  float distance = distance(gl_FragCoord.xy, texPosition);
+  // rgba.rg *= 255. / iResolution.x;
+  if (distance >= 1. && distance < 2.) {
+    gl_FragColor = rgba;
+  } else {
+    gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+  }
   
   /* float min_dist = 99999.0;
   vec4 closest_rgba = vec4(1.0);
@@ -256,7 +263,6 @@ void main() {
 `, {
     tex: { value: null },
     iResolution: { value: null },
-    // jumpOffset: { value: 1 },
     oldDepthTexture: { value: null },
     newDepthTexture: { value: null },
 });
@@ -268,17 +274,25 @@ export function renderDepthReconstruction(
   newDepthFloats,
   iResolution
 ) {
-  const oldDepthTexture = new Float32Array(oldDepthFloats.length * 4);
+  const oldDepthTextureData = new Float32Array(oldDepthFloats.length * 4);
   for (let i = 0; i < oldDepthFloats.length; i++) {
-    oldDepthTexture[i * 4] = oldDepthFloats[i];
+    oldDepthTextureData[i * 4] = oldDepthFloats[i];
   }
-  const newDepthTexture = new Float32Array(newDepthFloats.length * 4);
+  const oldDepthTexture = new three_1.DataTexture(oldDepthTextureData, iResolution.x, iResolution.y, three_1.RGBAFormat, three_1.FloatType);
+  oldDepthTexture.minFilter = three_1.NearestFilter;
+  oldDepthTexture.magFilter = three_1.NearestFilter;
+  oldDepthTexture.needsUpdate = true;
+
+  const newDepthTextureData = new Float32Array(newDepthFloats.length * 4);
   for (let i = 0; i < newDepthFloats.length; i++) {
-    newDepthTexture[i * 4] = newDepthFloats[i];
+    newDepthTextureData[i * 4] = newDepthFloats[i];
   }
+  const newDepthTexture = new three_1.DataTexture(newDepthTextureData, iResolution.x, iResolution.y, three_1.RGBAFormat, three_1.FloatType);
+  newDepthTexture.minFilter = three_1.NearestFilter;
+  newDepthTexture.magFilter = three_1.NearestFilter;
+  newDepthTexture.needsUpdate = true;
 
   renderer.setRenderTarget(writeRenderTarget);
-  console.log('set resolution', iResolution.x, iResolution.y)
   reconstructionPass(renderer, {
     tex: readRenderTarget.texture,
     iResolution,
