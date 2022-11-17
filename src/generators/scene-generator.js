@@ -99,6 +99,18 @@ export const layer2Specs = [
   //   name: 'indexColorsAlphasArray',
   //   type: 'json',
   // },
+  {
+    name: 'oldDepthFloatImageData',
+    type: 'arrayBuffer',
+  },
+  {
+    name: 'newDepthFloatImageData',
+    type: 'arrayBuffer',
+  },
+  {
+    name: 'reconstructedDepthFloats',
+    type: 'arrayBuffer',
+  },
 ];
 
 //
@@ -1053,6 +1065,7 @@ class PanelRenderer extends EventTarget {
 
     // depth reconstruction
     console.time('reconstructZ');
+    let reconstructedDepthFloats;
     {
       const targets = _makeFloatRenderTargetSwapChain();
 
@@ -1067,10 +1080,16 @@ class PanelRenderer extends EventTarget {
 
       // read the render target
       const writeRenderTarget = targets[0];
-      const readFloatImageData = new Float32Array(writeRenderTarget.width * writeRenderTarget.height * 4);
-      this.renderer.readRenderTargetPixels(writeRenderTarget, 0, 0, writeRenderTarget.width, writeRenderTarget.height, readFloatImageData);
+      const reconstructedDepthFloatsImageData = new Float32Array(writeRenderTarget.width * writeRenderTarget.height * 4);
+      this.renderer.readRenderTargetPixels(writeRenderTarget, 0, 0, writeRenderTarget.width, writeRenderTarget.height, reconstructedDepthFloatsImageData);
 
-      globalThis.feedbackFloatImageData = readFloatImageData;
+      // extract to depth-only
+      reconstructedDepthFloats = new Float32Array(reconstructedDepthFloatsImageData.length / 4);
+      for (let i = 0; i < reconstructedDepthFloats.length; i++) {
+        reconstructedDepthFloats[i] = reconstructedDepthFloatsImageData[i*4];
+      }
+
+      // globalThis.reconstructedDepthFloats = reconstructedDepthFloats;
 
       // draw to canvas
       const canvas = document.createElement('canvas');
@@ -1080,11 +1099,11 @@ class PanelRenderer extends EventTarget {
       const context = canvas.getContext('2d');
       const imageData = context.createImageData(canvas.width, canvas.height);
       const data = imageData.data;
-      for (let i = 0; i < readFloatImageData.length; i += 4) {
-        const r = readFloatImageData[i];
-        const g = readFloatImageData[i+1];
-        const b = readFloatImageData[i+2];
-        const a = readFloatImageData[i+3];
+      for (let i = 0; i < reconstructedDepthFloatsImageData.length; i += 4) {
+        const r = reconstructedDepthFloatsImageData[i];
+        const g = reconstructedDepthFloatsImageData[i+1];
+        const b = reconstructedDepthFloatsImageData[i+2];
+        const a = reconstructedDepthFloatsImageData[i+3];
 
         const j = i / 4;
         const x = j % canvas.width;
@@ -1100,6 +1119,7 @@ class PanelRenderer extends EventTarget {
         const localDepthZ = -localViewZ;
 
         // flip y
+        // XXX this should be flipped earlier
         const index = (canvas.height - y - 1) * canvas.width + x;
         data[index*4 + 0] = localDepthZ / 30 * 255;
         data[index*4 + 1] = g;
@@ -1119,6 +1139,9 @@ class PanelRenderer extends EventTarget {
       pointCloud: pointCloudArrayBuffer,
       depthFloatImageData,
       // indexColorsAlphasArray,
+      oldDepthFloatImageData,
+      newDepthFloatImageData,
+      reconstructedDepthFloats,
     };
   }
   createOutmeshLayer(layerEntries) {
@@ -1135,14 +1158,9 @@ class PanelRenderer extends EventTarget {
     const pointCloud = _getLayerEntry('pointCloud');
     const depthFloatImageData = _getLayerEntry('depthFloatImageData');
     // const indexColorsAlphasArray = _getLayerEntry('indexColorsAlphasArray');
-    /* console.log('got data', {
-      maskImg,
-      editedImg,
-      pointCloudHeaders,
-      pointCloud,
-      depthFloatImageData,
-      // indexColorsAlphasArray,
-    }); */
+    const oldDepthFloatImageData = _getLayerEntry('oldDepthFloatImageData');
+    const newDepthFloatImageData = _getLayerEntry('newDepthFloatImageData');
+    const reconstructedDepthFloats = _getLayerEntry('reconstructedDepthFloats');
 
     const layerScene = new THREE.Scene();
     layerScene.autoUpdate = false;
@@ -1180,6 +1198,53 @@ class PanelRenderer extends EventTarget {
       backgroundMesh.matrixWorld.copy(this.camera.matrixWorld);
       backgroundMesh.frustumCulled = false;
 
+      console.time('applyReconstruction');
+      {
+        // render an instanced cubes mesh to show the depth
+        // const depthCubesGeometry = new THREE.BoxBufferGeometry(1, 1, 1);
+        const depthCubesGeometry = new THREE.BoxBufferGeometry(0.01, 0.01, 0.01);
+        const depthCubesMaterial = new THREE.MeshPhongMaterial({
+          color: 0x00FFFF,
+        });
+        const depthCubesMesh = new THREE.InstancedMesh(depthCubesGeometry, depthCubesMaterial, depthFloatImageData.length);
+        depthCubesMesh.name = 'depthCubesMesh';
+        depthCubesMesh.frustumCulled = false;
+        layerScene.add(depthCubesMesh);
+
+        // set the matrices by projecting the depth from the perspective camera
+        const depthRenderSkipRatio = 8;
+        depthCubesMesh.count = 0;
+        for (let i = 0; i < depthFloatImageData.length; i += depthRenderSkipRatio) {
+          const x = (i % this.renderer.domElement.width) / this.renderer.domElement.width;
+          const y = Math.floor(i / this.renderer.domElement.width) / this.renderer.domElement.height;
+
+          // this gets you the world position of the point:
+          // const viewZ = depthFloatImageData[i];
+          // const target = setCameraViewPositionFromViewZ(px, py, viewZ, this.camera.projectionMatrix, localVector);
+          // target.applyMatrix4(this.camera.matrixWorld);
+
+          // this is how we got the reconstruction:
+          // const viewZ = depthFloatImageData[i]; // mostly negative
+          // const worldPoint = setCameraViewPositionFromViewZ(px, py, viewZ, this.camera.projectionMatrix, localVector);
+          // const projectionPoint = worldPoint.applyMatrix4(this.camera.projectionMatrix);
+          // reconstructedDepthFloats[i] = projectionPoint.z;
+
+          const viewZ = 0.5; // mostly negative
+          const worldPoint = setCameraViewPositionFromViewZ(x, y, viewZ, this.camera.projectionMatrix, localVector);
+          const projectionPoint = worldPoint.applyMatrix4(this.camera.projectionMatrix);
+          projectionPoint.z = reconstructedDepthFloats[i];
+          projectionPoint.applyMatrix4(this.camera.projectionMatrixInverse);
+          const target = projectionPoint.applyMatrix4(this.camera.matrixWorld);
+
+          localMatrix.makeTranslation(target.x, target.y, target.z);
+          depthCubesMesh.setMatrixAt(i / depthRenderSkipRatio, localMatrix);
+          depthCubesMesh.count++;
+        }
+        depthCubesMesh.instanceMatrix.needsUpdate = true;
+      }
+      console.timeEnd('applyReconstruction');
+
+      console.time('mapDepth');
       const projectionDepthFloatImageData = new Float32Array(depthFloatImageData.length);
       for (let y = 0; y < panelSize; y++) {
         for (let x = 0; x < panelSize; x++) {
@@ -1188,14 +1253,14 @@ class PanelRenderer extends EventTarget {
           const px = x / panelSize;
           const py = y / panelSize;
 
-          const viewZ = depthFloatImageData[i]; // mostly negative
+          const viewZ = depthFloatImageData[i];
           const worldPoint = setCameraViewPositionFromViewZ(px, py, viewZ, this.camera.projectionMatrix, localVector);
           const projectionPoint = worldPoint.applyMatrix4(this.camera.projectionMatrix);
 
           projectionDepthFloatImageData[i] = projectionPoint.z;
         }
       }
-
+      console.timeEnd('mapDepth');
       console.time('cutDepth');
       // const wrappedPositions = geometry.attributes.position.array.slice();
       _cutDepth(geometry, projectionDepthFloatImageData);
@@ -1383,7 +1448,7 @@ class PanelRenderer extends EventTarget {
       layerScene.add(backgroundMesh2);
     })();
 
-    // display depth cubes
+    /* // display depth cubes
     console.time('depthCubes');
     {
       // render an instanced cubes mesh to show the depth
@@ -1413,7 +1478,7 @@ class PanelRenderer extends EventTarget {
       }
       depthCubesMesh.instanceMatrix.needsUpdate = true;
     }
-    console.timeEnd('depthCubes');
+    console.timeEnd('depthCubes'); */
 
     return layerScene;
   }
