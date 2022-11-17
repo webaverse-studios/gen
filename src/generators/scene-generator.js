@@ -4,6 +4,7 @@ import PolynomialRegression from 'ml-regression-polynomial';
 import regression from 'regression';
 import Heap from 'heap-js';
 import alea from '../utils/alea.js';
+import {JFAOutline, renderDepthReconstruction} from '../utils/jfaOutline.js';
 
 // const x = [50, 50, 50, 70, 70, 70, 80, 80, 80, 90, 90, 90, 100, 100, 100];
 // const y = [3.3, 2.8, 2.9, 2.3, 2.6, 2.1, 2.5, 2.9, 2.4, 3.0, 3.1, 2.8, 3.3, 3.5, 3.0];
@@ -347,7 +348,7 @@ const _cutMask = (geometry, maskImageData) => {
   geometry.setIndex(new THREE.BufferAttribute(newIndices.subarray(0, numIndices), 1));
 };
 const _isValidZDepth = z => z >= 0 && z <= 1;
-const _cutDepth = (geometry, projectionDepthFloatImageData) => {
+const _cutDepth = (geometry, depthFloatImageData) => {
   // copy over only the triangles that are not completely far
   const newIndices = new geometry.index.array.constructor(geometry.index.array.length);
   let numIndices = 0;
@@ -355,9 +356,9 @@ const _cutDepth = (geometry, projectionDepthFloatImageData) => {
     const a = geometry.index.array[i + 0];
     const b = geometry.index.array[i + 1];
     const c = geometry.index.array[i + 2];
-    const aValid = _isValidZDepth(projectionDepthFloatImageData[a]);
-    const bValid = _isValidZDepth(projectionDepthFloatImageData[b]);
-    const cValid = _isValidZDepth(projectionDepthFloatImageData[c]);
+    const aValid = _isValidZDepth(depthFloatImageData[a]);
+    const bValid = _isValidZDepth(depthFloatImageData[b]);
+    const cValid = _isValidZDepth(depthFloatImageData[c]);
     // if not all are valid, then keep the triangle
     if (!(aValid && bValid && cValid)) {
       newIndices[numIndices + 0] = a;
@@ -940,6 +941,160 @@ class PanelRenderer extends EventTarget {
     }
     console.timeEnd('renderDepth');
 
+    console.time('formatDepths');
+    let oldDepthFloatImageData;
+    let newDepthFloatImageData;
+    {
+      oldDepthFloatImageData = new Float32Array(depthFloatImageData.length);
+      for (let y = 0; y < panelSize; y++) {
+        for (let x = 0; x < panelSize; x++) {
+          const i = y * panelSize + x;
+
+          const px = x / panelSize;
+          const py = y / panelSize;
+
+          const viewZ = depthFloatImageData[i]; // mostly negative
+          const worldPoint = setCameraViewPositionFromViewZ(px, py, viewZ, this.camera.projectionMatrix, localVector);
+          const projectionPoint = worldPoint.applyMatrix4(this.camera.projectionMatrix);
+
+          oldDepthFloatImageData[i] = projectionPoint.z;
+        }
+      }
+      
+      const geometryPositions = new Float32Array(panelSize * panelSize * 3);
+      pointCloudArrayBufferToPositionAttributeArray(pointCloudArrayBuffer, geometryPositions, 1 / panelSize);
+
+      newDepthFloatImageData = new Float32Array(geometryPositions.length / 3);
+      for (let i = 0; i < newDepthFloatImageData.length; i++) {
+        const worldPoint = localVector.fromArray(geometryPositions, i * 3);
+        const projectionPoint = worldPoint.applyMatrix4(this.camera.projectionMatrix);
+
+        newDepthFloatImageData[i] = projectionPoint.z;
+      }
+    }
+    console.timeEnd('formatDepths');
+
+    // render outline
+    console.time('outline');
+    const iResolution = new THREE.Vector2(this.renderer.domElement.width, this.renderer.domElement.height);
+    let distanceRenderTarget;
+    let writeRenderTarget;
+    {
+      // By default we rely on the three js layer system to mark an object for outlining.
+      const SELECTED_LAYER = 0;
+
+      const tempScene = new THREE.Scene();
+      tempScene.autoUpdate = false;
+      tempScene.add(this.sceneMesh); // note: stealing the scene mesh for a moment
+
+      // We need two render targets to ping-pong in between.  
+      const targets = [];
+      for (let i = 0; i < 2; i++) {
+        targets.push(
+          new THREE.WebGLRenderTarget(this.renderer.domElement.width, this.renderer.domElement.height, {
+            type: THREE.FloatType,
+            magFilter: THREE.LinearFilter,
+            minFilter: THREE.LinearFilter,
+          })
+        );
+      }
+
+      const jfaOutline = new JFAOutline(targets, iResolution);
+      // jfaOutline.outline(this.renderer, tempScene, this.camera, targets, iResolution, SELECTED_LAYER);
+      jfaOutline.renderSelected(this.renderer, tempScene, this.camera, targets, SELECTED_LAYER);
+      const outlineUniforms = undefined;
+      const distanceIndex = jfaOutline.renderDistanceTex(this.renderer, targets, iResolution, outlineUniforms);
+      distanceRenderTarget = targets[distanceIndex];
+      writeRenderTarget = targets[distanceIndex === 0 ? 1 : 0];
+      // get the image data back out of the render target, as a Float32Array
+      const distanceFloatImageData = new Float32Array(distanceRenderTarget.width * distanceRenderTarget.height * 4);
+      this.renderer.readRenderTargetPixels(distanceRenderTarget, 0, 0, distanceRenderTarget.width, distanceRenderTarget.height, distanceFloatImageData);
+      // globalThis.distanceFloatImageData = distanceFloatImageData;
+
+      // output to canvas
+      const canvas = document.createElement('canvas');
+      canvas.classList.add('outlineCanvas');
+      canvas.width = distanceRenderTarget.width;
+      canvas.height = distanceRenderTarget.height;
+      const context = canvas.getContext('2d');
+      const imageData = context.createImageData(canvas.width, canvas.height);
+      const data = imageData.data;
+      // globalThis.distanceU8ImageData = data;
+      for (let i = 0; i < distanceFloatImageData.length; i += 4) {
+        const r = distanceFloatImageData[i];
+        const g = distanceFloatImageData[i+1];
+        const b = distanceFloatImageData[i+2];
+        const a = distanceFloatImageData[i+3];
+
+        const j = i / 4;
+        const x = j % canvas.width;
+        const y = Math.floor(j / canvas.width);
+
+        const expectedPoint = new THREE.Vector2(x, y);
+        const realPoint = new THREE.Vector2(r, g);
+        const d = realPoint.distanceTo(expectedPoint);
+        const f = Math.max(1 - d / 100, 0);
+
+        // flip y
+        const index = (canvas.height - y - 1) * canvas.width + x;
+        data[index*4 + 0] = r / canvas.width * 255 * f;
+        data[index*4 + 1] = g / canvas.width * 255 * f;
+        data[index*4 + 2] = b / canvas.width * 255 * f;
+        data[index*4 + 3] = 255;
+      }
+      context.putImageData(imageData, 0, 0);
+      document.body.appendChild(canvas);
+
+      // done with this, put it back
+      this.scene.add(this.sceneMesh);
+    }
+    console.timeEnd('outline');
+
+    console.time('reconstructZ');
+    {
+      renderDepthReconstruction(
+        this.renderer,
+        distanceRenderTarget,
+        writeRenderTarget,
+        oldDepthFloatImageData,
+        newDepthFloatImageData,
+        iResolution
+      );
+
+      // read the render target
+      const readFloatImageData = new Float32Array(writeRenderTarget.width * writeRenderTarget.height * 4);
+      this.renderer.readRenderTargetPixels(writeRenderTarget, 0, 0, writeRenderTarget.width, writeRenderTarget.height, readFloatImageData);
+
+      // draw to canvas
+      const canvas = document.createElement('canvas');
+      canvas.classList.add('reconstructionCanvas');
+      canvas.width = writeRenderTarget.width;
+      canvas.height = writeRenderTarget.height;
+      const context = canvas.getContext('2d');
+      const imageData = context.createImageData(canvas.width, canvas.height);
+      const data = imageData.data;
+      for (let i = 0; i < readFloatImageData.length; i += 4) {
+        const r = readFloatImageData[i];
+        const g = readFloatImageData[i+1];
+        const b = readFloatImageData[i+2];
+        const a = readFloatImageData[i+3];
+
+        const j = i / 4;
+        const x = j % canvas.width;
+        const y = Math.floor(j / canvas.width);
+
+        // flip y
+        const index = (canvas.height - y - 1) * canvas.width + x;
+        data[index*4 + 0] = r;
+        data[index*4 + 1] = g;
+        data[index*4 + 2] = b;
+        data[index*4 + 3] = 255;
+      }
+      context.putImageData(imageData, 0, 0);
+      document.body.appendChild(canvas);
+    }
+    console.timeEnd('reconstructZ');
+
     // return result
     return {
       maskImg: maskImgArrayBuffer,
@@ -964,14 +1119,14 @@ class PanelRenderer extends EventTarget {
     const pointCloud = _getLayerEntry('pointCloud');
     const depthFloatImageData = _getLayerEntry('depthFloatImageData');
     // const indexColorsAlphasArray = _getLayerEntry('indexColorsAlphasArray');
-    console.log('got data', {
+    /* console.log('got data', {
       maskImg,
       editedImg,
       pointCloudHeaders,
       pointCloud,
       depthFloatImageData,
       // indexColorsAlphasArray,
-    });
+    }); */
 
     const layerScene = new THREE.Scene();
     layerScene.autoUpdate = false;
@@ -1009,8 +1164,6 @@ class PanelRenderer extends EventTarget {
       backgroundMesh.matrixWorld.copy(this.camera.matrixWorld);
       backgroundMesh.frustumCulled = false;
 
-      console.time('cutDepth');
-      const wrappedPositions = geometry.attributes.position.array.slice();
       const projectionDepthFloatImageData = new Float32Array(depthFloatImageData.length);
       for (let y = 0; y < panelSize; y++) {
         for (let x = 0; x < panelSize; x++) {
@@ -1026,6 +1179,9 @@ class PanelRenderer extends EventTarget {
           projectionDepthFloatImageData[i] = projectionPoint.z;
         }
       }
+
+      console.time('cutDepth');
+      // const wrappedPositions = geometry.attributes.position.array.slice();
       _cutDepth(geometry, projectionDepthFloatImageData);
       console.timeEnd('cutDepth');
 
@@ -1046,7 +1202,7 @@ class PanelRenderer extends EventTarget {
       backgroundMesh2.frustumCulled = false;
       console.timeEnd('backgroundMesh');
 
-      console.time('extendZ');
+      /* console.time('extendZ');
       {
         // sort by numValidNeighbors, low to high
         const entryEquals = (a, b) => a.i === b.i;
@@ -1094,8 +1250,6 @@ class PanelRenderer extends EventTarget {
         }
         for (const entry of queue) {
           // select a random index from the queue
-          // const [x, y, i] = queue.splice(Math.floor(rng() * queue.length), 1)[0];
-          // const [x, y, i] = queue.shift();
           const {x, y, i, numValidNeighbors} = entry;
           
           const validNeighbors = [];
@@ -1196,7 +1350,7 @@ class PanelRenderer extends EventTarget {
         // replace positions with wrapped positions
         geometry.setAttribute('position', new THREE.BufferAttribute(wrappedPositions, 3));
       }
-      console.timeEnd('extendZ');
+      console.timeEnd('extendZ'); */
 
       /* _clipGeometryToMask(
         geometry,
@@ -1204,7 +1358,7 @@ class PanelRenderer extends EventTarget {
         heightSegments,
         oldGeometry,
         maskImageData,
-        depthFloatImageData,
+        projectionDepthFloatImageData,
         indexColorsAlphasArray
       ); */
       geometry.computeVertexNormals();
