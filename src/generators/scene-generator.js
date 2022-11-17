@@ -1084,9 +1084,18 @@ class PanelRenderer extends EventTarget {
       this.renderer.readRenderTargetPixels(writeRenderTarget, 0, 0, writeRenderTarget.width, writeRenderTarget.height, reconstructedDepthFloatsImageData);
 
       // extract to depth-only
+      // flip y
       reconstructedDepthFloats = new Float32Array(reconstructedDepthFloatsImageData.length / 4);
       for (let i = 0; i < reconstructedDepthFloats.length; i++) {
-        reconstructedDepthFloats[i] = reconstructedDepthFloatsImageData[i*4];
+        const j = i * 4;
+
+        const x = i % writeRenderTarget.width;
+        let y = Math.floor(i / writeRenderTarget.width);
+        y = writeRenderTarget.height - y - 1;
+        
+        const index = y * writeRenderTarget.width + x;
+
+        reconstructedDepthFloats[index] = reconstructedDepthFloatsImageData[j];
       }
 
       // globalThis.reconstructedDepthFloats = reconstructedDepthFloats;
@@ -1118,9 +1127,7 @@ class PanelRenderer extends EventTarget {
         const localViewZ = localViewPoint.z;
         const localDepthZ = -localViewZ;
 
-        // flip y
-        // XXX this should be flipped earlier
-        const index = (canvas.height - y - 1) * canvas.width + x;
+        const index = y * canvas.width + x;
         data[index*4 + 0] = localDepthZ / 30 * 255;
         data[index*4 + 1] = g;
         data[index*4 + 2] = b;
