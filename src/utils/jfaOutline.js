@@ -1,9 +1,9 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.JFAOutline = void 0;
-const three_1 = require("three");
-const fullScreenPass_1 = require("./fullScreenPass");
-class JFAOutline {
+import * as three_1 from 'three';
+import * as fullScreenPass_1 from './fullscreenPass.js';
+
+const localColor = new three_1.Color();
+
+export class JFAOutline {
     /**
      * Construct an instance of JFAOutline
      * @param targets The targets to ping pong between.
@@ -162,15 +162,15 @@ class JFAOutline {
      * @param selectedLayer The layer for selected objects.
      */
     renderSelected(renderer, scene, camera, targets, selectedLayer) {
-        const oldClearColor = renderer.getClearColor().getHex();
+        // const oldClearColor = renderer.getClearColor(localColor).getHex();
         const oldOverrideMaterial = scene.overrideMaterial;
-        renderer.setClearColor(0x0);
+        // renderer.setClearColor(0x0);
         scene.overrideMaterial = this.selectedMaterial;
-        camera.layers.set(selectedLayer);
+        // camera.layers.set(selectedLayer);
         renderer.setRenderTarget(targets[0]);
         renderer.render(scene, camera);
-        camera.layers.enableAll();
-        renderer.setClearColor(oldClearColor);
+        // camera.layers.enableAll();
+        // renderer.setClearColor(oldClearColor);
         scene.overrideMaterial = oldOverrideMaterial;
     }
     /**
@@ -222,4 +222,68 @@ class JFAOutline {
         renderer.autoClear = oldAutoClear;
     }
 }
-exports.JFAOutline = JFAOutline;
+
+const reconstructionPass = fullScreenPass_1.fullScreenPass(`
+uniform sampler2D tex;
+// uniform float jumpOffset;
+
+void main() {
+  vec2 uv = gl_FragCoord.xy / iResolution;
+  vec4 rgba = texture2D(tex, uv);
+  rgba.rg *= 255. / iResolution.x;
+  gl_FragColor = rgba;
+  
+  /* float min_dist = 99999.0;
+  vec4 closest_rgba = vec4(1.0);
+  vec2 pixelCoord = gl_FragCoord.xy; //vUv * iResolution;
+  for (int y = -1; y <= 1; y++) {
+    for (int x = -1; x <= 1; x++) {
+      vec2 sampleCoord = pixelCoord + vec2(x,y) * jumpOffset;
+      //sampleCoord += vec2(0.5); // get center of pixel
+      vec4 rgba = texture2D(tex, clamp(sampleCoord / iResolution, 0.0, 1.0));
+      if (rgba.a < 1.0) {
+        vec2 coord = rgba.xy;
+        float dist = distance(pixelCoord, coord);
+        if (dist < min_dist) {
+          min_dist = dist;
+          closest_rgba = rgba;
+        }  
+      }  
+    }
+  }
+  gl_FragColor = closest_rgba; */
+}
+`, {
+    tex: { value: null },
+    iResolution: { value: null },
+    // jumpOffset: { value: 1 },
+    oldDepthTexture: { value: null },
+    newDepthTexture: { value: null },
+});
+export function renderDepthReconstruction(
+  renderer,
+  readRenderTarget,
+  writeRenderTarget,
+  oldDepthFloats,
+  newDepthFloats,
+  iResolution
+) {
+  const oldDepthTexture = new Float32Array(oldDepthFloats.length * 4);
+  for (let i = 0; i < oldDepthFloats.length; i++) {
+    oldDepthTexture[i * 4] = oldDepthFloats[i];
+  }
+  const newDepthTexture = new Float32Array(newDepthFloats.length * 4);
+  for (let i = 0; i < newDepthFloats.length; i++) {
+    newDepthTexture[i * 4] = newDepthFloats[i];
+  }
+
+  renderer.setRenderTarget(writeRenderTarget);
+  console.log('set resolution', iResolution.x, iResolution.y)
+  reconstructionPass(renderer, {
+    tex: readRenderTarget.texture,
+    iResolution,
+    oldDepthTexture,
+    newDepthTexture,
+  });
+  renderer.setRenderTarget(null);
+}

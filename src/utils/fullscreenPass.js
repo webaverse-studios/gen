@@ -1,7 +1,5 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.fullScreenPass = void 0;
-const three_1 = require("three");
+import * as three_1 from 'three';
+
 const fullScreenTri = new three_1.BufferGeometry();
 // prettier-ignore
 const vertices = new Float32Array([
@@ -18,7 +16,7 @@ const fullScreenCam = new three_1.OrthographicCamera(-1, 1, 1, -1, -1, 1);
  * @param materialProps Extra material props to set for the pass.
  * @returns A closure you call with the THREE.Renderer and new uniform values.
  */
-function fullScreenPass(fragmentShader, uniforms, materialProps) {
+export function fullScreenPass(fragmentShader, uniforms, materialProps) {
     const fullScreenMat = new three_1.ShaderMaterial(Object.assign({ vertexShader: `
   void main() {
     gl_Position = vec4( position, 1.0 );
@@ -37,4 +35,3 @@ function fullScreenPass(fragmentShader, uniforms, materialProps) {
         renderer.render(fullScreenScene, fullScreenCam);
     };
 }
-exports.fullScreenPass = fullScreenPass;
