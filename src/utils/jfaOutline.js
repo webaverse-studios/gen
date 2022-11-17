@@ -234,6 +234,9 @@ void main() {
   vec2 pixelUv = gl_FragCoord.xy;
   vec2 uv = pixelUv / iResolution;
 
+  // vec4 rgba = texture2D(oldNewDepthTexture, uv);
+  // gl_FragColor = rgba;
+
   vec4 distanceRgba = texture2D(distanceTex, uv);
   float d = distance(pixelUv, distanceRgba.rg);
   
@@ -309,12 +312,13 @@ export function renderDepthReconstruction(
 ) {
   const oldNewDepthTextureData = new Float32Array(oldDepthFloats.length * 4);
   for (let i = 0; i < oldDepthFloats.length; i++) {
-    oldNewDepthTextureData[i * 4] = oldDepthFloats[i];
+    oldNewDepthTextureData[i * 4] = oldDepthFloats[i] < 0 ? 0 : oldDepthFloats[i];
     oldNewDepthTextureData[i * 4 + 1] = newDepthFloats[i];
   }
   const oldNewDepthTexture = new three_1.DataTexture(oldNewDepthTextureData, iResolution.x, iResolution.y, three_1.RGBAFormat, three_1.FloatType);
   oldNewDepthTexture.minFilter = three_1.NearestFilter;
   oldNewDepthTexture.magFilter = three_1.NearestFilter;
+  oldNewDepthTexture.flipY = true;
   oldNewDepthTexture.needsUpdate = true;
 
   globalThis.oldNewDepthTextureData = oldNewDepthTextureData;
@@ -347,5 +351,7 @@ export function renderDepthReconstruction(
     // swap targets
     [targets[0], targets[1]] = [targets[1], targets[0]];
   };
-  _render(0, 1);
+  for (let i = 0; i < iResolution.x; i++) {
+    _render(i, i + 1);
+  }
 }

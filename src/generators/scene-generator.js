@@ -1034,7 +1034,7 @@ class PanelRenderer extends EventTarget {
         const expectedPoint = new THREE.Vector2(x, y);
         const realPoint = new THREE.Vector2(r, g);
         const d = realPoint.distanceTo(expectedPoint);
-        const f = Math.max(1 - d / 100, 0);
+        const f = Math.max(1 - d / 512, 0);
 
         // flip y
         const index = (canvas.height - y - 1) * canvas.width + x;
@@ -1090,9 +1090,18 @@ class PanelRenderer extends EventTarget {
         const x = j % canvas.width;
         const y = Math.floor(j / canvas.width);
 
+        // const viewZ = depthFloatImageData[i]; // mostly negative
+        // const worldPoint = setCameraViewPositionFromViewZ(x / canvas.width, y / canvas.height, viewZ, this.camera.projectionMatrix, localVector);
+        
+        const viewZ = r;
+        const localViewPoint = localVector.set(x / canvas.width, y / canvas.height, viewZ)
+          .applyMatrix4(this.camera.projectionMatrixInverse);
+        const localViewZ = localViewPoint.z;
+        const localDepthZ = -localViewZ;
+
         // flip y
         const index = (canvas.height - y - 1) * canvas.width + x;
-        data[index*4 + 0] = r * 255;
+        data[index*4 + 0] = localDepthZ / 30 * 255;
         data[index*4 + 1] = g;
         data[index*4 + 2] = b;
         data[index*4 + 3] = 255;
