@@ -974,11 +974,22 @@ class PanelRenderer extends EventTarget {
     }
     console.timeEnd('formatDepths');
 
+    const _makeFloatRenderTargetSwapChain = () => {
+      const targets = Array(2);
+      for (let i = 0; i < 2; i++) {
+        targets[i] = new THREE.WebGLRenderTarget(this.renderer.domElement.width, this.renderer.domElement.height, {
+          type: THREE.FloatType,
+          magFilter: THREE.NearestFilter,
+          minFilter: THREE.NearestFilter,
+        });
+      }
+      return targets;
+    };
+
     // render outline
     console.time('outline');
     const iResolution = new THREE.Vector2(this.renderer.domElement.width, this.renderer.domElement.height);
     let distanceRenderTarget;
-    let writeRenderTarget;
     {
       // By default we rely on the three js layer system to mark an object for outlining.
       const SELECTED_LAYER = 0;
@@ -988,18 +999,7 @@ class PanelRenderer extends EventTarget {
       tempScene.add(this.sceneMesh); // note: stealing the scene mesh for a moment
 
       // We need two render targets to ping-pong in between.  
-      const targets = [];
-      for (let i = 0; i < 2; i++) {
-        targets.push(
-          new THREE.WebGLRenderTarget(this.renderer.domElement.width, this.renderer.domElement.height, {
-            type: THREE.FloatType,
-            // magFilter: THREE.LinearFilter,
-            // minFilter: THREE.LinearFilter,
-            magFilter: THREE.NearestFilter,
-            minFilter: THREE.NearestFilter,
-          })
-        );
-      }
+      const targets = _makeFloatRenderTargetSwapChain();
 
       const jfaOutline = new JFAOutline(targets, iResolution);
       // jfaOutline.outline(this.renderer, tempScene, this.camera, targets, iResolution, SELECTED_LAYER);
@@ -1007,7 +1007,6 @@ class PanelRenderer extends EventTarget {
       const outlineUniforms = undefined;
       const distanceIndex = jfaOutline.renderDistanceTex(this.renderer, targets, iResolution, outlineUniforms);
       distanceRenderTarget = targets[distanceIndex];
-      writeRenderTarget = targets[distanceIndex === 0 ? 1 : 0];
       // get the image data back out of the render target, as a Float32Array
       const distanceFloatImageData = new Float32Array(distanceRenderTarget.width * distanceRenderTarget.height * 4);
       this.renderer.readRenderTargetPixels(distanceRenderTarget, 0, 0, distanceRenderTarget.width, distanceRenderTarget.height, distanceFloatImageData);
@@ -1052,20 +1051,26 @@ class PanelRenderer extends EventTarget {
     }
     console.timeEnd('outline');
 
+    // depth reconstruction
     console.time('reconstructZ');
     {
+      const targets = _makeFloatRenderTargetSwapChain();
+
       renderDepthReconstruction(
         this.renderer,
         distanceRenderTarget,
-        writeRenderTarget,
+        targets,
         oldDepthFloatImageData,
         newDepthFloatImageData,
         iResolution
       );
 
       // read the render target
+      const writeRenderTarget = targets[0];
       const readFloatImageData = new Float32Array(writeRenderTarget.width * writeRenderTarget.height * 4);
       this.renderer.readRenderTargetPixels(writeRenderTarget, 0, 0, writeRenderTarget.width, writeRenderTarget.height, readFloatImageData);
+
+      globalThis.feedbackFloatImageData = readFloatImageData;
 
       // draw to canvas
       const canvas = document.createElement('canvas');
@@ -1087,7 +1092,7 @@ class PanelRenderer extends EventTarget {
 
         // flip y
         const index = (canvas.height - y - 1) * canvas.width + x;
-        data[index*4 + 0] = r;
+        data[index*4 + 0] = r * 255;
         data[index*4 + 1] = g;
         data[index*4 + 2] = b;
         data[index*4 + 3] = 255;

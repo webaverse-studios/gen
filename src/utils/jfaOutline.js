@@ -224,80 +224,128 @@ export class JFAOutline {
 }
 
 const reconstructionPass = fullScreenPass_1.fullScreenPass(`
-uniform sampler2D tex;
-uniform sampler2D oldDepthTexture;
-uniform sampler2D newDepthTexture;
+uniform sampler2D distanceTex;
+uniform sampler2D oldNewDepthTexture;
+uniform sampler2D feedbackDepthTexture;
+uniform float minDistance;
+uniform float maxDistance;
 
 void main() {
-  vec2 uv = gl_FragCoord.xy / iResolution;
-  vec4 rgba = texture2D(tex, uv);
-  vec2 texPosition = rgba.xy;
-  float distance = distance(gl_FragCoord.xy, texPosition);
-  // rgba.rg *= 255. / iResolution.x;
-  if (distance >= 1. && distance < 2.) {
-    gl_FragColor = rgba;
-  } else {
-    gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
-  }
+  vec2 pixelUv = gl_FragCoord.xy;
+  vec2 uv = pixelUv / iResolution;
+
+  vec4 distanceRgba = texture2D(distanceTex, uv);
+  float d = distance(pixelUv, distanceRgba.rg);
   
-  /* float min_dist = 99999.0;
-  vec4 closest_rgba = vec4(1.0);
-  vec2 pixelCoord = gl_FragCoord.xy; //vUv * iResolution;
-  for (int y = -1; y <= 1; y++) {
-    for (int x = -1; x <= 1; x++) {
-      vec2 sampleCoord = pixelCoord + vec2(x,y) * jumpOffset;
-      //sampleCoord += vec2(0.5); // get center of pixel
-      vec4 rgba = texture2D(tex, clamp(sampleCoord / iResolution, 0.0, 1.0));
-      if (rgba.a < 1.0) {
-        vec2 coord = rgba.xy;
-        float dist = distance(pixelCoord, coord);
-        if (dist < min_dist) {
-          min_dist = dist;
-          closest_rgba = rgba;
-        }  
-      }  
+  vec4 feedbackRgba = texture2D(feedbackDepthTexture, uv);
+
+  if (d >= minDistance && d < maxDistance) { // if we are writing this pixel
+    vec4 localRgba = texture2D(oldNewDepthTexture, uv);
+    float localOldDepth = localRgba.r;
+    float localNewDepth = localRgba.g;
+
+    if (d < 0.000001) { // if this is an initial pixel, just write the old depth
+      feedbackRgba.r = localOldDepth;
+    } else { // else if this is a feedback pixel, derive new depth
+      // sample the 3x3 area around ourselves
+      float sumZ = 0.;
+      float totalZ = 0.;
+      for (int dy = -1; dy <= 1; dy++) {
+        for (int dx = -1; dx <= 1; dx++) {
+          if (dx == 0 && dy == 0) {
+            continue;
+          }
+
+          vec2 pixelUv2 = vec2(pixelUv.x + float(dx), pixelUv.y + float(dy));
+          if (pixelUv2.x >= 0. && pixelUv2.x < iResolution.x && pixelUv2.y >= 0. && pixelUv2.y < iResolution.y) {
+            vec2 uv2 = pixelUv2 / iResolution;
+            
+            vec4 neighborFeedbackRgba = texture2D(feedbackDepthTexture, uv2);
+            float neighborOldDepth = neighborFeedbackRgba.r;
+
+            vec4 neighborDistanceRgba = texture2D(distanceTex, uv2);
+            float neighborDistance = distance(pixelUv2, neighborDistanceRgba.rg);
+            if (neighborDistance < minDistance) { // if this neighbor is valid; ie was filled in a previous distance pass
+              vec4 neighborOldNewDepthRgba = texture2D(oldNewDepthTexture, uv2);
+              // float neighborOldDepth = neighborOldNewDepthRgba.r;
+              float neighborNewDepth = neighborOldNewDepthRgba.g;
+              float deltaZ = localNewDepth - neighborNewDepth;
+
+              float predictedZ = neighborOldDepth + deltaZ;
+              
+              float deltaDistance = sqrt(float(dx * dx + dy * dy));
+              float factor = 1. / deltaDistance;
+              
+              sumZ += predictedZ * factor;
+              totalZ += factor;
+            }
+          }
+        }
+      }
+      if (totalZ != 0.) {
+        sumZ /= totalZ;
+      }
+  
+      feedbackRgba.r = sumZ;
     }
   }
-  gl_FragColor = closest_rgba; */
+  gl_FragColor = feedbackRgba;
 }
 `, {
-    tex: { value: null },
+    distanceTex: { value: null },
     iResolution: { value: null },
-    oldDepthTexture: { value: null },
-    newDepthTexture: { value: null },
+    oldNewDepthTexture: { value: null },
+    minDistance: { value: 1.0 },
+    maxDistance: { value: 2.0 },
+    feedbackDepthTexture: { value: null },
 });
 export function renderDepthReconstruction(
   renderer,
-  readRenderTarget,
-  writeRenderTarget,
+  distanceTarget,
+  targets,
   oldDepthFloats,
   newDepthFloats,
   iResolution
 ) {
-  const oldDepthTextureData = new Float32Array(oldDepthFloats.length * 4);
+  const oldNewDepthTextureData = new Float32Array(oldDepthFloats.length * 4);
   for (let i = 0; i < oldDepthFloats.length; i++) {
-    oldDepthTextureData[i * 4] = oldDepthFloats[i];
+    oldNewDepthTextureData[i * 4] = oldDepthFloats[i];
+    oldNewDepthTextureData[i * 4 + 1] = newDepthFloats[i];
   }
-  const oldDepthTexture = new three_1.DataTexture(oldDepthTextureData, iResolution.x, iResolution.y, three_1.RGBAFormat, three_1.FloatType);
-  oldDepthTexture.minFilter = three_1.NearestFilter;
-  oldDepthTexture.magFilter = three_1.NearestFilter;
-  oldDepthTexture.needsUpdate = true;
+  const oldNewDepthTexture = new three_1.DataTexture(oldNewDepthTextureData, iResolution.x, iResolution.y, three_1.RGBAFormat, three_1.FloatType);
+  oldNewDepthTexture.minFilter = three_1.NearestFilter;
+  oldNewDepthTexture.magFilter = three_1.NearestFilter;
+  oldNewDepthTexture.needsUpdate = true;
 
-  const newDepthTextureData = new Float32Array(newDepthFloats.length * 4);
-  for (let i = 0; i < newDepthFloats.length; i++) {
-    newDepthTextureData[i * 4] = newDepthFloats[i];
-  }
-  const newDepthTexture = new three_1.DataTexture(newDepthTextureData, iResolution.x, iResolution.y, three_1.RGBAFormat, three_1.FloatType);
-  newDepthTexture.minFilter = three_1.NearestFilter;
-  newDepthTexture.magFilter = three_1.NearestFilter;
-  newDepthTexture.needsUpdate = true;
+  globalThis.oldNewDepthTextureData = oldNewDepthTextureData;
+  globalThis.oldDepthFloats = oldDepthFloats;
+  globalThis.newDepthFloats = newDepthFloats;
 
-  renderer.setRenderTarget(writeRenderTarget);
-  reconstructionPass(renderer, {
-    tex: readRenderTarget.texture,
-    iResolution,
-    oldDepthTexture,
-    newDepthTexture,
-  });
-  renderer.setRenderTarget(null);
+  const _render = (minDistance, maxDistance) => {
+    const readTarget = targets[0];
+    const writeTarget = targets[1];
+
+    renderer.setRenderTarget(writeTarget);
+    reconstructionPass(renderer, {
+      distanceTex: distanceTarget.texture,
+      iResolution,
+      oldNewDepthTexture,
+      minDistance,
+      maxDistance,
+      feedbackDepthTexture: readTarget.texture,
+    });
+    console.log('got uniforms', {
+      distanceTex: distanceTarget.texture,
+      iResolution,
+      oldNewDepthTexture,
+      minDistance,
+      maxDistance,
+      feedbackDepthTexture: readTarget.texture,
+    });
+    renderer.setRenderTarget(null);
+
+    // swap targets
+    [targets[0], targets[1]] = [targets[1], targets[0]];
+  };
+  _render(0, 1);
 }
