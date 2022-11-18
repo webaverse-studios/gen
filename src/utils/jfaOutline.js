@@ -260,7 +260,7 @@ void main() {
   if (d < 0.000001) { // if this is an initial pixel, just write the old depth
     feedbackRgba.r = localOldDepth;
   } else { // else if this is a feedback pixel, derive new depth
-    // get the remote distance pixel
+    /* // get the remote distance pixel
     vec2 distanceUv = distancePixelUv / iResolution;
     vec4 remoteRgba = texture2D(oldNewDepthTexture, distanceUv);
     float remoteOldDepth = remoteRgba.r;
@@ -270,9 +270,50 @@ void main() {
     float delta = localNewDepth - remoteNewDepth;
     float predicted = remoteOldDepth + delta;
 
-    feedbackRgba.r = predicted;
+    feedbackRgba.r = predicted; */
 
-    // feedbackRgba.r = localNewDepth;
+
+
+    // XXX resample around the nearest distance
+
+    float sum = 0.;
+    float total = 0.;
+
+    int range = 8;
+    for (int x = -range; x <= range; x++) {
+      for (int y = -range; y <= range; y++) {
+        if (x == 0 && y == 0) continue;
+        
+        vec2 offset = vec2(float(x), float(y));
+
+        vec2 remotePixelUv = distancePixelUv + offset;
+        if (
+          remotePixelUv.x >= 0. && remotePixelUv.x < iResolution.x &&
+          remotePixelUv.y >= 0. && remotePixelUv.y < iResolution.y
+        ) {
+          vec2 remoteUv = remotePixelUv / iResolution;
+          vec4 remoteRgba = texture2D(oldNewDepthTexture, remoteUv);
+          float remoteOldDepth = remoteRgba.r;
+          float remoteNewDepth = remoteRgba.g;
+
+          if (remoteOldDepth < 0.) { // if this is a valid point
+            // compute the predicted depth:
+            float delta = localNewDepth - remoteNewDepth;
+            float predicted = remoteOldDepth + delta;
+
+            float remoteDistance = length(offset) / float(range);
+            float factor = 1. / remoteDistance;
+
+            sum += predicted * factor;
+            total += factor;
+          }
+        }
+      }
+    }
+    if (total > 0.) {
+      sum /= total;
+    }
+    feedbackRgba.r = sum;
   }
 
   gl_FragColor = feedbackRgba;
@@ -293,6 +334,9 @@ export function renderDepthReconstruction(
   newDepthFloats,
   iResolution
 ) {
+  globalThis.oldDepthFloats = oldDepthFloats;
+  globalThis.newDepthFloats = newDepthFloats;
+
   const oldNewDepthTextureData = new Float32Array(oldDepthFloats.length * 4);
   for (let i = 0; i < oldDepthFloats.length; i++) {
     oldNewDepthTextureData[i * 4] = oldDepthFloats[i];
