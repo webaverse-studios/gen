@@ -234,37 +234,67 @@ const depthFragmentShader = `\
   float perspectiveDepthToViewZ( const in float invClipZ, const in float near, const in float far ) {
     return ( near * far ) / ( ( far - near ) * invClipZ - far );
   }
+  float viewZToPerspectiveDepth( const in float viewZ, const in float near, const in float far ) {
+    return ( ( near + viewZ ) * far ) / ( ( far - near ) * viewZ );
+  }
+  
+  float viewZToOrthographicDepth( const in float viewZ, const in float near, const in float far ) {
+    return ( viewZ + near ) / ( near - far );
+  }
+  float orthographicDepthToViewZ( const in float linearClipZ, const in float near, const in float far ) {
+    return linearClipZ * ( near - far ) - near;
+  }
 
   void main() {
     // get the view Z
     // first, we need to reconstruct the depth value in this fragment
     float depth = gl_FragCoord.z;
     float viewZ = perspectiveDepthToViewZ(depth, cameraNear, cameraFar);
+    
+    // convert to orthographic depth
+    // float orthoZ = viewZToOrthographicDepth(viewZ, cameraNear, cameraFar);
+    // gl_FragColor = encode_float(orthoZ).abgr;
+
     gl_FragColor = encode_float(viewZ).abgr;
   }
 `;
 const setCameraViewPositionFromViewZ = (() => {
-  const projInv = new THREE.Matrix4();
+  const projectionMatrixInverse = new THREE.Matrix4();
 
-  return (x, y, viewZ, projectionMatrix, position) => {
-    // projInv.copy(projectionMatrix).invert();
-    // localVector.set(x, y, viewZ).applyMatrix4(projInv);
-    // position.set(localVector.x, localVector.y, localVector.z);
-    // return position;
+  function viewZToOrthographicDepth(viewZ, near, far) {
+    return ( viewZ + near ) / ( near - far );
+  }
+  function orthographicDepthToViewZ(orthoZ, near, far) {
+    return orthoZ * ( near - far ) - near;
+  }
 
-    // get the inverse projection matrix of the camera
-    projInv.copy(projectionMatrix)
+  return (x, y, viewZ, camera, target) => {
+    const {near, far, projectionMatrix} = camera;
+    projectionMatrixInverse.copy(projectionMatrix)
       .invert();
-    position
-      .set(
-        x * 2 - 1,
-        -y * 2 + 1,
-        0.5
-      )
-      .applyMatrix4(projInv);
+    
+    const depth = viewZToOrthographicDepth(viewZ, near, far);
 
-    position.multiplyScalar(viewZ / position.z);
-    return position;
+    // float clipW = cameraProjection[2][3] * viewZ + cameraProjection[3][3];
+    // vec4 clipPosition = vec4( ( vec3( gl_FragCoord.xy / viewport.zw, depth ) - 0.5 ) * 2.0, 1.0 );
+    // clipPosition *= clipW;
+    // vec4 viewPosition = inverseProjection * clipPosition;
+    // vec4 vorldPosition = cameraMatrixWorld * vec4( viewPosition.xyz, 1.0 );
+
+    const clipW = projectionMatrix.elements[2 * 4 + 3] * viewZ + projectionMatrix.elements[3 * 4 + 3];
+    const clipPosition = new THREE.Vector4(
+      (x - 0.5) * 2,
+      (y - 0.5) * 2,
+      (depth - 0.5) * 2,
+      1
+    );
+    clipPosition.multiplyScalar(clipW);
+    const viewPosition = clipPosition.applyMatrix4(projectionMatrixInverse);
+    
+    target.x = viewPosition.x;
+    target.y = viewPosition.y;
+    target.z = viewPosition.z;
+    return target;
   };
 })();
 
@@ -359,7 +389,7 @@ const _cutMask = (geometry, maskImageData) => {
   // set the new indices
   geometry.setIndex(new THREE.BufferAttribute(newIndices.subarray(0, numIndices), 1));
 };
-const _isValidZDepth = z => z >= 0 && z <= 1;
+const _isValidZDepth = z => z < 0;
 const _cutDepth = (geometry, depthFloatImageData) => {
   // copy over only the triangles that are not completely far
   const newIndices = new geometry.index.array.constructor(geometry.index.array.length);
@@ -944,35 +974,13 @@ class PanelRenderer extends EventTarget {
         this.renderer.setRenderTarget(null);
         return imageData;
       };
-      depthFloatImageData = floatImageData(_renderOverrideMaterial(depthRenderTarget));
-      /* for (let i = 0; i < depthFloatImageData.length; i++) {
-        if (depthFloatImageData[i] === this.camera.near) {
-          depthFloatImageData[i] = -this.camera.far;
-        }
-      } */
+      depthFloatImageData = floatImageData(_renderOverrideMaterial(depthRenderTarget)); // orthoZ
     }
     console.timeEnd('renderDepth');
 
     console.time('formatDepths');
-    let oldDepthFloatImageData;
     let newDepthFloatImageData;
-    {
-      oldDepthFloatImageData = new Float32Array(depthFloatImageData.length);
-      for (let y = 0; y < panelSize; y++) {
-        for (let x = 0; x < panelSize; x++) {
-          const i = y * panelSize + x;
-
-          const px = x / panelSize;
-          const py = y / panelSize;
-
-          const viewZ = depthFloatImageData[i]; // mostly negative
-          const worldPoint = setCameraViewPositionFromViewZ(px, py, viewZ, this.camera.projectionMatrix, localVector);
-          const projectionPoint = worldPoint.applyMatrix4(this.camera.projectionMatrix);
-
-          oldDepthFloatImageData[i] = projectionPoint.z;
-        }
-      }
-      
+    { 
       const geometryPositions = new Float32Array(panelSize * panelSize * 3);
       pointCloudArrayBufferToPositionAttributeArray(pointCloudArrayBuffer, geometryPositions, 1 / panelSize);
 
@@ -1073,7 +1081,7 @@ class PanelRenderer extends EventTarget {
         this.renderer,
         distanceRenderTarget,
         targets,
-        oldDepthFloatImageData,
+        depthFloatImageData,
         newDepthFloatImageData,
         iResolution
       );
@@ -1098,7 +1106,7 @@ class PanelRenderer extends EventTarget {
         reconstructedDepthFloats[index] = reconstructedDepthFloatsImageData[j];
       }
 
-      // globalThis.reconstructedDepthFloats = reconstructedDepthFloats;
+      globalThis.reconstructedDepthFloats = reconstructedDepthFloats;
 
       // draw to canvas
       const canvas = document.createElement('canvas');
@@ -1118,9 +1126,6 @@ class PanelRenderer extends EventTarget {
         const x = j % canvas.width;
         const y = Math.floor(j / canvas.width);
 
-        // const viewZ = depthFloatImageData[i]; // mostly negative
-        // const worldPoint = setCameraViewPositionFromViewZ(x / canvas.width, y / canvas.height, viewZ, this.camera.projectionMatrix, localVector);
-        
         const viewZ = r;
         const localViewPoint = localVector.set(x / canvas.width, y / canvas.height, viewZ)
           .applyMatrix4(this.camera.projectionMatrixInverse);
@@ -1146,7 +1151,6 @@ class PanelRenderer extends EventTarget {
       pointCloud: pointCloudArrayBuffer,
       depthFloatImageData,
       // indexColorsAlphasArray,
-      oldDepthFloatImageData,
       newDepthFloatImageData,
       reconstructedDepthFloats,
     };
@@ -1165,7 +1169,6 @@ class PanelRenderer extends EventTarget {
     const pointCloud = _getLayerEntry('pointCloud');
     const depthFloatImageData = _getLayerEntry('depthFloatImageData');
     // const indexColorsAlphasArray = _getLayerEntry('indexColorsAlphasArray');
-    const oldDepthFloatImageData = _getLayerEntry('oldDepthFloatImageData');
     const newDepthFloatImageData = _getLayerEntry('newDepthFloatImageData');
     const reconstructedDepthFloats = _getLayerEntry('reconstructedDepthFloats');
 
@@ -1205,7 +1208,7 @@ class PanelRenderer extends EventTarget {
       backgroundMesh.matrixWorld.copy(this.camera.matrixWorld);
       backgroundMesh.frustumCulled = false;
 
-      console.time('applyReconstruction');
+      console.time('reconstructZ');
       {
         // render an instanced cubes mesh to show the depth
         // const depthCubesGeometry = new THREE.BoxBufferGeometry(1, 1, 1);
@@ -1223,25 +1226,12 @@ class PanelRenderer extends EventTarget {
         depthCubesMesh.count = 0;
         for (let i = 0; i < depthFloatImageData.length; i += depthRenderSkipRatio) {
           const x = (i % this.renderer.domElement.width) / this.renderer.domElement.width;
-          const y = Math.floor(i / this.renderer.domElement.width) / this.renderer.domElement.height;
+          let y = Math.floor(i / this.renderer.domElement.width) / this.renderer.domElement.height;
+          y = 1 - y;
 
-          // this gets you the world position of the point:
-          // const viewZ = depthFloatImageData[i];
-          // const target = setCameraViewPositionFromViewZ(px, py, viewZ, this.camera.projectionMatrix, localVector);
-          // target.applyMatrix4(this.camera.matrixWorld);
-
-          // this is how we got the reconstruction:
-          // const viewZ = depthFloatImageData[i]; // mostly negative
-          // const worldPoint = setCameraViewPositionFromViewZ(px, py, viewZ, this.camera.projectionMatrix, localVector);
-          // const projectionPoint = worldPoint.applyMatrix4(this.camera.projectionMatrix);
-          // reconstructedDepthFloats[i] = projectionPoint.z;
-
-          const viewZ = 0.5; // mostly negative
-          const worldPoint = setCameraViewPositionFromViewZ(x, y, viewZ, this.camera.projectionMatrix, localVector);
-          const projectionPoint = worldPoint.applyMatrix4(this.camera.projectionMatrix);
-          projectionPoint.z = reconstructedDepthFloats[i];
-          projectionPoint.applyMatrix4(this.camera.projectionMatrixInverse);
-          const target = projectionPoint.applyMatrix4(this.camera.matrixWorld);
+          const viewZ = depthFloatImageData[i];
+          const worldPoint = setCameraViewPositionFromViewZ(x, y, viewZ, this.camera, localVector);
+          const target = worldPoint.applyMatrix4(this.camera.matrixWorld);
 
           localMatrix.makeTranslation(target.x, target.y, target.z);
           depthCubesMesh.setMatrixAt(i / depthRenderSkipRatio, localMatrix);
@@ -1249,28 +1239,11 @@ class PanelRenderer extends EventTarget {
         }
         depthCubesMesh.instanceMatrix.needsUpdate = true;
       }
-      console.timeEnd('applyReconstruction');
+      console.timeEnd('reconstructZ');
 
-      console.time('mapDepth');
-      const projectionDepthFloatImageData = new Float32Array(depthFloatImageData.length);
-      for (let y = 0; y < panelSize; y++) {
-        for (let x = 0; x < panelSize; x++) {
-          const i = y * panelSize + x;
-
-          const px = x / panelSize;
-          const py = y / panelSize;
-
-          const viewZ = depthFloatImageData[i];
-          const worldPoint = setCameraViewPositionFromViewZ(px, py, viewZ, this.camera.projectionMatrix, localVector);
-          const projectionPoint = worldPoint.applyMatrix4(this.camera.projectionMatrix);
-
-          projectionDepthFloatImageData[i] = projectionPoint.z;
-        }
-      }
-      console.timeEnd('mapDepth');
       console.time('cutDepth');
       // const wrappedPositions = geometry.attributes.position.array.slice();
-      _cutDepth(geometry, projectionDepthFloatImageData);
+      _cutDepth(geometry, depthFloatImageData);
       console.timeEnd('cutDepth');
 
       // copy the geometry, including the attributes
@@ -1290,202 +1263,11 @@ class PanelRenderer extends EventTarget {
       backgroundMesh2.frustumCulled = false;
       console.timeEnd('backgroundMesh');
 
-      /* console.time('extendZ');
-      {
-        // sort by numValidNeighbors, low to high
-        const entryEquals = (a, b) => a.i === b.i;
-        const entryCompare = (a, b) => b.numValidNeighbors - a.numValidNeighbors;
-        const queue = new Heap(entryCompare);
-        const _getNumValidNeighbors = (x, y, i) => {
-          let numValidNeighbors = 0;
-          for (let dy = -1; dy <= 1; dy++) {
-            for (let dx = -1; dx <= 1; dx++) {
-              if (dx === 0 && dy === 0) {
-                continue;
-              }
-
-              const ax = x + dx;
-              const ay = y + dy;
-
-              if (ax >= 0 && ax < panelSize && ay >= 0 && ay < panelSize) {
-                const i2 = ay * panelSize + ax;
-                const neighborZ = projectionDepthFloatImageData[i2];
-
-                if (_isValidZDepth(neighborZ)) { // if the neighbor point is valid
-                  numValidNeighbors++;
-                }
-              }
-            }
-          }
-          return numValidNeighbors;
-        };
-        const queueEntries = new Map();
-        for (let y = 0; y < panelSize; y++) {
-          for (let x = 0; x < panelSize; x++) {
-            const i = y * panelSize + x;
-
-            const oldZ = projectionDepthFloatImageData[i];
-
-            if (!_isValidZDepth(oldZ)) { // if the current point is invalid
-              const numValidNeighbors = _getNumValidNeighbors(x, y, i);
-              if (numValidNeighbors > 0) {
-                const entry = {x, y, i, numValidNeighbors};
-                queue.push(entry);
-                queueEntries.set(i, entry);
-              }
-            }
-          }
-        }
-        for (const entry of queue) {
-          // select a random index from the queue
-          const {x, y, i, numValidNeighbors} = entry;
-          
-          const validNeighbors = [];
-          const invalidNeighbors = [];
-          for (let dy = -1; dy <= 1; dy++) {
-            for (let dx = -1; dx <= 1; dx++) {
-              if (dx === 0 && dy === 0) {
-                continue;
-              }
-
-              const ax = x + dx;
-              const ay = y + dy;
-
-              if (ax >= 0 && ax < panelSize && ay >= 0 && ay < panelSize) {
-                const i2 = ay * panelSize + ax;
-                const neighborZ = projectionDepthFloatImageData[i2];
-                
-                if (_isValidZDepth(neighborZ)) {
-                  validNeighbors.push([dx, dy, i2]);
-                } else {
-                  invalidNeighbors.push([ax, ay, i2]);
-                }
-              }
-            }
-          }
-          if (validNeighbors.length === 0) { // XXX
-            console.warn('had no valid neighbors!');
-            debugger;
-          }
-
-          // rebase new geometry contributions from neighbors on top of the existing mesh
-          const newLocalPoint = localVector2.fromArray(geometry.attributes.position.array, i * 3);
-          newLocalPoint.applyMatrix4(this.camera.projectionMatrix);
-          let totalFactor = 0;
-          const contributions = validNeighbors.map(neighborSpec => {
-            const [dx, dy, i2] = neighborSpec;
-
-            const newRemotePoint = localVector3.fromArray(geometry.attributes.position.array, i2 * 3);
-            newRemotePoint.applyMatrix4(this.camera.projectionMatrix);
-            const deltaZ = newLocalPoint.z - newRemotePoint.z;
-
-            const neighborPointZ = projectionDepthFloatImageData[i2];
-            if (!_isValidZDepth(neighborPointZ)) {
-              console.warn('neighbor point was not valid');
-              debugger;
-            }
-            const predictedZ = neighborPointZ + deltaZ;
-
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            const factor = 1 / distance;
-            totalFactor += factor;
-            
-            return {
-              predictedZ,
-              factor,
-              deltaZ,
-              neighborPointZ,
-            };
-          });
-          let totalPredictedZ = 0;
-          for (const {predictedZ, factor} of contributions) {
-            totalPredictedZ += predictedZ * factor;
-          }
-          totalPredictedZ /= totalFactor;
-          if (!_isValidZDepth(totalPredictedZ)) { // XXX
-            console.warn('totalPredictedZ ended up invalid', totalPredictedZ);
-            debugger;
-          }
-
-          // set the new point z
-          newLocalPoint.z = totalPredictedZ;
-          newLocalPoint.applyMatrix4(this.camera.projectionMatrixInverse);
-          newLocalPoint.toArray(wrappedPositions, i * 3);
-          projectionDepthFloatImageData[i] = totalPredictedZ;
-          // maskImageData.data[i * 4 + 3] = 1;
-          
-          // recurse on unseen invalid neighbors
-          for (const [ax, ay, i2] of invalidNeighbors) {
-            const numValidNeighbors = _getNumValidNeighbors(ax, ay, i2);
-            
-            let entry = queueEntries.get(i2);
-            if (entry) {
-              queue.remove(entry, entryEquals);
-              entry.numValidNeighbors = numValidNeighbors;
-            } else {
-              entry = {
-                x: ax,
-                y: ay,
-                i: i2,
-                numValidNeighbors,
-              };
-              queueEntries.set(i2, entry);
-            }
-            queue.add(entry);
-          }
-        }
-
-        // replace positions with wrapped positions
-        geometry.setAttribute('position', new THREE.BufferAttribute(wrappedPositions, 3));
-      }
-      console.timeEnd('extendZ'); */
-
-      /* _clipGeometryToMask(
-        geometry,
-        widthSegments,
-        heightSegments,
-        oldGeometry,
-        maskImageData,
-        projectionDepthFloatImageData,
-        indexColorsAlphasArray
-      ); */
       geometry.computeVertexNormals();
 
       layerScene.add(backgroundMesh);
       layerScene.add(backgroundMesh2);
     })();
-
-    /* // display depth cubes
-    console.time('depthCubes');
-    {
-      // render an instanced cubes mesh to show the depth
-      // const depthCubesGeometry = new THREE.BoxBufferGeometry(1, 1, 1);
-      const depthCubesGeometry = new THREE.BoxBufferGeometry(0.01, 0.01, 0.01);
-      const depthCubesMaterial = new THREE.MeshPhongMaterial({
-        color: 0x00FFFF,
-      });
-      const depthCubesMesh = new THREE.InstancedMesh(depthCubesGeometry, depthCubesMaterial, depthFloatImageData.length);
-      depthCubesMesh.name = 'depthCubesMesh';
-      depthCubesMesh.frustumCulled = false;
-      layerScene.add(depthCubesMesh);
-
-      // set the matrices by projecting the depth from the perspective camera
-      const depthRenderSkipRatio = 8;
-      depthCubesMesh.count = 0;
-      for (let i = 0; i < depthFloatImageData.length; i += depthRenderSkipRatio) {
-        const x = (i % this.renderer.domElement.width) / this.renderer.domElement.width;
-        const y = Math.floor(i / this.renderer.domElement.width) / this.renderer.domElement.height;
-        const viewZ = depthFloatImageData[i];
-        const target = setCameraViewPositionFromViewZ(x, y, viewZ, this.camera.projectionMatrix, localVector);
-        target.applyMatrix4(this.camera.matrixWorld);
-
-        localMatrix.makeTranslation(target.x, target.y, target.z);
-        depthCubesMesh.setMatrixAt(i / depthRenderSkipRatio, localMatrix);
-        depthCubesMesh.count++;
-      }
-      depthCubesMesh.instanceMatrix.needsUpdate = true;
-    }
-    console.timeEnd('depthCubes'); */
 
     return layerScene;
   }
