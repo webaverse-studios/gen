@@ -205,6 +205,18 @@ export class JFAOutline {
             currRT = 1 - currRT;
             sampleOffset >>= 1;
         }
+
+        // final pass
+        sampleOffset = 1;
+        for (let i = 0; i < 1; i++) {
+            renderer.setRenderTarget(targets[currRT]);
+            this.jumpFloodPass(renderer, {
+                tex: targets[1 - currRT].texture,
+                jumpOffset: sampleOffset,
+            });
+            currRT = 1 - currRT;
+        }
+
         return 1 - currRT;
     }
     /**
