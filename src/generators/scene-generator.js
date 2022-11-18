@@ -259,8 +259,6 @@ const depthFragmentShader = `\
   }
 `;
 const setCameraViewPositionFromViewZ = (() => {
-  const projectionMatrixInverse = new THREE.Matrix4();
-
   function viewZToOrthographicDepth(viewZ, near, far) {
     return ( viewZ + near ) / ( near - far );
   }
@@ -269,9 +267,7 @@ const setCameraViewPositionFromViewZ = (() => {
   }
 
   return (x, y, viewZ, camera, target) => {
-    const {near, far, projectionMatrix} = camera;
-    projectionMatrixInverse.copy(projectionMatrix)
-      .invert();
+    const {near, far, projectionMatrix, projectionMatrixInverse} = camera;
     
     const depth = viewZToOrthographicDepth(viewZ, near, far);
 
@@ -987,7 +983,7 @@ class PanelRenderer extends EventTarget {
       newDepthFloatImageData = new Float32Array(geometryPositions.length / 3);
       for (let i = 0; i < newDepthFloatImageData.length; i++) {
         const worldPoint = localVector.fromArray(geometryPositions, i * 3);
-        const projectionPoint = worldPoint.applyMatrix4(this.camera.projectionMatrix);
+        const projectionPoint = worldPoint//.applyMatrix4(this.camera.projectionMatrix);
 
         newDepthFloatImageData[i] = projectionPoint.z;
       }
@@ -1216,7 +1212,7 @@ class PanelRenderer extends EventTarget {
         const depthCubesMaterial = new THREE.MeshPhongMaterial({
           color: 0x00FFFF,
         });
-        const depthCubesMesh = new THREE.InstancedMesh(depthCubesGeometry, depthCubesMaterial, depthFloatImageData.length);
+        const depthCubesMesh = new THREE.InstancedMesh(depthCubesGeometry, depthCubesMaterial, newDepthFloatImageData.length);
         depthCubesMesh.name = 'depthCubesMesh';
         depthCubesMesh.frustumCulled = false;
         layerScene.add(depthCubesMesh);
@@ -1224,12 +1220,12 @@ class PanelRenderer extends EventTarget {
         // set the matrices by projecting the depth from the perspective camera
         const depthRenderSkipRatio = 8;
         depthCubesMesh.count = 0;
-        for (let i = 0; i < depthFloatImageData.length; i += depthRenderSkipRatio) {
+        for (let i = 0; i < newDepthFloatImageData.length; i += depthRenderSkipRatio) {
           const x = (i % this.renderer.domElement.width) / this.renderer.domElement.width;
           let y = Math.floor(i / this.renderer.domElement.width) / this.renderer.domElement.height;
           y = 1 - y;
 
-          const viewZ = depthFloatImageData[i];
+          const viewZ = newDepthFloatImageData[i];
           const worldPoint = setCameraViewPositionFromViewZ(x, y, viewZ, this.camera, localVector);
           const target = worldPoint.applyMatrix4(this.camera.matrixWorld);
 
