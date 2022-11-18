@@ -244,9 +244,6 @@ void main() {
   vec2 pixelUv = gl_FragCoord.xy;
   vec2 uv = pixelUv / iResolution;
 
-  // vec4 rgba = texture2D(oldNewDepthTexture, uv);
-  // gl_FragColor = rgba;
-
   vec4 distanceRgba = texture2D(distanceTex, uv);
   vec2 distancePixelUv = distanceRgba.rg;
   float d = distance(pixelUv, distancePixelUv);
@@ -260,60 +257,53 @@ void main() {
   if (d < 0.000001) { // if this is an initial pixel, just write the old depth
     feedbackRgba.r = localOldDepth;
   } else { // else if this is a feedback pixel, derive new depth
-    /* // get the remote distance pixel
-    vec2 distanceUv = distancePixelUv / iResolution;
-    vec4 remoteRgba = texture2D(oldNewDepthTexture, distanceUv);
-    float remoteOldDepth = remoteRgba.r;
-    float remoteNewDepth = remoteRgba.g;
+    // resample around the nearest distance
 
-    // compute the predicted depth:
-    float delta = localNewDepth - remoteNewDepth;
-    float predicted = remoteOldDepth + delta;
+    float sumDelta = 0.;
+    float totalDelta = 0.;
 
-    feedbackRgba.r = predicted; */
+    {
+      int range = 16;
+      for (int x = -range; x <= range; x++) {
+        for (int y = -range; y <= range; y++) {
+          vec2 offset = vec2(float(x), float(y));
 
+          vec2 pixelUv2 = pixelUv + offset;
+          if (pixelUv2.x >= 0. && pixelUv2.x < iResolution.x && pixelUv2.y >= 0. && pixelUv2.y < iResolution.y) {
+            vec2 uv2 = pixelUv2 / iResolution;
 
+            vec4 distanceRgba2 = texture2D(distanceTex, uv2);
+            vec2 distancePixelUv2 = distanceRgba2.rg;
+            float d2 = distance(pixelUv2, distancePixelUv2);
 
-    // XXX resample around the nearest distance
+            vec4 localRgba2 = texture2D(oldNewDepthTexture, uv2);
+            float localOldDepth2 = localRgba2.r;
+            float localNewDepth2 = localRgba2.g;
 
-    float sum = 0.;
-    float total = 0.;
+            vec2 remotePixelUv = distancePixelUv2;
+            vec2 remoteUv = remotePixelUv / iResolution;
+            vec4 remoteRgba = texture2D(oldNewDepthTexture, remoteUv);
+            float remoteOldDepth = remoteRgba.r;
+            float remoteNewDepth = remoteRgba.g;
 
-    int range = 8;
-    for (int x = -range; x <= range; x++) {
-      for (int y = -range; y <= range; y++) {
-        if (x == 0 && y == 0) continue;
-        
-        vec2 offset = vec2(float(x), float(y));
-
-        vec2 remotePixelUv = distancePixelUv + offset;
-        if (
-          remotePixelUv.x >= 0. && remotePixelUv.x < iResolution.x &&
-          remotePixelUv.y >= 0. && remotePixelUv.y < iResolution.y
-        ) {
-          vec2 remoteUv = remotePixelUv / iResolution;
-          vec4 remoteRgba = texture2D(oldNewDepthTexture, remoteUv);
-          float remoteOldDepth = remoteRgba.r;
-          float remoteNewDepth = remoteRgba.g;
-
-          if (remoteOldDepth < 0.) { // if this is a valid point
             // compute the predicted depth:
-            float delta = localNewDepth - remoteNewDepth;
-            float predicted = remoteOldDepth + delta;
+            float delta = remoteOldDepth - remoteNewDepth;
 
-            float remoteDistance = length(offset) / float(range);
-            float factor = 1. / remoteDistance;
+            float denom = (1. + length(offset));
+            denom *= denom;
+            float weight = 1. / denom;
 
-            sum += predicted * factor;
-            total += factor;
+            sumDelta += delta * weight;
+            totalDelta += weight;
           }
         }
       }
+      if (totalDelta != 0.) {
+        sumDelta /= totalDelta;
+      }
     }
-    if (total > 0.) {
-      sum /= total;
-    }
-    feedbackRgba.r = sum;
+
+    feedbackRgba.r = localNewDepth + sumDelta;
   }
 
   gl_FragColor = feedbackRgba;
