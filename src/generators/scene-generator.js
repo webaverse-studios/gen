@@ -120,8 +120,8 @@ const abortError = new Error();
 abortError.isAbortError = true;
 
 const localVector = new THREE.Vector3();
-const localVector2 = new THREE.Vector3();
-const localVector3 = new THREE.Vector3();
+// const localVector2 = new THREE.Vector3();
+// const localVector3 = new THREE.Vector3();
 const localMatrix = new THREE.Matrix4();
 
 //
@@ -982,10 +982,7 @@ class PanelRenderer extends EventTarget {
 
       newDepthFloatImageData = new Float32Array(geometryPositions.length / 3);
       for (let i = 0; i < newDepthFloatImageData.length; i++) {
-        const worldPoint = localVector.fromArray(geometryPositions, i * 3);
-        const projectionPoint = worldPoint//.applyMatrix4(this.camera.projectionMatrix);
-
-        newDepthFloatImageData[i] = projectionPoint.z;
+        newDepthFloatImageData[i] = geometryPositions[i * 3 + 2];
       }
     }
     console.timeEnd('formatDepths');
@@ -1101,7 +1098,8 @@ class PanelRenderer extends EventTarget {
 
         reconstructedDepthFloats[index] = reconstructedDepthFloatsImageData[j];
       }
-
+      globalThis.depthFloatImageData = depthFloatImageData;
+      globalThis.newDepthFloatImageData = newDepthFloatImageData;
       globalThis.reconstructedDepthFloats = reconstructedDepthFloats;
 
       // draw to canvas
@@ -1112,26 +1110,26 @@ class PanelRenderer extends EventTarget {
       const context = canvas.getContext('2d');
       const imageData = context.createImageData(canvas.width, canvas.height);
       const data = imageData.data;
-      for (let i = 0; i < reconstructedDepthFloatsImageData.length; i += 4) {
-        const r = reconstructedDepthFloatsImageData[i];
-        const g = reconstructedDepthFloatsImageData[i+1];
-        const b = reconstructedDepthFloatsImageData[i+2];
-        const a = reconstructedDepthFloatsImageData[i+3];
+      for (let i = 0; i < depthFloatImageData.length; i++) {
+        const x = (i % canvas.width);
+        const y = Math.floor(i / canvas.width);
 
-        const j = i / 4;
-        const x = j % canvas.width;
-        const y = Math.floor(j / canvas.width);
+        const px = x / canvas.width;
+        const py = y / canvas.height;
 
-        const viewZ = r;
-        const localViewPoint = localVector.set(x / canvas.width, y / canvas.height, viewZ)
-          .applyMatrix4(this.camera.projectionMatrixInverse);
-        const localViewZ = localViewPoint.z;
-        const localDepthZ = -localViewZ;
+        // const viewZ = r;
+        // const localViewPoint = localVector.set(x / canvas.width, y / canvas.height, viewZ)
+        //   .applyMatrix4(this.camera.projectionMatrixInverse);
+        // const localViewZ = localViewPoint.z;
+        // const localDepthZ = -localViewZ;
+
+        const viewZ = newDepthFloatImageData[i];
+        const worldPoint = setCameraViewPositionFromViewZ(px, py, viewZ, this.camera, localVector);
 
         const index = y * canvas.width + x;
-        data[index*4 + 0] = localDepthZ / 30 * 255;
-        data[index*4 + 1] = g;
-        data[index*4 + 2] = b;
+        data[index*4 + 0] = -worldPoint.z / 30 * 255;
+        data[index*4 + 1] = 0;
+        data[index*4 + 2] = 0;
         data[index*4 + 3] = 255;
       }
       context.putImageData(imageData, 0, 0);

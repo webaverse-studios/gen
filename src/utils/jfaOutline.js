@@ -1,7 +1,7 @@
 import * as three_1 from 'three';
 import * as fullScreenPass_1 from './fullscreenPass.js';
 
-const localColor = new three_1.Color();
+// const localColor = new three_1.Color();
 
 export class JFAOutline {
     /**
@@ -312,7 +312,7 @@ export function renderDepthReconstruction(
 ) {
   const oldNewDepthTextureData = new Float32Array(oldDepthFloats.length * 4);
   for (let i = 0; i < oldDepthFloats.length; i++) {
-    oldNewDepthTextureData[i * 4] = oldDepthFloats[i] < 0 ? 0 : oldDepthFloats[i];
+    oldNewDepthTextureData[i * 4] = oldDepthFloats[i];
     oldNewDepthTextureData[i * 4 + 1] = newDepthFloats[i];
   }
   const oldNewDepthTexture = new three_1.DataTexture(oldNewDepthTextureData, iResolution.x, iResolution.y, three_1.RGBAFormat, three_1.FloatType);
@@ -321,9 +321,9 @@ export function renderDepthReconstruction(
   oldNewDepthTexture.flipY = true;
   oldNewDepthTexture.needsUpdate = true;
 
-  globalThis.oldNewDepthTextureData = oldNewDepthTextureData;
-  globalThis.oldDepthFloats = oldDepthFloats;
-  globalThis.newDepthFloats = newDepthFloats;
+  // globalThis.oldNewDepthTextureData = oldNewDepthTextureData;
+  // globalThis.oldDepthFloats = oldDepthFloats;
+  // globalThis.newDepthFloats = newDepthFloats;
 
   const _render = (minDistance, maxDistance) => {
     const readTarget = targets[0];
@@ -338,20 +338,21 @@ export function renderDepthReconstruction(
       maxDistance,
       feedbackDepthTexture: readTarget.texture,
     });
-    console.log('got uniforms', {
-      distanceTex: distanceTarget.texture,
-      iResolution,
-      oldNewDepthTexture,
-      minDistance,
-      maxDistance,
-      feedbackDepthTexture: readTarget.texture,
-    });
+    // console.log('got uniforms', {
+    //   distanceTex: distanceTarget.texture,
+    //   iResolution,
+    //   oldNewDepthTexture,
+    //   minDistance,
+    //   maxDistance,
+    //   feedbackDepthTexture: readTarget.texture,
+    // });
     renderer.setRenderTarget(null);
 
     // swap targets
     [targets[0], targets[1]] = [targets[1], targets[0]];
   };
-  for (let i = 0; i < iResolution.x; i++) {
+  // for (let i = 0; i < iResolution.x; i++) {
+  for (let i = 0; i < 1; i++) {
     _render(i, i + 1);
   }
 }
