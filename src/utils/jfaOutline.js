@@ -227,8 +227,6 @@ const reconstructionPass = fullScreenPass_1.fullScreenPass(`
 uniform sampler2D distanceTex;
 uniform sampler2D oldNewDepthTexture;
 uniform sampler2D feedbackDepthTexture;
-uniform float minDistance;
-uniform float maxDistance;
 
 void main() {
   vec2 pixelUv = gl_FragCoord.xy;
@@ -238,60 +236,33 @@ void main() {
   // gl_FragColor = rgba;
 
   vec4 distanceRgba = texture2D(distanceTex, uv);
-  float d = distance(pixelUv, distanceRgba.rg);
+  vec2 distancePixelUv = distanceRgba.rg;
+  float d = distance(pixelUv, distancePixelUv);
   
   vec4 feedbackRgba = texture2D(feedbackDepthTexture, uv);
 
-  if (d >= minDistance && d < maxDistance) { // if we are writing this pixel
-    vec4 localRgba = texture2D(oldNewDepthTexture, uv);
-    float localOldDepth = localRgba.r;
-    float localNewDepth = localRgba.g;
+  vec4 localRgba = texture2D(oldNewDepthTexture, uv);
+  float localOldDepth = localRgba.r;
+  float localNewDepth = localRgba.g;
 
-    if (d < 0.000001) { // if this is an initial pixel, just write the old depth
-      feedbackRgba.r = localOldDepth;
-    } else { // else if this is a feedback pixel, derive new depth
-      // sample the 3x3 area around ourselves
-      float sumZ = 0.;
-      float totalZ = 0.;
-      for (int dy = -1; dy <= 1; dy++) {
-        for (int dx = -1; dx <= 1; dx++) {
-          if (dx == 0 && dy == 0) {
-            continue;
-          }
+  if (d < 0.000001) { // if this is an initial pixel, just write the old depth
+    feedbackRgba.r = localOldDepth;
+  } else { // else if this is a feedback pixel, derive new depth
+    // get the remote distance pixel
+    vec2 distanceUv = distancePixelUv / iResolution;
+    vec4 remoteRgba = texture2D(oldNewDepthTexture, distanceUv);
+    float remoteOldDepth = remoteRgba.r;
+    float remoteNewDepth = remoteRgba.g;
 
-          vec2 pixelUv2 = vec2(pixelUv.x + float(dx), pixelUv.y + float(dy));
-          if (pixelUv2.x >= 0. && pixelUv2.x < iResolution.x && pixelUv2.y >= 0. && pixelUv2.y < iResolution.y) {
-            vec2 uv2 = pixelUv2 / iResolution;
-            
-            vec4 neighborFeedbackRgba = texture2D(feedbackDepthTexture, uv2);
-            float neighborOldDepth = neighborFeedbackRgba.r;
+    // compute the predicted depth:
+    float delta = localNewDepth - remoteNewDepth;
+    float predicted = remoteOldDepth + delta;
 
-            vec4 neighborDistanceRgba = texture2D(distanceTex, uv2);
-            float neighborDistance = distance(pixelUv2, neighborDistanceRgba.rg);
-            if (neighborDistance < minDistance) { // if this neighbor is valid; ie was filled in a previous distance pass
-              vec4 neighborOldNewDepthRgba = texture2D(oldNewDepthTexture, uv2);
-              // float neighborOldDepth = neighborOldNewDepthRgba.r;
-              float neighborNewDepth = neighborOldNewDepthRgba.g;
-              float deltaZ = localNewDepth - neighborNewDepth;
+    feedbackRgba.r = predicted;
 
-              float predictedZ = neighborOldDepth + deltaZ;
-              
-              float deltaDistance = sqrt(float(dx * dx + dy * dy));
-              float factor = 1. / deltaDistance;
-              
-              sumZ += predictedZ * factor;
-              totalZ += factor;
-            }
-          }
-        }
-      }
-      if (totalZ != 0.) {
-        sumZ /= totalZ;
-      }
-  
-      feedbackRgba.r = sumZ;
-    }
+    // feedbackRgba.r = localNewDepth;
   }
+
   gl_FragColor = feedbackRgba;
 }
 `, {
@@ -325,7 +296,7 @@ export function renderDepthReconstruction(
   // globalThis.oldDepthFloats = oldDepthFloats;
   // globalThis.newDepthFloats = newDepthFloats;
 
-  const _render = (minDistance, maxDistance) => {
+  const _render = () => {
     const readTarget = targets[0];
     const writeTarget = targets[1];
 
@@ -334,25 +305,12 @@ export function renderDepthReconstruction(
       distanceTex: distanceTarget.texture,
       iResolution,
       oldNewDepthTexture,
-      minDistance,
-      maxDistance,
       feedbackDepthTexture: readTarget.texture,
     });
-    // console.log('got uniforms', {
-    //   distanceTex: distanceTarget.texture,
-    //   iResolution,
-    //   oldNewDepthTexture,
-    //   minDistance,
-    //   maxDistance,
-    //   feedbackDepthTexture: readTarget.texture,
-    // });
     renderer.setRenderTarget(null);
 
     // swap targets
     [targets[0], targets[1]] = [targets[1], targets[0]];
   };
-  // for (let i = 0; i < iResolution.x; i++) {
-  for (let i = 0; i < 1; i++) {
-    _render(i, i + 1);
-  }
+  _render();
 }

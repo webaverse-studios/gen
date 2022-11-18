@@ -1123,7 +1123,7 @@ class PanelRenderer extends EventTarget {
         // const localViewZ = localViewPoint.z;
         // const localDepthZ = -localViewZ;
 
-        const viewZ = newDepthFloatImageData[i];
+        const viewZ = reconstructedDepthFloats[i];
         const worldPoint = setCameraViewPositionFromViewZ(px, py, viewZ, this.camera, localVector);
 
         const index = y * canvas.width + x;
@@ -1223,7 +1223,7 @@ class PanelRenderer extends EventTarget {
           let y = Math.floor(i / this.renderer.domElement.width) / this.renderer.domElement.height;
           y = 1 - y;
 
-          const viewZ = newDepthFloatImageData[i];
+          const viewZ = reconstructedDepthFloats[i];
           const worldPoint = setCameraViewPositionFromViewZ(x, y, viewZ, this.camera, localVector);
           const target = worldPoint.applyMatrix4(this.camera.matrixWorld);
 
