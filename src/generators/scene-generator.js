@@ -18,7 +18,7 @@ import {
 import {blob2img, img2ImageData} from '../utils/convert-utils.js';
 import {makeId} from '../utils/id-utils.js';
 import {labelClasses} from '../constants/prompts.js';
-import {downloadFile} from '../utils/http-utils.js';
+// import {downloadFile} from '../utils/http-utils.js';
 
 //
 
