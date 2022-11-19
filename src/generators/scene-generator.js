@@ -636,7 +636,7 @@ const _clipGeometryToMask = (
 
 //
 
-const selectorSize = 64 + 1;
+const selectorSize = 8 + 1;
 class Selector {
   constructor({
     renderer,
@@ -649,14 +649,12 @@ class Selector {
     this.mouse = mouse;
     this.raycaster = raycaster;
     
-    this.meshes = [];
-
-    this.renderTarget = new THREE.WebGLRenderTarget(selectorSize, selectorSize, {
+    const lensRenderTarget = new THREE.WebGLRenderTarget(selectorSize, selectorSize, {
       minFilter: THREE.NearestFilter,
       magFilter: THREE.NearestFilter,
-      // format: THREE.RGBAFormat,
       type: THREE.FloatType,
     });
+    this.lensRenderTarget = lensRenderTarget;
 
     const indexMaterial = new THREE.ShaderMaterial({
       uniforms: {
@@ -668,17 +666,23 @@ class Selector {
           value: new THREE.Vector2(),
           needsUpdate: true,
         },
+        selectorSize: {
+          value: selectorSize,
+          needsUpdate: true,
+        },
       },
       vertexShader: `\
         uniform vec4 viewport;
         uniform vec2 iResolution;
-        flat varying int vIndex;
-
-        const float selectorSize = ${selectorSize.toFixed(8)};
+        uniform float selectorSize;
+        attribute float triangleId;
+        varying float vIndex;
 
         void main() {
           // get the triangle index, dividing by 3
-          vIndex = gl_VertexID / 3;
+          // vIndex = gl_VertexID / 3;
+          
+          vIndex = triangleId;
 
           gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
 
@@ -702,16 +706,17 @@ class Selector {
         }
       `,
       fragmentShader: `\
-        flat varying int vIndex;
+        varying float vIndex;
+
         void main() {
-          float fIndex = float(vIndex);
+          float fIndex = vIndex;
 
           // encode the index as rgb
           float r = floor(fIndex / 65536.0);
           fIndex -= r * 65536.0;
           float g = floor(fIndex / 256.0);
           fIndex -= g * 256.0;
-          float b = floor(fIndex / 1.0);
+          float b = fIndex;
 
           gl_FragColor = vec4(r, g, b, 1.);
         }
@@ -719,17 +724,17 @@ class Selector {
     });
     this.indexMaterial = indexMaterial;
 
-    const scene = new THREE.Scene();
-    scene.autoUpdate = false;
-    scene.overrideMaterial = indexMaterial;
-    this.scene = scene;
+    const lensScene = new THREE.Scene();
+    lensScene.autoUpdate = false;
+    lensScene.overrideMaterial = indexMaterial;
+    this.lensScene = lensScene;
 
-    const outputMesh = (() => {
+    const lensOutputMesh = (() => {
       const geometry = new THREE.PlaneBufferGeometry(1, 1);
       const material = new THREE.ShaderMaterial({
         uniforms: {
           tIndex: {
-            value: this.renderTarget.texture,
+            value: lensRenderTarget.texture,
             needsUpdate: true,
           },
         },
@@ -755,9 +760,6 @@ class Selector {
             // fIndex -= b * 1.0;
             // gl_FragColor = vec4(r, g, b, 1.);
 
-            // decode indexRgba to index
-            // float index = indexRgba.r * 65536.0 + indexRgba.g * 256.0 + indexRgba.b * 1.0;
-            // gl_FragColor = indexRgba;
             gl_FragColor = vec4(indexRgba.rgb / 255.0, 1.0);
           }
         `,
@@ -766,20 +768,154 @@ class Selector {
       mesh.frustumCulled = false;
       return mesh;
     })();
-    this.outputMesh = outputMesh;
+    this.lensOutputMesh = lensOutputMesh;
+
+    // index full screen pass 
+    const indicesRenderTarget = new THREE.WebGLRenderTarget((panelSize - 1) * 2, panelSize - 1, {
+      minFilter: THREE.NearestFilter,
+      magFilter: THREE.NearestFilter,
+      type: THREE.FloatType,
+    });
+    this.indicesRenderTarget = indicesRenderTarget;
+
+    const indicesScene = new THREE.Scene();
+    indicesScene.autoUpdate = false;
+    this.indicesScene = indicesScene;
+
+    const indicesFullscreenMesh = (() => {
+      const geometry = new THREE.PlaneBufferGeometry(2, 2);
+      const material = new THREE.ShaderMaterial({
+        uniforms: {
+          lensTexture: {
+            value: lensRenderTarget.texture,
+            needsUpdate: true,
+          },
+          lensTextureSize: {
+            value: new THREE.Vector2(selectorSize, selectorSize),
+            needsUpdate: true,
+          },
+          iResolution: {
+            value: new THREE.Vector2(indicesRenderTarget.width, indicesRenderTarget.height),
+            needsUpdate: true,
+          },
+        },
+        // full screen vertex shader, ignores the camera
+        vertexShader: `\
+          varying vec2 vUv;
+          void main() {
+            vUv = uv;
+            gl_Position = vec4(position, 1.0);
+          }
+        `,
+        fragmentShader: `\
+          uniform sampler2D lensTexture;
+          uniform vec2 lensTextureSize;
+          uniform vec2 iResolution;
+          varying vec2 vUv;
+          
+          void main() {
+            // get the exact pixel
+            float x = floor(vUv.x * iResolution.x - 0.5);
+            float y = floor(vUv.y * iResolution.y - 0.5);
+            float index = x + y * iResolution.x;
+
+            bool seen = false;
+            for (float ly = 0.; ly < lensTextureSize.y; ly += 1.) {
+              for (float lx = 0.; lx < lensTextureSize.x; lx += 1.) {
+                vec2 lensUv = (vec2(lx, ly) + 0.5) / lensTextureSize;
+                vec4 lensTextureRgba = texture2D(lensTexture, lensUv);
+
+                // encode the index as rgba
+                // float r = floor(fIndex / 65536.0);
+                // fIndex -= r * 65536.0;
+                // float g = floor(fIndex / 256.0);
+                // fIndex -= g * 256.0;
+                // float b = fIndex
+
+                // decode lensTextureRgba to index
+                float lensIndex = lensTextureRgba.r * 65536.0 + lensTextureRgba.g * 256.0 + lensTextureRgba.b;
+                float diff = abs(lensIndex - index);
+                if (diff < 0.25) {
+                  seen = true;
+                  break;
+                }
+              }
+              if (seen) {
+                break;
+              }
+            }
+            vec3 c;
+            if (seen) {
+              c = vec3(1.);
+            } else {
+              c = vec3(0.);
+            }
+            gl_FragColor = vec4(c, 1.);
+          }
+        `,
+      });
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.frustumCulled = false;
+      return mesh;
+    })();
+    indicesScene.add(indicesFullscreenMesh);
+    this.indicesFullscreenMesh = indicesFullscreenMesh;
+
+    const indicesOutputMesh = (() => {
+      const scale = 10;
+      const geometry = new THREE.PlaneBufferGeometry(2, 1)
+        .scale(scale, scale, scale);
+      const material = new THREE.ShaderMaterial({
+        uniforms: {
+          indicesTexture: {
+            value: indicesRenderTarget.texture,
+            needsUpdate: true,
+          },
+        },
+        vertexShader: `\
+          varying vec2 vUv;
+          void main() {
+            vUv = uv;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `,
+        fragmentShader: `\
+          uniform sampler2D indicesTexture;
+          varying vec2 vUv;
+          void main() {
+            vec4 indicesRgba = texture2D(indicesTexture, vUv);
+            gl_FragColor = vec4(indicesRgba.rgb, 1.0);
+            gl_FragColor.rg += 0.5 * vUv;
+          }
+        `,
+      });
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.frustumCulled = false;
+      return mesh;
+    })();
+    this.indicesOutputMesh = indicesOutputMesh;
   }
   addMesh(mesh) {
-    const geometry = mesh.geometry.toNonIndexed();
+    const geometry = mesh.geometry;
+    if (geometry.index) {
+      console.warn('mesh had index!');
+      debugger;
+    }
+    // add extra triangeId attribute
+    const triangleIdAttribute = new THREE.BufferAttribute(new Float32Array(geometry.attributes.position.count), 1);
+    for (let i = 0; i < triangleIdAttribute.count; i++) {
+      triangleIdAttribute.array[i] = Math.floor(i / 3);
+    }
+    geometry.setAttribute('triangleId', triangleIdAttribute);
+
+    // create the new mesh
     mesh = mesh.clone();
     mesh.geometry = geometry;
 
-    this.meshes.push(mesh);
+    this.lensScene.add(mesh);
   }
   update() {
     // push
-    for (const mesh of this.meshes) {
-      this.scene.add(mesh);
-    }
     const oldRenderTarget = this.renderer.getRenderTarget();
 
     // update
@@ -787,8 +923,8 @@ class Selector {
       const selectorSizeM1 = selectorSize - 1;
       const halfSelectorSizeM1 = selectorSizeM1 / 2;
       this.indexMaterial.uniforms.viewport.value.set(
-        (this.mouse.x / 2 + 0.5) * this.renderer.domElement.width - halfSelectorSizeM1 - 0.5,
-        (this.mouse.y / 2 + 0.5) * this.renderer.domElement.height - halfSelectorSizeM1 - 0.5,
+        (this.mouse.x / 2 + 0.5) * this.renderer.domElement.width - halfSelectorSizeM1 - 1,
+        (this.mouse.y / 2 + 0.5) * this.renderer.domElement.height - halfSelectorSizeM1 - 1,
         selectorSize,
         selectorSize
       );
@@ -797,16 +933,15 @@ class Selector {
       this.indexMaterial.uniforms.iResolution.needsUpdate = true;
     }
 
-    // render
-    this.renderer.setRenderTarget(this.renderTarget);
-    this.renderer.render(this.scene, this.camera);
+    // render lens
+    this.renderer.setRenderTarget(this.lensRenderTarget);
+    this.renderer.render(this.lensScene, this.camera);
 
-    // console.log('selector render'); // XXX
+    // render indices scene
+    this.renderer.setRenderTarget(this.indicesRenderTarget);
+    this.renderer.render(this.indicesScene, this.camera);
 
     // pop
-    for (const mesh of this.meshes) {
-      this.scene.remove(mesh);
-    }
     this.renderer.setRenderTarget(oldRenderTarget);
   }
 }
@@ -873,17 +1008,6 @@ class PanelRenderer extends EventTarget {
     const raycaster = new THREE.Raycaster();
     this.raycaster = raycaster;
 
-    // selector
-    const selector = new Selector({
-      renderer,
-      camera,
-      mouse,
-      raycaster,
-    });
-    this.selector = selector;
-
-    scene.add(selector.outputMesh);
-
     // lights
     const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
     directionalLight.position.set(1, 2, 3);
@@ -922,7 +1046,7 @@ class PanelRenderer extends EventTarget {
     // scene mesh
     const widthSegments = this.canvas.width - 1;
     const heightSegments = this.canvas.height - 1;
-    const geometry = new THREE.PlaneGeometry(1, 1, widthSegments, heightSegments);
+    let geometry = new THREE.PlaneGeometry(1, 1, widthSegments, heightSegments);
     pointCloudArrayBufferToPositionAttributeArray(pointCloudArrayBuffer, geometry.attributes.position.array, 1/this.canvas.width);
     geometry.setAttribute('color', new THREE.BufferAttribute(new Uint8Array(pointCloudArrayBuffer.byteLength / pointcloudStride * 3), 3, true));
     pointCloudArrayBufferToColorAttributeArray(labelImageData, geometry.attributes.color.array);
@@ -938,6 +1062,7 @@ class PanelRenderer extends EventTarget {
       });
       map.needsUpdate = true;
     })();
+    geometry = geometry.toNonIndexed();
     const sceneMesh = new THREE.Mesh(
       geometry,
       new THREE.MeshBasicMaterial({
@@ -950,7 +1075,21 @@ class PanelRenderer extends EventTarget {
     this.scene.add(sceneMesh);
     this.sceneMesh = sceneMesh;
 
-    this.selector.addMesh(sceneMesh);
+    // globalThis.sceneMesh = sceneMesh;
+
+    // selector
+    const selector = new Selector({
+      renderer,
+      camera,
+      mouse,
+      raycaster,
+    });
+    selector.addMesh(sceneMesh);
+    scene.add(selector.lensOutputMesh);
+    selector.indicesOutputMesh.position.z = -1;
+    selector.indicesOutputMesh.updateMatrixWorld();
+    scene.add(selector.indicesOutputMesh);
+    this.selector = selector;
 
     // floor mesh
     const floorMesh = (() => {
