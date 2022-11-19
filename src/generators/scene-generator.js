@@ -39,9 +39,10 @@ import {
   skyboxDistance,
 } from '../clients/reconstruction-client.js';
 
-import {blob2img} from '../utils/convert-utils.js';
+import {blob2img, img2ImageData} from '../utils/convert-utils.js';
 import {makeId} from '../utils/id-utils.js';
 import {labelClasses} from '../constants/prompts.js';
+import {downloadFile} from '../utils/http-utils.js';
 
 //
 
@@ -293,6 +294,27 @@ const setCameraViewPositionFromViewZ = (() => {
     return target;
   };
 })();
+const getDepthFloatsFromPointCloud = (pointCloudArrayBuffer, ) => {
+  const geometryPositions = new Float32Array(panelSize * panelSize * 3);
+  pointCloudArrayBufferToPositionAttributeArray(pointCloudArrayBuffer, geometryPositions, 1 / panelSize);
+
+  const newDepthFloatImageData = new Float32Array(geometryPositions.length / 3);
+  for (let i = 0; i < newDepthFloatImageData.length; i++) {
+    newDepthFloatImageData[i] = geometryPositions[i * 3 + 2];
+  }
+  return newDepthFloatImageData;
+};
+const makeFloatRenderTargetSwapChain = () => {
+  const targets = Array(2);
+  for (let i = 0; i < 2; i++) {
+    targets[i] = new THREE.WebGLRenderTarget(this.renderer.domElement.width, this.renderer.domElement.height, {
+      type: THREE.FloatType,
+      magFilter: THREE.NearestFilter,
+      minFilter: THREE.NearestFilter,
+    });
+  }
+  return targets;
+};
 
 //
 
@@ -970,34 +992,13 @@ class PanelRenderer extends EventTarget {
         this.renderer.setRenderTarget(null);
         return imageData;
       };
-      depthFloatImageData = floatImageData(_renderOverrideMaterial(depthRenderTarget)); // orthoZ
+      depthFloatImageData = floatImageData(_renderOverrideMaterial(depthRenderTarget)); // viewZ
     }
     console.timeEnd('renderDepth');
 
-    console.time('formatDepths');
-    let newDepthFloatImageData;
-    { 
-      const geometryPositions = new Float32Array(panelSize * panelSize * 3);
-      pointCloudArrayBufferToPositionAttributeArray(pointCloudArrayBuffer, geometryPositions, 1 / panelSize);
-
-      newDepthFloatImageData = new Float32Array(geometryPositions.length / 3);
-      for (let i = 0; i < newDepthFloatImageData.length; i++) {
-        newDepthFloatImageData[i] = geometryPositions[i * 3 + 2];
-      }
-    }
-    console.timeEnd('formatDepths');
-
-    const _makeFloatRenderTargetSwapChain = () => {
-      const targets = Array(2);
-      for (let i = 0; i < 2; i++) {
-        targets[i] = new THREE.WebGLRenderTarget(this.renderer.domElement.width, this.renderer.domElement.height, {
-          type: THREE.FloatType,
-          magFilter: THREE.NearestFilter,
-          minFilter: THREE.NearestFilter,
-        });
-      }
-      return targets;
-    };
+    console.time('extractDepths');
+    const newDepthFloatImageData = getDepthFloatsFromPointCloud(pointCloudArrayBuffer);
+    console.timeEnd('extractDepths');
 
     // render outline
     console.time('outline');
@@ -1012,7 +1013,7 @@ class PanelRenderer extends EventTarget {
       tempScene.add(this.sceneMesh); // note: stealing the scene mesh for a moment
 
       // We need two render targets to ping-pong in between.  
-      const targets = _makeFloatRenderTargetSwapChain();
+      const targets = makeFloatRenderTargetSwapChain();
 
       const jfaOutline = new JFAOutline(targets, iResolution);
       // jfaOutline.outline(this.renderer, tempScene, this.camera, targets, iResolution, SELECTED_LAYER);
@@ -1068,7 +1069,7 @@ class PanelRenderer extends EventTarget {
     console.time('reconstructZ');
     let reconstructedDepthFloats;
     {
-      const targets = _makeFloatRenderTargetSwapChain();
+      const targets = makeFloatRenderTargetSwapChain();
 
       renderDepthReconstruction(
         this.renderer,
@@ -1098,9 +1099,9 @@ class PanelRenderer extends EventTarget {
 
         reconstructedDepthFloats[index] = reconstructedDepthFloatsImageData[j];
       }
-      globalThis.depthFloatImageData = depthFloatImageData;
-      globalThis.newDepthFloatImageData = newDepthFloatImageData;
-      globalThis.reconstructedDepthFloats = reconstructedDepthFloats;
+      // globalThis.depthFloatImageData = depthFloatImageData;
+      // globalThis.newDepthFloatImageData = newDepthFloatImageData;
+      // globalThis.reconstructedDepthFloats = reconstructedDepthFloats;
 
       // draw to canvas
       const canvas = document.createElement('canvas');
@@ -1172,14 +1173,15 @@ class PanelRenderer extends EventTarget {
     // create background mesh
     (async () => {
       console.time('backgroundMesh');
-      const maskImgBlob = new Blob([maskImg], {type: 'image/png'});
-      const maskImageBitmap = await createImageBitmap(maskImgBlob);
-      const canvas = document.createElement('canvas');
-      canvas.width = maskImageBitmap.width;
-      canvas.height = maskImageBitmap.height;
-      const context = canvas.getContext('2d');
-      context.drawImage(maskImageBitmap, 0, 0);
-      const maskImageData = context.getImageData(0, 0, canvas.width, canvas.height);
+      // const maskImgBlob = new Blob([maskImg], {type: 'image/png'});
+      // const maskImageBitmap = await createImageBitmap(maskImgBlob);
+      // const canvas = document.createElement('canvas');
+      // canvas.width = maskImageBitmap.width;
+      // canvas.height = maskImageBitmap.height;
+      // const context = canvas.getContext('2d');
+      // context.drawImage(maskImageBitmap, 0, 0);
+      // const maskImageData = context.getImageData(0, 0, canvas.width, canvas.height);
+      const maskImageData = img2ImageData(maskImg);
       
       const widthSegments = panelSize - 1;
       const heightSegments = panelSize - 1;
@@ -1419,14 +1421,7 @@ async function compileVirtualScene(arrayBuffer) {
     threshold: 0.0001,
   });
   const labelImg = await blob2img(labelBlob);
-  const labelImageData = (() => {
-    const canvas = document.createElement('canvas');
-    canvas.width = labelImg.width;
-    canvas.height = labelImg.height;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(labelImg, 0, 0);
-    return ctx.getImageData(0, 0, canvas.width, canvas.height).data.buffer;
-  })();
+  const labelImageData = img2ImageData(labelImg).data.buffer;
   const boundingBoxLayers = JSON.parse(labelHeaders['x-bounding-boxes']);
   // const labelCanvas = drawLabelCanvas(labelImg, boundingBoxLayers);
   // document.body.appendChild(labelCanvas);
@@ -1438,6 +1433,35 @@ async function compileVirtualScene(arrayBuffer) {
   } = await getPointCloud(blob);
   const pointCloudCanvas = drawPointCloudCanvas(pointCloudArrayBuffer);
   // document.body.appendChild(pointCloudCanvas);
+
+  // create plane image
+  console.time('planeImage');
+  {
+    const {width, height} = img;
+    const header = Int32Array.from([width, height]);
+
+    const imageData = img2ImageData(img);
+    const colorsUint8Array = new Uint8Array(width * height * 3); // colors in RGB order
+    for (let i = 0; i < width * height; i++) {
+      const j = i * 4;
+      const k = i * 3;
+      colorsUint8Array[k + 0] = imageData.data[j + 0];
+      colorsUint8Array[k + 1] = imageData.data[j + 1];
+      colorsUint8Array[k + 2] = imageData.data[j + 2];
+    }
+    
+    const depthFloats32Array = getDepthFloatsFromPointCloud(pointCloudArrayBuffer);
+
+    // console.log('got blob', {
+    //   header, colorsUint8Array, depthFloats32Array,
+    // });
+    const blob = new Blob([header, colorsUint8Array, depthFloats32Array], {
+      type: 'application/octet-stream',
+    });
+    console.log('got plane blob')
+    // downloadFile(blob, 'planeImage.bin');
+  }
+  console.timeEnd('planeImage');
 
   // run ransac
   const planeMatrices = [];
