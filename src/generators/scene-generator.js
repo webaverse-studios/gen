@@ -1,9 +1,9 @@
 import * as THREE from 'three';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
-import PolynomialRegression from 'ml-regression-polynomial';
-import regression from 'regression';
-import Heap from 'heap-js';
-import alea from '../utils/alea.js';
+// import PolynomialRegression from 'ml-regression-polynomial';
+// import regression from 'regression';
+// import Heap from 'heap-js';
+// import alea from '../utils/alea.js';
 import {JFAOutline, renderDepthReconstruction} from '../utils/jfaOutline.js';
 
 // const x = [50, 50, 50, 70, 70, 70, 80, 80, 80, 90, 90, 90, 100, 100, 100];
