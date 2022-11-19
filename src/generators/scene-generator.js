@@ -291,10 +291,10 @@ const getDepthFloatsFromPointCloud = (pointCloudArrayBuffer, ) => {
   }
   return newDepthFloatImageData;
 };
-const makeFloatRenderTargetSwapChain = () => {
+const makeFloatRenderTargetSwapChain = (width, height) => {
   const targets = Array(2);
   for (let i = 0; i < 2; i++) {
-    targets[i] = new THREE.WebGLRenderTarget(this.renderer.domElement.width, this.renderer.domElement.height, {
+    targets[i] = new THREE.WebGLRenderTarget(width, height, {
       type: THREE.FloatType,
       magFilter: THREE.NearestFilter,
       minFilter: THREE.NearestFilter,
@@ -636,16 +636,115 @@ const _clipGeometryToMask = (
 
 //
 
+const selectorSize = 64 + 1;
 class Selector {
   constructor({
     renderer,
+    camera,
     raycaster,
   }) {
     this.renderer = renderer;
+    this.camera = camera;
     this.raycaster = raycaster;
+    
+    this.meshes = [];
+
+    this.renderTarget = new THREE.WebGLRenderTarget(selectorSize, selectorSize, {
+      minFilter: THREE.NearestFilter,
+      magFilter: THREE.NearestFilter,
+      // format: THREE.RGBAFormat,
+      type: THREE.FloatType,
+    });
+
+    const indexMaterial = new THREE.ShaderMaterial({
+      vertexShader: `\
+        flat varying int vIndex;
+        void main() {
+          // get the triangle index, dividing by 3
+          vIndex = gl_VertexID / 3;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `\
+        flat varying int vIndex;
+        void main() {
+          float fIndex = float(vIndex);
+          // encode the index as rgba
+          float r = floor(fIndex / 256.0 / 256.0 / 256.0);
+          float g = floor(fIndex / 256.0 / 256.0) - r * 256.0;
+          float b = floor(fIndex / 256.0) - r * 256.0 * 256.0 - g * 256.0;
+          float a = fIndex - r * 256.0 * 256.0 * 256.0 - g * 256.0 * 256.0 - b * 256.0;
+          gl_FragColor = vec4(r / 255.0, g / 255.0, b / 255.0, a / 255.0);
+        }
+      `,
+    });
+
+    const scene = new THREE.Scene();
+    scene.autoUpdate = false;
+    scene.overrideMaterial = indexMaterial;
+    this.scene = scene;
+
+    const outputMesh = (() => {
+      const geometry = new THREE.PlaneBufferGeometry(1, 1);
+      const material = new THREE.ShaderMaterial({
+        uniforms: {
+          tIndex: {
+            value: this.renderTarget.texture,
+            needsUpdate: true,
+          },
+        },
+        vertexShader: `\
+          varying vec2 vUv;
+          void main() {
+            vUv = uv;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `,
+        fragmentShader: `\
+          uniform sampler2D tIndex;
+          varying vec2 vUv;
+          void main() {
+            vec4 indexRgba = texture2D(tIndex, vUv);
+            
+            // decode indexRgba to index
+            // float index = indexRgba.r * 256.0 * 256.0 * 256.0 + indexRgba.g * 256.0 * 256.0 + indexRgba.b * 256.0 + indexRgba.a;
+            // gl_FragColor = vec4(index, index, index, 1.0);
+
+            gl_FragColor = indexRgba;
+          }
+        `,
+      });
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.frustumCulled = false;
+      return mesh;
+    })();
+    this.outputMesh = outputMesh;
+  }
+  addMesh(mesh) {
+    const geometry = mesh.geometry.toNonIndexed();
+    mesh = mesh.clone();
+    mesh.geometry = geometry;
+
+    this.meshes.push(mesh);
   }
   update() {
-    console.log('selector update'); // XXX
+    // push
+    for (const mesh of this.meshes) {
+      this.scene.add(mesh);
+    }
+    const oldRenderTarget = this.renderer.getRenderTarget();
+
+    // render
+    this.renderer.setRenderTarget(this.renderTarget);
+    this.renderer.render(this.scene, this.camera);
+
+    console.log('selector render'); // XXX
+
+    // pop
+    for (const mesh of this.meshes) {
+      this.scene.remove(mesh);
+    }
+    this.renderer.setRenderTarget(oldRenderTarget);
   }
 }
 
@@ -710,9 +809,12 @@ class PanelRenderer extends EventTarget {
     // selector
     const selector = new Selector({
       renderer,
+      camera,
       raycaster,
     });
     this.selector = selector;
+
+    scene.add(selector.outputMesh);
 
     // lights
     const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
@@ -779,6 +881,8 @@ class PanelRenderer extends EventTarget {
     sceneMesh.frustumCulled = false;
     this.scene.add(sceneMesh);
     this.sceneMesh = sceneMesh;
+
+    this.selector.addMesh(sceneMesh);
 
     // floor mesh
     const floorMesh = (() => {
@@ -1056,7 +1160,7 @@ class PanelRenderer extends EventTarget {
       tempScene.add(this.sceneMesh); // note: stealing the scene mesh for a moment
 
       // We need two render targets to ping-pong in between.  
-      const targets = makeFloatRenderTargetSwapChain();
+      const targets = makeFloatRenderTargetSwapChain(this.renderer.domElement.width, this.renderer.domElement.height);
 
       const jfaOutline = new JFAOutline(targets, iResolution);
       // jfaOutline.outline(this.renderer, tempScene, this.camera, targets, iResolution, SELECTED_LAYER);
@@ -1112,7 +1216,7 @@ class PanelRenderer extends EventTarget {
     console.time('reconstructZ');
     let reconstructedDepthFloats;
     {
-      const targets = makeFloatRenderTargetSwapChain();
+      const targets = makeFloatRenderTargetSwapChain(this.renderer.domElement.width, this.renderer.domElement.height);
 
       renderDepthReconstruction(
         this.renderer,
