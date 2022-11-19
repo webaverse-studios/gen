@@ -691,17 +691,10 @@ class Selector {
           // viewport is [x, y, width, height], in the range [0, iResolution]
           // iResolution is [width, height]
           // update gl_Position so that the view is zoomed in on the viewport:
-          //   - map gl_Position.xy from [-1, 1] to [0, iResolution]
-          //   - map gl_Position.xy from [0, iResolution] to [viewport.xy, viewport.xy + viewport.zw]
-          //   - map gl_Position.xy from [viewport.xy, viewport.xy + viewport.zw] to [0, selectorSize]
-          //   - map gl_Position.xy from [0, selectorSize] to [0, 1]
-          //   - map gl_Position.xy from [0, 1] to [-1, 1]
           gl_Position.xy = (gl_Position.xy + 1.0) / 2.0;
           gl_Position.xy *= iResolution;
           gl_Position.xy -= viewport.xy;
           gl_Position.xy /= viewport.zw;
-          // gl_Position.xy *= selectorSize;
-          // gl_Position.xy /= selectorSize;
           gl_Position.xy = gl_Position.xy * 2.0 - 1.0;
         }
       `,
@@ -783,7 +776,57 @@ class Selector {
     this.indicesScene = indicesScene;
 
     const indicesFullscreenMesh = (() => {
-      const geometry = new THREE.PlaneBufferGeometry(2, 2);
+      const planeGeometry = new THREE.PlaneBufferGeometry(1, 1)
+        .translate(0.5, 0.5, 0);
+      // position x, y is in the range [0, 1]
+
+      const geometry = new THREE.BufferGeometry();
+      const positions = new Float32Array(planeGeometry.attributes.position.array.length * selectorSize * selectorSize);
+      const coords = new Float32Array(planeGeometry.attributes.position.array.length * selectorSize * selectorSize);
+      const indices = new Uint32Array(planeGeometry.index.array.length * selectorSize * selectorSize);
+      let positionOffset = 0;
+      let indexOffset = 0;
+      for (let dy = 0; dy < selectorSize; dy++) {
+        for (let dx = 0; dx < selectorSize; dx++) {
+          for (let i = 0; i < planeGeometry.attributes.position.array.length; i += 3) {
+            // position
+            // const x = planeGeometry.attributes.position.array[i + 0] + dx;
+            // const y = planeGeometry.attributes.position.array[i + 1] + dy;
+
+            // const px = x / selectorSize;
+            // const py = y / selectorSize;
+
+            // const ndcX = px * 2 - 1;
+            // const ndcY = py * 2 - 1;
+
+            // positions[positionOffset + i + 0] = ndcX;
+            // positions[positionOffset + i + 1] = ndcY;
+            // positions[positionOffset + i + 2] = planeGeometry.attributes.position.array[i + 2];
+
+            // copy position
+            positions[positionOffset + i + 0] = planeGeometry.attributes.position.array[i + 0];
+            positions[positionOffset + i + 1] = planeGeometry.attributes.position.array[i + 1];
+            positions[positionOffset + i + 2] = planeGeometry.attributes.position.array[i + 2];
+
+            // coord
+            const index = dx + dy * selectorSize;
+            coords[positionOffset + i + 0] = dx;
+            coords[positionOffset + i + 1] = dy;
+            coords[positionOffset + i + 2] = index;
+          }
+          positionOffset += planeGeometry.attributes.position.array.length;
+
+          const localIndexOffset = positionOffset / 3;
+          for (let i = 0; i < planeGeometry.index.array.length; i++) {
+            indices[indexOffset + i] = planeGeometry.index.array[i] + localIndexOffset;
+          }
+          indexOffset += planeGeometry.index.array.length;
+        }
+      }
+      geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      geometry.setAttribute('coord', new THREE.BufferAttribute(coords, 3));
+      geometry.setIndex(new THREE.BufferAttribute(indices, 1));
+
       const material = new THREE.ShaderMaterial({
         uniforms: {
           lensTexture: {
@@ -801,13 +844,50 @@ class Selector {
         },
         // full screen vertex shader, ignores the camera
         vertexShader: `\
-          varying vec2 vUv;
+          uniform sampler2D lensTexture;
+          uniform vec2 lensTextureSize;
+          uniform vec2 iResolution;
+          attribute vec3 coord;
+
           void main() {
-            vUv = uv;
-            gl_Position = vec4(position, 1.0);
+            vec2 uv = (coord.xy + 0.5) / lensTextureSize;
+            vec4 lensTextureRgba = texture2D(lensTexture, uv);
+
+            // encode the index as rgba
+            // float r = floor(fIndex / 65536.0);
+            // fIndex -= r * 65536.0;
+            // float g = floor(fIndex / 256.0);
+            // fIndex -= g * 256.0;
+            // float b = fIndex
+
+            // decode lensTextureRgba to index
+            float lensIndex = lensTextureRgba.r * 65536.0 + lensTextureRgba.g * 256.0 + lensTextureRgba.b;
+
+            // compute the x, y point in [0, iResolution] space
+            float x = mod(lensIndex, iResolution.x);
+            float y = floor(lensIndex / iResolution.x);
+
+            // compute the uv point in [0, 1] space
+            float ax = x / iResolution.x;
+            float ay = y / iResolution.y;
+
+            // compute the ndc point in [-1, 1] space
+            float ndcX = ax * 2.0 - 1.0;
+            float ndcY = ay * 2.0 - 1.0;
+
+            // output the point
+            vec3 ndcOffset = vec3(ndcX, ndcY, 0.0);
+            vec3 p = vec3(position.xy / iResolution * 2., 0.) + // * 2 because the output is in [-1, 1] space
+              ndcOffset;
+            gl_Position = vec4(p, 1.0);
           }
         `,
         fragmentShader: `\
+          void main() {
+            gl_FragColor = vec4(1.);
+          }
+        `,
+        /* fragmentShader: `\
           uniform sampler2D lensTexture;
           uniform vec2 lensTextureSize;
           uniform vec2 iResolution;
@@ -852,8 +932,12 @@ class Selector {
             }
             gl_FragColor = vec4(c, 1.);
           }
-        `,
+        `, */
       });
+      // const geometry2 = new THREE.PlaneGeometry(1, 1);
+      // const material2 = new THREE.MeshBasicMaterial({
+      //   color: 0x0000FF,
+      // });
       const mesh = new THREE.Mesh(geometry, material);
       mesh.frustumCulled = false;
       return mesh;
@@ -897,10 +981,11 @@ class Selector {
   }
   addMesh(mesh) {
     const geometry = mesh.geometry;
-    if (geometry.index) {
-      console.warn('mesh had index!');
-      debugger;
-    }
+    // if (geometry.index) {
+    //   console.warn('mesh had index!');
+    //   debugger;
+    // }
+    
     // add extra triangeId attribute
     const triangleIdAttribute = new THREE.BufferAttribute(new Float32Array(geometry.attributes.position.count), 1);
     for (let i = 0; i < triangleIdAttribute.count; i++) {
