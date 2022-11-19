@@ -676,7 +676,7 @@ class Selector {
         uniform vec2 iResolution;
         uniform float selectorSize;
         attribute float triangleId;
-        varying float vIndex;
+        flat varying float vIndex;
 
         void main() {
           // get the triangle index, dividing by 3
@@ -699,7 +699,7 @@ class Selector {
         }
       `,
       fragmentShader: `\
-        varying float vIndex;
+        flat varying float vIndex;
 
         void main() {
           float fIndex = vIndex;
@@ -934,23 +934,7 @@ class Selector {
     this.indicesOutputMesh = indicesOutputMesh;
   }
   addMesh(mesh) {
-    const geometry = mesh.geometry;
-    // if (geometry.index) {
-    //   console.warn('mesh had index!');
-    //   debugger;
-    // }
-    
-    // add extra triangeId attribute
-    const triangleIdAttribute = new THREE.BufferAttribute(new Float32Array(geometry.attributes.position.count), 1);
-    for (let i = 0; i < triangleIdAttribute.count; i++) {
-      triangleIdAttribute.array[i] = Math.floor(i / 3);
-    }
-    geometry.setAttribute('triangleId', triangleIdAttribute);
-
-    // create the new mesh
     mesh = mesh.clone();
-    mesh.geometry = geometry;
-
     this.lensScene.add(mesh);
   }
   update() {
@@ -1091,6 +1075,15 @@ class PanelRenderer extends EventTarget {
     pointCloudArrayBufferToColorAttributeArray(labelImageData, geometry.attributes.color.array);
     // _cutSkybox(geometry);
     // applySkybox(geometry.attributes.position.array);
+    geometry = geometry.toNonIndexed();
+    // add extra triangeId attribute
+    const triangleIdAttribute = new THREE.BufferAttribute(new Float32Array(geometry.attributes.position.count), 1);
+    for (let i = 0; i < triangleIdAttribute.count; i++) {
+      triangleIdAttribute.array[i] = Math.floor(i / 3);
+    }
+    geometry.setAttribute('triangleId', triangleIdAttribute);
+    
+    // texture
     const map = new THREE.Texture();
     (async () => { // load the texture image
       const imgBlob = new Blob([imgArrayBuffer], {
@@ -1101,12 +1094,57 @@ class PanelRenderer extends EventTarget {
       });
       map.needsUpdate = true;
     })();
-    geometry = geometry.toNonIndexed();
+
+    // mesh
     const sceneMesh = new THREE.Mesh(
       geometry,
-      new THREE.MeshBasicMaterial({
-        // color: 0x0000ff,
-        map,
+      new THREE.ShaderMaterial({
+        uniforms: {
+          map: {
+            value: map,
+            needsUpdate: true,
+          },
+          selectedIndicesMap: {
+            value: null,
+            needsUpdate: false,
+          },
+          iSelectedIndicesMapResolution: {
+            value: new THREE.Vector2(),
+            needsUpdate: false,
+          },
+        },
+        vertexShader: `\
+          attribute float triangleId;
+          varying vec2 vUv;
+          flat varying float vTriangleId;
+          
+          void main() {
+            vUv = uv;
+            vTriangleId = triangleId;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `,
+        fragmentShader: `\
+          uniform sampler2D map;
+          uniform sampler2D selectedIndicesMap;
+          uniform vec2 iSelectedIndicesMapResolution;
+          varying vec2 vUv;
+          flat varying float vTriangleId;
+
+          void main() {
+            gl_FragColor = texture2D(map, vUv);
+            
+            // check for selection
+            float x = mod(vTriangleId, iSelectedIndicesMapResolution.x);
+            float y = floor(vTriangleId / iSelectedIndicesMapResolution.x);
+            vec2 uv = (vec2(x, y) + 0.5) / iSelectedIndicesMapResolution;
+            vec4 selectedIndexRgba = texture2D(selectedIndicesMap, uv);
+            bool isSelected = selectedIndexRgba.r > 0.5;
+            if (isSelected) {
+              gl_FragColor.rgb *= 0.2;
+            }
+          }
+        `,
       }),
     );
     sceneMesh.name = 'sceneMesh';
@@ -1117,18 +1155,28 @@ class PanelRenderer extends EventTarget {
     // globalThis.sceneMesh = sceneMesh;
 
     // selector
-    const selector = new Selector({
-      renderer,
-      camera,
-      mouse,
-      raycaster,
-    });
-    selector.addMesh(sceneMesh);
-    scene.add(selector.lensOutputMesh);
-    selector.indicesOutputMesh.position.z = -1;
-    selector.indicesOutputMesh.updateMatrixWorld();
-    scene.add(selector.indicesOutputMesh);
-    this.selector = selector;
+    {
+      const selector = new Selector({
+        renderer,
+        camera,
+        mouse,
+        raycaster,
+      });
+      selector.addMesh(sceneMesh);
+
+      scene.add(selector.lensOutputMesh);
+      
+      selector.indicesOutputMesh.position.z = -1;
+      selector.indicesOutputMesh.updateMatrixWorld();
+      scene.add(selector.indicesOutputMesh);
+      
+      sceneMesh.material.uniforms.selectedIndicesMap.value = selector.indicesRenderTarget.texture;
+      sceneMesh.material.uniforms.selectedIndicesMap.needsUpdate = true;
+      sceneMesh.material.uniforms.iSelectedIndicesMapResolution.value.set(selector.indicesRenderTarget.width, selector.indicesRenderTarget.height);
+      sceneMesh.material.uniforms.iSelectedIndicesMapResolution.needsUpdate = true;
+
+      this.selector = selector;
+    }
 
     // floor mesh
     const floorMesh = (() => {
