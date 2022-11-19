@@ -1,7 +1,12 @@
 import {useState, useRef, useEffect} from 'react';
 import classnames from 'classnames';
 
-import {panelSize, layer1Specs, layer2Specs} from '../../generators/scene-generator.js';
+import {
+  panelSize,
+  tools,
+  layer1Specs,
+  layer2Specs,
+} from '../../generators/scene-generator.js';
 import styles from '../../../styles/Storyboard3DRenderer.module.css';
 
 //
@@ -35,6 +40,19 @@ const Panel3DCanvas = ({
     const keydown = e => {
       if (!e.repeat) {
         switch (e.key) {
+          case '1':
+          case '2':
+          case '3':
+          case '4':
+          case '5':
+          case '6':
+          case '7':
+          case '8':
+          case '9': {
+            const keyIndex = parseInt(e.key, 10) - 1;
+            renderer.setTool(tools[keyIndex] ?? tools[0]);
+            break;
+          }
           case ' ': {
             e.preventDefault();
             e.stopPropagation();

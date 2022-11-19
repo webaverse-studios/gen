@@ -121,6 +121,10 @@ export const layer2Specs = [
     type: 'arrayBuffer',
   },
 ];
+export const tools = [
+  'camera',
+  'eraser',
+];
 
 //
 
@@ -669,6 +673,7 @@ class PanelRenderer extends EventTarget {
     this.panel = panel;
     this.debug = debug;
 
+    this.tool = tools[0];
     this.layerScenes = [];
 
     // canvas
@@ -816,6 +821,11 @@ class PanelRenderer extends EventTarget {
     this.listen();
     this.animate();
   }
+  setTool(tool) {
+    this.tool = tool;
+
+    this.controls.enabled = this.tool === 'camera';
+  }
   listen() {
     const keydown = e => {
       if (!e.repeat) {
@@ -858,9 +868,11 @@ class PanelRenderer extends EventTarget {
   animate() {
     const _startLoop = () => {
       const _render = () => {
-        // update orbit controls
-        this.controls.update();
-        this.camera.updateMatrixWorld();
+        if (this.tool === 'camera') {
+          // update orbit controls
+          this.controls.update();
+          this.camera.updateMatrixWorld();
+        }
 
         // render
         this.renderer.render(this.scene, this.camera);
@@ -1507,7 +1519,7 @@ async function compileVirtualScene(arrayBuffer) {
   img.classList.add('img');
   // document.body.appendChild(img);
   
-  /* // label
+  // label
   const {
     headers: labelHeaders,
     blob: labelBlob,
@@ -1519,7 +1531,7 @@ async function compileVirtualScene(arrayBuffer) {
   const labelImageData = img2ImageData(labelImg).data.buffer;
   const boundingBoxLayers = JSON.parse(labelHeaders['x-bounding-boxes']);
   // const labelCanvas = drawLabelCanvas(labelImg, boundingBoxLayers);
-  // document.body.appendChild(labelCanvas); */
+  // document.body.appendChild(labelCanvas);
 
   /* // image segmentation
   console.time('imageSegmentation');
