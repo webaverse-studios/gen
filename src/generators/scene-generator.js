@@ -676,7 +676,7 @@ class Selector {
         uniform vec2 iResolution;
         uniform float selectorSize;
         attribute float triangleId;
-        flat varying float vIndex;
+        varying float vIndex;
 
         void main() {
           // get the triangle index, dividing by 3
@@ -686,7 +686,8 @@ class Selector {
 
           gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
 
-          gl_Position /= gl_Position.w;
+          float w = gl_Position.w;
+          gl_Position /= w;
           
           // viewport is [x, y, width, height], in the range [0, iResolution]
           // iResolution is [width, height]
@@ -696,10 +697,12 @@ class Selector {
           gl_Position.xy -= viewport.xy;
           gl_Position.xy /= viewport.zw;
           gl_Position.xy = gl_Position.xy * 2.0 - 1.0;
+
+          gl_Position *= w;
         }
       `,
       fragmentShader: `\
-        flat varying float vIndex;
+        varying float vIndex;
 
         void main() {
           float fIndex = vIndex;
@@ -935,6 +938,7 @@ class Selector {
   }
   addMesh(mesh) {
     mesh = mesh.clone();
+    mesh.frustumCulled = false;
     this.lensScene.add(mesh);
   }
   update() {
@@ -1116,7 +1120,7 @@ class PanelRenderer extends EventTarget {
         vertexShader: `\
           attribute float triangleId;
           varying vec2 vUv;
-          flat varying float vTriangleId;
+          varying float vTriangleId;
           
           void main() {
             vUv = uv;
@@ -1129,7 +1133,7 @@ class PanelRenderer extends EventTarget {
           uniform sampler2D selectedIndicesMap;
           uniform vec2 iSelectedIndicesMapResolution;
           varying vec2 vUv;
-          flat varying float vTriangleId;
+          varying float vTriangleId;
 
           void main() {
             gl_FragColor = texture2D(map, vUv);
