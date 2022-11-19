@@ -66,9 +66,17 @@ export const layer1Specs = [
     name: 'boundingBoxLayers',
     type: 'json',
   },
+  // {
+  //   name: 'planeMatrices',
+  //   type: 'json',
+  // },
   {
-    name: 'planeMatrices',
+    name: 'planesJson',
     type: 'json',
+  },
+  {
+    name: 'planesIndices',
+    type: 'arrayBuffer',
   },
   {
     name: 'predictedHeight',
@@ -725,7 +733,9 @@ class PanelRenderer extends EventTarget {
     const labelImageData = panel.getData('layer1/labelImageData');
     const pointCloudHeaders = panel.getData('layer1/pointCloudHeaders');
     const pointCloudArrayBuffer = panel.getData('layer1/pointCloud');
-    const planeMatrices = panel.getData('layer1/planeMatrices');
+    // const planeMatrices = panel.getData('layer1/planeMatrices');
+    const planesJson = panel.getData('layer1/planesJson');
+    const planesIndices = panel.getData('layer1/planesIndices');
     const predictedHeight = panel.getData('layer1/predictedHeight');
     // console.log('got panel datas', panel.getDatas());
 
@@ -783,7 +793,7 @@ class PanelRenderer extends EventTarget {
     // this.scene.add(floorMesh);
     this.floorMesh = floorMesh;
 
-    // planes mesh
+    /* // planes mesh
     const planesMesh = (() => {
       const planeGeometry = new THREE.PlaneGeometry(1, 1);
       const material = new THREE.MeshBasicMaterial({
@@ -800,7 +810,7 @@ class PanelRenderer extends EventTarget {
       return planesMesh;
     })();
     // this.scene.add(planesMesh);
-    this.planesMesh = planesMesh;
+    this.planesMesh = planesMesh; */
 
     // bootstrap
     this.listen();
@@ -1308,7 +1318,7 @@ class PanelRenderer extends EventTarget {
 
 //
 
-const _detectPlanes = async points => {
+/* const _getPlanesRansac = async points => {
   console.time('ransac');
   const res = await fetch(`https://depth.webaverse.com/ransac?n=${8}&threshold=${0.1}&init_n=${1500}`, {
     method: 'POST',
@@ -1321,6 +1331,91 @@ const _detectPlanes = async points => {
   } else {
     console.timeEnd('ransac');
     throw new Error('failed to detect planes');
+  }
+}; */
+const _getPlanesRgbd = async (width, height, depthFloats32Array) => {
+  const header = Int32Array.from([width, height]);
+
+  const requestBlob = new Blob([header, depthFloats32Array], {
+    type: 'application/octet-stream',
+  });
+
+  const minSupport = 50000;
+  const res = await fetch(`https://depth.webaverse.com/planeDetection?minSupport=${minSupport}`, {
+    method: 'POST',
+    body: requestBlob,
+  });
+  if (res.ok) {
+    const planesArrayBuffer = await res.arrayBuffer();
+    const dataView = new DataView(planesArrayBuffer);
+    
+    // parse number of planes
+    let index = 0;
+    const numPlanes = dataView.getUint32(index, true);
+    index += Uint32Array.BYTES_PER_ELEMENT;
+    
+    // parse the planes
+    const planesJson = [];
+    for (let i = 0; i < numPlanes; i++) {
+      const normal = new Float32Array(planesArrayBuffer, index, 3);
+      index += Float32Array.BYTES_PER_ELEMENT * 3;
+      const center = new Float32Array(planesArrayBuffer, index, 3);
+      index += Float32Array.BYTES_PER_ELEMENT * 3;
+      const numVertices = dataView.getUint32(index, true);
+      index += Uint32Array.BYTES_PER_ELEMENT;
+      const distanceSquaredF = new Float32Array(planesArrayBuffer, index, 1);
+      index += Float32Array.BYTES_PER_ELEMENT;
+      
+      // console.log('plane', i, normal, center, numVertices, distanceSquaredF);
+      const planeJson = {
+        normal,
+        center,
+        numVertices,
+        distanceSquaredF,
+      };
+      planesJson.push(planeJson);
+    }
+
+    // the remainder is a Int32Array(width * height) of plane indices
+    const planesIndices = new Int32Array(planesArrayBuffer, index);
+    index += Int32Array.BYTES_PER_ELEMENT * planesIndices.length;
+    if (planesIndices.length !== width * height) {
+      throw new Error('plane indices length mismatch');
+    }
+
+    return {
+      planesJson,
+      planesIndices,
+    };
+  } else {
+    throw new Error('failed to detect planes');
+  }
+};
+const _getImageSegements = async imgBlob => {
+  const threshold = 0.5;
+  const res = await fetch(`https://mask2former.webaverse.com/predict?threshold=${threshold}`, {
+    method: 'POST',
+    body: imgBlob,
+  });
+  if (res.ok) {
+    const segmentsBlob = await res.blob();
+    const resHeaders = Object.fromEntries(res.headers.entries());
+
+    // const labelImg = await blob2img(segmentsBlob);
+    const boundingBoxLayers = JSON.parse(resHeaders['x-bounding-boxes']);
+    // console.log('got bounding boxes', boundingBoxLayers);
+    // const labelCanvas = drawLabelCanvas(labelImg, boundingBoxLayers);
+
+    return {
+      segmentsBlob,
+      boundingBoxLayers,
+    };
+
+    // const segmentsArrayBuffer = await res.arrayBuffer();
+    // const segments = new Uint8Array(segmentsArrayBuffer);
+    // return segments;
+  } else {
+    throw new Error('failed to detect image segments');
   }
 };
 
@@ -1412,7 +1507,7 @@ async function compileVirtualScene(arrayBuffer) {
   img.classList.add('img');
   // document.body.appendChild(img);
   
-  // label
+  /* // label
   const {
     headers: labelHeaders,
     blob: labelBlob,
@@ -1424,47 +1519,42 @@ async function compileVirtualScene(arrayBuffer) {
   const labelImageData = img2ImageData(labelImg).data.buffer;
   const boundingBoxLayers = JSON.parse(labelHeaders['x-bounding-boxes']);
   // const labelCanvas = drawLabelCanvas(labelImg, boundingBoxLayers);
-  // document.body.appendChild(labelCanvas);
+  // document.body.appendChild(labelCanvas); */
 
-  // point cloud
+  /* // image segmentation
+  console.time('imageSegmentation');
+  let imageSegmentationSpec;
+  {
+    imageSegmentationSpec = await _getImageSegements(blob);
+    console.log('got image segmentation spec', imageSegmentationSpec);
+  }
+  console.timeEnd('imageSegmentation'); */
+
+  // point cloud reconstruction
+  console.time('pointCloud');
   const {
     headers: pointCloudHeaders,
     arrayBuffer: pointCloudArrayBuffer,
   } = await getPointCloud(blob);
-  const pointCloudCanvas = drawPointCloudCanvas(pointCloudArrayBuffer);
-  // document.body.appendChild(pointCloudCanvas);
+  console.timeEnd('pointCloud');
 
-  // create plane image
-  console.time('planeImage');
+  // plane detection
+  console.time('planeDetection');
+  let planesJson;
+  let planesIndices;
   {
-    const {width, height} = img;
-    const header = Int32Array.from([width, height]);
-
-    const imageData = img2ImageData(img);
-    const colorsUint8Array = new Uint8Array(width * height * 3); // colors in RGB order
-    for (let i = 0; i < width * height; i++) {
-      const j = i * 4;
-      const k = i * 3;
-      colorsUint8Array[k + 0] = imageData.data[j + 0];
-      colorsUint8Array[k + 1] = imageData.data[j + 1];
-      colorsUint8Array[k + 2] = imageData.data[j + 2];
-    }
-    
     const depthFloats32Array = getDepthFloatsFromPointCloud(pointCloudArrayBuffer);
-
-    // console.log('got blob', {
-    //   header, colorsUint8Array, depthFloats32Array,
-    // });
-    const blob = new Blob([header, colorsUint8Array, depthFloats32Array], {
-      type: 'application/octet-stream',
-    });
-    console.log('got plane blob')
-    // downloadFile(blob, 'planeImage.bin');
+    
+    const {width, height} = img;
+    const planesSpec = await _getPlanesRgbd(width, height, depthFloats32Array);
+    console.log('got planes spec', planesSpec);
+    planesJson = planesSpec.planesJson;
+    planesIndices = planesSpec.planesIndices;
   }
-  console.timeEnd('planeImage');
+  console.timeEnd('planeDetection');
 
   // run ransac
-  const planeMatrices = [];
+  /* const planeMatrices = [];
   {
     const widthSegments = img.width - 1;
     const heightSegments = img.height - 1;
@@ -1491,11 +1581,11 @@ async function compileVirtualScene(arrayBuffer) {
     }
 
     // detect planes
-    const planesJson = await _detectPlanes(points2);
+    const planesJson = await _getPlanesRansac(points2);
     // draw detected planes
     for (let i = 0; i < planesJson.length; i++) {
       const plane = planesJson[i];
-      const [planeEquation, planePointIndices] = plane; // XXX note the planeIndices are computed relative to the current points set after removing all previous planes; these are not global indices
+      const [planeEquation, planePointIndices] = plane; // XXX note the planesIndices are computed relative to the current points set after removing all previous planes; these are not global indices
       
       const normal = new THREE.Vector3(planeEquation[0], planeEquation[1], planeEquation[2]);
       const distance = planeEquation[3];
@@ -1540,7 +1630,7 @@ async function compileVirtualScene(arrayBuffer) {
       // latch new points
       points2 = Float32Array.from(outlierPlaneFloats);
     }
-  }
+  } */
 
   // query the height
   const predictedHeight = await _getPredictedHeight(blob);
@@ -1552,7 +1642,9 @@ async function compileVirtualScene(arrayBuffer) {
     pointCloudHeaders,
     pointCloud: pointCloudArrayBuffer,
     boundingBoxLayers,
-    planeMatrices,
+    // planeMatrices,
+    planesJson,
+    planesIndices,
     predictedHeight,
   };
 }
