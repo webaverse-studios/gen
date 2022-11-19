@@ -641,10 +641,12 @@ class Selector {
   constructor({
     renderer,
     camera,
+    mouse,
     raycaster,
   }) {
     this.renderer = renderer;
     this.camera = camera;
+    this.mouse = mouse;
     this.raycaster = raycaster;
     
     this.meshes = [];
@@ -657,27 +659,65 @@ class Selector {
     });
 
     const indexMaterial = new THREE.ShaderMaterial({
+      uniforms: {
+        viewport: {
+          value: new THREE.Vector4(),
+          needsUpdate: true,
+        },
+        iResolution: {
+          value: new THREE.Vector2(),
+          needsUpdate: true,
+        },
+      },
       vertexShader: `\
+        uniform vec4 viewport;
+        uniform vec2 iResolution;
         flat varying int vIndex;
+
+        const float selectorSize = ${selectorSize.toFixed(8)};
+
         void main() {
           // get the triangle index, dividing by 3
           vIndex = gl_VertexID / 3;
+
           gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+
+          gl_Position /= gl_Position.w;
+          
+          // viewport is [x, y, width, height], in the range [0, iResolution]
+          // iResolution is [width, height]
+          // update gl_Position so that the view is zoomed in on the viewport:
+          //   - map gl_Position.xy from [-1, 1] to [0, iResolution]
+          //   - map gl_Position.xy from [0, iResolution] to [viewport.xy, viewport.xy + viewport.zw]
+          //   - map gl_Position.xy from [viewport.xy, viewport.xy + viewport.zw] to [0, selectorSize]
+          //   - map gl_Position.xy from [0, selectorSize] to [0, 1]
+          //   - map gl_Position.xy from [0, 1] to [-1, 1]
+          gl_Position.xy = (gl_Position.xy + 1.0) / 2.0;
+          gl_Position.xy *= iResolution;
+          gl_Position.xy -= viewport.xy;
+          gl_Position.xy /= viewport.zw;
+          // gl_Position.xy *= selectorSize;
+          // gl_Position.xy /= selectorSize;
+          gl_Position.xy = gl_Position.xy * 2.0 - 1.0;
         }
       `,
       fragmentShader: `\
         flat varying int vIndex;
         void main() {
           float fIndex = float(vIndex);
-          // encode the index as rgba
-          float r = floor(fIndex / 256.0 / 256.0 / 256.0);
-          float g = floor(fIndex / 256.0 / 256.0) - r * 256.0;
-          float b = floor(fIndex / 256.0) - r * 256.0 * 256.0 - g * 256.0;
-          float a = fIndex - r * 256.0 * 256.0 * 256.0 - g * 256.0 * 256.0 - b * 256.0;
-          gl_FragColor = vec4(r / 255.0, g / 255.0, b / 255.0, a / 255.0);
+
+          // encode the index as rgb
+          float r = floor(fIndex / 65536.0);
+          fIndex -= r * 65536.0;
+          float g = floor(fIndex / 256.0);
+          fIndex -= g * 256.0;
+          float b = floor(fIndex / 1.0);
+
+          gl_FragColor = vec4(r, g, b, 1.);
         }
       `,
     });
+    this.indexMaterial = indexMaterial;
 
     const scene = new THREE.Scene();
     scene.autoUpdate = false;
@@ -706,11 +746,19 @@ class Selector {
           void main() {
             vec4 indexRgba = texture2D(tIndex, vUv);
             
-            // decode indexRgba to index
-            // float index = indexRgba.r * 256.0 * 256.0 * 256.0 + indexRgba.g * 256.0 * 256.0 + indexRgba.b * 256.0 + indexRgba.a;
-            // gl_FragColor = vec4(index, index, index, 1.0);
+            // encode the index as rgba
+            // float r = floor(fIndex / 65536.0);
+            // fIndex -= r * 65536.0;
+            // float g = floor(fIndex / 256.0);
+            // fIndex -= g * 256.0;
+            // float b = floor(fIndex / 1.0);
+            // fIndex -= b * 1.0;
+            // gl_FragColor = vec4(r, g, b, 1.);
 
-            gl_FragColor = indexRgba;
+            // decode indexRgba to index
+            // float index = indexRgba.r * 65536.0 + indexRgba.g * 256.0 + indexRgba.b * 1.0;
+            // gl_FragColor = indexRgba;
+            gl_FragColor = vec4(indexRgba.rgb / 255.0, 1.0);
           }
         `,
       });
@@ -734,11 +782,26 @@ class Selector {
     }
     const oldRenderTarget = this.renderer.getRenderTarget();
 
+    // update
+    {
+      const selectorSizeM1 = selectorSize - 1;
+      const halfSelectorSizeM1 = selectorSizeM1 / 2;
+      this.indexMaterial.uniforms.viewport.value.set(
+        (this.mouse.x / 2 + 0.5) * this.renderer.domElement.width - halfSelectorSizeM1 - 0.5,
+        (this.mouse.y / 2 + 0.5) * this.renderer.domElement.height - halfSelectorSizeM1 - 0.5,
+        selectorSize,
+        selectorSize
+      );
+      this.indexMaterial.uniforms.viewport.needsUpdate = true;
+      this.indexMaterial.uniforms.iResolution.value.set(this.renderer.domElement.width, this.renderer.domElement.height);
+      this.indexMaterial.uniforms.iResolution.needsUpdate = true;
+    }
+
     // render
     this.renderer.setRenderTarget(this.renderTarget);
     this.renderer.render(this.scene, this.camera);
 
-    console.log('selector render'); // XXX
+    // console.log('selector render'); // XXX
 
     // pop
     for (const mesh of this.meshes) {
@@ -802,6 +865,10 @@ class PanelRenderer extends EventTarget {
     controls.target.set(0, 0, -3);
     this.controls = controls;
 
+    // mouse
+    const mouse = new THREE.Vector2();
+    this.mouse = mouse;
+
     // raycaster
     const raycaster = new THREE.Raycaster();
     this.raycaster = raycaster;
@@ -810,6 +877,7 @@ class PanelRenderer extends EventTarget {
     const selector = new Selector({
       renderer,
       camera,
+      mouse,
       raycaster,
     });
     this.selector = selector;
@@ -953,10 +1021,12 @@ class PanelRenderer extends EventTarget {
       const rect = this.canvas.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
-      this.raycaster.setFromCamera(localVector2D.set(
+
+      this.mouse.set(
         (x / rect.width) * 2 - 1,
         -(y / rect.height) * 2 + 1
-      ), this.camera);
+      );
+      this.raycaster.setFromCamera(this.mouse, this.camera);
     };
 
     const canvas = this.renderer.domElement;
