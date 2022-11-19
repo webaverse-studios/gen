@@ -887,52 +887,6 @@ class Selector {
             gl_FragColor = vec4(1.);
           }
         `,
-        /* fragmentShader: `\
-          uniform sampler2D lensTexture;
-          uniform vec2 lensTextureSize;
-          uniform vec2 iResolution;
-          varying vec2 vUv;
-          
-          void main() {
-            // get the exact pixel
-            float x = floor(vUv.x * iResolution.x - 0.5);
-            float y = floor(vUv.y * iResolution.y - 0.5);
-            float index = x + y * iResolution.x;
-
-            bool seen = false;
-            for (float ly = 0.; ly < lensTextureSize.y; ly += 1.) {
-              for (float lx = 0.; lx < lensTextureSize.x; lx += 1.) {
-                vec2 lensUv = (vec2(lx, ly) + 0.5) / lensTextureSize;
-                vec4 lensTextureRgba = texture2D(lensTexture, lensUv);
-
-                // encode the index as rgba
-                // float r = floor(fIndex / 65536.0);
-                // fIndex -= r * 65536.0;
-                // float g = floor(fIndex / 256.0);
-                // fIndex -= g * 256.0;
-                // float b = fIndex
-
-                // decode lensTextureRgba to index
-                float lensIndex = lensTextureRgba.r * 65536.0 + lensTextureRgba.g * 256.0 + lensTextureRgba.b;
-                float diff = abs(lensIndex - index);
-                if (diff < 0.25) {
-                  seen = true;
-                  break;
-                }
-              }
-              if (seen) {
-                break;
-              }
-            }
-            vec3 c;
-            if (seen) {
-              c = vec3(1.);
-            } else {
-              c = vec3(0.);
-            }
-            gl_FragColor = vec4(c, 1.);
-          }
-        `, */
       });
       // const geometry2 = new THREE.PlaneGeometry(1, 1);
       // const material2 = new THREE.MeshBasicMaterial({
