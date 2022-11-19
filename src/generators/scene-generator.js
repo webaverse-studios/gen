@@ -1168,9 +1168,13 @@ class PanelRenderer extends EventTarget {
       });
       selector.addMesh(sceneMesh);
 
+      selector.lensOutputMesh.position.x = -10;
+      selector.lensOutputMesh.updateMatrixWorld();
       scene.add(selector.lensOutputMesh);
       
-      selector.indicesOutputMesh.position.z = -1;
+      selector.indicesOutputMesh.position.x = -10;
+      selector.indicesOutputMesh.position.z = -10;
+      selector.indicesOutputMesh.quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
       selector.indicesOutputMesh.updateMatrixWorld();
       scene.add(selector.indicesOutputMesh);
       
