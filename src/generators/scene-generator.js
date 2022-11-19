@@ -109,8 +109,7 @@ const abortError = new Error();
 abortError.isAbortError = true;
 
 const localVector = new THREE.Vector3();
-// const localVector2 = new THREE.Vector3();
-// const localVector3 = new THREE.Vector3();
+const localVector2D = new THREE.Vector2();
 const localMatrix = new THREE.Matrix4();
 
 //
@@ -637,6 +636,21 @@ const _clipGeometryToMask = (
 
 //
 
+class Selector {
+  constructor({
+    renderer,
+    raycaster,
+  }) {
+    this.renderer = renderer;
+    this.raycaster = raycaster;
+  }
+  update() {
+    console.log('selector update'); // XXX
+  }
+}
+
+//
+
 class PanelRenderer extends EventTarget {
   constructor(canvas, panel, {
     debug = false,
@@ -688,6 +702,17 @@ class PanelRenderer extends EventTarget {
     controls.maxPolarAngle = Math.PI / 2;
     controls.target.set(0, 0, -3);
     this.controls = controls;
+
+    // raycaster
+    const raycaster = new THREE.Raycaster();
+    this.raycaster = raycaster;
+
+    // selector
+    const selector = new Selector({
+      renderer,
+      raycaster,
+    });
+    this.selector = selector;
 
     // lights
     const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
@@ -819,9 +844,21 @@ class PanelRenderer extends EventTarget {
     };
     document.addEventListener('keydown', keydown);
 
+    const mousemove = e => {
+      // set the THREE.js.Raycaster from the mouse event
+      const rect = this.canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      this.raycaster.setFromCamera(localVector2D.set(
+        (x / rect.width) * 2 - 1,
+        -(y / rect.height) * 2 + 1
+      ), this.camera);
+    };
+
     const canvas = this.renderer.domElement;
     canvas.addEventListener('mousedown', blockEvent);
     canvas.addEventListener('mouseup', blockEvent);
+    canvas.addEventListener('mousemove', mousemove);
     canvas.addEventListener('click', blockEvent);
     canvas.addEventListener('wheel', blockEvent);
 
@@ -835,6 +872,7 @@ class PanelRenderer extends EventTarget {
 
       canvas.removeEventListener('mousedown', blockEvent);
       canvas.removeEventListener('mouseup', blockEvent);
+      canvas.removeEventListener('mousemove', mousemove);
       canvas.removeEventListener('click', blockEvent);
       canvas.removeEventListener('wheel', blockEvent);
 
@@ -844,10 +882,17 @@ class PanelRenderer extends EventTarget {
   animate() {
     const _startLoop = () => {
       const _render = () => {
-        if (this.tool === 'camera') {
-          // update orbit controls
-          this.controls.update();
-          this.camera.updateMatrixWorld();
+        switch (this.tool) {
+          case 'camera': {
+            // update orbit controls
+            this.controls.update();
+            this.camera.updateMatrixWorld();
+            break;
+          }
+          case 'eraser': {
+            this.selector.update();
+            break;
+          }
         }
 
         // render
