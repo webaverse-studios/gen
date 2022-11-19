@@ -1,31 +1,7 @@
 import * as THREE from 'three';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
-// import PolynomialRegression from 'ml-regression-polynomial';
-// import regression from 'regression';
-// import Heap from 'heap-js';
 // import alea from '../utils/alea.js';
 import {JFAOutline, renderDepthReconstruction} from '../utils/jfaOutline.js';
-
-// const x = [50, 50, 50, 70, 70, 70, 80, 80, 80, 90, 90, 90, 100, 100, 100];
-// const y = [3.3, 2.8, 2.9, 2.3, 2.6, 2.1, 2.5, 2.9, 2.4, 3.0, 3.1, 2.8, 3.3, 3.5, 3.0];
-// const degree = 5; // setup the maximum degree of the polynomial
-// const regression = new PolynomialRegression(x, y, degree);
-// console.log(regression.predict(80));
-
-// import regression from 'regression';
-// const result = regression.linear([[0, 1], [32, 67], [12, 79]]);
-// const gradient = result.equation[0];
-// const yIntercept = result.equation[1];
-
-/* globalThis.testPrediction = () => {
-  const data = [[0,1],[32, 67], [12, 30], [40, 79]];
-  // const result = regression.polynomial(data, {
-  //   order: 3,
-  // });
-  const result = regression.exponential(data);
-  console.log('predict', result.predict(30));
-  return result;
-}; */
 
 import {ImageAiClient} from '../clients/image-client.js';
 import {getLabel} from '../clients/perception-client.js';
