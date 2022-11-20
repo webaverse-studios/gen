@@ -656,14 +656,14 @@ class Selector {
     });
     this.lensRenderTarget = lensRenderTarget;
 
-    const indexMaterial = new THREE.ShaderMaterial({
+    const lensMaterial = new THREE.ShaderMaterial({
       uniforms: {
         viewport: {
           value: new THREE.Vector4(),
           needsUpdate: true,
         },
         iResolution: {
-          value: new THREE.Vector2(),
+          value: new THREE.Vector2(this.renderer.domElement.width, this.renderer.domElement.height),
           needsUpdate: true,
         },
         selectorSize: {
@@ -718,11 +718,11 @@ class Selector {
         }
       `,
     });
-    this.indexMaterial = indexMaterial;
+    this.lensMaterial = lensMaterial;
 
     const lensScene = new THREE.Scene();
     lensScene.autoUpdate = false;
-    lensScene.overrideMaterial = indexMaterial;
+    lensScene.overrideMaterial = lensMaterial;
     this.lensScene = lensScene;
 
     const lensOutputMesh = (() => {
@@ -777,6 +777,192 @@ class Selector {
     const indicesScene = new THREE.Scene();
     indicesScene.autoUpdate = false;
     this.indicesScene = indicesScene;
+
+    const indexMaterial = new THREE.ShaderMaterial({
+      uniforms: {
+        iResolution: {
+          value: new THREE.Vector2(this.indicesRenderTarget.width, this.indicesRenderTarget.height),
+          needsUpdate: true,
+        },
+        uPointerCircle: {
+          value: new THREE.Vector3(),
+          needsUpdate: true,
+        },
+      },
+      vertexShader: `\
+        attribute vec3 point1;
+        attribute vec3 point2;
+        attribute vec3 point3;
+        varying vec3 vPoint1;
+        varying vec3 vPoint2;
+        varying vec3 vPoint3;
+
+        void main() {
+          vPoint1 = point1;
+          vPoint2 = point2;
+          vPoint3 = point3;
+          gl_Position = vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `\
+        uniform mat4 projectionMatrix;
+        uniform mat4 modelViewMatrix;
+        uniform vec2 iResolution;
+        uniform vec3 uPointerCircle;
+        varying vec3 vPoint1;
+        varying vec3 vPoint2;
+        varying vec3 vPoint3;
+
+        struct Point {
+          float x;
+          float y;
+        };
+        struct Triangle {
+          Point a;
+          Point b;
+          Point c;
+        };
+
+        bool pointInTriangle(Point point, Triangle triangle) {
+          //compute vectors & dot products
+          float cx = point.x;
+          float cy = point.y;
+          Point t0 = triangle.a;
+          Point t1 = triangle.b;
+          Point t2 = triangle.c;
+          float v0x = t2.x-t0.x;
+          float v0y = t2.y-t0.y;
+          float v1x = t1.x-t0.x;
+          float v1y = t1.y-t0.y;
+          float v2x = cx-t0.x;
+          float v2y = cy-t0.y;
+          float dot00 = v0x*v0x + v0y*v0y;
+          float dot01 = v0x*v1x + v0y*v1y;
+          float dot02 = v0x*v2x + v0y*v2y;
+          float dot11 = v1x*v1x + v1y*v1y;
+          float dot12 = v1x*v2x + v1y*v2y;
+        
+          // Compute barycentric coordinates
+          float b = (dot00 * dot11 - dot01 * dot01);
+          float inv = (b == 0.) ? 0. : (1. / b);
+          float u = (dot11*dot02 - dot01*dot12) * inv;
+          float v = (dot00*dot12 - dot01*dot02) * inv;
+          return u>=0. && v>=0. && (u+v < 1.);
+        }
+        bool pointCircleCollision(Point point, Point circle, float r) {
+          if (r==0.) return false;
+          float dx = circle.x - point.x;
+          float dy = circle.y - point.y;
+          return dx * dx + dy * dy <= r * r;
+        }
+        bool lineCircleCollision(Point a, Point b, Point circle, float radius/*, nearest*/) {
+          //check to see if start or end points lie within circle 
+          if (pointCircleCollision(a, circle, radius)) {
+            // if (nearest) {
+            //     nearest[0] = a[0]
+            //     nearest[1] = a[1]
+            // }
+            return true;
+          } if (pointCircleCollision(b, circle, radius)) {
+            // if (nearest) {
+            //     nearest[0] = b[0]
+            //     nearest[1] = b[1]
+            // }
+            return true;
+          }
+          
+          float x1 = a.x;
+          float y1 = a.y;
+          float x2 = b.x;
+          float y2 = b.y;
+          float cx = circle.x;
+          float cy = circle.y;
+    
+          //vector d
+          float dx = x2 - x1;
+          float dy = y2 - y1;
+          
+          //vector lc
+          float lcx = cx - x1;
+          float lcy = cy - y1;
+          
+          //project lc onto d, resulting in vector p
+          float dLen2 = dx * dx + dy * dy; //len2 of d
+          float px = dx;
+          float py = dy;
+          if (dLen2 > 0.) {
+            float dp = (lcx * dx + lcy * dy) / dLen2;
+            px *= dp;
+            py *= dp;
+          }
+          
+          // if (!nearest)
+          //     nearest = tmp
+          // const tmp = [0, 0]
+          Point tmp;
+          tmp.x = x1 + px;
+          tmp.y = y1 + py;
+          
+          //len2 of p
+          float pLen2 = px * px + py * py;
+          
+          //check collision
+          return pointCircleCollision(tmp, circle, radius) &&
+            pLen2 <= dLen2 &&
+            (px * dx + py * dy) >= 0.;
+        }
+
+        bool triangleCircleCollision(Triangle triangle, Point circle, float radius) {
+          if (pointInTriangle(circle, triangle))
+              return true;
+          if (lineCircleCollision(triangle.a, triangle.b, circle, radius))
+              return true;
+          if (lineCircleCollision(triangle.b, triangle.c, circle, radius))
+              return true;
+          if (lineCircleCollision(triangle.c, triangle.a, circle, radius))
+              return true;
+          return false;
+        }
+
+        void main() {
+          // project the points
+          vec4 point1Tmp = projectionMatrix * modelViewMatrix * vec4(vPoint1, 1.0);
+          point1Tmp /= point1Tmp.w;
+          vec2 point1 = point1Tmp.xy;
+
+          vec4 point2Tmp = projectionMatrix * modelViewMatrix * vec4(vPoint2, 1.0);
+          point2Tmp /= point2Tmp.w;
+          vec2 point2 = point2Tmp.xy;
+
+          vec4 point3Tmp = projectionMatrix * modelViewMatrix * vec4(vPoint3, 1.0);
+          point3Tmp /= point3Tmp.w;
+          vec2 point3 = point3Tmp.xy;
+
+          Triangle triangle;
+          triangle.a.x = point1.x;
+          triangle.a.y = point1.y;
+          triangle.b.x = point2.x;
+          triangle.b.y = point2.y;
+          triangle.c.x = point3.x;
+          triangle.c.y = point3.y;
+
+          Point circle;
+          circle.x = uPointerCircle.x;
+          circle.y = uPointerCircle.y;
+
+          float radius = uPointerCircle.z;
+
+          float v;
+          if (triangleCircleCollision(triangle, circle, radius)) {
+            v = 1.;
+          } else {
+            v = 0.;
+          }
+          gl_FragColor = vec4(vec3(v), 1.);
+        }
+      `,
+    });
+    this.indexMaterial = indexMaterial;
 
     const indicesOutputMesh = (() => {
       const scale = 10;
@@ -914,165 +1100,8 @@ class Selector {
       geometry.setAttribute('point3', new THREE.BufferAttribute(pt3, 3));
       geometry.setIndex(new THREE.BufferAttribute(indices, 1));
 
-      const material = new THREE.ShaderMaterial({
-        uniforms: {
-          iResolution: {
-            value: new THREE.Vector2(width, height),
-            needsUpdate: true,
-          },
-        },
-        vertexShader: `\
-          attribute vec3 point1;
-          attribute vec3 point2;
-          attribute vec3 point3;
-          varying vec3 vPoint1;
-          varying vec3 vPoint2;
-          varying vec3 vPoint3;
+      const material = this.indexMaterial;
 
-          void main() {
-            vPoint1 = point1;
-            vPoint2 = point2;
-            vPoint3 = point3;
-            gl_Position = vec4(position, 1.0);
-          }
-        `,
-        fragmentShader: `\
-          uniform mat4 projectionMatrix;
-          uniform mat4 modelViewMatrix;
-          uniform vec2 iResolution;
-          varying vec3 vPoint1;
-          varying vec3 vPoint2;
-          varying vec3 vPoint3;
-
-          struct Point {
-            float x;
-            float y;
-          };
-          struct Triangle {
-            Point a;
-            Point b;
-            Point c;
-          };
-
-          bool pointInTriangle(Point point, Triangle triangle) {
-            //compute vectors & dot products
-            float cx = point.x;
-            float cy = point.y;
-            Point t0 = triangle.a;
-            Point t1 = triangle.b;
-            Point t2 = triangle.c;
-            float v0x = t2.x-t0.x;
-            float v0y = t2.y-t0.y;
-            float v1x = t1.x-t0.x;
-            float v1y = t1.y-t0.y;
-            float v2x = cx-t0.x;
-            float v2y = cy-t0.y;
-            float dot00 = v0x*v0x + v0y*v0y;
-            float dot01 = v0x*v1x + v0y*v1y;
-            float dot02 = v0x*v2x + v0y*v2y;
-            float dot11 = v1x*v1x + v1y*v1y;
-            float dot12 = v1x*v2x + v1y*v2y;
-          
-            // Compute barycentric coordinates
-            float b = (dot00 * dot11 - dot01 * dot01);
-            float inv = (b == 0.) ? 0. : (1. / b);
-            float u = (dot11*dot02 - dot01*dot12) * inv;
-            float v = (dot00*dot12 - dot01*dot02) * inv;
-            return u>=0. && v>=0. && (u+v < 1.);
-          }
-          bool pointCircleCollision(Point point, Point circle, float r) {
-            if (r==0.) return false;
-            float dx = circle.x - point.x;
-            float dy = circle.y - point.y;
-            return dx * dx + dy * dy <= r * r;
-          }
-          bool lineCircleCollision(Point a, Point b, Point circle, float radius/*, nearest*/) {
-            //check to see if start or end points lie within circle 
-            if (pointCircleCollision(a, circle, radius)) {
-              // if (nearest) {
-              //     nearest[0] = a[0]
-              //     nearest[1] = a[1]
-              // }
-              return true;
-            } if (pointCircleCollision(b, circle, radius)) {
-              // if (nearest) {
-              //     nearest[0] = b[0]
-              //     nearest[1] = b[1]
-              // }
-              return true;
-            }
-            
-            float x1 = a.x;
-            float y1 = a.y;
-            float x2 = b.x;
-            float y2 = b.y;
-            float cx = circle.x;
-            float cy = circle.y;
-      
-            //vector d
-            float dx = x2 - x1;
-            float dy = y2 - y1;
-            
-            //vector lc
-            float lcx = cx - x1;
-            float lcy = cy - y1;
-            
-            //project lc onto d, resulting in vector p
-            float dLen2 = dx * dx + dy * dy; //len2 of d
-            float px = dx;
-            float py = dy;
-            if (dLen2 > 0.) {
-              float dp = (lcx * dx + lcy * dy) / dLen2;
-              px *= dp;
-              py *= dp;
-            }
-            
-            // if (!nearest)
-            //     nearest = tmp
-            // const tmp = [0, 0]
-            Point tmp;
-            tmp.x = x1 + px;
-            tmp.y = y1 + py;
-            
-            //len2 of p
-            float pLen2 = px * px + py * py;
-            
-            //check collision
-            return pointCircleCollision(tmp, circle, radius) &&
-              pLen2 <= dLen2 &&
-              (px * dx + py * dy) >= 0.;
-          }
-
-          bool triangleCircleCollision(Triangle triangle, Point circle, float radius) {
-            if (pointInTriangle(circle, triangle))
-                return true;
-            if (lineCircleCollision(triangle.a, triangle.b, circle, radius))
-                return true;
-            if (lineCircleCollision(triangle.b, triangle.c, circle, radius))
-                return true;
-            if (lineCircleCollision(triangle.c, triangle.a, circle, radius))
-                return true;
-            return false;
-          }
-
-          void main() {
-            // project the points
-            vec4 point1Tmp = projectionMatrix * modelViewMatrix * vec4(vPoint1, 1.0);
-            point1Tmp /= point1Tmp.w;
-            vec3 point1 = point1Tmp.xyz;
-
-            vec4 point2Tmp = projectionMatrix * modelViewMatrix * vec4(vPoint2, 1.0);
-            point2Tmp /= point2Tmp.w;
-            vec3 point2 = point2Tmp.xyz;
-
-            vec4 point3Tmp = projectionMatrix * modelViewMatrix * vec4(vPoint3, 1.0);
-            point3Tmp /= point3Tmp.w;
-            vec3 point3 = point3Tmp.xyz;
-
-            gl_FragColor = vec4(1.);
-          }
-        `,
-      });
       const resultMesh = new THREE.Mesh(geometry, material);
       resultMesh.frustumCulled = false;
       return resultMesh;
@@ -1085,17 +1114,22 @@ class Selector {
 
     // update
     {
+      // lens material
       const selectorSizeM1 = selectorSize - 1;
       const halfSelectorSizeM1 = selectorSizeM1 / 2;
-      this.indexMaterial.uniforms.viewport.value.set(
+      this.lensMaterial.uniforms.viewport.value.set(
         (this.mouse.x / 2 + 0.5) * this.renderer.domElement.width - halfSelectorSizeM1 - 1,
         (this.mouse.y / 2 + 0.5) * this.renderer.domElement.height - halfSelectorSizeM1 - 1,
         selectorSize,
         selectorSize
       );
-      this.indexMaterial.uniforms.viewport.needsUpdate = true;
-      this.indexMaterial.uniforms.iResolution.value.set(this.renderer.domElement.width, this.renderer.domElement.height);
-      this.indexMaterial.uniforms.iResolution.needsUpdate = true;
+      this.lensMaterial.uniforms.viewport.needsUpdate = true;
+
+      // index material
+      const radiusPixels = 100;
+      const radius = radiusPixels / this.renderer.domElement.width;
+      this.indexMaterial.uniforms.uPointerCircle.value.set(this.mouse.x, this.mouse.y, radius);
+      this.indexMaterial.uniforms.uPointerCircle.needsUpdate = true;
     }
 
     // render lens
