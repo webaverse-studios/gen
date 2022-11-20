@@ -921,7 +921,6 @@ class Selector {
             needsUpdate: true,
           },
         },
-        // full screen vertex shader, ignores the camera
         vertexShader: `\
           attribute vec3 point1;
           attribute vec3 point2;
