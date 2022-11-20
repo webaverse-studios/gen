@@ -778,130 +778,6 @@ class Selector {
     indicesScene.autoUpdate = false;
     this.indicesScene = indicesScene;
 
-    const indicesFullscreenMesh = (() => {
-      const planeGeometry = new THREE.PlaneBufferGeometry(1, 1)
-        .translate(0.5, 0.5, 0);
-      // position x, y is in the range [0, 1]
-
-      const geometry = new THREE.BufferGeometry();
-      const positions = new Float32Array(planeGeometry.attributes.position.array.length * selectorSize * selectorSize);
-      const coords = new Float32Array(planeGeometry.attributes.position.array.length * selectorSize * selectorSize);
-      const indices = new Uint32Array(planeGeometry.index.array.length * selectorSize * selectorSize);
-      let positionOffset = 0;
-      let indexOffset = 0;
-      for (let dy = 0; dy < selectorSize; dy++) {
-        for (let dx = 0; dx < selectorSize; dx++) {
-          for (let i = 0; i < planeGeometry.attributes.position.array.length; i += 3) {
-            // position
-            // const x = planeGeometry.attributes.position.array[i + 0] + dx;
-            // const y = planeGeometry.attributes.position.array[i + 1] + dy;
-
-            // const px = x / selectorSize;
-            // const py = y / selectorSize;
-
-            // const ndcX = px * 2 - 1;
-            // const ndcY = py * 2 - 1;
-
-            // positions[positionOffset + i + 0] = ndcX;
-            // positions[positionOffset + i + 1] = ndcY;
-            // positions[positionOffset + i + 2] = planeGeometry.attributes.position.array[i + 2];
-
-            // copy position
-            positions[positionOffset + i + 0] = planeGeometry.attributes.position.array[i + 0];
-            positions[positionOffset + i + 1] = planeGeometry.attributes.position.array[i + 1];
-            positions[positionOffset + i + 2] = planeGeometry.attributes.position.array[i + 2];
-
-            // coord
-            const index = dx + dy * selectorSize;
-            coords[positionOffset + i + 0] = dx;
-            coords[positionOffset + i + 1] = dy;
-            coords[positionOffset + i + 2] = index;
-          }
-          positionOffset += planeGeometry.attributes.position.array.length;
-
-          const localIndexOffset = positionOffset / 3;
-          for (let i = 0; i < planeGeometry.index.array.length; i++) {
-            indices[indexOffset + i] = planeGeometry.index.array[i] + localIndexOffset;
-          }
-          indexOffset += planeGeometry.index.array.length;
-        }
-      }
-      geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-      geometry.setAttribute('coord', new THREE.BufferAttribute(coords, 3));
-      geometry.setIndex(new THREE.BufferAttribute(indices, 1));
-
-      const material = new THREE.ShaderMaterial({
-        uniforms: {
-          lensTexture: {
-            value: lensRenderTarget.texture,
-            needsUpdate: true,
-          },
-          lensTextureSize: {
-            value: new THREE.Vector2(selectorSize, selectorSize),
-            needsUpdate: true,
-          },
-          iResolution: {
-            value: new THREE.Vector2(indicesRenderTarget.width, indicesRenderTarget.height),
-            needsUpdate: true,
-          },
-        },
-        // full screen vertex shader, ignores the camera
-        vertexShader: `\
-          uniform sampler2D lensTexture;
-          uniform vec2 lensTextureSize;
-          uniform vec2 iResolution;
-          attribute vec3 coord;
-
-          void main() {
-            vec2 uv = (coord.xy + 0.5) / lensTextureSize;
-            vec4 lensTextureRgba = texture2D(lensTexture, uv);
-
-            // encode the index as rgba
-            // float r = floor(fIndex / 65536.0);
-            // fIndex -= r * 65536.0;
-            // float g = floor(fIndex / 256.0);
-            // fIndex -= g * 256.0;
-            // float b = fIndex
-
-            // decode lensTextureRgba to index
-            float lensIndex = lensTextureRgba.r * 65536.0 + lensTextureRgba.g * 256.0 + lensTextureRgba.b;
-
-            // compute the x, y point in [0, iResolution] space
-            float x = mod(lensIndex, iResolution.x);
-            float y = floor(lensIndex / iResolution.x);
-
-            // compute the uv point in [0, 1] space
-            float ax = x / iResolution.x;
-            float ay = y / iResolution.y;
-
-            // compute the ndc point in [-1, 1] space
-            float ndcX = ax * 2.0 - 1.0;
-            float ndcY = ay * 2.0 - 1.0;
-
-            // output the point
-            vec3 ndcOffset = vec3(ndcX, ndcY, 0.0);
-            vec3 p = vec3(position.xy / iResolution * 2., 0.) + // * 2 because the output is in [-1, 1] space
-              ndcOffset;
-            gl_Position = vec4(p, 1.0);
-          }
-        `,
-        fragmentShader: `\
-          void main() {
-            gl_FragColor = vec4(1.);
-          }
-        `,
-      });
-      // const geometry2 = new THREE.PlaneGeometry(1, 1);
-      // const material2 = new THREE.MeshBasicMaterial({
-      //   color: 0x0000FF,
-      // });
-      const mesh = new THREE.Mesh(geometry, material);
-      mesh.frustumCulled = false;
-      return mesh;
-    })();
-    indicesScene.add(indicesFullscreenMesh);
-    this.indicesFullscreenMesh = indicesFullscreenMesh;
-
     const indicesOutputMesh = (() => {
       const scale = 10;
       const geometry = new THREE.PlaneBufferGeometry(2, 1)
@@ -937,9 +813,257 @@ class Selector {
     this.indicesOutputMesh = indicesOutputMesh;
   }
   addMesh(mesh) {
-    mesh = mesh.clone();
-    mesh.frustumCulled = false;
-    this.lensScene.add(mesh);
+    // lens mesh
+    const selectorWindowMesh = mesh.clone();
+    this.lensScene.add(selectorWindowMesh);
+    
+    // indices mesh
+    const indicesMesh = (() => {
+      const planeGeometry = new THREE.PlaneBufferGeometry(1, 1)
+        .translate(0.5, 0.5, 0);
+      // position x, y is in the range [0, 1]
+      const sceneMeshGeometry = mesh.geometry;
+
+      const {width, height} = this.indicesRenderTarget;
+
+      const geometry = new THREE.BufferGeometry();
+      const positions = new Float32Array(planeGeometry.attributes.position.array.length * width * height);
+      // const coords = new Float32Array(planeGeometry.attributes.position.array.length * width * height);
+      // for each plane, we copy in the sceneMeshGeometry triangle vertices it represents
+      /* const triangles = new Float32Array(9 * planeGeometry.attributes.position.array.length * width * height);
+      if (triangles.length !== sceneMeshGeometry.attributes.position.array * 9) {
+        console.warn('triangle count mismatch 1', triangles.length, sceneMeshGeometry.attributes.position.array * 9);
+        debugger;
+      }
+      if (triangles.length !== positions.length * 3) {
+        console.warn('triangle count mismatch 2', positions.length, triangles.length * 3);
+        debugger;
+      } */
+      if (width * height * 9 !== sceneMeshGeometry.attributes.position.array.length) {
+        console.warn('invalid width/height', width, height, sceneMeshGeometry.attributes.position.array.length);
+        debugger;
+      }
+      const pt1 = new Float32Array(planeGeometry.attributes.position.array.length * width * height);
+      const pt2 = new Float32Array(planeGeometry.attributes.position.array.length * width * height);
+      const pt3 = new Float32Array(planeGeometry.attributes.position.array.length * width * height);
+      // if (pt1.length !== sceneMeshGeometry.attributes.position.array.length * 3) {
+      //   console.warn('triangle count mismatch 1', pt1.length, sceneMeshGeometry.attributes.position.array.length * 3);
+      //   debugger;
+      // }
+      const indices = new Uint32Array(planeGeometry.index.array.length * width * height);
+      let positionOffset = 0;
+      let indexOffset = 0;
+      let triangleReadOffset = 0;
+      let triangleWriteOffset = 0;
+      for (let dy = 0; dy < height; dy++) {
+        for (let dx = 0; dx < width; dx++) {
+          const uvx = dx / width;
+          const uvy = dy / height;
+
+          // convert to ndc
+          const ndcx = uvx * 2 - 1;
+          const ndcy = uvy * 2 - 1;
+
+          for (let i = 0; i < planeGeometry.attributes.position.array.length; i += 3) {
+
+            // get the position offset
+            // note: * 2 because we are in the range [-1, 1]
+            const pox = planeGeometry.attributes.position.array[i + 0] / width * 2;
+            const poy = planeGeometry.attributes.position.array[i + 1] / height * 2;
+
+            // copy position
+            positions[positionOffset + i + 0] = ndcx + pox;
+            positions[positionOffset + i + 1] = ndcy + poy;
+            positions[positionOffset + i + 2] = 0;
+
+            // coord
+            // const index = dx + dy * selectorSize;
+            // coords[positionOffset + i + 0] = dx;
+            // coords[positionOffset + i + 1] = dy;
+            // coords[positionOffset + i + 2] = index;
+
+            // triangle
+            pt1[triangleWriteOffset + i + 0] = sceneMeshGeometry.attributes.position.array[triangleReadOffset + 0];
+            pt1[triangleWriteOffset + i + 1] = sceneMeshGeometry.attributes.position.array[triangleReadOffset + 1];
+            pt1[triangleWriteOffset + i + 2] = sceneMeshGeometry.attributes.position.array[triangleReadOffset + 2];
+
+            pt2[triangleWriteOffset + i + 0] = sceneMeshGeometry.attributes.position.array[triangleReadOffset + 3];
+            pt2[triangleWriteOffset + i + 1] = sceneMeshGeometry.attributes.position.array[triangleReadOffset + 4];
+            pt2[triangleWriteOffset + i + 2] = sceneMeshGeometry.attributes.position.array[triangleReadOffset + 5];
+
+            pt3[triangleWriteOffset + i + 0] = sceneMeshGeometry.attributes.position.array[triangleReadOffset + 6];
+            pt3[triangleWriteOffset + i + 1] = sceneMeshGeometry.attributes.position.array[triangleReadOffset + 7];
+            pt3[triangleWriteOffset + i + 2] = sceneMeshGeometry.attributes.position.array[triangleReadOffset + 8];
+          }
+          positionOffset += planeGeometry.attributes.position.array.length;
+
+          triangleWriteOffset += planeGeometry.attributes.position.array.length;
+          triangleReadOffset += 9;
+
+          const localIndexOffset = positionOffset / 3;
+          for (let i = 0; i < planeGeometry.index.array.length; i++) {
+            indices[indexOffset + i] = planeGeometry.index.array[i] + localIndexOffset;
+          }
+          indexOffset += planeGeometry.index.array.length;
+        }
+      }
+      geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      // geometry.setAttribute('coord', new THREE.BufferAttribute(coords, 3));
+      geometry.setAttribute('point1', new THREE.BufferAttribute(pt1, 3));
+      geometry.setAttribute('point2', new THREE.BufferAttribute(pt2, 3));
+      geometry.setAttribute('point3', new THREE.BufferAttribute(pt3, 3));
+      geometry.setIndex(new THREE.BufferAttribute(indices, 1));
+
+      const material = new THREE.ShaderMaterial({
+        uniforms: {
+          iResolution: {
+            value: new THREE.Vector2(width, height),
+            needsUpdate: true,
+          },
+        },
+        // full screen vertex shader, ignores the camera
+        vertexShader: `\
+          attribute vec3 point1;
+          attribute vec3 point2;
+          attribute vec3 point3;
+          varying vec3 vPoint1;
+          varying vec3 vPoint2;
+          varying vec3 vPoint3;
+
+          void main() {
+            vPoint1 = point1;
+            vPoint2 = point2;
+            vPoint3 = point3;
+            gl_Position = vec4(position, 1.0);
+          }
+        `,
+        fragmentShader: `\
+          uniform vec2 iResolution;
+          varying vec3 vPoint1;
+          varying vec3 vPoint2;
+          varying vec3 vPoint3;
+
+          struct Point {
+            float x;
+            float y;
+          };
+          struct Triangle {
+            Point a;
+            Point b;
+            Point c;
+          };
+
+          bool pointInTriangle(Point point, Triangle triangle) {
+            //compute vectors & dot products
+            float cx = point.x;
+            float cy = point.y;
+            Point t0 = triangle.a;
+            Point t1 = triangle.b;
+            Point t2 = triangle.c;
+            float v0x = t2.x-t0.x;
+            float v0y = t2.y-t0.y;
+            float v1x = t1.x-t0.x;
+            float v1y = t1.y-t0.y;
+            float v2x = cx-t0.x;
+            float v2y = cy-t0.y;
+            float dot00 = v0x*v0x + v0y*v0y;
+            float dot01 = v0x*v1x + v0y*v1y;
+            float dot02 = v0x*v2x + v0y*v2y;
+            float dot11 = v1x*v1x + v1y*v1y;
+            float dot12 = v1x*v2x + v1y*v2y;
+          
+            // Compute barycentric coordinates
+            float b = (dot00 * dot11 - dot01 * dot01);
+            float inv = (b == 0.) ? 0. : (1. / b);
+            float u = (dot11*dot02 - dot01*dot12) * inv;
+            float v = (dot00*dot12 - dot01*dot02) * inv;
+            return u>=0. && v>=0. && (u+v < 1.);
+          }
+          bool pointCircleCollision(Point point, Point circle, float r) {
+            if (r==0.) return false;
+            float dx = circle.x - point.x;
+            float dy = circle.y - point.y;
+            return dx * dx + dy * dy <= r * r;
+          }
+          bool lineCircleCollision(Point a, Point b, Point circle, float radius/*, nearest*/) {
+            //check to see if start or end points lie within circle 
+            if (pointCircleCollision(a, circle, radius)) {
+              // if (nearest) {
+              //     nearest[0] = a[0]
+              //     nearest[1] = a[1]
+              // }
+              return true;
+            } if (pointCircleCollision(b, circle, radius)) {
+              // if (nearest) {
+              //     nearest[0] = b[0]
+              //     nearest[1] = b[1]
+              // }
+              return true;
+            }
+            
+            float x1 = a.x;
+            float y1 = a.y;
+            float x2 = b.x;
+            float y2 = b.y;
+            float cx = circle.x;
+            float cy = circle.y;
+      
+            //vector d
+            float dx = x2 - x1;
+            float dy = y2 - y1;
+            
+            //vector lc
+            float lcx = cx - x1;
+            float lcy = cy - y1;
+            
+            //project lc onto d, resulting in vector p
+            float dLen2 = dx * dx + dy * dy; //len2 of d
+            float px = dx;
+            float py = dy;
+            if (dLen2 > 0.) {
+              float dp = (lcx * dx + lcy * dy) / dLen2;
+              px *= dp;
+              py *= dp;
+            }
+            
+            // if (!nearest)
+            //     nearest = tmp
+            // const tmp = [0, 0]
+            Point tmp;
+            tmp.x = x1 + px;
+            tmp.y = y1 + py;
+            
+            //len2 of p
+            float pLen2 = px * px + py * py;
+            
+            //check collision
+            return pointCircleCollision(tmp, circle, radius) &&
+              pLen2 <= dLen2 &&
+              (px * dx + py * dy) >= 0.;
+          }
+
+          bool triangleCircleCollision(Triangle triangle, Point circle, float radius) {
+            if (pointInTriangle(circle, triangle))
+                return true;
+            if (lineCircleCollision(triangle.a, triangle.b, circle, radius))
+                return true;
+            if (lineCircleCollision(triangle.b, triangle.c, circle, radius))
+                return true;
+            if (lineCircleCollision(triangle.c, triangle.a, circle, radius))
+                return true;
+            return false;
+          }
+
+          void main() {
+            gl_FragColor = vec4(1.);
+          }
+        `,
+      });
+      const resultMesh = new THREE.Mesh(geometry, material);
+      resultMesh.frustumCulled = false;
+      return resultMesh;
+    })();
+    this.indicesScene.add(indicesMesh);
   }
   update() {
     // push
@@ -1721,7 +1845,7 @@ class PanelRenderer extends EventTarget {
   updateOutmeshLayers() {
     const layers = this.panel.getDataLayersMatchingSpec(layer2Specs);
 
-    console.log('update outmesh layers', layers.length, this.layerScenes.length);
+    // console.log('update outmesh layers', layers.length, this.layerScenes.length);
 
     const _addNewLayers = () => {
       const startLayer = 2;
@@ -1729,9 +1853,9 @@ class PanelRenderer extends EventTarget {
         let layerScene = this.layerScenes[i];
         if (!layerScene) {
           const layerDatas = layers[i];
-          console.log ('pre add layer scene', i, layerDatas);
+          // console.log ('pre add layer scene', i, layerDatas);
           layerScene = this.createOutmeshLayer(layerDatas);
-          console.log('add layer scene', i, layerScene);
+          // console.log('add layer scene', i, layerScene);
           this.scene.add(layerScene);
           this.layerScenes[i] = layerScene;
         }
@@ -1742,15 +1866,15 @@ class PanelRenderer extends EventTarget {
     const _removeOldLayers = () => {
       for (let i = layers.length; i < this.layerScenes.length; i++) {
         const layerScene = this.layerScenes[i];
-        console.log('remove layer scene', i, layerScene);
+        // console.log('remove layer scene', i, layerScene);
         this.scene.remove(layerScene);
       }
-      console.log('set layer scenes', layers.length);
+      // console.log('set layer scenes', layers.length);
       this.layerScenes.length = layers.length;
     };
     _removeOldLayers();
 
-    console.log('ending layer scenes length', this.layerScenes.length);
+    // console.log('ending layer scenes length', this.layerScenes.length);
   }
   destroy() {
     this.dispatchEvent(new MessageEvent('destroy'));
@@ -2331,3 +2455,104 @@ export class Storyboard extends EventTarget {
     this.#removePanelInternal(panel);
   }
 }
+
+//
+
+function triangleCircleCollision(triangle, circle, radius) {
+  if (pointInTriangle(circle, triangle))
+      return true
+  if (lineCircleCollision(triangle[0], triangle[1], circle, radius))
+      return true
+  if (lineCircleCollision(triangle[1], triangle[2], circle, radius))
+      return true
+  if (lineCircleCollision(triangle[2], triangle[0], circle, radius))
+      return true
+  return false
+}
+
+function pointInTriangle(point, triangle) {
+  //compute vectors & dot products
+  var cx = point[0], cy = point[1],
+      t0 = triangle[0], t1 = triangle[1], t2 = triangle[2],
+      v0x = t2[0]-t0[0], v0y = t2[1]-t0[1],
+      v1x = t1[0]-t0[0], v1y = t1[1]-t0[1],
+      v2x = cx-t0[0], v2y = cy-t0[1],
+      dot00 = v0x*v0x + v0y*v0y,
+      dot01 = v0x*v1x + v0y*v1y,
+      dot02 = v0x*v2x + v0y*v2y,
+      dot11 = v1x*v1x + v1y*v1y,
+      dot12 = v1x*v2x + v1y*v2y
+
+  // Compute barycentric coordinates
+  var b = (dot00 * dot11 - dot01 * dot01),
+      inv = b === 0 ? 0 : (1 / b),
+      u = (dot11*dot02 - dot01*dot12) * inv,
+      v = (dot00*dot12 - dot01*dot02) * inv
+  return u>=0 && v>=0 && (u+v < 1)
+}
+
+function pointCircleCollision(point, circle, r) {
+  if (r===0) return false
+  var dx = circle[0] - point[0]
+  var dy = circle[1] - point[1]
+  return dx * dx + dy * dy <= r * r
+}
+
+const lineCircleCollision = (() => {
+  const tmp = [0, 0]
+
+  function lineCircleCollision(a, b, circle, radius/*, nearest*/) {
+      //check to see if start or end points lie within circle 
+      if (pointCircleCollision(a, circle, radius)) {
+          // if (nearest) {
+          //     nearest[0] = a[0]
+          //     nearest[1] = a[1]
+          // }
+          return true
+      } if (pointCircleCollision(b, circle, radius)) {
+          // if (nearest) {
+          //     nearest[0] = b[0]
+          //     nearest[1] = b[1]
+          // }
+          return true
+      }
+      
+      var x1 = a[0],
+          y1 = a[1],
+          x2 = b[0],
+          y2 = b[1],
+          cx = circle[0],
+          cy = circle[1]
+
+      //vector d
+      var dx = x2 - x1
+      var dy = y2 - y1
+      
+      //vector lc
+      var lcx = cx - x1
+      var lcy = cy - y1
+      
+      //project lc onto d, resulting in vector p
+      var dLen2 = dx * dx + dy * dy //len2 of d
+      var px = dx
+      var py = dy
+      if (dLen2 > 0) {
+          var dp = (lcx * dx + lcy * dy) / dLen2
+          px *= dp
+          py *= dp
+      }
+      
+      // if (!nearest)
+      //     nearest = tmp
+      tmp[0] = x1 + px
+      tmp[1] = y1 + py
+      
+      //len2 of p
+      var pLen2 = px * px + py * py
+      
+      //check collision
+      return pointCircleCollision(tmp, circle, radius)
+              && pLen2 <= dLen2 && (px * dx + py * dy) >= 0
+  }
+  return lineCircleCollision;
+})();
