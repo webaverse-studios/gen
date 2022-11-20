@@ -937,6 +937,8 @@ class Selector {
           }
         `,
         fragmentShader: `\
+          uniform mat4 projectionMatrix;
+          uniform mat4 modelViewMatrix;
           uniform vec2 iResolution;
           varying vec3 vPoint1;
           varying vec3 vPoint2;
@@ -1054,6 +1056,19 @@ class Selector {
           }
 
           void main() {
+            // project the points
+            vec4 point1Tmp = projectionMatrix * modelViewMatrix * vec4(vPoint1, 1.0);
+            point1Tmp /= point1Tmp.w;
+            vec3 point1 = point1Tmp.xyz;
+
+            vec4 point2Tmp = projectionMatrix * modelViewMatrix * vec4(vPoint2, 1.0);
+            point2Tmp /= point2Tmp.w;
+            vec3 point2 = point2Tmp.xyz;
+
+            vec4 point3Tmp = projectionMatrix * modelViewMatrix * vec4(vPoint3, 1.0);
+            point3Tmp /= point3Tmp.w;
+            vec3 point3 = point3Tmp.xyz;
+
             gl_FragColor = vec4(1.);
           }
         `,
