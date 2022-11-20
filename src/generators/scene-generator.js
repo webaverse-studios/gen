@@ -2152,8 +2152,7 @@ const _getPlanesRgbd = async (width, height, depthFloats32Array) => {
   }
 };
 const _getImageSegements = async imgBlob => {
-  const threshold = 0.005;
-  const res = await fetch(`https://mask2former.webaverse.com/predict?threshold=${threshold}`, {
+  const res = await fetch(`https://mask2former.webaverse.com/predict`, {
     method: 'POST',
     body: imgBlob,
   });
@@ -2281,12 +2280,12 @@ async function compileVirtualScene(arrayBuffer) {
   // const labelCanvas = drawLabelCanvas(labelImg, boundingBoxLayers);
   // document.body.appendChild(labelCanvas);
 
-  /* // image segmentation
+  // image segmentation
   console.time('imageSegmentation');
   let imageSegmentationSpec;
   {
     imageSegmentationSpec = await _getImageSegements(blob);
-    // console.log('got image segmentation spec', imageSegmentationSpec);
+    console.log('got image segmentation spec', imageSegmentationSpec);
     const {segmentsBlob, boundingBoxLayers} = imageSegmentationSpec;
 
     const imageBitmap = await createImageBitmap(segmentsBlob);
@@ -2302,9 +2301,9 @@ async function compileVirtualScene(arrayBuffer) {
     ctx.drawImage(imageBitmap, 0, 0);
 
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    console.log('got segmentation image data', imageData);
+    // console.log('got segmentation image data', imageData);
   }
-  console.timeEnd('imageSegmentation'); */
+  console.timeEnd('imageSegmentation');
 
   // point cloud reconstruction
   console.time('pointCloud');
