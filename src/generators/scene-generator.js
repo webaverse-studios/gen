@@ -26,10 +26,10 @@ export const panelSize = 1024;
 export const mainImageKey = 'layer0/image';
 export const promptKey = 'layer0/prompt';
 export const layer1Specs = [
-  {
-    name: 'labelImageData',
-    type: 'arrayBuffer',
-  },
+  // {
+  //   name: 'labelImageData',
+  //   type: 'arrayBuffer',
+  // },
   {
     name: 'pointCloudHeaders',
     type: 'json',
@@ -38,10 +38,10 @@ export const layer1Specs = [
     name: 'pointCloud',
     type: 'arrayBuffer',
   },
-  {
-    name: 'boundingBoxLayers',
-    type: 'json',
-  },
+  // {
+  //   name: 'boundingBoxLayers',
+  //   type: 'json',
+  // },
   // {
   //   name: 'planeMatrices',
   //   type: 'json',
@@ -100,6 +100,20 @@ export const layer2Specs = [
 export const tools = [
   'camera',
   'eraser',
+];
+const rainbowColors = [
+  0x881177,
+  0xaa3366,
+  0xcc6666,
+  0xee9944,
+  0xeedd00,
+  0x99dd55,
+  0x44dd88,
+  0x22ccbb,
+  0x00bbcc,
+  0x0099cc,
+  0x3366bb,
+  0x663399,
 ];
 
 //
@@ -1147,6 +1161,127 @@ class Selector {
 
 //
 
+class Overlay {
+  constructor({
+    renderer,
+  }) {
+    this.renderer = renderer;
+
+    const overlayScene = new THREE.Scene();
+    overlayScene.autoUpdate = false;
+    this.overlayScene = overlayScene;
+  }
+  addMesh(mesh) {
+    const geometry = mesh.geometry.clone();
+    // add barycentric coordinates
+    const barycentric = new THREE.BufferAttribute(new Float32Array(geometry.attributes.position.array.length), 3);
+    for (let i = 0; i < barycentric.array.length; i += 9) {
+      barycentric.array[i + 0] = 1;
+      barycentric.array[i + 1] = 0;
+      barycentric.array[i + 2] = 0;
+
+      barycentric.array[i + 3] = 0;
+      barycentric.array[i + 4] = 1;
+      barycentric.array[i + 5] = 0;
+
+      barycentric.array[i + 6] = 0;
+      barycentric.array[i + 7] = 0;
+      barycentric.array[i + 8] = 1;
+    }
+    geometry.setAttribute('barycentric', barycentric);
+    // add colors
+    // const colors = new THREE.BufferAttribute(new Float32Array(geometry.attributes.position.array.length), 3);
+    // for (let i = 0; i < colors.array.length; i += 3) {
+    //   const x = geometry.attributes.position.array[i + 0];
+    //   const y = geometry.attributes.position.array[i + 1];
+    // }
+
+    const material = new THREE.ShaderMaterial({
+      vertexShader: `\
+        attribute vec3 barycentric;
+        varying vec3 vBarycentric;
+        varying vec2 vUv;
+        varying vec3 vPosition;
+
+        void main() {
+          vBarycentric = barycentric;
+          vUv = uv;
+          vPosition = position;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `\
+        varying vec3 vBarycentric;
+        varying vec2 vUv;
+        varying vec3 vPosition;
+
+        const float lineWidth = 0.1;
+        const vec3 lineColor = vec3(${new THREE.Vector3(0x00BBCC).toArray().map(n => n.toFixed(8)).join(',')});
+
+        float edgeFactor(vec3 bary, float width) {
+          // vec3 bary = vec3(vBC.x, vBC.y, 1.0 - vBC.x - vBC.y);
+          vec3 d = fwidth(bary);
+          vec3 a3 = smoothstep(d * (width - 0.5), d * (width + 0.5), bary);
+          return min(min(a3.x, a3.y), a3.z);
+        }
+
+        void main() {
+          /* float f = edgeFactor();
+          // vec3 c = min(vec3(f), color);
+          // float a = pow(f, 2.);
+          float a = f;
+          vec3 c = lineColor;
+          // gl_FragColor = vec4(c, a);
+          gl_FragColor = vec4(c * a, 1.); */
+
+          vec3 c = lineColor;
+          vec3 p = vPosition;
+          // float f = min(mod(p.x, 1.), mod(p.z, 1.));
+          // f = min(f, mod(1.-p.x, 1.));
+          // f = min(f, mod(1.-p.z, 1.));
+          // f *= 30.;
+          
+          vec2 uv = vUv;
+          float b = 0.05;
+          float f = min(mod(uv.x, b), mod(uv.y, b));
+          f = min(f, mod(1.-uv.x, b));
+          f = min(f, mod(1.-uv.y, b));
+          f *= 200.;
+          // f = pow(f, 0.1);
+          // f = pow(f, 0.5);
+
+          float a = max(1. - f, 0.);
+          a = max(a, 0.4);
+          // if (a < 0.5) {
+          //   discard;
+          // } else {
+            gl_FragColor = vec4(c, a);
+            gl_FragColor.rg = uv;
+            // gl_FragColor = sRGBToLinear(gl_FragColor);
+          // }
+        }
+      `,
+      transparent: true,
+      alphaToCoverage: true,
+      // polygon offset to front
+      polygonOffset: true,
+      polygonOffsetFactor: -1,
+      polygonOffsetUnits: 1,
+    });
+
+    // lens mesh
+    const overlayMesh = new THREE.Mesh(
+      geometry,
+      material,
+    );
+    this.overlayScene.add(overlayMesh);
+    
+    globalThis.overlayMesh = overlayMesh;
+  }
+}
+
+//
+
 class PanelRenderer extends EventTarget {
   constructor(canvas, panel, {
     debug = false,
@@ -1229,7 +1364,7 @@ class PanelRenderer extends EventTarget {
 
     // read the mesh from the panel
     const imgArrayBuffer = panel.getData(mainImageKey);
-    const labelImageData = panel.getData('layer1/labelImageData');
+    // const labelImageData = panel.getData('layer1/labelImageData');
     const pointCloudHeaders = panel.getData('layer1/pointCloudHeaders');
     const pointCloudArrayBuffer = panel.getData('layer1/pointCloud');
     // const planeMatrices = panel.getData('layer1/planeMatrices');
@@ -1247,8 +1382,8 @@ class PanelRenderer extends EventTarget {
     const heightSegments = this.canvas.height - 1;
     let geometry = new THREE.PlaneGeometry(1, 1, widthSegments, heightSegments);
     pointCloudArrayBufferToPositionAttributeArray(pointCloudArrayBuffer, geometry.attributes.position.array, 1/this.canvas.width);
-    geometry.setAttribute('color', new THREE.BufferAttribute(new Uint8Array(pointCloudArrayBuffer.byteLength / pointcloudStride * 3), 3, true));
-    pointCloudArrayBufferToColorAttributeArray(labelImageData, geometry.attributes.color.array);
+    // geometry.setAttribute('color', new THREE.BufferAttribute(new Uint8Array(pointCloudArrayBuffer.byteLength / pointcloudStride * 3), 3, true));
+    // pointCloudArrayBufferToColorAttributeArray(labelImageData, geometry.attributes.color.array);
     // _cutSkybox(geometry);
     // applySkybox(geometry.attributes.position.array);
     geometry = geometry.toNonIndexed();
@@ -1356,6 +1491,18 @@ class PanelRenderer extends EventTarget {
       sceneMesh.material.uniforms.iSelectedIndicesMapResolution.needsUpdate = true;
 
       this.selector = selector;
+    }
+
+    // overlay
+    {
+      const overlay = new Overlay({
+        renderer,
+      });
+
+      overlay.addMesh(sceneMesh);
+      scene.add(overlay.overlayScene);
+
+      this.overlay = overlay;
     }
 
     // floor mesh
@@ -2005,7 +2152,7 @@ const _getPlanesRgbd = async (width, height, depthFloats32Array) => {
   }
 };
 const _getImageSegements = async imgBlob => {
-  const threshold = 0.5;
+  const threshold = 0.005;
   const res = await fetch(`https://mask2former.webaverse.com/predict?threshold=${threshold}`, {
     method: 'POST',
     body: imgBlob,
@@ -2121,7 +2268,7 @@ async function compileVirtualScene(arrayBuffer) {
   // document.body.appendChild(img);
   
   // label
-  const {
+  /* const {
     headers: labelHeaders,
     blob: labelBlob,
   } = await getLabel(blob, {
@@ -2130,7 +2277,7 @@ async function compileVirtualScene(arrayBuffer) {
   });
   const labelImg = await blob2img(labelBlob);
   const labelImageData = img2ImageData(labelImg).data.buffer;
-  const boundingBoxLayers = JSON.parse(labelHeaders['x-bounding-boxes']);
+  const boundingBoxLayers = JSON.parse(labelHeaders['x-bounding-boxes']); */
   // const labelCanvas = drawLabelCanvas(labelImg, boundingBoxLayers);
   // document.body.appendChild(labelCanvas);
 
@@ -2139,7 +2286,23 @@ async function compileVirtualScene(arrayBuffer) {
   let imageSegmentationSpec;
   {
     imageSegmentationSpec = await _getImageSegements(blob);
-    console.log('got image segmentation spec', imageSegmentationSpec);
+    // console.log('got image segmentation spec', imageSegmentationSpec);
+    const {segmentsBlob, boundingBoxLayers} = imageSegmentationSpec;
+
+    const imageBitmap = await createImageBitmap(segmentsBlob);
+    const canvas = document.createElement('canvas');
+    canvas.classList.add('imageSegmentationCanvas');
+    canvas.width = imageBitmap.width;
+    canvas.height = imageBitmap.height;
+    canvas.style.cssText = `\
+      background-color: red;
+    `;
+    document.body.appendChild(canvas);
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(imageBitmap, 0, 0);
+
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    console.log('got segmentation image data', imageData);
   }
   console.timeEnd('imageSegmentation'); */
 
@@ -2160,7 +2323,7 @@ async function compileVirtualScene(arrayBuffer) {
     
     const {width, height} = img;
     const planesSpec = await _getPlanesRgbd(width, height, depthFloats32Array);
-    console.log('got planes spec', planesSpec);
+    // console.log('got planes spec', planesSpec);
     planesJson = planesSpec.planesJson;
     planesIndices = planesSpec.planesIndices;
   }
@@ -2251,10 +2414,10 @@ async function compileVirtualScene(arrayBuffer) {
 
   // return result
   return {
-    labelImageData,
+    // labelImageData,
     pointCloudHeaders,
     pointCloud: pointCloudArrayBuffer,
-    boundingBoxLayers,
+    // boundingBoxLayers,
     // planeMatrices,
     planesJson,
     planesIndices,
@@ -2506,7 +2669,7 @@ export class Storyboard extends EventTarget {
 
 //
 
-function triangleCircleCollision(triangle, circle, radius) {
+/* function triangleCircleCollision(triangle, circle, radius) {
   if (pointInTriangle(circle, triangle))
       return true
   if (lineCircleCollision(triangle[0], triangle[1], circle, radius))
@@ -2549,7 +2712,13 @@ function pointCircleCollision(point, circle, r) {
 const lineCircleCollision = (() => {
   const tmp = [0, 0]
 
-  function lineCircleCollision(a, b, circle, radius/*, nearest*/) {
+  function lineCircleCollision(
+    a,
+    b,
+    circle,
+    radius,
+    // nearest,
+  ) {
       //check to see if start or end points lie within circle 
       if (pointCircleCollision(a, circle, radius)) {
           // if (nearest) {
@@ -2603,4 +2772,4 @@ const lineCircleCollision = (() => {
               && pLen2 <= dLen2 && (px * dx + py * dy) >= 0
   }
   return lineCircleCollision;
-})();
+})(); */
