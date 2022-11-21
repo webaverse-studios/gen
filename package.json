@@ -29,6 +29,7 @@
     "stream": "^0.0.2",
     "three": "./packages/three",
     "three_js_outline": "^1.0.1",
+    "troika-three-text": "^0.46.4",
     "uuid-by-string": "^4.0.0",
     "weaviate-client": "^2.12.0",
     "web3.storage": "^4.4.0",
