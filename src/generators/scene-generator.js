@@ -546,7 +546,7 @@ const planesMask2Canvas = (planesMask, {
     const planeIndex = planesMask[i];
     
     if (color) {
-      const c = localColor.setHex(colors[planeIndex % colors.length]);
+      const c = localColor.setHex(rainbowColors[planeIndex % rainbowColors.length]);
 
       data[baseIndex + 0] = c.r * 255;
       data[baseIndex + 1] = c.g * 255;
