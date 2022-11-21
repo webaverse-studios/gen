@@ -55,7 +55,7 @@ export const layer1Specs = [
     type: 'json',
   },
   {
-    name: 'planesIndices',
+    name: 'planesMask',
     type: 'arrayBuffer',
   },
   {
@@ -463,13 +463,9 @@ const segmentsImg2Canvas = (imageBitmap, {
   color = false,
 } = {})  => {  
   const canvas = document.createElement('canvas');
-  canvas.classList.add('imageSegmentationCanvas1');
   canvas.width = imageBitmap.width;
   canvas.height = imageBitmap.height;
-  canvas.style.cssText = `\
-    background-color: red;
-  `;
-  // document.body.appendChild(canvas);
+
   const ctx = canvas.getContext('2d');
   ctx.drawImage(imageBitmap, 0, 0);
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -495,13 +491,9 @@ const segmentsImg2Canvas = (imageBitmap, {
 
   // resize the canvas to the image size
   const canvas2 = document.createElement('canvas');
-  canvas2.classList.add('imageSegmentationCanvas2');
   canvas2.width = panelSize;
   canvas2.height = panelSize;
-  canvas2.style.cssText = `\
-    background-color: red;
-  `;
-  document.body.appendChild(canvas2);
+
   const ctx2 = canvas2.getContext('2d');
   ctx2.imageSmoothingEnabled = false;
   ctx2.drawImage(canvas, 0, 0, canvas2.width, canvas2.height);
@@ -523,6 +515,47 @@ const resizeBoundingBoxLayers = (boundingBoxLayers, oldWidth, oldHeight, width, 
 
 //
 
+const planesMask2Canvas = (planesMask, {
+  color = false,
+} = {}) => {
+  const canvas = document.createElement('canvas');
+  canvas.width = panelSize;
+  canvas.height = panelSize;
+
+  const ctx = canvas.getContext('2d');
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const {data} = imageData;
+  for (let i = 0; i < planesMask.length; i++) {
+    const baseIndex = i * 4;
+    const planeIndex = planesMask[i];
+    
+    if (color) {
+      const c = localColor.setHex(rainbowColors[planeIndex % rainbowColors.length]);
+
+      data[baseIndex + 0] = c.r * 255;
+      data[baseIndex + 1] = c.g * 255;
+      data[baseIndex + 2] = c.b * 255;
+      data[baseIndex + 3] = 255;
+    } else {
+      data[baseIndex + 0] = planeIndex;
+      data[baseIndex + 1] = planeIndex;
+      data[baseIndex + 2] = planeIndex;
+      data[baseIndex + 3] = 255;
+    }
+  }
+  ctx.putImageData(imageData, 0, 0);
+
+  /* if (data.byteLength !== planesMask.length * 4) {
+    console.log('lengths', width, height, data, planesMask);
+    debugger;
+    throw new Error('unexpected length');
+  } */
+
+  return canvas;
+}
+
+//
+
 const decorateGeometrySegments = (geometry, attributeName, maskCanvas) => {
   console.log('decorateGeometrySegments', attributeName, maskCanvas); // XXX
 };
@@ -534,7 +567,7 @@ const abortError = new Error();
 abortError.isAbortError = true;
 
 const localVector = new THREE.Vector3();
-const localVector2D = new THREE.Vector2();
+// const localVector2D = new THREE.Vector2();
 const localMatrix = new THREE.Matrix4();
 const localColor = new THREE.Color();
 
@@ -1744,7 +1777,7 @@ class PanelRenderer extends EventTarget {
     const pointCloudArrayBuffer = panel.getData('layer1/pointCloud');
     // const planeMatrices = panel.getData('layer1/planeMatrices');
     const planesJson = panel.getData('layer1/planesJson');
-    const planesIndices = panel.getData('layer1/planesIndices');
+    const planesMask = panel.getData('layer1/planesMask');
     const predictedHeight = panel.getData('layer1/predictedHeight');
     // console.log('got panel datas', panel.getDatas());
 
@@ -1874,7 +1907,7 @@ class PanelRenderer extends EventTarget {
         renderer,
       });
 
-      overlay.addMesh(sceneMesh, segmentMask);
+      overlay.addMesh(sceneMesh, segmentMask, planesMask);
       scene.add(overlay.overlayScene);
 
       this.overlay = overlay;
@@ -2512,15 +2545,15 @@ const _getPlanesRgbd = async (width, height, depthFloats32Array) => {
     }
 
     // the remainder is a Int32Array(width * height) of plane indices
-    const planesIndices = new Int32Array(planesArrayBuffer, index);
-    index += Int32Array.BYTES_PER_ELEMENT * planesIndices.length;
-    /* if (planesIndices.length !== width * height) {
+    const planesMask = new Int32Array(planesArrayBuffer, index);
+    index += Int32Array.BYTES_PER_ELEMENT * planesMask.length;
+    /* if (planesMask.length !== width * height) {
       throw new Error('plane indices length mismatch');
     } */
 
     return {
       planesJson,
-      planesIndices,
+      planesMask,
     };
   } else {
     throw new Error('failed to detect planes');
@@ -2661,6 +2694,11 @@ async function compileVirtualScene(arrayBuffer) {
       const segmentsCanvasColor = segmentsImg2Canvas(segmentsImageBitmap, {
         color: true,
       });
+      segmentsCanvasColor.classList.add('imageSegmentationCanvas2');
+      segmentsCanvasColor.style.cssText = `\
+        background-color: red;
+      `;
+      document.body.appendChild(segmentsCanvasColor);
       const ctx = segmentsCanvasColor.getContext('2d');
 
       drawLabels(ctx, resizeBoundingBoxLayers(
@@ -2685,7 +2723,7 @@ async function compileVirtualScene(arrayBuffer) {
   // plane detection
   console.time('planeDetection');
   let planesJson;
-  let planesIndices;
+  let planesMask;
   {
     const depthFloats32Array = getDepthFloatsFromPointCloud(pointCloudArrayBuffer);
     
@@ -2693,124 +2731,23 @@ async function compileVirtualScene(arrayBuffer) {
     const planesSpec = await _getPlanesRgbd(width, height, depthFloats32Array);
     // console.log('got planes spec', planesSpec);
     planesJson = planesSpec.planesJson;
-    planesIndices = planesSpec.planesIndices;
+    planesMask = planesSpec.planesMask;
 
-    const canvas = document.createElement('canvas');
-    canvas.classList.add('planeDetectionCanvas');
-    canvas.width = width;
-    canvas.height = height;
-    canvas.style.cssText = `\
+    // if (!planesMask) {
+    //   console.warn('no planes mask');
+    //   debugger;
+    // }
+
+    const planesCanvas = planesMask2Canvas(planesMask, {
+      color: true,
+    });
+    planesCanvas.classList.add('planeDetectionCanvas');
+    planesCanvas.style.cssText = `\
       background-color: red;
     `;
-    document.body.appendChild(canvas);
-    const ctx = canvas.getContext('2d');
-    const imageData = ctx.getImageData(0, 0, width, height);
-    const {data} = imageData;
-    for (let i = 0; i < planesIndices.length; i++) {
-      // const x = i % width;
-      // const y = Math.floor(i / width);
-      const baseIndex = i * 4;
-      const planeIndex = planesIndices[i];
-      // const v = planeIndex * 16;
-      const color = localColor.setHex(rainbowColors[planeIndex % rainbowColors.length]);
-      data[baseIndex + 0] = color.r * 255;
-      data[baseIndex + 1] = color.g * 255;
-      data[baseIndex + 2] = color.b * 255;
-      data[baseIndex + 3] = 255;
-    }
-
-    // globalThis.planesJson = planesJson;
-    // globalThis.planesIndices = planesIndices;
-    // globalThis.planesImageData = data;
-
-    /* if (data.byteLength !== planesIndices.length * 4) {
-      console.log('lengths', width, height, data, planesIndices);
-      debugger;
-      throw new Error('unexpected length');
-    } */
-    
-    ctx.putImageData(imageData, 0, 0);
+    document.body.appendChild(planesCanvas);
   }
   console.timeEnd('planeDetection');
-
-  // run ransac
-  /* const planeMatrices = [];
-  {
-    const widthSegments = img.width - 1;
-    const heightSegments = img.height - 1;
-    const geometry = new THREE.PlaneGeometry(1, 1, widthSegments, heightSegments);
-    pointCloudArrayBufferToPositionAttributeArray(pointCloudArrayBuffer, geometry.attributes.position.array, 1/img.width);
-    // applySkybox(geometry.attributes.position.array);
-
-    // keep only a fraction of the points
-    const fraction = 16;
-    let points = geometry.attributes.position.array;
-    let points2 = new Float32Array(points.length / fraction);
-    for (let i = 0; i < points2.length / 3; i++) {
-      const j = i * 3 * fraction;
-      points2[i*3+0] = points[j+0];
-      points2[i*3+1] = points[j+1];
-      points2[i*3+2] = points[j+2];
-    }
-    // shuffle points2
-    for (let i = 0; i < points2.length / 3; i++) {
-      const j = Math.floor(Math.random() * points2.length / 3);
-      const tmp = points2.slice(i*3, i*3+3);
-      points2.set(points2.slice(j*3, j*3+3), i*3);
-      points2.set(tmp, j*3);
-    }
-
-    // detect planes
-    const planesJson = await _getPlanesRansac(points2);
-    // draw detected planes
-    for (let i = 0; i < planesJson.length; i++) {
-      const plane = planesJson[i];
-      const [planeEquation, planePointIndices] = plane; // XXX note the planesIndices are computed relative to the current points set after removing all previous planes; these are not global indices
-      
-      const normal = new THREE.Vector3(planeEquation[0], planeEquation[1], planeEquation[2]);
-      const distance = planeEquation[3];
-      
-      // cut out the plane points
-      const inlierPlaneFloats = [];
-      const outlierPlaneFloats = [];
-      for (let j = 0; j < points2.length; j += 3) {
-        if (planePointIndices.includes(j/3)) {
-          inlierPlaneFloats.push(points2[j], points2[j+1], points2[j+2]);
-        } else {
-          outlierPlaneFloats.push(points2[j], points2[j+1], points2[j+2]);
-        }
-      }
-
-      // compute the centroid
-      const centroid = new THREE.Vector3();
-      let count = 0;
-      for (let j = 0; j < inlierPlaneFloats.length; j += 3) {
-        centroid.x += inlierPlaneFloats[j];
-        centroid.y += inlierPlaneFloats[j+1];
-        centroid.z += inlierPlaneFloats[j+2];
-        count++;
-      }
-      centroid.divideScalar(count);
-
-      // console.log('got centroid', centroid);
-
-      const m = new THREE.Matrix4().compose(
-        centroid,
-        new THREE.Quaternion().setFromRotationMatrix(
-          new THREE.Matrix4().lookAt(
-            normal,
-            new THREE.Vector3(0, 0, 0),
-            new THREE.Vector3(0, 1, 0),
-          )
-        ),
-        new THREE.Vector3(1, 1, 1)
-      );
-      planeMatrices.push(m.toArray());
-
-      // latch new points
-      points2 = Float32Array.from(outlierPlaneFloats);
-    }
-  } */
 
   // query the height
   const predictedHeight = await _getPredictedHeight(blob);
@@ -2825,7 +2762,7 @@ async function compileVirtualScene(arrayBuffer) {
     // boundingBoxLayers,
     // planeMatrices,
     planesJson,
-    planesIndices,
+    planesMask,
     predictedHeight,
   };
 }
