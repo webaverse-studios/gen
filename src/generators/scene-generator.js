@@ -104,6 +104,8 @@ export const layer2Specs = [
 export const tools = [
   'camera',
   'eraser',
+  'segment',
+  'plane',
 ];
 const classes = [
   "person",
@@ -1658,41 +1660,25 @@ class Overlay {
     const overlayScene = new THREE.Scene();
     overlayScene.autoUpdate = false;
     this.overlayScene = overlayScene;
-  }
-  addMesh(mesh, segmentMask, planesMask) {
-    const geometry = mesh.geometry.clone();
 
-    // add barycentric coordinates
-    const barycentric = new THREE.BufferAttribute(new Float32Array(geometry.attributes.position.array.length), 3);
-    for (let i = 0; i < barycentric.array.length; i += 9) {
-      barycentric.array[i + 0] = 1;
-      barycentric.array[i + 1] = 0;
-      barycentric.array[i + 2] = 0;
-
-      barycentric.array[i + 3] = 0;
-      barycentric.array[i + 4] = 1;
-      barycentric.array[i + 5] = 0;
-
-      barycentric.array[i + 6] = 0;
-      barycentric.array[i + 7] = 0;
-      barycentric.array[i + 8] = 1;
-    }
-    geometry.setAttribute('barycentric', barycentric);
-
-    const material = new THREE.ShaderMaterial({
+    const overlayMaterial = new THREE.ShaderMaterial({
       uniforms: {
         uRenderMode: {
-          value: 1,
+          value: -1,
           needsUpdate: true,
         },
       },
       vertexShader: `\
         attribute float segment;
         attribute vec3 segmentColor;
+        attribute float plane;
+        attribute vec3 planeColor;
         attribute vec3 barycentric;
         
         varying float vSegment;
         flat varying vec3 vSegmentColor;
+        varying float vPlane;
+        flat varying vec3 vPlaneColor;
         varying vec3 vBarycentric;
         varying vec2 vUv;
         varying vec3 vPosition;
@@ -1700,6 +1686,9 @@ class Overlay {
         void main() {
           vSegment = segment;
           vSegmentColor = segmentColor;
+          vPlane = plane;
+          vPlaneColor = planeColor;
+
           vBarycentric = barycentric;
           vUv = uv;
           vPosition = position;
@@ -1711,6 +1700,8 @@ class Overlay {
         
         varying float vSegment;
         flat varying vec3 vSegmentColor;
+        varying float vPlane;
+        flat varying vec3 vPlaneColor;
         varying vec3 vBarycentric;
         varying vec2 vUv;
         varying vec3 vPosition;
@@ -1734,21 +1725,21 @@ class Overlay {
           f *= 200.;
 
           float a = max(1. - f, 0.);
+          a = max(a, 0.5);
 
           if (uRenderMode == 0) {
             vec3 c = lineColor;
             vec3 p = vPosition;
 
-            a = max(a, 0.4);
-
             gl_FragColor = vec4(c, a);
             gl_FragColor.rg = uv;
           } else if (uRenderMode == 1) {
-            a = max(a, 0.5);
-
             gl_FragColor = vec4(vSegmentColor, a);
+          } else if (uRenderMode == 2) {
+            gl_FragColor = vec4(vPlaneColor, a);
           } else {
-            gl_FragColor = vec4(1., 0., 0., 1.);
+            // gl_FragColor = vec4(1., 0., 0., 1.);
+            discard;
           }
         }
       `,
@@ -1759,6 +1750,29 @@ class Overlay {
       polygonOffsetFactor: -1,
       polygonOffsetUnits: 1,
     });
+    this.overlayMaterial = overlayMaterial;
+  }
+  addMesh(mesh) {
+    const geometry = mesh.geometry.clone();
+
+    // add barycentric coordinates
+    const barycentric = new THREE.BufferAttribute(new Float32Array(geometry.attributes.position.array.length), 3);
+    for (let i = 0; i < barycentric.array.length; i += 9) {
+      barycentric.array[i + 0] = 1;
+      barycentric.array[i + 1] = 0;
+      barycentric.array[i + 2] = 0;
+
+      barycentric.array[i + 3] = 0;
+      barycentric.array[i + 4] = 1;
+      barycentric.array[i + 5] = 0;
+
+      barycentric.array[i + 6] = 0;
+      barycentric.array[i + 7] = 0;
+      barycentric.array[i + 8] = 1;
+    }
+    geometry.setAttribute('barycentric', barycentric);
+
+    const material = this.overlayMaterial;
 
     // lens mesh
     const overlayMesh = new THREE.Mesh(
@@ -1766,6 +1780,30 @@ class Overlay {
       material,
     );
     this.overlayScene.add(overlayMesh);
+  }
+  setTool(tool) {
+    switch (tool) {
+      case 'eraser': {
+        this.overlayMaterial.uniforms.uRenderMode.value = 0;
+        this.overlayMaterial.uniforms.uRenderMode.needsUpdate = true;
+        break;
+      }
+      case 'segment': {
+        this.overlayMaterial.uniforms.uRenderMode.value = 1;
+        this.overlayMaterial.uniforms.uRenderMode.needsUpdate = true;
+        break;
+      }
+      case 'plane': {
+        this.overlayMaterial.uniforms.uRenderMode.value = 2;
+        this.overlayMaterial.uniforms.uRenderMode.needsUpdate = true;
+        break;
+      }
+      default: {
+        this.overlayMaterial.uniforms.uRenderMode.value = -1;
+        this.overlayMaterial.uniforms.uRenderMode.needsUpdate = true;
+        break;
+      }
+    }
   }
 }
 
@@ -1776,8 +1814,6 @@ class PanelRenderer extends EventTarget {
     debug = false,
   } = {}) {
     super();
-
-    console.log('create renderer', new Error().stack);
 
     this.canvas = canvas;
     this.panel = panel;
@@ -1842,15 +1878,15 @@ class PanelRenderer extends EventTarget {
     this.floorMesh = null;
     this.planesMesh = null;
 
-    const cubeMesh = new THREE.Mesh(
+    const defaultCubeMesh = new THREE.Mesh(
       new THREE.BoxBufferGeometry(1, 1, 1),
       new THREE.MeshPhongMaterial({
         color: 0x00ff00,
       }),
     );
-    cubeMesh.name = 'cubeMesh';
-    cubeMesh.frustumCulled = false;
-    // scene.add(cubeMesh);
+    defaultCubeMesh.name = 'defaultCubeMesh';
+    defaultCubeMesh.frustumCulled = false;
+    // scene.add(defaultCubeMesh);
 
     // read the mesh from the panel
     const imgArrayBuffer = panel.getData(mainImageKey);
@@ -1879,9 +1915,9 @@ class PanelRenderer extends EventTarget {
     // applySkybox(geometry.attributes.position.array);
     decorateGeometrySegments(geometry, 'segment', segmentMask, this.canvas.width, this.canvas.height);
     decorateGeometrySegments(geometry, 'plane', planesMask, this.canvas.width, this.canvas.height);
-    globalThis.oldGeometry = geometry;
+    // globalThis.oldGeometry = geometry;
     geometry = geometry.toNonIndexed();
-    globalThis.newGeometry = geometry;
+    // globalThis.newGeometry = geometry;
     // add extra triangeId attribute
     const triangleIdAttribute = new THREE.BufferAttribute(new Float32Array(geometry.attributes.position.count), 1);
     for (let i = 0; i < triangleIdAttribute.count; i++) {
@@ -1891,16 +1927,6 @@ class PanelRenderer extends EventTarget {
     
     // texture
     const map = new THREE.Texture();
-    (async () => { // load the texture image
-      const imgBlob = new Blob([imgArrayBuffer], {
-        type: 'image/png',
-      });
-      map.image = await createImageBitmap(imgBlob, {
-        imageOrientation: 'flipY',
-      });
-      // map.encoding = THREE.sRGBEncoding;
-      map.needsUpdate = true;
-    })();
 
     // mesh
     const sceneMesh = new THREE.Mesh(
@@ -1919,6 +1945,10 @@ class PanelRenderer extends EventTarget {
             value: new THREE.Vector2(),
             needsUpdate: false,
           },
+          uEraser: {
+            value: 0,
+            needsUpdate: true,
+          },
         },
         vertexShader: `\
           attribute float triangleId;
@@ -1935,20 +1965,24 @@ class PanelRenderer extends EventTarget {
           uniform sampler2D map;
           uniform sampler2D selectedIndicesMap;
           uniform vec2 iSelectedIndicesMapResolution;
+          uniform int uEraser;
+
           varying vec2 vUv;
           varying float vTriangleId;
 
           void main() {
             gl_FragColor = texture2D(map, vUv);
             
-            // check for selection
-            float x = mod(vTriangleId, iSelectedIndicesMapResolution.x);
-            float y = floor(vTriangleId / iSelectedIndicesMapResolution.x);
-            vec2 uv = (vec2(x, y) + 0.5) / iSelectedIndicesMapResolution;
-            vec4 selectedIndexRgba = texture2D(selectedIndicesMap, uv);
-            bool isSelected = selectedIndexRgba.r > 0.5;
-            if (isSelected) {
-              gl_FragColor.rgb *= 0.2;
+            if (uEraser == 1) {
+              // check for selection
+              float x = mod(vTriangleId, iSelectedIndicesMapResolution.x);
+              float y = floor(vTriangleId / iSelectedIndicesMapResolution.x);
+              vec2 uv = (vec2(x, y) + 0.5) / iSelectedIndicesMapResolution;
+              vec4 selectedIndexRgba = texture2D(selectedIndicesMap, uv);
+              bool isSelected = selectedIndexRgba.r > 0.5;
+              if (isSelected) {
+                gl_FragColor.rgb *= 0.2;
+              }
             }
           }
         `,
@@ -1958,6 +1992,21 @@ class PanelRenderer extends EventTarget {
     sceneMesh.frustumCulled = false;
     this.scene.add(sceneMesh);
     this.sceneMesh = sceneMesh;
+
+    (async () => { // load the texture image
+      sceneMesh.visible = false;
+
+      const imgBlob = new Blob([imgArrayBuffer], {
+        type: 'image/png',
+      });
+      map.image = await createImageBitmap(imgBlob, {
+        imageOrientation: 'flipY',
+      });
+      // map.encoding = THREE.sRGBEncoding;
+      map.needsUpdate = true;
+
+      sceneMesh.visible = true;
+    })();
 
     // selector
     {
@@ -1993,7 +2042,7 @@ class PanelRenderer extends EventTarget {
         renderer,
       });
 
-      overlay.addMesh(sceneMesh, segmentMask, planesMask);
+      overlay.addMesh(sceneMesh);
       scene.add(overlay.overlayScene);
 
       this.overlay = overlay;
@@ -2044,7 +2093,16 @@ class PanelRenderer extends EventTarget {
   setTool(tool) {
     this.tool = tool;
 
-    this.controls.enabled = this.tool === 'camera';
+    this.sceneMesh.material.uniforms.uEraser.value = tool === 'eraser' ? 1 : 0;
+    this.sceneMesh.material.uniforms.uEraser.needsUpdate = true;
+
+    this.controls.enabled = [
+      'camera',
+      'segment',
+      'plane',
+    ].includes(this.tool);
+    
+    this.overlay.setTool(this.tool);
   }
   listen() {
     const keydown = e => {
