@@ -4,7 +4,7 @@ import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 import {JFAOutline, renderDepthReconstruction} from '../utils/jfaOutline.js';
 
 import {ImageAiClient} from '../clients/image-client.js';
-import {getLabel} from '../clients/perception-client.js';
+// import {getLabel} from '../clients/perception-client.js';
 import {
   pointcloudStride,
   getPointCloud,
@@ -17,7 +17,7 @@ import {
 
 import {blob2img, img2ImageData} from '../utils/convert-utils.js';
 import {makeId} from '../utils/id-utils.js';
-import {labelClasses} from '../constants/prompts.js';
+// import {labelClasses} from '../constants/prompts.js';
 // import {downloadFile} from '../utils/http-utils.js';
 
 //
@@ -458,6 +458,7 @@ const detectronColors = [
   const hex = c.getHex();
   return hex;
 });
+const colors = detectronColors;
 
 //
 
@@ -477,7 +478,7 @@ const segmentsImg2Canvas = (imageBitmap, {
     const segmentIndex = r;
 
     if (color) {
-      const c = localColor.setHex(rainbowColors[segmentIndex % rainbowColors.length]);
+      const c = localColor.setHex(colors[segmentIndex % colors.length]);
       data[i + 0] = c.r * 255;
       data[i + 1] = c.g * 255;
       data[i + 2] = c.b * 255;
@@ -532,7 +533,7 @@ const planesMask2Canvas = (planesMask, {
     const planeIndex = planesMask[i];
     
     if (color) {
-      const c = localColor.setHex(rainbowColors[planeIndex % rainbowColors.length]);
+      const c = localColor.setHex(colors[planeIndex % colors.length]);
 
       data[baseIndex + 0] = c.r * 255;
       data[baseIndex + 1] = c.g * 255;
@@ -606,7 +607,7 @@ const decorateGeometrySegments = (geometry, attributeName, mask, width, height) 
           }
         }
 
-        const c = localColor.setHex(rainbowColors[value % rainbowColors.length]);
+        const c = localColor.setHex(colors[value % colors.length]);
         for (const index of segmentIndices) {
           array[index] = value;
 
@@ -1660,97 +1661,6 @@ class Overlay {
     const overlayScene = new THREE.Scene();
     overlayScene.autoUpdate = false;
     this.overlayScene = overlayScene;
-
-    const overlayMaterial = new THREE.ShaderMaterial({
-      uniforms: {
-        uRenderMode: {
-          value: -1,
-          needsUpdate: true,
-        },
-      },
-      vertexShader: `\
-        attribute float segment;
-        attribute vec3 segmentColor;
-        attribute float plane;
-        attribute vec3 planeColor;
-        attribute vec3 barycentric;
-        
-        varying float vSegment;
-        flat varying vec3 vSegmentColor;
-        varying float vPlane;
-        flat varying vec3 vPlaneColor;
-        varying vec3 vBarycentric;
-        varying vec2 vUv;
-        varying vec3 vPosition;
-
-        void main() {
-          vSegment = segment;
-          vSegmentColor = segmentColor;
-          vPlane = plane;
-          vPlaneColor = planeColor;
-
-          vBarycentric = barycentric;
-          vUv = uv;
-          vPosition = position;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        }
-      `,
-      fragmentShader: `\
-        uniform int uRenderMode;
-        
-        varying float vSegment;
-        flat varying vec3 vSegmentColor;
-        varying float vPlane;
-        flat varying vec3 vPlaneColor;
-        varying vec3 vBarycentric;
-        varying vec2 vUv;
-        varying vec3 vPosition;
-
-        const float lineWidth = 0.1;
-        const vec3 lineColor = vec3(${new THREE.Vector3(0x00BBCC).toArray().map(n => n.toFixed(8)).join(',')});
-
-        float edgeFactor(vec3 bary, float width) {
-          // vec3 bary = vec3(vBC.x, vBC.y, 1.0 - vBC.x - vBC.y);
-          vec3 d = fwidth(bary);
-          vec3 a3 = smoothstep(d * (width - 0.5), d * (width + 0.5), bary);
-          return min(min(a3.x, a3.y), a3.z);
-        }
-
-        void main() {
-          vec2 uv = vUv;
-          float b = 0.05;
-          float f = min(mod(uv.x, b), mod(uv.y, b));
-          f = min(f, mod(1.-uv.x, b));
-          f = min(f, mod(1.-uv.y, b));
-          f *= 200.;
-
-          float a = max(1. - f, 0.);
-          a = max(a, 0.5);
-
-          if (uRenderMode == 0) {
-            vec3 c = lineColor;
-            vec3 p = vPosition;
-
-            gl_FragColor = vec4(c, a);
-            gl_FragColor.rg = uv;
-          } else if (uRenderMode == 1) {
-            gl_FragColor = vec4(vSegmentColor, a);
-          } else if (uRenderMode == 2) {
-            gl_FragColor = vec4(vPlaneColor, a);
-          } else {
-            // gl_FragColor = vec4(1., 0., 0., 1.);
-            discard;
-          }
-        }
-      `,
-      transparent: true,
-      alphaToCoverage: true,
-      // polygon offset to front
-      polygonOffset: true,
-      polygonOffsetFactor: -1,
-      polygonOffsetUnits: 1,
-    });
-    this.overlayMaterial = overlayMaterial;
   }
   addMesh(mesh) {
     const geometry = mesh.geometry.clone();
@@ -1772,37 +1682,155 @@ class Overlay {
     }
     geometry.setAttribute('barycentric', barycentric);
 
-    const material = this.overlayMaterial;
+    const _makeOverlayMesh = ({
+      renderMode,
+    }) => {
+      const material = new THREE.ShaderMaterial({
+        uniforms: {
+          uRenderMode: {
+            value: renderMode,
+            needsUpdate: true,
+          },
+        },
+        vertexShader: `\
+          attribute float segment;
+          attribute vec3 segmentColor;
+          attribute float plane;
+          attribute vec3 planeColor;
+          attribute vec3 barycentric;
+          
+          varying float vSegment;
+          flat varying vec3 vSegmentColor;
+          varying float vPlane;
+          flat varying vec3 vPlaneColor;
+          varying vec3 vBarycentric;
+          varying vec2 vUv;
+          varying vec3 vPosition;
+  
+          void main() {
+            vSegment = segment;
+            vSegmentColor = segmentColor;
+            vPlane = plane;
+            vPlaneColor = planeColor;
+  
+            vBarycentric = barycentric;
+            vUv = uv;
+            vPosition = position;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `,
+        fragmentShader: `\
+          uniform int uRenderMode;
+          
+          varying float vSegment;
+          flat varying vec3 vSegmentColor;
+          varying float vPlane;
+          flat varying vec3 vPlaneColor;
+          varying vec3 vBarycentric;
+          varying vec2 vUv;
+          varying vec3 vPosition;
+  
+          const float lineWidth = 0.1;
+          const vec3 lineColor = vec3(${new THREE.Vector3(0x00BBCC).toArray().map(n => n.toFixed(8)).join(',')});
+  
+          float edgeFactor(vec3 bary, float width) {
+            // vec3 bary = vec3(vBC.x, vBC.y, 1.0 - vBC.x - vBC.y);
+            vec3 d = fwidth(bary);
+            vec3 a3 = smoothstep(d * (width - 0.5), d * (width + 0.5), bary);
+            return min(min(a3.x, a3.y), a3.z);
+          }
+  
+          void main() {
+            vec2 uv = vUv;
+            float b = 0.05;
+            float f = min(mod(uv.x, b), mod(uv.y, b));
+            f = min(f, mod(1.-uv.x, b));
+            f = min(f, mod(1.-uv.y, b));
+            f *= 200.;
+  
+            float a = max(1. - f, 0.);
+            a = max(a, 0.5);
+  
+            if (uRenderMode == 0) {
+              vec3 c = lineColor;
+              vec3 p = vPosition;
+  
+              gl_FragColor = vec4(c, a);
+              gl_FragColor.rg = uv;
+            } else if (uRenderMode == 1) {
+              gl_FragColor = vec4(vSegmentColor, a);
+            } else if (uRenderMode == 2) {
+              gl_FragColor = vec4(vPlaneColor, a);
+            } else {
+              // gl_FragColor = vec4(1., 0., 0., 1.);
+              discard;
+            }
+          }
+        `,
+        transparent: true,
+        alphaToCoverage: true,
+        // polygon offset to front
+        polygonOffset: true,
+        polygonOffsetFactor: -1,
+        polygonOffsetUnits: 1,
+      });
+
+      const mesh = new THREE.Mesh(
+        geometry,
+        material,
+      );
+      mesh.frustumCulled = false;
+      return mesh;
+    };
 
     // lens mesh
-    const overlayMesh = new THREE.Mesh(
-      geometry,
-      material,
-    );
-    this.overlayScene.add(overlayMesh);
+    const toolOverlayMeshSpecs = [
+      {
+        name: 'eraser',
+        renderMode: 0,
+      },
+      {
+        name: 'segment',
+        renderMode: 1,
+      },
+      {
+        name: 'plane',
+        renderMode: 2,
+      },
+    ];
+    this.toolOverlayMeshes = {};
+    for (let i = 0; i < toolOverlayMeshSpecs.length; i++) {
+      const toolOverlayMeshSpec = toolOverlayMeshSpecs[i];
+      const {
+        name,
+        renderMode,
+      } = toolOverlayMeshSpec;
+      const overlayMesh = _makeOverlayMesh({
+        renderMode,
+      });
+      overlayMesh.visible = false;
+      this.overlayScene.add(overlayMesh);
+      this.toolOverlayMeshes[name] = overlayMesh;
+    }
+
+    /* const segmentTextMeshes = (() => {
+      const myText = new Text()
+      myScene.add(myText);
+
+      // Set properties to configure:
+      myText.text = 'Hello world!'
+      myText.fontSize = 0.2
+      myText.position.z = -2
+      myText.color = 0x9966FF
+
+      // Update the rendering:
+      myText.sync();
+    })(); */
   }
   setTool(tool) {
-    switch (tool) {
-      case 'eraser': {
-        this.overlayMaterial.uniforms.uRenderMode.value = 0;
-        this.overlayMaterial.uniforms.uRenderMode.needsUpdate = true;
-        break;
-      }
-      case 'segment': {
-        this.overlayMaterial.uniforms.uRenderMode.value = 1;
-        this.overlayMaterial.uniforms.uRenderMode.needsUpdate = true;
-        break;
-      }
-      case 'plane': {
-        this.overlayMaterial.uniforms.uRenderMode.value = 2;
-        this.overlayMaterial.uniforms.uRenderMode.needsUpdate = true;
-        break;
-      }
-      default: {
-        this.overlayMaterial.uniforms.uRenderMode.value = -1;
-        this.overlayMaterial.uniforms.uRenderMode.needsUpdate = true;
-        break;
-      }
+    for (const k in this.toolOverlayMeshes) {
+      const toolOverlayMesh = this.toolOverlayMeshes[k];
+      toolOverlayMesh.visible = k === tool;
     }
   }
 }
