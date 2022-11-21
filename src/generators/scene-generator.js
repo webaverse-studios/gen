@@ -2557,20 +2557,6 @@ async function compileVirtualScene(arrayBuffer) {
   img.classList.add('img');
   // document.body.appendChild(img);
   
-  // label
-  /* const {
-    headers: labelHeaders,
-    blob: labelBlob,
-  } = await getLabel(blob, {
-    classes: labelClasses,
-    threshold: 0.0001,
-  });
-  const labelImg = await blob2img(labelBlob);
-  const labelImageData = img2ImageData(labelImg).data.buffer;
-  const boundingBoxLayers = JSON.parse(labelHeaders['x-bounding-boxes']); */
-  // const labelCanvas = drawLabelCanvas(labelImg, boundingBoxLayers);
-  // document.body.appendChild(labelCanvas);
-
   // image segmentation
   console.time('imageSegmentation');
   let imageSegmentationSpec;
