@@ -577,8 +577,8 @@ const getMaskSpecs = (geometry, mask, width, height) => {
 
   const array = new Float32Array(width * height);
   const colorArray = new Float32Array(width * height * 3);
-  const boundingBoxes = [];
-  const boundingBoxIndices = new Uint32Array(width * height);
+  const labels = [];
+  const labelIndices = new Uint32Array(width * height);
 
   const seenIndices = new Set();
   for (let y = 0; y < height; y++) {
@@ -593,13 +593,13 @@ const getMaskSpecs = (geometry, mask, width, height) => {
           localVector.set(Infinity, Infinity, Infinity),
           localVector2.set(-Infinity, -Infinity, -Infinity)
         );
-        const boundingBoxIndex = boundingBoxes.length;
+        const labelIndex = labelIndices.length;
 
         // push initial queue entry
         const queue = [index];
         seenIndices.add(index);
         segmentIndices.push(index);
-        boundingBoxIndices[index] = boundingBoxIndex;
+        labelIndices[index] = labelIndex;
 
         // loop
         while (queue.length > 0) {
@@ -626,7 +626,7 @@ const getMaskSpecs = (geometry, mask, width, height) => {
                     queue.push(aIndex);
                     seenIndices.add(aIndex);
                     segmentIndices.push(aIndex);
-                    boundingBoxIndices[aIndex] = boundingBoxIndex;
+                    labelIndices[aIndex] = labelIndex;
                   }
                 }
               }
@@ -645,18 +645,21 @@ const getMaskSpecs = (geometry, mask, width, height) => {
           colorArray[index * 3 + 1] = c.g;
           colorArray[index * 3 + 2] = c.b;
         }
-        boundingBoxes.push([
-          boundingBox.min.toArray(),
-          boundingBox.max.toArray(),
-        ]);
+        labels.push({
+          index: value,
+          bbox: [
+            boundingBox.min.toArray(),
+            boundingBox.max.toArray(),
+          ],
+        });
       }
     }
   }
   return {
     array,
     colorArray,
-    boundingBoxes,
-    boundingBoxIndices,
+    labels,
+    labelIndices,
   };
 };
 
@@ -1696,11 +1699,6 @@ class Overlay {
       planeSpecs,
     } = mesh;
 
-    console.log('overlay specs', {
-      segmentSpecs,
-      planeSpecs,
-    });
-
     /* // add barycentric coordinates
     const barycentric = new THREE.BufferAttribute(new Float32Array(geometry.attributes.position.array.length), 3);
     for (let i = 0; i < barycentric.array.length; i += 9) {
@@ -1849,17 +1847,39 @@ class Overlay {
       this.toolOverlayMeshes[name] = overlayMesh;
     }
 
-    const segmentTextMeshes = (() => {
-      const textMesh = new Text();
-      textMesh.text = 'Hello world!';
-      textMesh.fontSize = 0.2;
-      // textMesh.position.z = -2;
-      textMesh.color = 0xFFFFFF;
-      textMesh.sync();
+    const segmentMesh = this.toolOverlayMeshes['segment'];
+    console.log('overlay specs', {
+      segmentSpecs,
+      planeSpecs,
+    });
+    const {labels} = segmentSpecs;
+    for (const label of labels) {
+      const {index, bbox} = label;
+      const name = classes[index];
 
-      const segmentMesh = this.toolOverlayMeshes['segment'];
-      segmentMesh.add(textMesh);
-    })();
+      const boundingBox = localBox.set(
+        localVector.fromArray(bbox[0]),
+        localVector2.fromArray(bbox[1])
+      );
+      const center = boundingBox.getCenter(localVector);
+      const size = boundingBox.getSize(localVector2);
+      
+      {
+        const textMesh = new Text();
+        textMesh.position.copy(center);
+        textMesh.position.z += size.z / 2;
+        textMesh.updateMatrixWorld();
+
+        textMesh.text = name;
+        textMesh.fontSize = 0.2;
+        textMesh.anchorX = 'center';
+        textMesh.anchorY = 'middle';
+        textMesh.color = 0x000000;
+        textMesh.sync();
+
+        segmentMesh.add(textMesh);
+      }
+    }
   }
   setTool(tool) {
     for (const k in this.toolOverlayMeshes) {
