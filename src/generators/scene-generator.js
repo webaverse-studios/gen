@@ -659,42 +659,26 @@ const makeFloatRenderTargetSwapChain = (width, height) => {
 
 //
 
-function drawLabelCanvas(img, boundingBoxLayers) {
-  const canvas = document.createElement('canvas');
-  canvas.width = img.width;
-  canvas.height = img.height;
-  const ctx = canvas.getContext('2d');
-
-  //
-
-  ctx.drawImage(img, 0, 0);
-
-  //
+function drawLabels(ctx, boundingBoxLayers) {
   for (let i = 0; i < boundingBoxLayers.length; i++) {
-    const bboxes = boundingBoxLayers[i];
+    const layer = boundingBoxLayers[i];
+    let {label, bbox} = layer;
+
     ctx.strokeStyle = 'red';
-    const className = labelClasses[i];
-    for (let j = 0; j < bboxes.length; j++) {      
-      // draw the main rectangle
-      const bbox = bboxes[j];
-      const [x1, y1, x2, y2] = bbox;
-      const w = x2 - x1;
-      const h = y2 - y1;
-      ctx.lineWidth = 2;
-      ctx.strokeRect(x1, y1, w, h);
+    // draw the main rectangle
+    const [x1, y1, x2, y2] = bbox;
+    const w = x2 - x1;
+    const h = y2 - y1;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x1, y1, w, h);
 
-      // label the box in the top left, with a black background and white text that fits inside
-      ctx.fillStyle = 'black';
-      ctx.fillRect(x1, y1, 100, 20);
-      ctx.fillStyle = 'white';
-      ctx.font = '12px Arial';
-      ctx.fillText(className, x1 + 2, y1 + 14);
-    }
+    // label the box in the top left, with a black background and white text that fits inside
+    ctx.fillStyle = 'black';
+    ctx.fillRect(x1, y1, 150, 20);
+    ctx.fillStyle = 'white';
+    ctx.font = '12px Arial';
+    ctx.fillText(label, x1 + 2, y1 + 14);
   }
-
-  //
-
-  return canvas;
 }
 
 //
@@ -2630,13 +2614,13 @@ async function compileVirtualScene(arrayBuffer) {
 
     const imageBitmap = await createImageBitmap(segmentsBlob);
     const canvas = document.createElement('canvas');
-    canvas.classList.add('imageSegmentationCanvas');
+    canvas.classList.add('imageSegmentationCanvas1');
     canvas.width = imageBitmap.width;
     canvas.height = imageBitmap.height;
     canvas.style.cssText = `\
       background-color: red;
     `;
-    document.body.appendChild(canvas);
+    // document.body.appendChild(canvas);
     const ctx = canvas.getContext('2d');
     ctx.drawImage(imageBitmap, 0, 0);
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -2652,8 +2636,21 @@ async function compileVirtualScene(arrayBuffer) {
       data[i + 3] = 255;
     }
     ctx.putImageData(imageData, 0, 0);
+    
+    drawLabels(ctx, boundingBoxLayers);
 
-    console.log('got segmentation image data', imageData);
+    // resize the canvas to the image size
+    const canvas2 = document.createElement('canvas');
+    canvas2.classList.add('imageSegmentationCanvas2');
+    canvas2.width = img.width;
+    canvas2.height = img.height;
+    canvas2.style.cssText = `\
+      background-color: red;
+    `;
+    document.body.appendChild(canvas2);
+    const ctx2 = canvas2.getContext('2d');
+    ctx2.imageSmoothingEnabled = false;
+    ctx2.drawImage(canvas, 0, 0, canvas2.width, canvas2.height);
   }
   console.timeEnd('imageSegmentation');
 
