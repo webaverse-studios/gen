@@ -2458,19 +2458,12 @@ const _getImageSegements = async imgBlob => {
     const segmentsBlob = await res.blob();
     const resHeaders = Object.fromEntries(res.headers.entries());
 
-    // const labelImg = await blob2img(segmentsBlob);
     const boundingBoxLayers = JSON.parse(resHeaders['x-bounding-boxes']);
-    // console.log('got bounding boxes', boundingBoxLayers);
-    // const labelCanvas = drawLabelCanvas(labelImg, boundingBoxLayers);
 
     return {
       segmentsBlob,
       boundingBoxLayers,
     };
-
-    // const segmentsArrayBuffer = await res.arrayBuffer();
-    // const segments = new Uint8Array(segmentsArrayBuffer);
-    // return segments;
   } else {
     throw new Error('failed to detect image segments');
   }
