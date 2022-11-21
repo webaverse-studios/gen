@@ -257,7 +257,7 @@ const classes = [
 ];
 const rainbowColors = [
   0x881177,
-  0xaa3366,
+  0xaa3355,
   0xcc6666,
   0xee9944,
   0xeedd00,
