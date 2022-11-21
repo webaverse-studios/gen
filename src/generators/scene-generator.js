@@ -556,8 +556,67 @@ const planesMask2Canvas = (planesMask, {
 
 //
 
-const decorateGeometrySegments = (geometry, attributeName, maskCanvas) => {
-  console.log('decorateGeometrySegments', attributeName, maskCanvas); // XXX
+const decorateGeometrySegments = (geometry, attributeName, mask, width, height) => {
+  const array = new Float32Array(width * height);
+  const colorArray = new Float32Array(width * height * 3);
+
+  const seenIndices = new Set()
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const index = y * width + x;
+
+      if (!seenIndices.has(index)) {
+        const value = mask[index];
+        const segmentIndices = [];
+
+        const queue = [index];
+        seenIndices.add(index);
+        segmentIndices.push(index);
+
+        while (queue.length > 0) {
+          const index = queue.shift();
+
+          const localValue = mask[index];
+          if (localValue === value) {
+            const x = index % width;
+            const y = Math.floor(index / width);
+
+            for (let dx = -1; dx <= 1; dx++) {
+              for (let dy = -1; dy <= 1; dy++) {
+                if (dx === 0 && dy === 0) {
+                  continue;
+                }
+
+                const ax = x + dx;
+                const ay = y + dy;
+
+                if (ax >= 0 && ax < width && ay >= 0 && ay < height) {
+                  const aIndex = ay * width + ax;
+                  
+                  if (!seenIndices.has(aIndex)) {
+                    queue.push(aIndex);
+                    seenIndices.add(aIndex);
+                    segmentIndices.push(aIndex);
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        const c = localColor.setHex(rainbowColors[value % rainbowColors.length]);
+        for (const index of segmentIndices) {
+          array[index] = value;
+
+          colorArray[index * 3 + 0] = c.r;
+          colorArray[index * 3 + 1] = c.g;
+          colorArray[index * 3 + 2] = c.b;
+        }
+      }
+    }
+  }
+  geometry.setAttribute(attributeName, new THREE.BufferAttribute(array, 1));
+  geometry.setAttribute(attributeName + 'Color', new THREE.BufferAttribute(colorArray, 3));
 };
 
 //
@@ -1603,9 +1662,6 @@ class Overlay {
   addMesh(mesh, segmentMask, planesMask) {
     const geometry = mesh.geometry.clone();
 
-    decorateGeometrySegments(geometry, 'segment', segmentMask);
-    decorateGeometrySegments(geometry, 'plane', planesMask);
-
     // add barycentric coordinates
     const barycentric = new THREE.BufferAttribute(new Float32Array(geometry.attributes.position.array.length), 3);
     for (let i = 0; i < barycentric.array.length; i += 9) {
@@ -1624,13 +1680,26 @@ class Overlay {
     geometry.setAttribute('barycentric', barycentric);
 
     const material = new THREE.ShaderMaterial({
+      uniforms: {
+        uRenderMode: {
+          value: 1,
+          needsUpdate: true,
+        },
+      },
       vertexShader: `\
+        attribute float segment;
+        attribute vec3 segmentColor;
         attribute vec3 barycentric;
+        
+        varying float vSegment;
+        flat varying vec3 vSegmentColor;
         varying vec3 vBarycentric;
         varying vec2 vUv;
         varying vec3 vPosition;
 
         void main() {
+          vSegment = segment;
+          vSegmentColor = segmentColor;
           vBarycentric = barycentric;
           vUv = uv;
           vPosition = position;
@@ -1638,6 +1707,10 @@ class Overlay {
         }
       `,
       fragmentShader: `\
+        uniform int uRenderMode;
+        
+        varying float vSegment;
+        flat varying vec3 vSegmentColor;
         varying vec3 vBarycentric;
         varying vec2 vUv;
         varying vec3 vPosition;
@@ -1653,9 +1726,6 @@ class Overlay {
         }
 
         void main() {
-          vec3 c = lineColor;
-          vec3 p = vPosition;
-          
           vec2 uv = vUv;
           float b = 0.05;
           float f = min(mod(uv.x, b), mod(uv.y, b));
@@ -1664,10 +1734,22 @@ class Overlay {
           f *= 200.;
 
           float a = max(1. - f, 0.);
-          a = max(a, 0.4);
 
-          gl_FragColor = vec4(c, a);
-          gl_FragColor.rg = uv;
+          if (uRenderMode == 0) {
+            vec3 c = lineColor;
+            vec3 p = vPosition;
+
+            a = max(a, 0.4);
+
+            gl_FragColor = vec4(c, a);
+            gl_FragColor.rg = uv;
+          } else if (uRenderMode == 1) {
+            a = max(a, 0.5);
+
+            gl_FragColor = vec4(vSegmentColor, a);
+          } else {
+            gl_FragColor = vec4(1., 0., 0., 1.);
+          }
         }
       `,
       transparent: true,
@@ -1716,6 +1798,7 @@ class PanelRenderer extends EventTarget {
       antialias: true,
       preserveDrawingBuffer: true,
     });
+    // renderer.outputEncoding = THREE.sRGBEncoding;
     renderer.setClearColor(0x000000, 0);
     this.renderer = renderer;
     this.addEventListener('destroy', e => {
@@ -1794,7 +1877,11 @@ class PanelRenderer extends EventTarget {
     // pointCloudArrayBufferToColorAttributeArray(labelImageData, geometry.attributes.color.array);
     // _cutSkybox(geometry);
     // applySkybox(geometry.attributes.position.array);
+    decorateGeometrySegments(geometry, 'segment', segmentMask, this.canvas.width, this.canvas.height);
+    decorateGeometrySegments(geometry, 'plane', planesMask, this.canvas.width, this.canvas.height);
+    globalThis.oldGeometry = geometry;
     geometry = geometry.toNonIndexed();
+    globalThis.newGeometry = geometry;
     // add extra triangeId attribute
     const triangleIdAttribute = new THREE.BufferAttribute(new Float32Array(geometry.attributes.position.count), 1);
     for (let i = 0; i < triangleIdAttribute.count; i++) {
@@ -1806,11 +1893,12 @@ class PanelRenderer extends EventTarget {
     const map = new THREE.Texture();
     (async () => { // load the texture image
       const imgBlob = new Blob([imgArrayBuffer], {
-        type: 'image/jpeg',
+        type: 'image/png',
       });
       map.image = await createImageBitmap(imgBlob, {
         imageOrientation: 'flipY',
       });
+      // map.encoding = THREE.sRGBEncoding;
       map.needsUpdate = true;
     })();
 
@@ -1870,8 +1958,6 @@ class PanelRenderer extends EventTarget {
     sceneMesh.frustumCulled = false;
     this.scene.add(sceneMesh);
     this.sceneMesh = sceneMesh;
-
-    // globalThis.sceneMesh = sceneMesh;
 
     // selector
     {
