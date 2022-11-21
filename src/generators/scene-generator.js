@@ -26,6 +26,10 @@ export const panelSize = 1024;
 export const mainImageKey = 'layer0/image';
 export const promptKey = 'layer0/prompt';
 export const layer1Specs = [
+  {
+    name: 'segmentMask',
+    type: 'arrayBuffer',
+  },
   // {
   //   name: 'labelImageData',
   //   type: 'arrayBuffer',
@@ -450,10 +454,78 @@ const detectronColors = [
   const {color: [r, g, b]} = o;
   const c = new THREE.Color(r / 255, g / 255, b / 255);
   const hex = c.getHex();
-  // return '0x' + hex.toString(16).padStart(6, '0');
   return hex;
 });
-// globalThis.colors = colors;
+
+//
+
+const segmentsImg2Canvas = (imageBitmap, {
+  color = false,
+} = {})  => {  
+  const canvas = document.createElement('canvas');
+  canvas.classList.add('imageSegmentationCanvas1');
+  canvas.width = imageBitmap.width;
+  canvas.height = imageBitmap.height;
+  canvas.style.cssText = `\
+    background-color: red;
+  `;
+  // document.body.appendChild(canvas);
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(imageBitmap, 0, 0);
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const {data} = imageData;
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i + 0];
+    const segmentIndex = r;
+
+    if (color) {
+      const c = localColor.setHex(rainbowColors[segmentIndex % rainbowColors.length]);
+      data[i + 0] = c.r * 255;
+      data[i + 1] = c.g * 255;
+      data[i + 2] = c.b * 255;
+      data[i + 3] = 255;
+    } else {
+      data[i + 0] = segmentIndex;
+      data[i + 1] = segmentIndex;
+      data[i + 2] = segmentIndex;
+      data[i + 3] = 255;
+    }
+  }
+  ctx.putImageData(imageData, 0, 0);
+
+  // resize the canvas to the image size
+  const canvas2 = document.createElement('canvas');
+  canvas2.classList.add('imageSegmentationCanvas2');
+  canvas2.width = panelSize;
+  canvas2.height = panelSize;
+  canvas2.style.cssText = `\
+    background-color: red;
+  `;
+  document.body.appendChild(canvas2);
+  const ctx2 = canvas2.getContext('2d');
+  ctx2.imageSmoothingEnabled = false;
+  ctx2.drawImage(canvas, 0, 0, canvas2.width, canvas2.height);
+
+  return canvas2;
+};
+const resizeBoundingBoxLayers = (boundingBoxLayers, oldWidth, oldHeight, width, height) => boundingBoxLayers.map(layer => {
+  const {label, bbox} = layer;
+  return {
+    label,
+    bbox: [
+      bbox[0] / oldWidth * width,
+      bbox[1] / oldHeight * height,
+      bbox[2] / oldWidth * width,
+      bbox[3] / oldHeight * height,
+    ],
+  };
+});
+
+//
+
+const decorateGeometrySegments = (geometry, attributeName, maskCanvas) => {
+  console.log('decorateGeometrySegments', attributeName, maskCanvas); // XXX
+};
 
 //
 
@@ -1495,8 +1567,12 @@ class Overlay {
     overlayScene.autoUpdate = false;
     this.overlayScene = overlayScene;
   }
-  addMesh(mesh) {
+  addMesh(mesh, segmentMask, planesMask) {
     const geometry = mesh.geometry.clone();
+
+    decorateGeometrySegments(geometry, 'segment', segmentMask);
+    decorateGeometrySegments(geometry, 'plane', planesMask);
+
     // add barycentric coordinates
     const barycentric = new THREE.BufferAttribute(new Float32Array(geometry.attributes.position.array.length), 3);
     for (let i = 0; i < barycentric.array.length; i += 9) {
@@ -1662,6 +1738,7 @@ class PanelRenderer extends EventTarget {
 
     // read the mesh from the panel
     const imgArrayBuffer = panel.getData(mainImageKey);
+    const segmentMask = panel.getData('layer1/segmentMask');
     // const labelImageData = panel.getData('layer1/labelImageData');
     const pointCloudHeaders = panel.getData('layer1/pointCloudHeaders');
     const pointCloudArrayBuffer = panel.getData('layer1/pointCloud');
@@ -1797,7 +1874,7 @@ class PanelRenderer extends EventTarget {
         renderer,
       });
 
-      overlay.addMesh(sceneMesh);
+      overlay.addMesh(sceneMesh, segmentMask);
       scene.add(overlay.overlayScene);
 
       this.overlay = overlay;
@@ -2559,51 +2636,41 @@ async function compileVirtualScene(arrayBuffer) {
   
   // image segmentation
   console.time('imageSegmentation');
-  let imageSegmentationSpec;
+  let segmentMask;
   {
-    imageSegmentationSpec = await _getImageSegements(blob);
+    const imageSegmentationSpec = await _getImageSegements(blob);
     console.log('got image segmentation spec', imageSegmentationSpec);
     const {segmentsBlob, boundingBoxLayers} = imageSegmentationSpec;
 
-    const imageBitmap = await createImageBitmap(segmentsBlob);
-    const canvas = document.createElement('canvas');
-    canvas.classList.add('imageSegmentationCanvas1');
-    canvas.width = imageBitmap.width;
-    canvas.height = imageBitmap.height;
-    canvas.style.cssText = `\
-      background-color: red;
-    `;
-    // document.body.appendChild(canvas);
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(imageBitmap, 0, 0);
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const {data} = imageData;
-    for (let i = 0; i < data.length; i += 4) {
-      const r = data[i + 0];
-      const segmentIndex = r;
-      const color = localColor.setHex(rainbowColors[segmentIndex % rainbowColors.length]);
-
-      data[i + 0] = color.r * 255;
-      data[i + 1] = color.g * 255;
-      data[i + 2] = color.b * 255;
-      data[i + 3] = 255;
-    }
-    ctx.putImageData(imageData, 0, 0);
+    const segmentsImageBitmap = await createImageBitmap(segmentsBlob);
     
-    drawLabels(ctx, boundingBoxLayers);
+    {
+      const segmentsCanvasMono = segmentsImg2Canvas(segmentsImageBitmap);
+      const ctx = segmentsCanvasMono.getContext('2d');
 
-    // resize the canvas to the image size
-    const canvas2 = document.createElement('canvas');
-    canvas2.classList.add('imageSegmentationCanvas2');
-    canvas2.width = img.width;
-    canvas2.height = img.height;
-    canvas2.style.cssText = `\
-      background-color: red;
-    `;
-    document.body.appendChild(canvas2);
-    const ctx2 = canvas2.getContext('2d');
-    ctx2.imageSmoothingEnabled = false;
-    ctx2.drawImage(canvas, 0, 0, canvas2.width, canvas2.height);
+      const imageData = ctx.getImageData(0, 0, segmentsCanvasMono.width, segmentsCanvasMono.height);
+      const {data} = imageData;
+      segmentMask = new Int32Array(data.byteLength / Int32Array.BYTES_PER_ELEMENT);
+      for (let i = 0; i < segmentMask.length; i++) {
+        const r = data[i * 4 + 0];
+        segmentMask[i] = r;
+      }
+    }
+
+    {
+      const segmentsCanvasColor = segmentsImg2Canvas(segmentsImageBitmap, {
+        color: true,
+      });
+      const ctx = segmentsCanvasColor.getContext('2d');
+
+      drawLabels(ctx, resizeBoundingBoxLayers(
+        boundingBoxLayers,
+        segmentsImageBitmap.width,
+        segmentsImageBitmap.height,
+        segmentsCanvasColor.width,
+        segmentsCanvasColor.height
+      ));
+    }
   }
   console.timeEnd('imageSegmentation');
 
@@ -2751,6 +2818,7 @@ async function compileVirtualScene(arrayBuffer) {
 
   // return result
   return {
+    segmentMask,
     // labelImageData,
     pointCloudHeaders,
     pointCloud: pointCloudArrayBuffer,
