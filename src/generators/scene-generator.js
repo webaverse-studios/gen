@@ -1794,7 +1794,7 @@ class Overlay {
             } else if (uRenderMode == 1) {
               gl_FragColor = vec4(vSegmentColor, a);
             } else if (uRenderMode == 2) {
-              gl_FragColor = vec4(vPlaneColor, a);
+              gl_FragColor = vec4(vPlaneColor, 0.7);
             } else {
               // gl_FragColor = vec4(1., 0., 0., 1.);
               discard;
