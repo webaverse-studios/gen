@@ -1513,12 +1513,6 @@ class Overlay {
       barycentric.array[i + 8] = 1;
     }
     geometry.setAttribute('barycentric', barycentric);
-    // add colors
-    // const colors = new THREE.BufferAttribute(new Float32Array(geometry.attributes.position.array.length), 3);
-    // for (let i = 0; i < colors.array.length; i += 3) {
-    //   const x = geometry.attributes.position.array[i + 0];
-    //   const y = geometry.attributes.position.array[i + 1];
-    // }
 
     const material = new THREE.ShaderMaterial({
       vertexShader: `\
@@ -1550,20 +1544,8 @@ class Overlay {
         }
 
         void main() {
-          /* float f = edgeFactor();
-          // vec3 c = min(vec3(f), color);
-          // float a = pow(f, 2.);
-          float a = f;
-          vec3 c = lineColor;
-          // gl_FragColor = vec4(c, a);
-          gl_FragColor = vec4(c * a, 1.); */
-
           vec3 c = lineColor;
           vec3 p = vPosition;
-          // float f = min(mod(p.x, 1.), mod(p.z, 1.));
-          // f = min(f, mod(1.-p.x, 1.));
-          // f = min(f, mod(1.-p.z, 1.));
-          // f *= 30.;
           
           vec2 uv = vUv;
           float b = 0.05;
@@ -1571,18 +1553,12 @@ class Overlay {
           f = min(f, mod(1.-uv.x, b));
           f = min(f, mod(1.-uv.y, b));
           f *= 200.;
-          // f = pow(f, 0.1);
-          // f = pow(f, 0.5);
 
           float a = max(1. - f, 0.);
           a = max(a, 0.4);
-          // if (a < 0.5) {
-          //   discard;
-          // } else {
-            gl_FragColor = vec4(c, a);
-            gl_FragColor.rg = uv;
-            // gl_FragColor = sRGBToLinear(gl_FragColor);
-          // }
+
+          gl_FragColor = vec4(c, a);
+          gl_FragColor.rg = uv;
         }
       `,
       transparent: true,
@@ -1599,8 +1575,6 @@ class Overlay {
       material,
     );
     this.overlayScene.add(overlayMesh);
-    
-    globalThis.overlayMesh = overlayMesh;
   }
 }
 
