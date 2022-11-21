@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 // import alea from '../utils/alea.js';
+import {Text} from 'troika-three-text';
 import {JFAOutline, renderDepthReconstruction} from '../utils/jfaOutline.js';
 
 import {ImageAiClient} from '../clients/image-client.js';
@@ -19,6 +20,18 @@ import {blob2img, img2ImageData} from '../utils/convert-utils.js';
 import {makeId} from '../utils/id-utils.js';
 // import {labelClasses} from '../constants/prompts.js';
 // import {downloadFile} from '../utils/http-utils.js';
+
+//
+
+const imageAiClient = new ImageAiClient();
+const abortError = new Error();
+abortError.isAbortError = true;
+
+const localVector = new THREE.Vector3();
+const localVector2 = new THREE.Vector3();
+const localMatrix = new THREE.Matrix4();
+const localBox = new THREE.Box3();
+const localColor = new THREE.Color();
 
 //
 
@@ -559,23 +572,36 @@ const planesMask2Canvas = (planesMask, {
 
 //
 
-const decorateGeometrySegments = (geometry, attributeName, mask, width, height) => {
+const getMaskSpecs = (geometry, mask, width, height) => {
+  const positions = geometry.attributes.position.array;
+
   const array = new Float32Array(width * height);
   const colorArray = new Float32Array(width * height * 3);
+  const boundingBoxes = [];
+  const boundingBoxIndices = new Uint32Array(width * height);
 
-  const seenIndices = new Set()
+  const seenIndices = new Set();
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const index = y * width + x;
 
       if (!seenIndices.has(index)) {
+        // initialize loop
         const value = mask[index];
         const segmentIndices = [];
+        const boundingBox = localBox.set(
+          localVector.set(Infinity, Infinity, Infinity),
+          localVector2.set(-Infinity, -Infinity, -Infinity)
+        );
+        const boundingBoxIndex = boundingBoxes.length;
 
+        // push initial queue entry
         const queue = [index];
         seenIndices.add(index);
         segmentIndices.push(index);
+        boundingBoxIndices[index] = boundingBoxIndex;
 
+        // loop
         while (queue.length > 0) {
           const index = queue.shift();
 
@@ -600,6 +626,7 @@ const decorateGeometrySegments = (geometry, attributeName, mask, width, height) 
                     queue.push(aIndex);
                     seenIndices.add(aIndex);
                     segmentIndices.push(aIndex);
+                    boundingBoxIndices[aIndex] = boundingBoxIndex;
                   }
                 }
               }
@@ -609,29 +636,29 @@ const decorateGeometrySegments = (geometry, attributeName, mask, width, height) 
 
         const c = localColor.setHex(colors[value % colors.length]);
         for (const index of segmentIndices) {
+          const position = localVector.fromArray(positions, index * 3);
+          boundingBox.expandByPoint(position);
+
           array[index] = value;
 
           colorArray[index * 3 + 0] = c.r;
           colorArray[index * 3 + 1] = c.g;
           colorArray[index * 3 + 2] = c.b;
         }
+        boundingBoxes.push([
+          boundingBox.min.toArray(),
+          boundingBox.max.toArray(),
+        ]);
       }
     }
   }
-  geometry.setAttribute(attributeName, new THREE.BufferAttribute(array, 1));
-  geometry.setAttribute(attributeName + 'Color', new THREE.BufferAttribute(colorArray, 3));
+  return {
+    array,
+    colorArray,
+    boundingBoxes,
+    boundingBoxIndices,
+  };
 };
-
-//
-
-const imageAiClient = new ImageAiClient();
-const abortError = new Error();
-abortError.isAbortError = true;
-
-const localVector = new THREE.Vector3();
-// const localVector2D = new THREE.Vector2();
-const localMatrix = new THREE.Matrix4();
-const localColor = new THREE.Color();
 
 //
 
@@ -1664,8 +1691,17 @@ class Overlay {
   }
   addMesh(mesh) {
     const geometry = mesh.geometry.clone();
+    const {
+      segmentSpecs,
+      planeSpecs,
+    } = mesh;
 
-    // add barycentric coordinates
+    console.log('overlay specs', {
+      segmentSpecs,
+      planeSpecs,
+    });
+
+    /* // add barycentric coordinates
     const barycentric = new THREE.BufferAttribute(new Float32Array(geometry.attributes.position.array.length), 3);
     for (let i = 0; i < barycentric.array.length; i += 9) {
       barycentric.array[i + 0] = 1;
@@ -1680,7 +1716,7 @@ class Overlay {
       barycentric.array[i + 7] = 0;
       barycentric.array[i + 8] = 1;
     }
-    geometry.setAttribute('barycentric', barycentric);
+    geometry.setAttribute('barycentric', barycentric); */
 
     const _makeOverlayMesh = ({
       renderMode,
@@ -1813,19 +1849,17 @@ class Overlay {
       this.toolOverlayMeshes[name] = overlayMesh;
     }
 
-    /* const segmentTextMeshes = (() => {
-      const myText = new Text()
-      myScene.add(myText);
+    const segmentTextMeshes = (() => {
+      const textMesh = new Text();
+      textMesh.text = 'Hello world!';
+      textMesh.fontSize = 0.2;
+      // textMesh.position.z = -2;
+      textMesh.color = 0xFFFFFF;
+      textMesh.sync();
 
-      // Set properties to configure:
-      myText.text = 'Hello world!'
-      myText.fontSize = 0.2
-      myText.position.z = -2
-      myText.color = 0x9966FF
-
-      // Update the rendering:
-      myText.sync();
-    })(); */
+      const segmentMesh = this.toolOverlayMeshes['segment'];
+      segmentMesh.add(textMesh);
+    })();
   }
   setTool(tool) {
     for (const k in this.toolOverlayMeshes) {
@@ -1941,8 +1975,12 @@ class PanelRenderer extends EventTarget {
     // pointCloudArrayBufferToColorAttributeArray(labelImageData, geometry.attributes.color.array);
     // _cutSkybox(geometry);
     // applySkybox(geometry.attributes.position.array);
-    decorateGeometrySegments(geometry, 'segment', segmentMask, this.canvas.width, this.canvas.height);
-    decorateGeometrySegments(geometry, 'plane', planesMask, this.canvas.width, this.canvas.height);
+    const segmentSpecs = getMaskSpecs(geometry, segmentMask, this.canvas.width, this.canvas.height);
+    const planeSpecs = getMaskSpecs(geometry, planesMask, this.canvas.width, this.canvas.height);
+    geometry.setAttribute('segment', new THREE.BufferAttribute(segmentSpecs.array, 1));
+    geometry.setAttribute('segmentColor', new THREE.BufferAttribute(segmentSpecs.colorArray, 3));
+    geometry.setAttribute('plane', new THREE.BufferAttribute(planeSpecs.array, 1));
+    geometry.setAttribute('planeColor', new THREE.BufferAttribute(planeSpecs.colorArray, 3));
     // globalThis.oldGeometry = geometry;
     geometry = geometry.toNonIndexed();
     // globalThis.newGeometry = geometry;
@@ -2018,6 +2056,8 @@ class PanelRenderer extends EventTarget {
     );
     sceneMesh.name = 'sceneMesh';
     sceneMesh.frustumCulled = false;
+    sceneMesh.segmentSpecs = segmentSpecs;
+    sceneMesh.planeSpecs = planeSpecs;
     this.scene.add(sceneMesh);
     this.sceneMesh = sceneMesh;
 
