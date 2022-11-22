@@ -82,43 +82,6 @@ const createSeedImage = (
     maskCanvas,
   };
 };
-/* const makeCharacterSeedImage = () => {
-  return createSeedImage(512, 512, 64, 128, 1, 256);
-};
-const createFullSeedImage = () => {
-  const rng = () => (Math.random() * 2) - 1;
-  const baseColors = Object.keys(materialColors).map(k => materialColors[k][400].slice(1));
-
-  const canvas = document.createElement('canvas');
-  canvas.width = w;
-  canvas.height = h;
-
-  const ctx = canvas.getContext('2d');
-  ctx.fillStyle = '#fff';
-  ctx.fillRect(0, 0, w, h);
-  // ctx.filter = blur ? `blur(${blur}px) saturate(1.5)` : '';
-
-  const minSize = 64;
-  
-  const baseColor = color ?? baseColors[Math.floor(Math.random() * baseColors.length)];
-  const scheme = new ColorScheme();
-  scheme.from_hex(baseColor)
-    .scheme(monochrome ? 'mono' : 'triade')   
-    // .variation('hard');
-  const colors = scheme.colors();
-
-  for (let i = 0; i < n; i++) {
-    const x = w / 2 + rng() * rw;
-    const y = h / 2 + rng() * rh;
-    const sw = Math.pow(Math.random(), p) * rw;
-    const sh = Math.pow(Math.random(), p) * rh;
-    ctx.fillStyle = '#' + colors[Math.floor(Math.random() * colors.length)];
-
-    ctx.fillRect(x - sw / 2, y - sh / 2, sw, sh);
-  }
-
-  return canvas;
-}; */
 
 const previewCanvasSize = 1024;
 
