@@ -33,7 +33,7 @@ const ADDENDUM_CONSTRUCTORS = (() => {
 })();
 const ADDENDUM_SERIALIZERS = (() => {
   const _serializedTypedArray = (typedArray, uint8Array, index) => {
-    uint8Array.set(new Uint8Array(typedArray.buffer, addtypedArrayndum.byteOffset, typedArray.byteLength), index);
+    uint8Array.set(new Uint8Array(typedArray.buffer, typedArray.byteOffset, typedArray.byteLength), index);
   };
   _serializedTypedArray.getSize = typedArray => align4(typedArray.byteLength);
   const _serializeArrayBuffer = (arrayBuffer, uint8Array, index) => {

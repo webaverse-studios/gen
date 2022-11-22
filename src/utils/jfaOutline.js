@@ -161,7 +161,7 @@ export class JFAOutline {
      * @param targets Render targets array (at least length two) to ping pong between, must be of type float.
      * @param selectedLayer The layer for selected objects.
      */
-    renderSelected(renderer, scene, camera, targets, selectedLayer) {
+    renderSelected(renderer, scene, camera, targets) {
         // const oldClearColor = renderer.getClearColor(localColor).getHex();
         const oldOverrideMaterial = scene.overrideMaterial;
         // renderer.setClearColor(0x0);

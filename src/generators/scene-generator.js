@@ -29,6 +29,8 @@ abortError.isAbortError = true;
 
 const localVector = new THREE.Vector3();
 const localVector2 = new THREE.Vector3();
+const localVector3 = new THREE.Vector3();
+const localVector4 = new THREE.Vector3();
 const localMatrix = new THREE.Matrix4();
 const localBox = new THREE.Box3();
 const localColor = new THREE.Color();
@@ -759,6 +761,9 @@ const getMaskSpecsByValue = (geometry, mask, width, height) => {
           colorArray[index * 3 + 1] = c.g;
           colorArray[index * 3 + 2] = c.b;
         }
+
+        boundingBox.min.toArray(label.bbox[0]);
+        boundingBox.max.toArray(label.bbox[1]);
       }
     }
   }
@@ -770,19 +775,19 @@ const getMaskSpecsByValue = (geometry, mask, width, height) => {
   };
 };
 const zipPlanesSegmentsJson = (planeSpecs, planesJson) => {
-  for (let i = 0; i < planeSpecs.length; i++) {
-    const planeSpec = planeSpecs[i];
-    if (!planeSpec) {
-      console.warn('missing planeSpec 1', {planeSpecs, planesJson});
-      debugger;
-    }
+  for (let i = 0; i < planeSpecs.labels.length; i++) {
+    const label = planeSpecs.labels[i];
+    // if (!planeSpec) {
+    //   console.warn('missing planeSpec 1', {planeSpecs, planesJson});
+    //   debugger;
+    // }
     const planeJson = planesJson[i];
-    if (!planeJson) {
-      console.warn('missing planeSpec 2', {planeSpecs, planesJson});
-      debugger;
-    }
+    // if (!planeJson) {
+    //   console.warn('missing planeSpec 2', {planeSpecs, planesJson});
+    //   debugger;
+    // }
     for (const k in planeJson) {
-      planeSpec[k] = planeJson[k];
+      label[k] = planeJson[k];
     }
   }
   return planeSpecs;
@@ -1972,37 +1977,167 @@ class Overlay {
       this.toolOverlayMeshes[name] = overlayMesh;
     }
 
-    const segmentMesh = this.toolOverlayMeshes['segment'];
-    console.log('overlay specs', {
-      segmentSpecs,
-      planeSpecs,
-    });
-    const {labels} = segmentSpecs;
-    for (const label of labels) {
-      const {index, bbox} = label;
-      const name = classes[index];
+    // segment meshes
+    {
+      const segmentMesh = this.toolOverlayMeshes['segment'];
+      // console.log('overlay specs', {
+      //   segmentSpecs,
+      //   planeSpecs,
+      // });
+      const {labels} = segmentSpecs;
+      for (const label of labels) {
+        const {index, bbox} = label;
+        const name = classes[index];
 
-      const boundingBox = localBox.set(
-        localVector.fromArray(bbox[0]),
-        localVector2.fromArray(bbox[1])
-      );
-      const center = boundingBox.getCenter(localVector);
-      const size = boundingBox.getSize(localVector2);
-      
-      {
-        const textMesh = new Text();
-        textMesh.position.copy(center);
-        textMesh.position.z += size.z / 2;
-        textMesh.updateMatrixWorld();
+        const boundingBox = localBox.set(
+          localVector.fromArray(bbox[0]),
+          localVector2.fromArray(bbox[1])
+        );
+        const center = boundingBox.getCenter(localVector);
+        const size = boundingBox.getSize(localVector2);
+        
+        {
+          const textMesh = new Text();
+          textMesh.position.copy(center);
+          textMesh.position.z += size.z / 2;
+          textMesh.updateMatrixWorld();
 
-        textMesh.text = name;
-        textMesh.fontSize = 0.2;
-        textMesh.anchorX = 'center';
-        textMesh.anchorY = 'middle';
-        textMesh.color = 0x000000;
-        textMesh.sync();
+          textMesh.text = name;
+          textMesh.fontSize = 0.2;
+          textMesh.anchorX = 'center';
+          textMesh.anchorY = 'middle';
+          textMesh.color = 0x000000;
+          textMesh.sync();
 
-        segmentMesh.add(textMesh);
+          segmentMesh.add(textMesh);
+        }
+      }
+    }
+
+    // plane meshes
+    {
+      const planeMesh = this.toolOverlayMeshes['plane'];
+
+      if (planeSpecs.labels.length > 0) {
+        const arrowGeometry = (() => {
+          const shape = new THREE.Shape();
+          shape.moveTo(0, 0);
+          shape.lineTo(1, -1);
+          shape.lineTo(0, 2);
+          shape.lineTo(-1, -1);
+
+          const extrudeSettings = {
+            // steps: 2,
+            depth: 0.25,
+            bevelEnabled: false,
+            // bevelThickness: 1,
+            // bevelSize: 1,
+            // bevelOffset: 0,
+            // bevelSegments: 1
+          };
+
+          const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+          geometry.translate(0, 1, 0);
+          geometry.rotateX(Math.PI / 2);
+          const s = 0.1;
+          geometry.scale(s, s, s);
+
+          return geometry;
+        })();
+        const arrowMaterial = new THREE.MeshPhongMaterial({
+          color: 0xFF0000,
+        });
+        const gridGeometry = new THREE.PlaneGeometry(1, 1);
+        const gridMaterial = new THREE.ShaderMaterial({
+          vertexShader: `\
+            varying vec2 vUv;
+    
+            void main() {
+              vUv = uv;
+              gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+            }
+          `,
+          fragmentShader: `\
+            varying vec2 vUv;
+
+            const vec3 lineColor = vec3(${new THREE.Vector3(0x00BBCC).toArray().map(n => n.toFixed(8)).join(',')});
+    
+            void main() {
+              vec2 uv = vUv;
+
+              // draw a grid based on uv
+              float b = 0.1;
+              float f = min(mod(uv.x, b), mod(uv.y, b));
+              f = min(f, mod(1.-uv.x, b));
+              f = min(f, mod(1.-uv.y, b));
+              f *= 200.;
+
+              float a = max(1. - f, 0.);
+              a = max(a, 0.5);
+
+              vec3 c = lineColor;
+
+              gl_FragColor = vec4(c, a);
+              // gl_FragColor.rg = uv;
+            }
+          `,
+          transparent: true,
+          side: THREE.DoubleSide,
+        });
+
+        const makeArrowMesh = () => {
+          const arrowMesh = new THREE.Mesh(arrowGeometry, arrowMaterial);
+          return arrowMesh;
+        };
+        const makeGridMesh = () => {
+          const gridMesh = new THREE.Mesh(gridGeometry, gridMaterial);
+          return gridMesh;
+        };
+
+        // console.log('render labels', planeSpecs.labels);
+        for (const label of planeSpecs.labels) {
+          // localBox.set(
+          //   localVector.fromArray(label.bbox[0]),
+          //   localVector2.fromArray(label.bbox[1])
+          // );
+          // const center = localBox.getCenter(localVector);
+          // const size = localBox.getSize(localVector2);
+
+          /* if (!label.center || !label.normal) {
+            console.warn('invalid label', label);
+            debugger;
+          } */
+
+          // compute label plane
+          const center = localVector.fromArray(label.center);
+          // center.x *= -1;
+          center.y *= -1;
+          center.z *= -1;
+          const normal = localVector2.fromArray(label.normal);
+          normal.x *= -1;
+
+          // arrow mesh
+          const arrowMesh = makeArrowMesh();
+          arrowMesh.position.copy(center);
+          arrowMesh.quaternion.setFromRotationMatrix(
+            localMatrix.lookAt(
+              localVector3.set(0, 0, 0),
+              normal,
+              localVector4.set(0, 1, 0)
+            )
+          );
+          arrowMesh.updateMatrixWorld();
+          arrowMesh.frustumCulled = false;
+          planeMesh.add(arrowMesh);
+
+          // grid mesh
+          const gridMesh = makeGridMesh();
+          gridMesh.position.copy(arrowMesh.position);
+          gridMesh.quaternion.copy(arrowMesh.quaternion);
+          gridMesh.updateMatrixWorld();
+          gridMesh.frustumCulled = false;
+          planeMesh.add(gridMesh);
+        }
       }
     }
   }
@@ -2949,7 +3084,7 @@ const _getPlanesRgbd = async (width, height, depthFloats32Array) => {
     type: 'application/octet-stream',
   });
 
-  const minSupport = 50000;
+  const minSupport = 30000;
   const res = await fetch(`https://depth.webaverse.com/planeDetection?minSupport=${minSupport}`, {
     method: 'POST',
     body: requestBlob,
@@ -2962,27 +3097,37 @@ const _getPlanesRgbd = async (width, height, depthFloats32Array) => {
     let index = 0;
     const numPlanes = dataView.getUint32(index, true);
     index += Uint32Array.BYTES_PER_ELEMENT;
+
+    /* if (numPlanes > 512) {
+      console.warn('too many planes', numPlanes);
+      debugger;
+    } */
     
     // parse the planes
     const planesJson = [];
     for (let i = 0; i < numPlanes; i++) {
-      const normal = new Float32Array(planesArrayBuffer, index, 3);
-      index += Float32Array.BYTES_PER_ELEMENT * 3;
-      const center = new Float32Array(planesArrayBuffer, index, 3);
-      index += Float32Array.BYTES_PER_ELEMENT * 3;
-      const numVertices = dataView.getUint32(index, true);
-      index += Uint32Array.BYTES_PER_ELEMENT;
-      const distanceSquaredF = new Float32Array(planesArrayBuffer, index, 1);
-      index += Float32Array.BYTES_PER_ELEMENT;
-      
-      // console.log('plane', i, normal, center, numVertices, distanceSquaredF);
-      const planeJson = {
-        normal,
-        center,
-        numVertices,
-        distanceSquaredF,
-      };
-      planesJson.push(planeJson);
+      try {
+        const normal = new Float32Array(planesArrayBuffer, index, 3);
+        index += Float32Array.BYTES_PER_ELEMENT * 3;
+        const center = new Float32Array(planesArrayBuffer, index, 3);
+        index += Float32Array.BYTES_PER_ELEMENT * 3;
+        const numVertices = dataView.getUint32(index, true);
+        index += Uint32Array.BYTES_PER_ELEMENT;
+        const distanceSquaredF = new Float32Array(planesArrayBuffer, index, 1);
+        index += Float32Array.BYTES_PER_ELEMENT;
+        
+        // console.log('plane', i, normal, center, numVertices, distanceSquaredF);
+        const planeJson = {
+          normal,
+          center,
+          numVertices,
+          distanceSquaredF,
+        };
+        planesJson.push(planeJson);
+      } catch(err) {
+        console.warn('fail', err.stack);
+        debugger;
+      }
     }
 
     // the remainder is a Int32Array(width * height) of plane indices
