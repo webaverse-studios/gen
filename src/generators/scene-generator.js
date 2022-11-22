@@ -113,6 +113,18 @@ export const layer2Specs = [
     name: 'reconstructedDepthFloats',
     type: 'arrayBuffer',
   },
+  {
+    name: 'planesJson',
+    type: 'json',
+  },
+  {
+    name: 'planesMask',
+    type: 'arrayBuffer',
+  },
+  {
+    name: 'segmentMask',
+    type: 'arrayBuffer',
+  },
 ];
 export const tools = [
   'camera',
@@ -572,7 +584,7 @@ const planesMask2Canvas = (planesMask, {
 
 //
 
-const getMaskSpecs = (geometry, mask, width, height) => {
+const getMaskSpecsByConnectivity = (geometry, mask, width, height) => {
   const positions = geometry.attributes.position.array;
 
   const array = new Float32Array(width * height);
@@ -661,6 +673,119 @@ const getMaskSpecs = (geometry, mask, width, height) => {
     labels,
     labelIndices,
   };
+};
+const getMaskSpecsByValue = (geometry, mask, width, height) => {
+  const positions = geometry.attributes.position.array;
+
+  const array = new Float32Array(width * height);
+  const colorArray = new Float32Array(width * height * 3);
+  const labels = new Map();
+  const labelIndices = new Uint32Array(width * height);
+
+  const seenIndices = new Set();
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const index = y * width + x;
+
+      if (!seenIndices.has(index)) {
+        // initialize loop
+        const value = mask[index];
+        const segmentIndices = [];
+        const labelIndex = labelIndices.length;
+
+        // push initial queue entry
+        const queue = [index];
+        seenIndices.add(index);
+        segmentIndices.push(index);
+        labelIndices[index] = labelIndex;
+
+        let label = labels.get(value);
+        if (!label) {
+          label = {
+            index: value,
+            bbox: [
+              [Infinity, Infinity, Infinity],
+              [-Infinity, -Infinity, -Infinity],
+            ],
+          };
+          labels.set(value, label);
+        }
+        const boundingBox = localBox.set(
+          localVector.fromArray(label.bbox[0]),
+          localVector2.fromArray(label.bbox[1])
+        );
+
+        // loop
+        while (queue.length > 0) {
+          const index = queue.shift();
+
+          const localValue = mask[index];
+          if (localValue === value) {
+            const x = index % width;
+            const y = Math.floor(index / width);
+
+            for (let dx = -1; dx <= 1; dx++) {
+              for (let dy = -1; dy <= 1; dy++) {
+                if (dx === 0 && dy === 0) {
+                  continue;
+                }
+
+                const ax = x + dx;
+                const ay = y + dy;
+
+                if (ax >= 0 && ax < width && ay >= 0 && ay < height) {
+                  const aIndex = ay * width + ax;
+                  
+                  if (!seenIndices.has(aIndex)) {
+                    queue.push(aIndex);
+                    seenIndices.add(aIndex);
+                    segmentIndices.push(aIndex);
+                    labelIndices[aIndex] = labelIndex;
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        const c = localColor.setHex(colors[value % colors.length]);
+        for (const index of segmentIndices) {
+          const position = localVector.fromArray(positions, index * 3);
+          boundingBox.expandByPoint(position);
+
+          array[index] = value;
+
+          colorArray[index * 3 + 0] = c.r;
+          colorArray[index * 3 + 1] = c.g;
+          colorArray[index * 3 + 2] = c.b;
+        }
+      }
+    }
+  }
+  return {
+    array,
+    colorArray,
+    labels: Array.from(labels.values()),
+    labelIndices,
+  };
+};
+const zipPlanesSegmentsJson = (planeSpecs, planesJson) => {
+  for (let i = 0; i < planeSpecs.length; i++) {
+    const planeSpec = planeSpecs[i];
+    if (!planeSpec) {
+      console.warn('missing planeSpec 1', {planeSpecs, planesJson});
+      debugger;
+    }
+    const planeJson = planesJson[i];
+    if (!planeJson) {
+      console.warn('missing planeSpec 2', {planeSpecs, planesJson});
+      debugger;
+    }
+    for (const k in planeJson) {
+      planeSpec[k] = planeJson[k];
+    }
+  }
+  return planeSpecs;
 };
 
 //
@@ -1995,8 +2120,9 @@ class PanelRenderer extends EventTarget {
     // pointCloudArrayBufferToColorAttributeArray(labelImageData, geometry.attributes.color.array);
     // _cutSkybox(geometry);
     // applySkybox(geometry.attributes.position.array);
-    const segmentSpecs = getMaskSpecs(geometry, segmentMask, this.canvas.width, this.canvas.height);
-    const planeSpecs = getMaskSpecs(geometry, planesMask, this.canvas.width, this.canvas.height);
+    const segmentSpecs = getMaskSpecsByConnectivity(geometry, segmentMask, this.canvas.width, this.canvas.height);
+    let planeSpecs = getMaskSpecsByValue(geometry, planesMask, this.canvas.width, this.canvas.height);
+    planeSpecs = zipPlanesSegmentsJson(planeSpecs, planesJson);
     geometry.setAttribute('segment', new THREE.BufferAttribute(segmentSpecs.array, 1));
     geometry.setAttribute('segmentColor', new THREE.BufferAttribute(segmentSpecs.colorArray, 3));
     geometry.setAttribute('plane', new THREE.BufferAttribute(planeSpecs.array, 1));
@@ -2010,7 +2136,7 @@ class PanelRenderer extends EventTarget {
       triangleIdAttribute.array[i] = Math.floor(i / 3);
     }
     geometry.setAttribute('triangleId', triangleIdAttribute);
-    
+
     // texture
     const map = new THREE.Texture();
 
@@ -2328,6 +2454,51 @@ class PanelRenderer extends EventTarget {
     }
     console.timeEnd('editImg');
 
+    // image segmentation
+    console.time('imageSegmentation');
+    let segmentMask;
+    {
+      const imageSegmentationSpec = await _getImageSegements(editedImgBlob);
+      // console.log('got image segmentation spec', imageSegmentationSpec);
+      const {segmentsBlob, boundingBoxLayers} = imageSegmentationSpec;
+
+      const segmentsImageBitmap = await createImageBitmap(segmentsBlob);
+      
+      {
+        const segmentsCanvasMono = segmentsImg2Canvas(segmentsImageBitmap);
+        const ctx = segmentsCanvasMono.getContext('2d');
+
+        const imageData = ctx.getImageData(0, 0, segmentsCanvasMono.width, segmentsCanvasMono.height);
+        const {data} = imageData;
+        segmentMask = new Int32Array(data.byteLength / Int32Array.BYTES_PER_ELEMENT);
+        for (let i = 0; i < segmentMask.length; i++) {
+          const r = data[i * 4 + 0];
+          segmentMask[i] = r;
+        }
+      }
+
+      {
+        const segmentsCanvasColor = segmentsImg2Canvas(segmentsImageBitmap, {
+          color: true,
+        });
+        segmentsCanvasColor.classList.add('imageSegmentationCanvas2');
+        segmentsCanvasColor.style.cssText = `\
+          background-color: red;
+        `;
+        document.body.appendChild(segmentsCanvasColor);
+        const ctx = segmentsCanvasColor.getContext('2d');
+
+        drawLabels(ctx, resizeBoundingBoxLayers(
+          boundingBoxLayers,
+          segmentsImageBitmap.width,
+          segmentsImageBitmap.height,
+          segmentsCanvasColor.width,
+          segmentsCanvasColor.height
+        ));
+      }
+    }
+    console.timeEnd('imageSegmentation');
+
     // get point cloud
     console.time('pointCloud');
     let pointCloudHeaders;
@@ -2340,6 +2511,29 @@ class PanelRenderer extends EventTarget {
       // this.element.appendChild(pointCloudCanvas);
     }
     console.timeEnd('pointCloud');
+
+    // plane detection
+    console.time('planeDetection');
+    let planesJson;
+    let planesMask;
+    {
+      const depthFloats32Array = getDepthFloatsFromPointCloud(pointCloudArrayBuffer);
+      
+      const {width, height} = editedImg;
+      const planesSpec = await _getPlanesRgbd(width, height, depthFloats32Array);
+      planesJson = planesSpec.planesJson;
+      planesMask = planesSpec.planesMask;
+
+      const planesCanvas = planesMask2Canvas(planesMask, {
+        color: true,
+      });
+      planesCanvas.classList.add('planeDetectionCanvas');
+      planesCanvas.style.cssText = `\
+        background-color: red;
+      `;
+      document.body.appendChild(planesCanvas);
+    }
+    console.timeEnd('planeDetection');
 
     // set fov
     console.time('fov');
@@ -2548,6 +2742,11 @@ class PanelRenderer extends EventTarget {
     }
     console.timeEnd('reconstructZ');
 
+    if (!segmentMask) {
+      console.warn('missing segment mask 1', segmentMask);
+      debugger;
+    }
+
     // return result
     return {
       maskImg: maskImgArrayBuffer,
@@ -2558,15 +2757,18 @@ class PanelRenderer extends EventTarget {
       // indexColorsAlphasArray,
       newDepthFloatImageData,
       reconstructedDepthFloats,
+      planesJson,
+      planesMask,
+      segmentMask,
     };
   }
   createOutmeshLayer(layerEntries) {
-    if (!globalThis.outmeshing) {
-      globalThis.outmeshing = 1;
-    } else {
-      console.warn('already outmeshing: ' + globalThis.outmeshing);
-      debugger;
-    }
+    // if (!globalThis.outmeshing) {
+    //   globalThis.outmeshing = 1;
+    // } else {
+    //   console.warn('already outmeshing: ' + globalThis.outmeshing);
+    //   debugger;
+    // }
     const _getLayerEntry = key => layerEntries.find(layerEntry => layerEntry.key.endsWith('/' + key))?.value;
     const maskImg = _getLayerEntry('maskImg');
     const editedImg = _getLayerEntry('editedImg');
@@ -2576,36 +2778,42 @@ class PanelRenderer extends EventTarget {
     // const indexColorsAlphasArray = _getLayerEntry('indexColorsAlphasArray');
     const newDepthFloatImageData = _getLayerEntry('newDepthFloatImageData');
     const reconstructedDepthFloats = _getLayerEntry('reconstructedDepthFloats');
+    const planesJson = _getLayerEntry('planesJson');
+    const planesMask = _getLayerEntry('planesMask');
+    const segmentMask = _getLayerEntry('segmentMask');
 
     const layerScene = new THREE.Scene();
     layerScene.autoUpdate = false;
 
     // create background mesh
-    (async () => {
-      console.time('backgroundMesh');
-      // const maskImgBlob = new Blob([maskImg], {type: 'image/png'});
-      // const maskImageBitmap = await createImageBitmap(maskImgBlob);
-      // const canvas = document.createElement('canvas');
-      // canvas.width = maskImageBitmap.width;
-      // canvas.height = maskImageBitmap.height;
-      // const context = canvas.getContext('2d');
-      // context.drawImage(maskImageBitmap, 0, 0);
-      // const maskImageData = context.getImageData(0, 0, canvas.width, canvas.height);
-      const maskImageData = img2ImageData(maskImg);
-      
+    console.time('backgroundMesh');
+    let backgroundMesh;
+    {
       const widthSegments = panelSize - 1;
       const heightSegments = panelSize - 1;
       // geometry is camera-relative
       const geometry = new THREE.PlaneGeometry(1, 1, widthSegments, heightSegments);
       pointCloudArrayBufferToPositionAttributeArray(pointCloud, geometry.attributes.position.array, 1 / panelSize);
       // _cutMask(geometry, maskImageData);
+      if (!segmentMask) {
+        console.warn('missing segment mask 2', segmentMask);
+        debugger;
+      }
+      const segmentSpecs = getMaskSpecsByConnectivity(geometry, segmentMask, this.canvas.width, this.canvas.height);
+      let planeSpecs = getMaskSpecsByValue(geometry, planesMask, this.canvas.width, this.canvas.height);
+      planeSpecs = zipPlanesSegmentsJson(planeSpecs, planesJson);
+      geometry.setAttribute('segment', new THREE.BufferAttribute(segmentSpecs.array, 1));
+      geometry.setAttribute('segmentColor', new THREE.BufferAttribute(segmentSpecs.colorArray, 3));
+      geometry.setAttribute('plane', new THREE.BufferAttribute(planeSpecs.array, 1));
+      geometry.setAttribute('planeColor', new THREE.BufferAttribute(planeSpecs.colorArray, 3));
       geometry.computeVertexNormals();
+
       const material = new THREE.MeshPhongMaterial({
         color: 0xff0000,
         transparent: true,
         opacity: 0.8,
       });
-      const backgroundMesh = new THREE.Mesh(geometry, material);
+      backgroundMesh = new THREE.Mesh(geometry, material);
       backgroundMesh.name = 'backgroundMesh';
       backgroundMesh.position.copy(this.camera.position);
       backgroundMesh.quaternion.copy(this.camera.quaternion);
@@ -2613,46 +2821,55 @@ class PanelRenderer extends EventTarget {
       backgroundMesh.matrix.copy(this.camera.matrix);
       backgroundMesh.matrixWorld.copy(this.camera.matrixWorld);
       backgroundMesh.frustumCulled = false;
+      backgroundMesh.segmentSpecs = segmentSpecs;
+      backgroundMesh.planeSpecs = planeSpecs;
 
-      console.time('reconstructZ');
-      {
-        // render an instanced cubes mesh to show the depth
-        // const depthCubesGeometry = new THREE.BoxBufferGeometry(1, 1, 1);
-        const depthCubesGeometry = new THREE.BoxBufferGeometry(0.01, 0.01, 0.01);
-        const depthCubesMaterial = new THREE.MeshPhongMaterial({
-          color: 0x00FFFF,
-        });
-        const depthCubesMesh = new THREE.InstancedMesh(depthCubesGeometry, depthCubesMaterial, newDepthFloatImageData.length);
-        depthCubesMesh.name = 'depthCubesMesh';
-        depthCubesMesh.frustumCulled = false;
-        layerScene.add(depthCubesMesh);
+      layerScene.add(backgroundMesh);
+    }
+    console.timeEnd('backgroundMesh');
 
-        // set the matrices by projecting the depth from the perspective camera
-        const depthRenderSkipRatio = 8;
-        depthCubesMesh.count = 0;
-        for (let i = 0; i < newDepthFloatImageData.length; i += depthRenderSkipRatio) {
-          const x = (i % this.renderer.domElement.width) / this.renderer.domElement.width;
-          let y = Math.floor(i / this.renderer.domElement.width) / this.renderer.domElement.height;
-          y = 1 - y;
+    console.time('reconstructZ');
+    {
+      // render an instanced cubes mesh to show the depth
+      // const depthCubesGeometry = new THREE.BoxBufferGeometry(1, 1, 1);
+      const depthCubesGeometry = new THREE.BoxBufferGeometry(0.01, 0.01, 0.01);
+      const depthCubesMaterial = new THREE.MeshPhongMaterial({
+        color: 0x00FFFF,
+      });
+      const depthCubesMesh = new THREE.InstancedMesh(depthCubesGeometry, depthCubesMaterial, newDepthFloatImageData.length);
+      depthCubesMesh.name = 'depthCubesMesh';
+      depthCubesMesh.frustumCulled = false;
+      layerScene.add(depthCubesMesh);
 
-          const viewZ = reconstructedDepthFloats[i];
-          const worldPoint = setCameraViewPositionFromViewZ(x, y, viewZ, this.camera, localVector);
-          const target = worldPoint.applyMatrix4(this.camera.matrixWorld);
+      // set the matrices by projecting the depth from the perspective camera
+      const depthRenderSkipRatio = 8;
+      depthCubesMesh.count = 0;
+      for (let i = 0; i < newDepthFloatImageData.length; i += depthRenderSkipRatio) {
+        const x = (i % this.renderer.domElement.width) / this.renderer.domElement.width;
+        let y = Math.floor(i / this.renderer.domElement.width) / this.renderer.domElement.height;
+        y = 1 - y;
 
-          localMatrix.makeTranslation(target.x, target.y, target.z);
-          depthCubesMesh.setMatrixAt(i / depthRenderSkipRatio, localMatrix);
-          depthCubesMesh.count++;
-        }
-        depthCubesMesh.instanceMatrix.needsUpdate = true;
+        const viewZ = reconstructedDepthFloats[i];
+        const worldPoint = setCameraViewPositionFromViewZ(x, y, viewZ, this.camera, localVector);
+        const target = worldPoint.applyMatrix4(this.camera.matrixWorld);
+
+        localMatrix.makeTranslation(target.x, target.y, target.z);
+        depthCubesMesh.setMatrixAt(i / depthRenderSkipRatio, localMatrix);
+        depthCubesMesh.count++;
       }
-      console.timeEnd('reconstructZ');
+      depthCubesMesh.instanceMatrix.needsUpdate = true;
+    }
+    console.timeEnd('reconstructZ');
 
-      console.time('cutDepth');
-      // const wrappedPositions = geometry.attributes.position.array.slice();
-      _cutDepth(geometry, depthFloatImageData);
-      console.timeEnd('cutDepth');
+    // console.time('cutDepth');
+    // // const wrappedPositions = geometry.attributes.position.array.slice();
+    // _cutDepth(geometry, depthFloatImageData);
+    // console.timeEnd('cutDepth');
 
+    console.time('backgroundMesh2');
+    {
       // copy the geometry, including the attributes
+      const {geometry} = backgroundMesh;
       const geometry2 = geometry.clone();
       const material2 = new THREE.MeshPhongMaterial({
         color: 0x0000ff,
@@ -2667,13 +2884,10 @@ class PanelRenderer extends EventTarget {
       backgroundMesh2.matrix.copy(this.camera.matrix);
       backgroundMesh2.matrixWorld.copy(this.camera.matrixWorld);
       backgroundMesh2.frustumCulled = false;
-      console.timeEnd('backgroundMesh');
-
-      geometry.computeVertexNormals();
-
-      layerScene.add(backgroundMesh);
+      
       layerScene.add(backgroundMesh2);
-    })();
+    }
+    console.timeEnd('backgroundMesh2');
 
     return layerScene;
   }
@@ -2904,7 +3118,7 @@ async function compileVirtualScene(arrayBuffer) {
   let segmentMask;
   {
     const imageSegmentationSpec = await _getImageSegements(blob);
-    console.log('got image segmentation spec', imageSegmentationSpec);
+    // console.log('got image segmentation spec', imageSegmentationSpec);
     const {segmentsBlob, boundingBoxLayers} = imageSegmentationSpec;
 
     const segmentsImageBitmap = await createImageBitmap(segmentsBlob);
@@ -3240,110 +3454,3 @@ export class Storyboard extends EventTarget {
     this.#removePanelInternal(panel);
   }
 }
-
-//
-
-/* function triangleCircleCollision(triangle, circle, radius) {
-  if (pointInTriangle(circle, triangle))
-      return true
-  if (lineCircleCollision(triangle[0], triangle[1], circle, radius))
-      return true
-  if (lineCircleCollision(triangle[1], triangle[2], circle, radius))
-      return true
-  if (lineCircleCollision(triangle[2], triangle[0], circle, radius))
-      return true
-  return false
-}
-
-function pointInTriangle(point, triangle) {
-  //compute vectors & dot products
-  var cx = point[0], cy = point[1],
-      t0 = triangle[0], t1 = triangle[1], t2 = triangle[2],
-      v0x = t2[0]-t0[0], v0y = t2[1]-t0[1],
-      v1x = t1[0]-t0[0], v1y = t1[1]-t0[1],
-      v2x = cx-t0[0], v2y = cy-t0[1],
-      dot00 = v0x*v0x + v0y*v0y,
-      dot01 = v0x*v1x + v0y*v1y,
-      dot02 = v0x*v2x + v0y*v2y,
-      dot11 = v1x*v1x + v1y*v1y,
-      dot12 = v1x*v2x + v1y*v2y
-
-  // Compute barycentric coordinates
-  var b = (dot00 * dot11 - dot01 * dot01),
-      inv = b === 0 ? 0 : (1 / b),
-      u = (dot11*dot02 - dot01*dot12) * inv,
-      v = (dot00*dot12 - dot01*dot02) * inv
-  return u>=0 && v>=0 && (u+v < 1)
-}
-
-function pointCircleCollision(point, circle, r) {
-  if (r===0) return false
-  var dx = circle[0] - point[0]
-  var dy = circle[1] - point[1]
-  return dx * dx + dy * dy <= r * r
-}
-
-const lineCircleCollision = (() => {
-  const tmp = [0, 0]
-
-  function lineCircleCollision(
-    a,
-    b,
-    circle,
-    radius,
-    // nearest,
-  ) {
-      //check to see if start or end points lie within circle 
-      if (pointCircleCollision(a, circle, radius)) {
-          // if (nearest) {
-          //     nearest[0] = a[0]
-          //     nearest[1] = a[1]
-          // }
-          return true
-      } if (pointCircleCollision(b, circle, radius)) {
-          // if (nearest) {
-          //     nearest[0] = b[0]
-          //     nearest[1] = b[1]
-          // }
-          return true
-      }
-      
-      var x1 = a[0],
-          y1 = a[1],
-          x2 = b[0],
-          y2 = b[1],
-          cx = circle[0],
-          cy = circle[1]
-
-      //vector d
-      var dx = x2 - x1
-      var dy = y2 - y1
-      
-      //vector lc
-      var lcx = cx - x1
-      var lcy = cy - y1
-      
-      //project lc onto d, resulting in vector p
-      var dLen2 = dx * dx + dy * dy //len2 of d
-      var px = dx
-      var py = dy
-      if (dLen2 > 0) {
-          var dp = (lcx * dx + lcy * dy) / dLen2
-          px *= dp
-          py *= dp
-      }
-      
-      // if (!nearest)
-      //     nearest = tmp
-      tmp[0] = x1 + px
-      tmp[1] = y1 + py
-      
-      //len2 of p
-      var pLen2 = px * px + py * py
-      
-      //check collision
-      return pointCircleCollision(tmp, circle, radius)
-              && pLen2 <= dLen2 && (px * dx + py * dy) >= 0
-  }
-  return lineCircleCollision;
-})(); */
