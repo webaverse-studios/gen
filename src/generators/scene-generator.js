@@ -607,7 +607,7 @@ const getMaskSpecsByConnectivity = (geometry, mask, width, height) => {
           localVector.set(Infinity, Infinity, Infinity),
           localVector2.set(-Infinity, -Infinity, -Infinity)
         );
-        const labelIndex = labelIndices.length;
+        const labelIndex = labels.length;
 
         // push initial queue entry
         const queue = [index];
@@ -674,6 +674,7 @@ const getMaskSpecsByConnectivity = (geometry, mask, width, height) => {
     colorArray,
     labels,
     labelIndices,
+    mask,
   };
 };
 const getMaskSpecsByValue = (geometry, mask, width, height) => {
@@ -693,18 +694,16 @@ const getMaskSpecsByValue = (geometry, mask, width, height) => {
         // initialize loop
         const value = mask[index];
         const segmentIndices = [];
-        const labelIndex = labelIndices.length;
 
         // push initial queue entry
         const queue = [index];
         seenIndices.add(index);
         segmentIndices.push(index);
-        labelIndices[index] = labelIndex;
 
         let label = labels.get(value);
         if (!label) {
           label = {
-            index: value,
+            index: labels.size,
             bbox: [
               [Infinity, Infinity, Infinity],
               [-Infinity, -Infinity, -Infinity],
@@ -712,6 +711,8 @@ const getMaskSpecsByValue = (geometry, mask, width, height) => {
           };
           labels.set(value, label);
         }
+        labelIndices[index] = label.index;
+
         const boundingBox = localBox.set(
           localVector.fromArray(label.bbox[0]),
           localVector2.fromArray(label.bbox[1])
@@ -742,7 +743,7 @@ const getMaskSpecsByValue = (geometry, mask, width, height) => {
                     queue.push(aIndex);
                     seenIndices.add(aIndex);
                     segmentIndices.push(aIndex);
-                    labelIndices[aIndex] = labelIndex;
+                    labelIndices[aIndex] = label.index;
                   }
                 }
               }
@@ -2033,58 +2034,70 @@ class Overlay {
 
           return geometry;
         })();
-        const arrowMaterial = new THREE.MeshPhongMaterial({
-          color: 0xFF0000,
-        });
         const gridGeometry = new THREE.PlaneGeometry(1, 1);
-        const gridMaterial = new THREE.ShaderMaterial({
-          vertexShader: `\
-            varying vec2 vUv;
-    
-            void main() {
-              vUv = uv;
-              gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-            }
-          `,
-          fragmentShader: `\
-            varying vec2 vUv;
-
-            const vec3 lineColor = vec3(${new THREE.Vector3(0x00BBCC).toArray().map(n => n.toFixed(8)).join(',')});
-    
-            void main() {
-              vec2 uv = vUv;
-
-              // draw a grid based on uv
-              float b = 0.1;
-              float f = min(mod(uv.x, b), mod(uv.y, b));
-              f = min(f, mod(1.-uv.x, b));
-              f = min(f, mod(1.-uv.y, b));
-              f *= 200.;
-
-              float a = max(1. - f, 0.);
-              a = max(a, 0.5);
-
-              vec3 c = lineColor;
-
-              gl_FragColor = vec4(c, a);
-              // gl_FragColor.rg = uv;
-            }
-          `,
-          transparent: true,
-          side: THREE.DoubleSide,
-        });
 
         const makeArrowMesh = () => {
-          const arrowMesh = new THREE.Mesh(arrowGeometry, arrowMaterial);
+          const material = new THREE.MeshPhongMaterial({
+            color: 0xFF0000,
+          });
+
+          const arrowMesh = new THREE.Mesh(arrowGeometry, material);
           return arrowMesh;
         };
         const makeGridMesh = () => {
-          const gridMesh = new THREE.Mesh(gridGeometry, gridMaterial);
+          const material = new THREE.ShaderMaterial({
+            uniforms: {
+              uColor: {
+                value: new THREE.Color(0xFF0000),
+                needsUpdate: true,
+              },
+            },
+            vertexShader: `\
+              varying vec2 vUv;
+      
+              void main() {
+                vUv = uv;
+                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+              }
+            `,
+            fragmentShader: `\
+              uniform vec3 uColor;
+              varying vec2 vUv;
+  
+              const vec3 lineColor = vec3(${new THREE.Vector3(0x00BBCC).toArray().map(n => n.toFixed(8)).join(',')});
+      
+              void main() {
+                vec2 uv = vUv;
+  
+                // draw a grid based on uv
+                float b = 0.1;
+                float f = min(mod(uv.x, b), mod(uv.y, b));
+                f = min(f, mod(1.-uv.x, b));
+                f = min(f, mod(1.-uv.y, b));
+                f *= 200.;
+  
+                float a = max(1. - f, 0.);
+                a = max(a, 0.5);
+  
+                // vec3 c = lineColor;
+                vec3 c = uColor;
+  
+                gl_FragColor = vec4(c, a);
+                // gl_FragColor.rg = uv;
+              }
+            `,
+            transparent: true,
+            side: THREE.DoubleSide,
+          });
+
+          const gridMesh = new THREE.Mesh(gridGeometry, material);
           return gridMesh;
         };
 
+        const arrowMeshes = [];
+        const planeMeshes = [];
         for (const label of planeSpecs.labels) {
-          // compute label plane
+          // compute label planes
           const center = localVector.fromArray(label.center);
           const normal = localVector2.fromArray(label.normal);
 
@@ -2101,6 +2114,7 @@ class Overlay {
           arrowMesh.updateMatrixWorld();
           arrowMesh.frustumCulled = false;
           planeMesh.add(arrowMesh);
+          arrowMeshes.push(arrowMesh);
 
           // grid mesh
           const gridMesh = makeGridMesh();
@@ -2109,163 +2123,234 @@ class Overlay {
           gridMesh.updateMatrixWorld();
           gridMesh.frustumCulled = false;
           planeMesh.add(gridMesh);
+          planeMeshes.push(gridMesh);
         }
-
-        console.log('got segment plane specs', {segmentSpecs, planeSpecs});
-        debugger;
 
         const segmentLabelIndices = segmentSpecs.labelIndices;
         const planeLabelIndices = planeSpecs.labelIndices;
-        const floorClasses = [
-          "floor-wood",
-          "gravel",
-          "playingfield",
-          "railroad",
-          "river",
-          "road",
-          "roof",
-          "sand",
-          "sea",
-          "snow",
-          "water-other",
-          "floor-other-merged",
-          "pavement-merged",
-          "grass-merged",
-          "dirt-merged",
-          "rock-merged",
-          "rug-merged",
-        ];
-        const wallClasses = [
-          "curtain",
-          "wall-brick",
-          "wall-stone",
-          "wall-tile",
-          "wall-wood",
-          "window-blind",
-          "fence-merged",
-          "wall-other-merged",
-        ];
-        const ceilingClasses = [
-          "ceiling-merged",
-        ];
-        const portalClasses = [
-          "bridge",
-          "door-stuff",
-          "house",
-          "platform",
-          "stairs",
-          "window-other",
-          "building-other-merged",
-          "tent",
-        ];
-        const seatClasses = [
-          "bench",
-          "chair",
-          "couch",
-          "bed",
-          "dining table",
-          "toilet",
-          "counter",
-          "table-merged",
-        ];
-        const lightClasses = [
-          "traffic light",
-          "light",
-        ];
-        const npcClasses = [
-          "person",
-        ];
-        const mobClases = [
-          "bird",
-          "cat",
-          "dog",
-          "horse",
-          "sheep",
-          "cow",
-          "elephant",
-          "bear",
-          "zebra",
-          "giraffe",
-        ];
-        const vehicleClasses = [
-          "bicycle",
-          "car",
-          "motorcycle",
-          "airplane",
-          "bus",
-          "train",
-          "truck",
-          "boat",
-          "skis",
-          "snowboard",
-          "skateboard",
-          "surfboard",
-        ];
-        const furnitureClasses = [
-          "potted plant",
-          "tv",
-          "laptop",
-          "mouse",
-          "remote",
-          "keyboard",
-          "cell phone",
-          "microwave",
-          "oven",
-          "toaster",
-          "sink",
-          "refrigerator",
-          "book",
-          "clock",
-          "vase",
-          "teddy bear",
-          "hair drier",
-          "toothbrush",
-          "banner",
-          "blanket",
-          "pillow",
-          "shelf",
-        ];
-        const weaponClasses = [
-          "umbrella",
-          "handbag",
-          "suitcase",
-          "frisbee",
-          "sports ball",
-          "kite",
-          "baseball bat",
-          "tennis racket",
-          "fork",
-          "knife",
-          "spoon",
-          "scissors",
-        ];
-        const natureClasses = [
-          "flower",
-          "tree-merged",
-          "sky-other-merged",
-          "mountain-merged",
-          "grass-merged",
-        ];
-        const foodClasses = [
-          "banana",
-          "apple",
-          "sandwich",
-          "orange",
-          "broccoli",
-          "carrot",
-          "hot dog",
-          "pizza",
-          "donut",
-          "cake",
-          "fruit",
-          "food-other-merged",
-        ];
-        const wearableClasses = [
-          "backpack",
-          "tie",
-          "baseball glove",
-          "towel",
-        ];
+
+        // globalThis.segmentLabelIndices = segmentLabelIndices;
+        // globalThis.planeLabelIndices = planeLabelIndices;
+        
+        const categories = {
+          floor: [
+            "floor-wood",
+            "gravel",
+            "playingfield",
+            "railroad",
+            "river",
+            "road",
+            "roof",
+            "sand",
+            "sea",
+            "snow",
+            "water-other",
+            "floor-other-merged",
+            "pavement-merged",
+            "grass-merged",
+            "dirt-merged",
+            "rock-merged",
+            "rug-merged",
+          ],
+          wall: [
+            "curtain",
+            "wall-brick",
+            "wall-stone",
+            "wall-tile",
+            "wall-wood",
+            "window-blind",
+            "fence-merged",
+            "wall-other-merged",
+          ],
+          ceiling: [
+            "ceiling-merged",
+          ],
+          portal: [
+            "bridge",
+            "door-stuff",
+            "house",
+            "platform",
+            "stairs",
+            "window-other",
+            "building-other-merged",
+            "tent",
+          ],
+          seat: [
+            "bench",
+            "chair",
+            "couch",
+            "bed",
+            "dining table",
+            "toilet",
+            "counter",
+            "table-merged",
+          ],
+          light: [
+            "traffic light",
+            "light",
+          ],
+          npc: [
+            "person",
+          ],
+          mob: [
+            "bird",
+            "cat",
+            "dog",
+            "horse",
+            "sheep",
+            "cow",
+            "elephant",
+            "bear",
+            "zebra",
+            "giraffe",
+          ],
+          vehicle: [
+            "bicycle",
+            "car",
+            "motorcycle",
+            "airplane",
+            "bus",
+            "train",
+            "truck",
+            "boat",
+            "skis",
+            "snowboard",
+            "skateboard",
+            "surfboard",
+          ],
+          furniture: [
+            "potted plant",
+            "tv",
+            "laptop",
+            "mouse",
+            "remote",
+            "keyboard",
+            "cell phone",
+            "microwave",
+            "oven",
+            "toaster",
+            "sink",
+            "refrigerator",
+            "book",
+            "clock",
+            "vase",
+            "teddy bear",
+            "hair drier",
+            "toothbrush",
+            "banner",
+            "blanket",
+            "pillow",
+            "shelf",
+          ],
+          weapon: [
+            "umbrella",
+            "handbag",
+            "suitcase",
+            "frisbee",
+            "sports ball",
+            "kite",
+            "baseball bat",
+            "tennis racket",
+            "fork",
+            "knife",
+            "spoon",
+            "scissors",
+          ],
+          nature: [
+            "flower",
+            "tree-merged",
+            "sky-other-merged",
+            "mountain-merged",
+            "grass-merged",
+          ],
+          food: [
+            "banana",
+            "apple",
+            "sandwich",
+            "orange",
+            "broccoli",
+            "carrot",
+            "hot dog",
+            "pizza",
+            "donut",
+            "cake",
+            "fruit",
+            "food-other-merged",
+          ],
+          wearable: [
+            "backpack",
+            "tie",
+            "baseball glove",
+            "towel",
+          ],
+        };
+        const categoryClassIndices = {};
+        for (const category in categories) {
+          categoryClassIndices[category] = categories[category].map(className => classes.indexOf(className));
+        }
+
+        const _getPlanesBySegmentIndices = selectSegmentIndices => {
+          const planeAcc = new Map();
+
+          if (selectSegmentIndices.some(n => n === -1)) {
+            console.log('invalid selection');
+            debugger;
+          }
+          
+          /* if (segmentSpecs.mask.length !== planeLabelIndices.length) {
+            console.log('invalid plane detection length', segmentSpecs.mask.length, planeLabelIndices.length);
+            debugger;
+          } */
+
+          for (let i = 0; i < segmentSpecs.mask.length; i++) {
+            const segmentIndex = segmentSpecs.mask[i];
+            if (selectSegmentIndices.includes(segmentIndex)) {
+              const planeIndex = planeLabelIndices[i];
+              
+              let acc = planeAcc.get(planeIndex) ?? 0;
+              acc++;
+              planeAcc.set(planeIndex, acc);
+            }
+          }
+
+          // divide planeAcc by numVertices
+          for (const planeIndex of planeAcc.keys()) {
+            let acc = planeAcc.get(planeIndex);
+            if (typeof planeSpecs.labels[planeIndex].numVertices !== 'number') {
+              console.warn('invalid type', planeSpecs.labels[planeIndex].numVertices);
+              debugger;
+            }
+            acc /= planeSpecs.labels[planeIndex].numVertices; // XXX should numVertices be computed from the raw index array?
+            if (acc > 1) {
+              console.warn('acc overflow', acc);
+              debugger;
+            }
+            planeAcc.set(planeIndex, acc);
+          }
+
+          globalThis.planeAcc = planeAcc;
+          // globalThis.segmentSpecs = segmentSpecs;
+          // globalThis.planeSpecs = planeSpecs;
+          // globalThis.categoryClassIndices = categoryClassIndices;
+
+          // return the plane indices sorted by highest acc count
+          return Array.from(planeAcc.entries())
+            .sort((a, b) => b[1] - a[1])
+            .map(entry => entry[0]);
+        };
+        const floorPlaneIndices = _getPlanesBySegmentIndices(categoryClassIndices.floor);
+        const floorPlaneLabels = floorPlaneIndices.map(planeIndex => planeSpecs.labels[planeIndex]);
+        globalThis.floorPlaneIndices = floorPlaneIndices;
+        globalThis.floorPlaneLabels = floorPlaneLabels;
+        // console.log('got floor planes', {selectSegmentIndices: categoryClassIndices.floor, segmentLabelIndices, floorPlaneIndices, floorPlaneLabels});
+        if (floorPlaneIndices.length > 0) {
+          const firstFloorPlaneIndex = floorPlaneIndices[0];
+
+          arrowMeshes[firstFloorPlaneIndex].material.color.set(0x00FF00);
+
+          planeMeshes[firstFloorPlaneIndex].material.uniforms.uColor.value.set(0x00FF00);
+          planeMeshes[firstFloorPlaneIndex].material.uniforms.uColor.needsUpdate = true;
+        }
       }
     }
   }
