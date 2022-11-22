@@ -2651,7 +2651,7 @@ class PanelRenderer extends EventTarget {
       const depthFloats32Array = getDepthFloatsFromPointCloud(pointCloudArrayBuffer);
       
       const {width, height} = editedImg;
-      const planesSpec = await _getPlanesRgbd(width, height, depthFloats32Array);
+      const planesSpec = await getPlanesRgbd(width, height, depthFloats32Array);
       planesJson = planesSpec.planesJson;
       planesMask = planesSpec.planesMask;
 
@@ -3073,7 +3073,7 @@ class PanelRenderer extends EventTarget {
     throw new Error('failed to detect planes');
   }
 }; */
-const _getPlanesRgbd = async (width, height, depthFloats32Array) => {
+const getPlanesRgbd = async (width, height, depthFloats32Array) => {
   const header = Int32Array.from([width, height]);
 
   const requestBlob = new Blob([header, depthFloats32Array], {
@@ -3310,7 +3310,7 @@ async function compileVirtualScene(arrayBuffer) {
     const depthFloats32Array = getDepthFloatsFromPointCloud(pointCloudArrayBuffer);
     
     const {width, height} = img;
-    const planesSpec = await _getPlanesRgbd(width, height, depthFloats32Array);
+    const planesSpec = await getPlanesRgbd(width, height, depthFloats32Array);
     // console.log('got planes spec', planesSpec);
     planesJson = planesSpec.planesJson;
     planesMask = planesSpec.planesMask;
