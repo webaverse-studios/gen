@@ -267,7 +267,7 @@ const classes = [
   "building-other-merged",
   "rock-merged",
   "wall-other-merged",
-  "rug-merged"
+  "rug-merged",
 ];
 const rainbowColors = [
   0x881177,
@@ -1980,10 +1980,6 @@ class Overlay {
     // segment meshes
     {
       const segmentMesh = this.toolOverlayMeshes['segment'];
-      // console.log('overlay specs', {
-      //   segmentSpecs,
-      //   planeSpecs,
-      // });
       const {labels} = segmentSpecs;
       for (const label of labels) {
         const {index, bbox} = label;
@@ -2026,17 +2022,10 @@ class Overlay {
           shape.lineTo(0, 2);
           shape.lineTo(-1, -1);
 
-          const extrudeSettings = {
-            // steps: 2,
+          const geometry = new THREE.ExtrudeGeometry(shape, {
             depth: 0.25,
             bevelEnabled: false,
-            // bevelThickness: 1,
-            // bevelSize: 1,
-            // bevelOffset: 0,
-            // bevelSegments: 1
-          };
-
-          const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+          });
           geometry.translate(0, 1, 0);
           geometry.rotateX(Math.PI / 2);
           const s = 0.1;
@@ -2094,20 +2083,7 @@ class Overlay {
           return gridMesh;
         };
 
-        // console.log('render labels', planeSpecs.labels);
         for (const label of planeSpecs.labels) {
-          // localBox.set(
-          //   localVector.fromArray(label.bbox[0]),
-          //   localVector2.fromArray(label.bbox[1])
-          // );
-          // const center = localBox.getCenter(localVector);
-          // const size = localBox.getSize(localVector2);
-
-          /* if (!label.center || !label.normal) {
-            console.warn('invalid label', label);
-            debugger;
-          } */
-
           // compute label plane
           const center = localVector.fromArray(label.center);
           const normal = localVector2.fromArray(label.normal);
