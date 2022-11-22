@@ -192,7 +192,6 @@ export class JFAOutline {
             iResolution,
         });
         const distance = (_a = outlineUniforms === null || outlineUniforms === void 0 ? void 0 : outlineUniforms.threshHigh) !== null && _a !== void 0 ? _a : Math.max(iResolution.x, iResolution.y);
-        console.log(distance);
         const numPasses = Math.ceil(Math.log2(distance));
         let sampleOffset = Math.pow(2, numPasses - 1);
         let currRT = 0;
