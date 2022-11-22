@@ -2609,9 +2609,6 @@ class PanelRenderer extends EventTarget {
     const iResolution = new THREE.Vector2(this.renderer.domElement.width, this.renderer.domElement.height);
     let distanceRenderTarget;
     {
-      // By default we rely on the three js layer system to mark an object for outlining.
-      const SELECTED_LAYER = 0;
-
       const tempScene = new THREE.Scene();
       tempScene.autoUpdate = false;
       tempScene.add(this.sceneMesh); // note: stealing the scene mesh for a moment
@@ -2620,15 +2617,13 @@ class PanelRenderer extends EventTarget {
       const targets = makeFloatRenderTargetSwapChain(this.renderer.domElement.width, this.renderer.domElement.height);
 
       const jfaOutline = new JFAOutline(targets, iResolution);
-      // jfaOutline.outline(this.renderer, tempScene, this.camera, targets, iResolution, SELECTED_LAYER);
-      jfaOutline.renderSelected(this.renderer, tempScene, this.camera, targets, SELECTED_LAYER);
+      jfaOutline.renderSelected(this.renderer, tempScene, this.camera, targets);
       const outlineUniforms = undefined;
       const distanceIndex = jfaOutline.renderDistanceTex(this.renderer, targets, iResolution, outlineUniforms);
       distanceRenderTarget = targets[distanceIndex];
       // get the image data back out of the render target, as a Float32Array
       const distanceFloatImageData = new Float32Array(distanceRenderTarget.width * distanceRenderTarget.height * 4);
       this.renderer.readRenderTargetPixels(distanceRenderTarget, 0, 0, distanceRenderTarget.width, distanceRenderTarget.height, distanceFloatImageData);
-      // globalThis.distanceFloatImageData = distanceFloatImageData;
 
       // output to canvas
       const canvas = document.createElement('canvas');
@@ -2742,10 +2737,10 @@ class PanelRenderer extends EventTarget {
     }
     console.timeEnd('reconstructZ');
 
-    if (!segmentMask) {
+    /* if (!segmentMask) {
       console.warn('missing segment mask 1', segmentMask);
       debugger;
-    }
+    } */
 
     // return result
     return {
