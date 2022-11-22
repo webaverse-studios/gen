@@ -2134,6 +2134,162 @@ class Overlay {
           gridMesh.frustumCulled = false;
           planeMesh.add(gridMesh);
         }
+
+        console.log('got segment plane specs', {segmentSpecs, planeSpecs});
+        debugger;
+
+        const segmentLabelIndices = segmentSpecs.labelIndices;
+        const planeLabelIndices = planeSpecs.labelIndices;
+        const floorClasses = [
+          "floor-wood",
+          "gravel",
+          "playingfield",
+          "railroad",
+          "river",
+          "road",
+          "roof",
+          "sand",
+          "sea",
+          "snow",
+          "water-other",
+          "floor-other-merged",
+          "pavement-merged",
+          "grass-merged",
+          "dirt-merged",
+          "rock-merged",
+          "rug-merged",
+        ];
+        const wallClasses = [
+          "curtain",
+          "wall-brick",
+          "wall-stone",
+          "wall-tile",
+          "wall-wood",
+          "window-blind",
+          "fence-merged",
+          "wall-other-merged",
+        ];
+        const ceilingClasses = [
+          "ceiling-merged",
+        ];
+        const portalClasses = [
+          "bridge",
+          "door-stuff",
+          "house",
+          "platform",
+          "stairs",
+          "window-other",
+          "building-other-merged",
+          "tent",
+        ];
+        const seatClasses = [
+          "bench",
+          "chair",
+          "couch",
+          "bed",
+          "dining table",
+          "toilet",
+          "counter",
+          "table-merged",
+        ];
+        const lightClasses = [
+          "traffic light",
+          "light",
+        ];
+        const npcClasses = [
+          "person",
+        ];
+        const mobClases = [
+          "bird",
+          "cat",
+          "dog",
+          "horse",
+          "sheep",
+          "cow",
+          "elephant",
+          "bear",
+          "zebra",
+          "giraffe",
+        ];
+        const vehicleClasses = [
+          "bicycle",
+          "car",
+          "motorcycle",
+          "airplane",
+          "bus",
+          "train",
+          "truck",
+          "boat",
+          "skis",
+          "snowboard",
+          "skateboard",
+          "surfboard",
+        ];
+        const furnitureClasses = [
+          "potted plant",
+          "tv",
+          "laptop",
+          "mouse",
+          "remote",
+          "keyboard",
+          "cell phone",
+          "microwave",
+          "oven",
+          "toaster",
+          "sink",
+          "refrigerator",
+          "book",
+          "clock",
+          "vase",
+          "teddy bear",
+          "hair drier",
+          "toothbrush",
+          "banner",
+          "blanket",
+          "pillow",
+          "shelf",
+        ];
+        const weaponClasses = [
+          "umbrella",
+          "handbag",
+          "suitcase",
+          "frisbee",
+          "sports ball",
+          "kite",
+          "baseball bat",
+          "tennis racket",
+          "fork",
+          "knife",
+          "spoon",
+          "scissors",
+        ];
+        const natureClasses = [
+          "flower",
+          "tree-merged",
+          "sky-other-merged",
+          "mountain-merged",
+          "grass-merged",
+        ];
+        const foodClasses = [
+          "banana",
+          "apple",
+          "sandwich",
+          "orange",
+          "broccoli",
+          "carrot",
+          "hot dog",
+          "pizza",
+          "donut",
+          "cake",
+          "fruit",
+          "food-other-merged",
+        ];
+        const wearableClasses = [
+          "backpack",
+          "tie",
+          "baseball glove",
+          "towel",
+        ];
       }
     }
   }
