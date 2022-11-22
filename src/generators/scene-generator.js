@@ -2110,11 +2110,7 @@ class Overlay {
 
           // compute label plane
           const center = localVector.fromArray(label.center);
-          // center.x *= -1;
-          center.y *= -1;
-          center.z *= -1;
           const normal = localVector2.fromArray(label.normal);
-          normal.x *= -1;
 
           // arrow mesh
           const arrowMesh = makeArrowMesh();
