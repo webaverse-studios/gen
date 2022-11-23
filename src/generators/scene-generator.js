@@ -38,6 +38,10 @@ const localColor = new THREE.Color();
 
 //
 
+const defaultCameraMatrix = new THREE.Matrix4();
+
+//
+
 export const panelSize = 1024;
 export const mainImageKey = 'layer0/image';
 export const promptKey = 'layer0/prompt';
@@ -1250,6 +1254,8 @@ class Selector {
     this.camera = camera;
     this.mouse = mouse;
     this.raycaster = raycaster;
+
+    this.sceneMeshes = [];
     
     const lensRenderTarget = new THREE.WebGLRenderTarget(selectorSize, selectorSize, {
       minFilter: THREE.NearestFilter,
@@ -1321,7 +1327,7 @@ class Selector {
       `,
     });
     this.lensMaterial = lensMaterial;
-
+2
     const lensScene = new THREE.Scene();
     lensScene.autoUpdate = false;
     lensScene.overrideMaterial = lensMaterial;
@@ -1601,10 +1607,8 @@ class Selector {
     this.indicesOutputMesh = indicesOutputMesh;
   }
   addMesh(mesh) {
-    // lens mesh
-    const selectorWindowMesh = mesh.clone();
-    this.lensScene.add(selectorWindowMesh);
-    
+    this.sceneMeshes.push(mesh);
+
     // indices mesh
     const indicesMesh = (() => {
       const planeGeometry = new THREE.PlaneBufferGeometry(1, 1)
@@ -1734,6 +1738,20 @@ class Selector {
       this.indexMaterial.uniforms.uPointerCircle.needsUpdate = true;
     }
 
+    // attach
+    const _restoreParents = (() => {
+      const parents = this.sceneMeshes.map(sceneMesh => {
+        const {parent} = sceneMesh;
+        this.lensScene.add(sceneMesh);
+        return parent;
+      });
+      return () => {
+        for (let i = 0; i < parents.length; i++) {
+          parents[i].add(this.sceneMeshes[i]);
+        }
+      };
+    })();
+
     // render lens
     this.renderer.setRenderTarget(this.lensRenderTarget);
     this.renderer.render(this.lensScene, this.camera);
@@ -1741,6 +1759,9 @@ class Selector {
     // render indices scene
     this.renderer.setRenderTarget(this.indicesRenderTarget);
     this.renderer.render(this.indicesScene, this.camera);
+
+    // restore
+    _restoreParents();
 
     // pop
     this.renderer.setRenderTarget(oldRenderTarget);
@@ -1886,7 +1907,7 @@ class Overlay {
         // polygon offset to front
         polygonOffset: true,
         polygonOffsetFactor: -1,
-        polygonOffsetUnits: 1,
+        polygonOffsetUnits: -1,
       });
 
       const mesh = new THREE.Mesh(
@@ -2753,6 +2774,8 @@ class PanelRenderer extends EventTarget {
               this.panel.outmesh();
             } else if (this.tool === 'outmesh') {
               this.outmeshMesh.setRunning(true);
+
+              defaultCameraMatrix.copy(this.camera.matrixWorld);
             }
             break;
           }
@@ -2773,9 +2796,18 @@ class PanelRenderer extends EventTarget {
               );
             this.sceneMesh.updateMatrixWorld();
 
+            defaultCameraMatrix.copy(this.sceneMesh.matrixWorld);
+
             break;
           }
-          case 'PageUp': {
+          case 'f': {
+            this.camera.matrixWorld.copy(defaultCameraMatrix);
+            this.camera.matrix.copy(this.camera.matrixWorld)
+              .decompose(this.camera.position, this.camera.quaternion, this.camera.scale);
+            break;
+            
+          }
+          /* case 'PageUp': {
             this.sceneMesh.material.uniforms.uColorEnabled.value = 1;
             this.sceneMesh.material.uniforms.uColorEnabled.needsUpdate = true;
             blockEvent(e);
@@ -2786,7 +2818,7 @@ class PanelRenderer extends EventTarget {
             this.sceneMesh.material.uniforms.uColorEnabled.needsUpdate = true;
             blockEvent(e);
             break;
-          }
+          } */
         }
       }
     };
