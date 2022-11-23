@@ -2367,16 +2367,13 @@ class PanelRenderer extends EventTarget {
       const rectangleGeometry = (() => {
         const s2 = 1 / s;
         const topGeometry = new THREE.BoxBufferGeometry(s2, 1, 1)
-          .translate(s2 / 2 - 0.5, 0, 0);
-        const bottomGeometry = topGeometry.clone();
+          .translate(0, s2 / 2, 0);
+        const bottomGeometry = topGeometry.clone()
+          .translate(0, -s2, 0);
         const leftGeometry = new THREE.BoxBufferGeometry(1, s2, 1)
-          .translate(0, s2 / 2 - 0.5, 0);
-        const rightGeometry = leftGeometry.clone();
-
-        _decorateDirectionAttribute(topGeometry, new THREE.Vector2(-1, 1));
-        _decorateDirectionAttribute(bottomGeometry, new THREE.Vector2(-1, -1));
-        _decorateDirectionAttribute(leftGeometry, new THREE.Vector2(-1, -1));
-        _decorateDirectionAttribute(rightGeometry, new THREE.Vector2(1, -1));
+          .translate(-s2 / 2, 0, 0);
+        const rightGeometry = leftGeometry.clone()
+          .translate(s2, 0, 0);
 
         const rectangleGeometry = BufferGeometryUtils.mergeBufferGeometries([
           topGeometry,
@@ -2384,6 +2381,20 @@ class PanelRenderer extends EventTarget {
           leftGeometry,
           rightGeometry,
         ]);
+
+        /* const directions = new Float32Array(geometry.attributes.position.array.length / 3 * 2);
+        {
+          for (let i = 0; i < rectangleGeometry.attributes.position.array.length; i += 3) {
+            const position = localVector.fromArray(rectangleGeometry.attributes.position.array, i);
+            const x = position.x < 0 ? 0 : 2;
+            const y = position.y < 0 ? 0 : 2;
+            
+            const j = i / 3 * 2;
+            directions[j + 0] = x;
+            directions[j + 1] = y;
+          }
+        }
+        rectangleGeometry.setAttribute('direction', new THREE.BufferAttribute(directions, 2)); */
 
         rectangleGeometry.scale(s, s, s);
 
@@ -2408,6 +2419,7 @@ class PanelRenderer extends EventTarget {
         vertexShader: `\
           uniform float uTime;
           uniform vec3 uWorldViewport;
+          uniform float uRunning;
           attribute vec2 direction;
           varying vec2 vUv;
           varying vec2 vDirection;
@@ -2416,9 +2428,14 @@ class PanelRenderer extends EventTarget {
             vUv = uv;
             vDirection = direction;
 
-            vec3 offset = vec3(direction, 1.) * uWorldViewport;
-            gl_Position = projectionMatrix * modelViewMatrix * vec4(position + offset, 1.0);
-            // gl_Position = projectionMatrix * vec4(position + offset, 1.0);
+            if (uRunning > 0.5) {
+              vec3 p = vec3(position.xy * uWorldViewport.xy * 2., position.z + uWorldViewport.z);
+              gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+            } else {
+              vec3 offset = vec3(direction, 1.) * uWorldViewport;
+              vec3 p = position + offset;
+              gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+            }
           }
         `,
         fragmentShader: `\
@@ -2437,7 +2454,6 @@ class PanelRenderer extends EventTarget {
             } else {
               gl_FragColor = vec4(0., 0., 0., 1.);
             }
-            // gl_FragColor = vec4(vUv, uTime, 1.0);
           }
         `,
         side: THREE.DoubleSide,
