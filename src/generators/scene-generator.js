@@ -18,8 +18,9 @@ import {
 
 import {blob2img, img2ImageData} from '../utils/convert-utils.js';
 import {makeId} from '../utils/id-utils.js';
+import {classes, categories} from '../../constants/classes.js';
+import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 // import {labelClasses} from '../constants/prompts.js';
-// import {downloadFile} from '../utils/http-utils.js';
 
 //
 
@@ -131,143 +132,10 @@ export const layer2Specs = [
 export const tools = [
   'camera',
   'eraser',
+  'outmesh',
   'segment',
   'plane',
-];
-const classes = [
-  "person",
-  "bicycle",
-  "car",
-  "motorcycle",
-  "airplane",
-  "bus",
-  "train",
-  "truck",
-  "boat",
-  "traffic light",
-  "fire hydrant",
-  "stop sign",
-  "parking meter",
-  "bench",
-  "bird",
-  "cat",
-  "dog",
-  "horse",
-  "sheep",
-  "cow",
-  "elephant",
-  "bear",
-  "zebra",
-  "giraffe",
-  "backpack",
-  "umbrella",
-  "handbag",
-  "tie",
-  "suitcase",
-  "frisbee",
-  "skis",
-  "snowboard",
-  "sports ball",
-  "kite",
-  "baseball bat",
-  "baseball glove",
-  "skateboard",
-  "surfboard",
-  "tennis racket",
-  "bottle",
-  "wine glass",
-  "cup",
-  "fork",
-  "knife",
-  "spoon",
-  "bowl",
-  "banana",
-  "apple",
-  "sandwich",
-  "orange",
-  "broccoli",
-  "carrot",
-  "hot dog",
-  "pizza",
-  "donut",
-  "cake",
-  "chair",
-  "couch",
-  "potted plant",
-  "bed",
-  "dining table",
-  "toilet",
-  "tv",
-  "laptop",
-  "mouse",
-  "remote",
-  "keyboard",
-  "cell phone",
-  "microwave",
-  "oven",
-  "toaster",
-  "sink",
-  "refrigerator",
-  "book",
-  "clock",
-  "vase",
-  "scissors",
-  "teddy bear",
-  "hair drier",
-  "toothbrush",
-  "banner",
-  "blanket",
-  "bridge",
-  "cardboard",
-  "counter",
-  "curtain",
-  "door-stuff",
-  "floor-wood",
-  "flower",
-  "fruit",
-  "gravel",
-  "house",
-  "light",
-  "mirror-stuff",
-  "net",
-  "pillow",
-  "platform",
-  "playingfield",
-  "railroad",
-  "river",
-  "road",
-  "roof",
-  "sand",
-  "sea",
-  "shelf",
-  "snow",
-  "stairs",
-  "tent",
-  "towel",
-  "wall-brick",
-  "wall-stone",
-  "wall-tile",
-  "wall-wood",
-  "water-other",
-  "window-blind",
-  "window-other",
-  "tree-merged",
-  "fence-merged",
-  "ceiling-merged",
-  "sky-other-merged",
-  "cabinet-merged",
-  "table-merged",
-  "floor-other-merged",
-  "pavement-merged",
-  "mountain-merged",
-  "grass-merged",
-  "dirt-merged",
-  "paper-merged",
-  "food-other-merged",
-  "building-other-merged",
-  "rock-merged",
-  "wall-other-merged",
-  "rug-merged",
+  'portal',
 ];
 const rainbowColors = [
   0x881177,
@@ -2135,158 +2003,6 @@ class Overlay {
         // globalThis.segmentLabelIndices = segmentLabelIndices;
         // globalThis.planeLabelIndices = planeLabelIndices;
         
-        const categories = {
-          floor: [
-            "floor-wood",
-            "gravel",
-            "playingfield",
-            "railroad",
-            "river",
-            "road",
-            "roof",
-            "sand",
-            "sea",
-            "snow",
-            "water-other",
-            "floor-other-merged",
-            "pavement-merged",
-            "grass-merged",
-            "dirt-merged",
-            "rock-merged",
-            "rug-merged",
-          ],
-          wall: [
-            "curtain",
-            "wall-brick",
-            "wall-stone",
-            "wall-tile",
-            "wall-wood",
-            "window-blind",
-            "fence-merged",
-            "wall-other-merged",
-          ],
-          ceiling: [
-            "ceiling-merged",
-          ],
-          portal: [
-            "bridge",
-            "door-stuff",
-            "house",
-            "platform",
-            "stairs",
-            "window-other",
-            "building-other-merged",
-            "tent",
-          ],
-          seat: [
-            "bench",
-            "chair",
-            "couch",
-            "bed",
-            "dining table",
-            "toilet",
-            "counter",
-            "table-merged",
-          ],
-          light: [
-            "traffic light",
-            "light",
-          ],
-          npc: [
-            "person",
-          ],
-          mob: [
-            "bird",
-            "cat",
-            "dog",
-            "horse",
-            "sheep",
-            "cow",
-            "elephant",
-            "bear",
-            "zebra",
-            "giraffe",
-          ],
-          vehicle: [
-            "bicycle",
-            "car",
-            "motorcycle",
-            "airplane",
-            "bus",
-            "train",
-            "truck",
-            "boat",
-            "skis",
-            "snowboard",
-            "skateboard",
-            "surfboard",
-          ],
-          furniture: [
-            "potted plant",
-            "tv",
-            "laptop",
-            "mouse",
-            "remote",
-            "keyboard",
-            "cell phone",
-            "microwave",
-            "oven",
-            "toaster",
-            "sink",
-            "refrigerator",
-            "book",
-            "clock",
-            "vase",
-            "teddy bear",
-            "hair drier",
-            "toothbrush",
-            "banner",
-            "blanket",
-            "pillow",
-            "shelf",
-          ],
-          weapon: [
-            "umbrella",
-            "handbag",
-            "suitcase",
-            "frisbee",
-            "sports ball",
-            "kite",
-            "baseball bat",
-            "tennis racket",
-            "fork",
-            "knife",
-            "spoon",
-            "scissors",
-          ],
-          nature: [
-            "flower",
-            "tree-merged",
-            "sky-other-merged",
-            "mountain-merged",
-            "grass-merged",
-          ],
-          food: [
-            "banana",
-            "apple",
-            "sandwich",
-            "orange",
-            "broccoli",
-            "carrot",
-            "hot dog",
-            "pizza",
-            "donut",
-            "cake",
-            "fruit",
-            "food-other-merged",
-          ],
-          wearable: [
-            "backpack",
-            "tie",
-            "baseball glove",
-            "towel",
-          ],
-        };
         const categoryClassIndices = {};
         for (const category in categories) {
           categoryClassIndices[category] = categories[category].map(className => classes.indexOf(className));
@@ -2321,6 +2037,10 @@ class Overlay {
             let acc = planeAcc.get(planeIndex);
             acc /= planeSpecs.labels[planeIndex].numPixels;
             // acc /= planeSpecs.labels[planeIndex].distanceSquaredF;
+            if (isNaN(acc)) {
+              console.warn('invalid plane acc', planeIndex, planeAcc.get(planeIndex), planeSpecs.labels[planeIndex].numPixels);
+              debugger;
+            }
             planeAcc.set(planeIndex, acc);
           }
 
@@ -2402,12 +2122,12 @@ class PanelRenderer extends EventTarget {
 
     // orbit controls
     const controls = new OrbitControls(this.camera, canvas);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.05;
+    // controls.enableDamping = true;
+    // controls.dampingFactor = 0.05;
     controls.screenSpacePanning = false;
     controls.minDistance = 1;
     controls.maxDistance = 100;
-    controls.maxPolarAngle = Math.PI / 2;
+    // controls.maxPolarAngle = Math.PI / 2;
     controls.target.set(0, 0, -3);
     this.controls = controls;
 
@@ -2426,8 +2146,6 @@ class PanelRenderer extends EventTarget {
     scene.add(directionalLight);
 
     this.sceneMesh = null;
-    this.floorMesh = null;
-    this.planesMesh = null;
 
     const defaultCubeMesh = new THREE.Mesh(
       new THREE.BoxBufferGeometry(1, 1, 1),
@@ -2606,43 +2324,107 @@ class PanelRenderer extends EventTarget {
       this.overlay = overlay;
     }
 
-    // floor mesh
-    const floorMesh = (() => {
-      const geometry = new THREE.PlaneGeometry(1, 1)
-        .rotateX(-Math.PI/2)
-      const material = new THREE.MeshBasicMaterial({
-        color: 0x808080,
-        transparent: true,
-        opacity: 0.1,
-      });
-      const mesh = new THREE.Mesh(geometry, material);
-      mesh.name = 'floorMesh';
-      mesh.frustumCulled = false;
-      return mesh;
-    })();
-    floorMesh.position.y = -predictedHeight;
-    floorMesh.updateMatrixWorld();
-    // this.scene.add(floorMesh);
-    this.floorMesh = floorMesh;
+    // outmesh
+    {
+      const _makeOutmeshMesh = () => {        
+        const topLeftCornerGeometry = BufferGeometryUtils.mergeBufferGeometries([
+          new THREE.BoxBufferGeometry(3, 1, 1)
+            .translate(3 / 2 - 0.5, 0, 0),
+          new THREE.BoxBufferGeometry(1, 3 - 0.5, 1)
+            .translate(0, -(3 - 0.5) / 2 - 0.5, 0),
+        ]);
+        const bottomLeftCornerGeometry = topLeftCornerGeometry.clone()
+          .rotateZ(Math.PI / 2);
+        const bottomRightCornerGeometry = topLeftCornerGeometry.clone()
+          .rotateZ(Math.PI);
+        const topRightCornerGeometry = topLeftCornerGeometry.clone()
+          .rotateZ(-Math.PI / 2);
 
-    /* // planes mesh
-    const planesMesh = (() => {
-      const planeGeometry = new THREE.PlaneGeometry(1, 1);
-      const material = new THREE.MeshBasicMaterial({
-        color: 0xff0000,
-      });
-      const planesMesh = new THREE.InstancedMesh(planeGeometry, material, planeMatrices.length);
-      planesMesh.name = 'planesMesh';
-      planesMesh.frustumCulled = false;
-      for (let i = 0; i < planeMatrices.length; i++) {
-        planesMesh.setMatrixAt(i, localMatrix.fromArray(planeMatrices[i]));
-      }
-      planesMesh.count = planeMatrices.length;
-      planesMesh.instanceMatrix.needsUpdate = true;
-      return planesMesh;
-    })();
-    // this.scene.add(planesMesh);
-    this.planesMesh = planesMesh; */
+        const _decorateDirectionAttribute = (geometry, direction) => {
+          const directions = new Float32Array(geometry.attributes.position.array.length / 3 * 2);
+          for (let i = 0; i < directions.length; i += 2) {
+            direction.toArray(directions, i);
+          }
+          geometry.setAttribute('direction', new THREE.BufferAttribute(directions, 2));
+        };
+        _decorateDirectionAttribute(topLeftCornerGeometry, new THREE.Vector2(-1, 1));
+        _decorateDirectionAttribute(bottomLeftCornerGeometry, new THREE.Vector2(-1, -1));
+        _decorateDirectionAttribute(bottomRightCornerGeometry, new THREE.Vector2(1, -1));
+        _decorateDirectionAttribute(topRightCornerGeometry, new THREE.Vector2(1, 1));
+
+        const s = 0.1;
+        const geometry = BufferGeometryUtils.mergeBufferGeometries([
+          topLeftCornerGeometry,
+          bottomLeftCornerGeometry,
+          bottomRightCornerGeometry,
+          topRightCornerGeometry,
+        ]);
+        geometry.scale(s, s, s);
+
+        const material = new THREE.ShaderMaterial({
+          uniforms: {
+            uTime: {
+              value: 0,
+              needsUpdate: false,
+            },
+          },
+          vertexShader: `\
+            uniform float uTime;
+            attribute vec2 direction;
+            varying vec2 vUv;
+            varying vec2 vDirection;
+            
+            void main() {
+              vUv = uv;
+              vDirection = direction;
+              gl_Position = projectionMatrix * modelViewMatrix * vec4(position + vec3(direction, 0.) * 3., 1.0);
+            }
+          `,
+          fragmentShader: `\
+            uniform float uTime;
+            varying vec2 vUv;
+            varying vec2 vDirection;
+            
+            void main() {
+              gl_FragColor = vec4(vUv, uTime, 1.0);
+            }
+          `,
+        });
+        const outmeshTargetMesh = new THREE.Mesh(geometry, material);
+        return outmeshTargetMesh;
+      };
+      const outmeshMesh = _makeOutmeshMesh();
+      outmeshMesh.frustumCulled = false;
+      outmeshMesh.visible = false;
+      outmeshMesh.update = () => {
+        // update uTime
+        outmeshMesh.material.uniforms.uTime.value = performance.now() / 1000;
+        outmeshMesh.material.uniforms.uTime.needsUpdate = true;
+      };
+      this.outmeshMesh = outmeshMesh;
+      this.scene.add(outmeshMesh);
+    }
+
+    // floor mesh
+    {
+      const floorMesh = (() => {
+        const geometry = new THREE.PlaneGeometry(1, 1)
+          .rotateX(-Math.PI/2)
+        const material = new THREE.MeshBasicMaterial({
+          color: 0x808080,
+          transparent: true,
+          opacity: 0.1,
+        });
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.name = 'floorMesh';
+        mesh.frustumCulled = false;
+        return mesh;
+      })();
+      floorMesh.position.y = -predictedHeight;
+      floorMesh.updateMatrixWorld();
+      // this.scene.add(floorMesh);
+      this.floorMesh = floorMesh;
+    }
 
     // bootstrap
     this.listen();
@@ -2654,10 +2436,14 @@ class PanelRenderer extends EventTarget {
     this.sceneMesh.material.uniforms.uEraser.value = tool === 'eraser' ? 1 : 0;
     this.sceneMesh.material.uniforms.uEraser.needsUpdate = true;
 
+    this.outmeshMesh.visible = tool === 'outmesh';
+
     this.controls.enabled = [
       'camera',
+      'outmesh',
       'segment',
       'plane',
+      'portal',
     ].includes(this.tool);
     
     this.overlay.setTool(this.tool);
@@ -2724,6 +2510,11 @@ class PanelRenderer extends EventTarget {
             // update orbit controls
             this.controls.update();
             this.camera.updateMatrixWorld();
+            break;
+          }
+          case 'outmesh': {
+            // update outmesh
+            this.outmeshMesh.update();
             break;
           }
           case 'eraser': {
