@@ -2327,6 +2327,13 @@ class PanelRenderer extends EventTarget {
     // outmesh
     {
       const s = 0.002;
+      const _decorateDirectionAttribute = (geometry, direction) => {
+        const directions = new Float32Array(geometry.attributes.position.array.length / 3 * 2);
+        for (let i = 0; i < directions.length; i += 2) {
+          direction.toArray(directions, i);
+        }
+        geometry.setAttribute('direction', new THREE.BufferAttribute(directions, 2));
+      };
 
       const targetGeometry = (() => {
         const topLeftCornerGeometry = BufferGeometryUtils.mergeBufferGeometries([
@@ -2342,13 +2349,6 @@ class PanelRenderer extends EventTarget {
         const topRightCornerGeometry = topLeftCornerGeometry.clone()
           .rotateZ(-Math.PI / 2);
 
-        const _decorateDirectionAttribute = (geometry, direction) => {
-          const directions = new Float32Array(geometry.attributes.position.array.length / 3 * 2);
-          for (let i = 0; i < directions.length; i += 2) {
-            direction.toArray(directions, i);
-          }
-          geometry.setAttribute('direction', new THREE.BufferAttribute(directions, 2));
-        };
         _decorateDirectionAttribute(topLeftCornerGeometry, new THREE.Vector2(-1, 1));
         _decorateDirectionAttribute(bottomLeftCornerGeometry, new THREE.Vector2(-1, -1));
         _decorateDirectionAttribute(bottomRightCornerGeometry, new THREE.Vector2(1, -1));
@@ -2365,15 +2365,18 @@ class PanelRenderer extends EventTarget {
       })();
 
       const rectangleGeometry = (() => {
-        const s2 = 1/s;
-        const topGeometry = new THREE.BoxBufferGeometry(s2, 1, 1)
-          .translate(0, s2/2, 0);
-        const bottomGeometry = topGeometry.clone()
-          .translate(0, -s2, 0);
-        const leftGeometry = new THREE.BoxBufferGeometry(1, s2, 1)
-          .translate(-s2/2, 0, 0);
-        const rightGeometry = leftGeometry.clone()
-          .translate(s2, 0, 0);
+        const s2 = 1 / s;
+        const topGeometry = new THREE.BoxBufferGeometry(s2 - 1, 1, 1)
+          .translate((s2 - 1) / 2, 0, 0);
+        const bottomGeometry = topGeometry.clone();
+        const leftGeometry = new THREE.BoxBufferGeometry(1, s2 - 1, 1)
+          .translate(0, (s2 - 1) / 2, 0);
+        const rightGeometry = leftGeometry.clone();
+
+        _decorateDirectionAttribute(topGeometry, new THREE.Vector2(-1, 1));
+        _decorateDirectionAttribute(bottomGeometry, new THREE.Vector2(-1, -1));
+        _decorateDirectionAttribute(leftGeometry, new THREE.Vector2(-1, -1));
+        _decorateDirectionAttribute(rightGeometry, new THREE.Vector2(1, -1));
 
         const rectangleGeometry = BufferGeometryUtils.mergeBufferGeometries([
           topGeometry,
@@ -2382,39 +2385,10 @@ class PanelRenderer extends EventTarget {
           rightGeometry,
         ]);
 
-        const directions = new Float32Array(rectangleGeometry.attributes.position.array.length / 3 * 2);
-        for (let i = 0; i < rectangleGeometry.attributes.position.array.length; i += 3) {
-          const position = localVector.fromArray(rectangleGeometry.attributes.position.array, i);
-          const x = position.x < 0 ? -1 : 1;
-          const y = position.y < 0 ? -1 : 1;
-
-          const baseIndex = i / 3 * 2;
-          directions[baseIndex + 0] = x;
-          directions[baseIndex + 1] = y;
-        }
-
-        // XXX center to the top left
-        const topGeometry2 = new THREE.BoxBufferGeometry(s2, 1, 1)
-          // .translate(0, s2/2, 0);
-        const bottomGeometry2 = topGeometry.clone()
-          // .translate(0, -s2/2, 0);
-        const leftGeometry2 = new THREE.BoxBufferGeometry(1, s2, 1)
-          // .translate(-s2/2, 0, 0);
-        const rightGeometry2 = leftGeometry.clone()
-          // .translate(s2/2, 0, 0);
-
-        const rectangleGeometry2 = BufferGeometryUtils.mergeBufferGeometries([
-          topGeometry2,
-          bottomGeometry2,
-          leftGeometry2,
-          rightGeometry2,
-        ]);
-        rectangleGeometry2.setAttribute('direction', new THREE.BufferAttribute(directions, 2));
-        // rectangleGeometry.translate(s2/2, -s2/2, 0);
         const s2Inv = 1 / s2;
-        rectangleGeometry2.scale(s2Inv, s2Inv, s2Inv);
+        rectangleGeometry.scale(s2Inv, s2Inv, s2Inv);
 
-        return rectangleGeometry2;
+        return rectangleGeometry;
       })();
 
       const _makeFrameMaterial = () => new THREE.ShaderMaterial({
@@ -2475,11 +2449,11 @@ class PanelRenderer extends EventTarget {
       targetMesh.visible = true;
 
       const rectangleMesh = new THREE.Mesh(rectangleGeometry, _makeFrameMaterial());
-      globalThis.rectangleMesh = rectangleMesh;
       rectangleMesh.frustumCulled = false;
       rectangleMesh.visible = false;
       
       const outmeshMesh = new THREE.Object3D();
+      outmeshMesh.visible = false;
 
       outmeshMesh.add(targetMesh);
       outmeshMesh.targetMesh = targetMesh;
