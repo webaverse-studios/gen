@@ -1256,6 +1256,7 @@ class Selector {
     this.raycaster = raycaster;
 
     this.sceneMeshes = [];
+    this.indexMeshes = [];
     
     const lensRenderTarget = new THREE.WebGLRenderTarget(selectorSize, selectorSize, {
       minFilter: THREE.NearestFilter,
@@ -1606,15 +1607,15 @@ class Selector {
     })();
     this.indicesOutputMesh = indicesOutputMesh;
   }
-  addMesh(mesh) {
-    this.sceneMeshes.push(mesh);
+  addMesh(sceneMesh) {
+    this.sceneMeshes.push(sceneMesh);
 
-    // indices mesh
-    const indicesMesh = (() => {
+    // index mesh
+    const indexMesh = (() => {
       const planeGeometry = new THREE.PlaneBufferGeometry(1, 1)
         .translate(0.5, 0.5, 0);
       // position x, y is in the range [0, 1]
-      const sceneMeshGeometry = mesh.geometry;
+      const sceneMeshGeometry = sceneMesh.geometry;
 
       const {width, height} = this.indicesRenderTarget;
 
@@ -1708,11 +1709,18 @@ class Selector {
 
       const material = this.indexMaterial;
 
-      const resultMesh = new THREE.Mesh(geometry, material);
-      resultMesh.frustumCulled = false;
-      return resultMesh;
+      const indexMesh = new THREE.Mesh(geometry, material);
+      indexMesh.frustumCulled = false;
+      indexMesh.setTransformToParent = () => {
+        indexMesh.position.copy(sceneMesh.position);
+        indexMesh.quaternion.copy(sceneMesh.quaternion);
+        indexMesh.scale.copy(sceneMesh.scale);
+        indexMesh.updateMatrixWorld();
+      };
+      return indexMesh;
     })();
-    this.indicesScene.add(indicesMesh);
+    this.indicesScene.add(indexMesh);
+    this.indexMeshes.push(indexMesh);
   }
   update() {
     // push
@@ -1736,6 +1744,11 @@ class Selector {
       const radius = radiusPixels / this.renderer.domElement.width;
       this.indexMaterial.uniforms.uPointerCircle.value.set(this.mouse.x, this.mouse.y, radius);
       this.indexMaterial.uniforms.uPointerCircle.needsUpdate = true;
+
+      // index meshes
+      for (const mesh of this.indexMeshes) {
+        mesh.setTransformToParent();
+      }
     }
 
     // attach
