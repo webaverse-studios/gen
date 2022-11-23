@@ -30,8 +30,8 @@ abortError.isAbortError = true;
 
 const localVector = new THREE.Vector3();
 const localVector2 = new THREE.Vector3();
-const localVector3 = new THREE.Vector3();
-const localVector4 = new THREE.Vector3();
+const localQuaternion = new THREE.Quaternion();
+const localQuaternion2 = new THREE.Quaternion();
 const localMatrix = new THREE.Matrix4();
 const localBox = new THREE.Box3();
 const localColor = new THREE.Color();
@@ -354,6 +354,71 @@ const detectronColors = [
   return hex;
 });
 const colors = detectronColors;
+
+//
+
+const getFirstFloorPlaneIndex = (segmentSpecs, planeSpecs) => {
+  // const segmentLabelIndices = segmentSpecs.labelIndices;
+  const planeLabelIndices = planeSpecs.labelIndices;
+
+  const categoryClassIndices = {};
+  for (const category in categories) {
+    categoryClassIndices[category] = categories[category].map(className => classes.indexOf(className));
+  }
+
+  const _getPlanesBySegmentIndices = selectSegmentIndices => {
+    const planeAcc = new Map();
+
+    for (let i = 0; i < segmentSpecs.mask.length; i++) {
+      const segmentIndex = segmentSpecs.mask[i];
+      if (selectSegmentIndices.includes(segmentIndex)) {
+        const planeIndex = planeLabelIndices[i];
+        
+        let acc = planeAcc.get(planeIndex) ?? 0;
+        acc++;
+        planeAcc.set(planeIndex, acc);
+      }
+    }
+
+    // divide planeAcc by numVertices
+    for (const planeIndex of planeAcc.keys()) {
+      let acc = planeAcc.get(planeIndex);
+      acc /= planeSpecs.labels[planeIndex].numPixels;
+      // acc /= planeSpecs.labels[planeIndex].distanceSquaredF;
+      if (isNaN(acc)) {
+        console.warn('invalid plane acc', planeIndex, planeAcc.get(planeIndex), planeSpecs.labels[planeIndex].numPixels);
+        debugger;
+      }
+      planeAcc.set(planeIndex, acc);
+    }
+
+    // return the plane indices sorted by highest acc count
+    return Array.from(planeAcc.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(entry => entry[0]);
+  };
+  const floorPlaneIndices = _getPlanesBySegmentIndices(categoryClassIndices.floor);
+  // const floorPlaneLabels = floorPlaneIndices.map(planeIndex => planeSpecs.labels[planeIndex]);
+  return floorPlaneIndices.length > 0 ? floorPlaneIndices[0] : -1;
+};
+
+//
+
+const normalToQuaternion = (() => {
+  const localVector = new THREE.Vector3();
+  const localVector2 = new THREE.Vector3();
+  const localMatrix = new THREE.Matrix4();
+
+  return (normal, quaternion) => {
+    return quaternion.setFromRotationMatrix(
+      localMatrix.lookAt(
+        localVector.set(0, 0, 0),
+        normal,
+        localVector2.set(0, 1, 0)
+      )
+    );
+  };
+})();
 
 //
 
@@ -1693,13 +1758,26 @@ class Overlay {
     const overlayScene = new THREE.Scene();
     overlayScene.autoUpdate = false;
     this.overlayScene = overlayScene;
+
+    this.sceneOverlayMeshes = [];
   }
-  addMesh(mesh) {
-    const geometry = mesh.geometry.clone();
+  addMesh(sceneMesh) {
+    const geometry = sceneMesh.geometry.clone();
     const {
       segmentSpecs,
       planeSpecs,
-    } = mesh;
+      firstFloorPlaneIndex,
+    } = sceneMesh;
+
+    const sceneOverlayMesh = new THREE.Object3D();
+    sceneOverlayMesh.setTransformToParent = () => {
+      sceneOverlayMesh.position.copy(sceneMesh.position);
+      sceneOverlayMesh.quaternion.copy(sceneMesh.quaternion);
+      sceneOverlayMesh.scale.copy(sceneMesh.scale);
+      sceneOverlayMesh.updateMatrixWorld();
+    };
+    this.overlayScene.add(sceneOverlayMesh);
+    this.sceneOverlayMeshes.push(sceneOverlayMesh);
 
     /* // add barycentric coordinates
     const barycentric = new THREE.BufferAttribute(new Float32Array(geometry.attributes.position.array.length), 3);
@@ -1845,7 +1923,7 @@ class Overlay {
         renderMode,
       });
       overlayMesh.visible = false;
-      this.overlayScene.add(overlayMesh);
+      sceneOverlayMesh.add(overlayMesh);
       this.toolOverlayMeshes[name] = overlayMesh;
     }
 
@@ -1975,13 +2053,7 @@ class Overlay {
           // arrow mesh
           const arrowMesh = makeArrowMesh();
           arrowMesh.position.copy(center);
-          arrowMesh.quaternion.setFromRotationMatrix(
-            localMatrix.lookAt(
-              localVector3.set(0, 0, 0),
-              normal,
-              localVector4.set(0, 1, 0)
-            )
-          );
+          normalToQuaternion(normal, arrowMesh.quaternion);
           arrowMesh.updateMatrixWorld();
           arrowMesh.frustumCulled = false;
           planeMesh.add(arrowMesh);
@@ -1997,71 +2069,7 @@ class Overlay {
           planeMeshes.push(gridMesh);
         }
 
-        const segmentLabelIndices = segmentSpecs.labelIndices;
-        const planeLabelIndices = planeSpecs.labelIndices;
-
-        // globalThis.segmentLabelIndices = segmentLabelIndices;
-        // globalThis.planeLabelIndices = planeLabelIndices;
-        
-        const categoryClassIndices = {};
-        for (const category in categories) {
-          categoryClassIndices[category] = categories[category].map(className => classes.indexOf(className));
-        }
-
-        const _getPlanesBySegmentIndices = selectSegmentIndices => {
-          const planeAcc = new Map();
-
-          /* if (selectSegmentIndices.some(n => n === -1)) {
-            console.log('invalid selection');
-            debugger;
-          } */
-          
-          /* if (segmentSpecs.mask.length !== planeLabelIndices.length) {
-            console.log('invalid plane detection length', segmentSpecs.mask.length, planeLabelIndices.length);
-            debugger;
-          } */
-
-          for (let i = 0; i < segmentSpecs.mask.length; i++) {
-            const segmentIndex = segmentSpecs.mask[i];
-            if (selectSegmentIndices.includes(segmentIndex)) {
-              const planeIndex = planeLabelIndices[i];
-              
-              let acc = planeAcc.get(planeIndex) ?? 0;
-              acc++;
-              planeAcc.set(planeIndex, acc);
-            }
-          }
-
-          // divide planeAcc by numVertices
-          for (const planeIndex of planeAcc.keys()) {
-            let acc = planeAcc.get(planeIndex);
-            acc /= planeSpecs.labels[planeIndex].numPixels;
-            // acc /= planeSpecs.labels[planeIndex].distanceSquaredF;
-            if (isNaN(acc)) {
-              console.warn('invalid plane acc', planeIndex, planeAcc.get(planeIndex), planeSpecs.labels[planeIndex].numPixels);
-              debugger;
-            }
-            planeAcc.set(planeIndex, acc);
-          }
-
-          globalThis.planeAcc = planeAcc;
-          // globalThis.segmentSpecs = segmentSpecs;
-          // globalThis.planeSpecs = planeSpecs;
-          // globalThis.categoryClassIndices = categoryClassIndices;
-
-          // return the plane indices sorted by highest acc count
-          return Array.from(planeAcc.entries())
-            .sort((a, b) => b[1] - a[1])
-            .map(entry => entry[0]);
-        };
-        const floorPlaneIndices = _getPlanesBySegmentIndices(categoryClassIndices.floor);
-        const floorPlaneLabels = floorPlaneIndices.map(planeIndex => planeSpecs.labels[planeIndex]);
-        globalThis.floorPlaneIndices = floorPlaneIndices;
-        globalThis.floorPlaneLabels = floorPlaneLabels;
-        // console.log('got floor planes', {selectSegmentIndices: categoryClassIndices.floor, segmentLabelIndices, floorPlaneIndices, floorPlaneLabels});
-        if (floorPlaneIndices.length > 0) {
-          const firstFloorPlaneIndex = floorPlaneIndices[0];
-
+        if (firstFloorPlaneIndex !== -1) {
           arrowMeshes[firstFloorPlaneIndex].material.color.set(0x00FF00);
 
           planeMeshes[firstFloorPlaneIndex].material.uniforms.uColor.value.set(0x00FF00);
@@ -2074,6 +2082,12 @@ class Overlay {
     for (const k in this.toolOverlayMeshes) {
       const toolOverlayMesh = this.toolOverlayMeshes[k];
       toolOverlayMesh.visible = k === tool;
+    }
+  }
+  update() {
+    // this.overlayScene.position.copy();
+    for (const mesh of this.sceneOverlayMeshes) {
+      mesh.setTransformToParent();
     }
   }
 }
@@ -2199,6 +2213,8 @@ class PanelRenderer extends EventTarget {
     }
     geometry.setAttribute('triangleId', triangleIdAttribute);
 
+    const firstFloorPlaneIndex = getFirstFloorPlaneIndex(segmentSpecs, planeSpecs);
+
     // texture
     const map = new THREE.Texture();
 
@@ -2266,6 +2282,7 @@ class PanelRenderer extends EventTarget {
     sceneMesh.frustumCulled = false;
     sceneMesh.segmentSpecs = segmentSpecs;
     sceneMesh.planeSpecs = planeSpecs;
+    sceneMesh.firstFloorPlaneIndex = firstFloorPlaneIndex;
     this.scene.add(sceneMesh);
     this.sceneMesh = sceneMesh;
 
@@ -2712,7 +2729,7 @@ class PanelRenderer extends EventTarget {
   }
   listen() {
     const keydown = e => {
-      if (!e.repeat) {
+      if (!e.repeat && !e.ctrlKey) {
         switch (e.key) {
           case '1':
           case '2':
@@ -2737,6 +2754,25 @@ class PanelRenderer extends EventTarget {
             } else if (this.tool === 'outmesh') {
               this.outmeshMesh.setRunning(true);
             }
+            break;
+          }
+          case 'r': {
+            const {planeSpecs, firstFloorPlaneIndex} = this.sceneMesh;
+            // console.log('normalize to plane', firstFloorPlaneIndex, planeSpecs);
+            const labelSpec = planeSpecs.labels[firstFloorPlaneIndex];
+            const normal = localVector.fromArray(labelSpec.normal);
+            const position = localVector2.fromArray(labelSpec.center);
+
+            normalToQuaternion(normal, this.sceneMesh.quaternion)
+              .invert()
+              .premultiply(
+                localQuaternion.setFromAxisAngle(localVector.set(0, 0, 1), Math.PI)
+                  .premultiply(
+                    localQuaternion2.setFromAxisAngle(localVector.set(1, 0, 0), -Math.PI/2)
+                  )
+              );
+            this.sceneMesh.updateMatrixWorld();
+
             break;
           }
           case 'PageUp': {
@@ -2796,15 +2832,14 @@ class PanelRenderer extends EventTarget {
   animate() {
     const _startLoop = () => {
       const _render = () => {
+        // update tools
         switch (this.tool) {
           case 'camera': {
-            // update orbit controls
             this.controls.update();
             this.camera.updateMatrixWorld();
             break;
           }
           case 'outmesh': {
-            // update outmesh
             this.outmeshMesh.update();
             break;
           }
@@ -2813,6 +2848,9 @@ class PanelRenderer extends EventTarget {
             break;
           }
         }
+
+        // update overlay
+        this.overlay.update();
 
         // render
         this.renderer.render(this.scene, this.camera);
