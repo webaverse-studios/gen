@@ -2456,6 +2456,128 @@ class PanelRenderer extends EventTarget {
       const rectangleMesh = new THREE.Mesh(rectangleGeometry, _makeFrameMaterial());
       rectangleMesh.frustumCulled = false;
       rectangleMesh.visible = false;
+
+      //
+
+      const frustumGeometry = new THREE.BoxBufferGeometry(1, 1, 1)
+        // .translate(0, 0, -0.5);
+
+      const frustumMaterial = new THREE.ShaderMaterial({
+        uniforms: {
+          uTime: {
+            value: 0,
+            needsUpdate: false,
+          },
+          uWorldBoxMin: {
+            value: new THREE.Vector3(),
+            needsUpdate: false,
+          },
+          uWorldBoxMax: {
+            value: new THREE.Vector3(),
+            needsUpdate: false,
+          },
+        },
+        vertexShader: `\
+          uniform float uTime;
+          uniform vec3 uWorldBoxMin;
+          uniform vec3 uWorldBoxMax;
+          varying vec2 vUv;
+          varying vec3 vNormal;
+          varying vec3 vPosition;
+          varying vec3 vLocalPosition;
+
+          void main() {
+            vUv = uv;
+            // vNormal = normalMatrix * normal;
+            vNormal = normal;
+
+            vec3 p = vec3(0.);
+            if (position.z < 0.) {
+              if (position.x < 0.) {
+                p.x = uWorldBoxMin.x;
+              } else {
+                p.x = -uWorldBoxMin.x;
+              }
+              if (position.y < 0.) {
+                p.y = uWorldBoxMin.y;
+              } else {
+                p.y = -uWorldBoxMin.y;
+              }
+              p.z = uWorldBoxMin.z;
+            } else {
+              if (position.x < 0.) {
+                p.x = -uWorldBoxMax.x;
+              } else {
+                p.x = uWorldBoxMax.x;
+              }
+              if (position.y < 0.) {
+                p.y = -uWorldBoxMax.y;
+              } else {
+                p.y = uWorldBoxMax.y;
+              }
+              p.z = uWorldBoxMax.z;
+
+              p *= 0.5;
+            }
+
+            vPosition = (modelMatrix * vec4(p, 1.0)).xyz;
+            vLocalPosition = p;
+
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+          }
+        `,
+        fragmentShader: `\
+          uniform float uTime;
+          uniform vec3 uWorldBoxMin;
+          uniform vec3 uWorldBoxMax;
+          varying vec2 vUv;
+          varying vec3 vNormal;
+          varying vec3 vPosition;
+          varying vec3 vLocalPosition;
+
+          void main() {
+            vec3 c = vec3(0.5, 0.5, 1.);
+
+            // vec3 light = normalize(vec3(1., 2., 3.));
+            // float d = dot(vNormal, light);
+
+            // use derivative to get the normal
+            vec3 dFdx = dFdx(vPosition);
+            vec3 dFdy = dFdy(vPosition);
+
+            // compute lighting
+            vec3 normal = normalize(cross(dFdx, dFdy));
+            vec3 light = normalize(vec3(1., 2., 3.));
+            float d = dot(normal, light);
+            
+            // c *= 0.3 + pow(d, 2.) * 0.7;
+
+            float a;
+            if (vNormal.z == 0.) {
+              vec2 uv = vLocalPosition.xy * 2. - 0.5;
+              float b = 0.2;
+              float f = min(mod(uv.x, b), mod(uv.y, b));
+              f = min(f, mod(1.-uv.x, b));
+              f = min(f, mod(1.-uv.y, b));
+              f *= 200.;
+
+              a = min(max(1. - f, 0.2), 0.5);
+            } else {
+              a = 0.2;
+            }
+
+            gl_FragColor = vec4(c, a);
+          }
+        `,
+        transparent: true,
+        side: THREE.BackSide,
+      });
+
+      const frustumMesh = new THREE.Mesh(frustumGeometry, frustumMaterial);
+      frustumMesh.frustumCulled = false;
+      frustumMesh.visible = false;
+
+      //
       
       const outmeshMesh = new THREE.Object3D();
       outmeshMesh.visible = false;
@@ -2464,11 +2586,25 @@ class PanelRenderer extends EventTarget {
       outmeshMesh.targetMesh = targetMesh;
       outmeshMesh.add(rectangleMesh);
       outmeshMesh.rectangleMesh = rectangleMesh;
+      outmeshMesh.add(frustumMesh);
+      outmeshMesh.frustumMesh = frustumMesh;
+
+      //
 
       const meshes = [
         targetMesh,
         rectangleMesh,
+        frustumMesh,
       ];
+      const worldViewportMeshes = [
+        targetMesh,
+        rectangleMesh,
+      ];
+      const worldBoxMeshes = [
+        frustumMesh,
+      ];
+
+      //
 
       let running = false;
       outmeshMesh.update = () => {
@@ -2484,27 +2620,47 @@ class PanelRenderer extends EventTarget {
           // update uTime
           mesh.material.uniforms.uTime.value = performance.now() / 1000;
           mesh.material.uniforms.uTime.needsUpdate = true;
-
-          // world viewport
+        }
+        for (const mesh of worldViewportMeshes) {
           mesh.material.uniforms.uWorldViewport.value.set(1, 1, -1)
             .applyMatrix4(camera.projectionMatrixInverse);
           mesh.material.uniforms.uWorldViewport.needsUpdate = true;
+        }
+        for (const mesh of worldBoxMeshes) {
+          const worldBox = localBox.set(
+            localVector.set(-1, -1, -1)
+              .applyMatrix4(camera.projectionMatrixInverse),
+            localVector2.set(1, 1, 1)
+              .applyMatrix4(camera.projectionMatrixInverse),
+          );
+
+          mesh.material.uniforms.uWorldBoxMin.value.copy(worldBox.min);
+          mesh.material.uniforms.uWorldBoxMin.needsUpdate = true;
+          mesh.material.uniforms.uWorldBoxMax.value.copy(worldBox.max);
+          mesh.material.uniforms.uWorldBoxMax.needsUpdate = true;
+          globalThis.box = [
+            worldBox.min.toArray(),
+            worldBox.max.toArray(),
+          ];
         }
       };
       outmeshMesh.setRunning = newRunning => {
         running = newRunning;
 
-        const runningValue = running ? 1 : 0;
         for (const mesh of meshes) {
-          mesh.material.uniforms.uRunning.value = runningValue;
-          mesh.material.uniforms.uRunning.needsUpdate = true;
           mesh.visible = false;
         }
-
         if (!running) {
           targetMesh.visible = true;
         } else {
           rectangleMesh.visible = true;
+          frustumMesh.visible = true;
+        }
+
+        const runningValue = running ? 1 : 0;
+        for (const mesh of worldViewportMeshes) {
+          mesh.material.uniforms.uRunning.value = runningValue;
+          mesh.material.uniforms.uRunning.needsUpdate = true;
         }
       };
       this.outmeshMesh = outmeshMesh;
