@@ -2382,19 +2382,9 @@ class PanelRenderer extends EventTarget {
           rightGeometry,
         ]);
 
-        /* const directions = new Float32Array(geometry.attributes.position.array.length / 3 * 2);
-        {
-          for (let i = 0; i < rectangleGeometry.attributes.position.array.length; i += 3) {
-            const position = localVector.fromArray(rectangleGeometry.attributes.position.array, i);
-            const x = position.x < 0 ? 0 : 2;
-            const y = position.y < 0 ? 0 : 2;
-            
-            const j = i / 3 * 2;
-            directions[j + 0] = x;
-            directions[j + 1] = y;
-          }
-        }
-        rectangleGeometry.setAttribute('direction', new THREE.BufferAttribute(directions, 2)); */
+        // dummy directions because they are not used in this mesh material
+        const directions = new Float32Array(geometry.attributes.position.array.length / 3 * 2);
+        rectangleGeometry.setAttribute('direction', new THREE.BufferAttribute(directions, 2));
 
         rectangleGeometry.scale(s, s, s);
 
