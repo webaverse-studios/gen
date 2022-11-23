@@ -2352,7 +2352,7 @@ class PanelRenderer extends EventTarget {
         _decorateDirectionAttribute(bottomRightCornerGeometry, new THREE.Vector2(1, -1));
         _decorateDirectionAttribute(topRightCornerGeometry, new THREE.Vector2(1, 1));
 
-        const s = 0.1;
+        const s = 0.002;
         const geometry = BufferGeometryUtils.mergeBufferGeometries([
           topLeftCornerGeometry,
           bottomLeftCornerGeometry,
@@ -2367,9 +2367,14 @@ class PanelRenderer extends EventTarget {
               value: 0,
               needsUpdate: false,
             },
+            uWorldViewport: {
+              value: new THREE.Vector3(),
+              needsUpdate: false,
+            },
           },
           vertexShader: `\
             uniform float uTime;
+            uniform vec3 uWorldViewport;
             attribute vec2 direction;
             varying vec2 vUv;
             varying vec2 vDirection;
@@ -2377,11 +2382,15 @@ class PanelRenderer extends EventTarget {
             void main() {
               vUv = uv;
               vDirection = direction;
-              gl_Position = projectionMatrix * modelViewMatrix * vec4(position + vec3(direction, 0.) * 3., 1.0);
+
+              vec3 offset = vec3(direction, 1.) * uWorldViewport;
+              // gl_Position = projectionMatrix * modelViewMatrix * vec4(position + offset, 1.0);
+              gl_Position = projectionMatrix * vec4(position + offset, 1.0);
             }
           `,
           fragmentShader: `\
             uniform float uTime;
+            uniform vec3 uWorldViewport;
             varying vec2 vUv;
             varying vec2 vDirection;
             
@@ -2389,6 +2398,7 @@ class PanelRenderer extends EventTarget {
               gl_FragColor = vec4(vUv, uTime, 1.0);
             }
           `,
+          side: THREE.DoubleSide,
         });
         const outmeshTargetMesh = new THREE.Mesh(geometry, material);
         return outmeshTargetMesh;
@@ -2397,9 +2407,22 @@ class PanelRenderer extends EventTarget {
       outmeshMesh.frustumCulled = false;
       outmeshMesh.visible = false;
       outmeshMesh.update = () => {
+        // update position
+        outmeshMesh.position.copy(camera.position);
+        outmeshMesh.quaternion.copy(camera.quaternion);
+        outmeshMesh.updateMatrixWorld();
+        
         // update uTime
         outmeshMesh.material.uniforms.uTime.value = performance.now() / 1000;
         outmeshMesh.material.uniforms.uTime.needsUpdate = true;
+
+        // world viewport
+        outmeshMesh.material.uniforms.uWorldViewport.value.set(1, 1, -1)
+          .applyMatrix4(camera.projectionMatrixInverse);
+        outmeshMesh.material.uniforms.uWorldViewport.needsUpdate = true;
+
+        //
+        globalThis.viewport = outmeshMesh.material.uniforms.uWorldViewport.value.toArray();
       };
       this.outmeshMesh = outmeshMesh;
       this.scene.add(outmeshMesh);
