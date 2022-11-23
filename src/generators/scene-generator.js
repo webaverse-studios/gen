@@ -2600,9 +2600,10 @@ class PanelRenderer extends EventTarget {
             vec3 normal = normalize(cross(dFdx, dFdy));
             vec3 light = normalize(vec3(1., 2., 3.));
             float d = dot(normal, light);
-            
-            // c *= 0.3 + pow(d, 2.) * 0.7;
 
+            // c *= 0.3 + pow(d, 2.) * 0.7;
+            
+            const float baseAlpha = 0.3;
             float a;
             if (vNormal.z == 0.) {
               vec2 uv = vLocalPosition.xy * 2. - 0.5;
@@ -2610,11 +2611,11 @@ class PanelRenderer extends EventTarget {
               float f = min(mod(uv.x, b), mod(uv.y, b));
               f = min(f, mod(1.-uv.x, b));
               f = min(f, mod(1.-uv.y, b));
-              f *= 200.;
+              f *= 50.;
 
-              a = min(max(1. - f, 0.2), 0.5);
+              a = min(max(1. - f, baseAlpha), 0.5);
             } else {
-              a = 0.2;
+              a = baseAlpha;
             }
 
             gl_FragColor = vec4(c, a);
@@ -2797,7 +2798,7 @@ class PanelRenderer extends EventTarget {
             // console.log('normalize to plane', firstFloorPlaneIndex, planeSpecs);
             const labelSpec = planeSpecs.labels[firstFloorPlaneIndex];
             const normal = localVector.fromArray(labelSpec.normal);
-            const position = localVector2.fromArray(labelSpec.center);
+            // const center = localVector2.fromArray(labelSpec.center);
 
             normalToQuaternion(normal, this.sceneMesh.quaternion)
               .invert()
@@ -2810,7 +2811,6 @@ class PanelRenderer extends EventTarget {
             this.sceneMesh.updateMatrixWorld();
 
             defaultCameraMatrix.copy(this.sceneMesh.matrixWorld);
-
             break;
           }
           case 'f': {
