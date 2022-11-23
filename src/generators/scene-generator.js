@@ -2326,7 +2326,9 @@ class PanelRenderer extends EventTarget {
 
     // outmesh
     {
-      const _makeOutmeshMesh = () => {        
+      const s = 0.002;
+
+      const targetGeometry = (() => {
         const topLeftCornerGeometry = BufferGeometryUtils.mergeBufferGeometries([
           new THREE.BoxBufferGeometry(3, 1, 1)
             .translate(3 / 2 - 0.5, 0, 0),
@@ -2352,95 +2354,179 @@ class PanelRenderer extends EventTarget {
         _decorateDirectionAttribute(bottomRightCornerGeometry, new THREE.Vector2(1, -1));
         _decorateDirectionAttribute(topRightCornerGeometry, new THREE.Vector2(1, 1));
 
-        const s = 0.002;
-        const geometry = BufferGeometryUtils.mergeBufferGeometries([
+        const targetGeometry = BufferGeometryUtils.mergeBufferGeometries([
           topLeftCornerGeometry,
           bottomLeftCornerGeometry,
           bottomRightCornerGeometry,
           topRightCornerGeometry,
         ]);
-        geometry.scale(s, s, s);
+        targetGeometry.scale(s, s, s);
+        return targetGeometry;
+      })();
 
-        const lensMaterial = new THREE.ShaderMaterial({
-          uniforms: {
-            uTime: {
-              value: 0,
-              needsUpdate: false,
-            },
-            uWorldViewport: {
-              value: new THREE.Vector3(),
-              needsUpdate: false,
-            },
-            uRunning: {
-              value: 0,
-              needsUpdate: false,
-            },
+      const rectangleGeometry = (() => {
+        const s2 = 1/s;
+        const topGeometry = new THREE.BoxBufferGeometry(s2, 1, 1)
+          .translate(0, s2/2, 0);
+        const bottomGeometry = topGeometry.clone()
+          .translate(0, -s2, 0);
+        const leftGeometry = new THREE.BoxBufferGeometry(1, s2, 1)
+          .translate(-s2/2, 0, 0);
+        const rightGeometry = leftGeometry.clone()
+          .translate(s2, 0, 0);
+
+        const rectangleGeometry = BufferGeometryUtils.mergeBufferGeometries([
+          topGeometry,
+          bottomGeometry,
+          leftGeometry,
+          rightGeometry,
+        ]);
+
+        const directions = new Float32Array(rectangleGeometry.attributes.position.array.length / 3 * 2);
+        for (let i = 0; i < rectangleGeometry.attributes.position.array.length; i += 3) {
+          const position = localVector.fromArray(rectangleGeometry.attributes.position.array, i);
+          const x = position.x < 0 ? -1 : 1;
+          const y = position.y < 0 ? -1 : 1;
+
+          const baseIndex = i / 3 * 2;
+          directions[baseIndex + 0] = x;
+          directions[baseIndex + 1] = y;
+        }
+
+        // XXX center to the top left
+        const topGeometry2 = new THREE.BoxBufferGeometry(s2, 1, 1)
+          // .translate(0, s2/2, 0);
+        const bottomGeometry2 = topGeometry.clone()
+          // .translate(0, -s2/2, 0);
+        const leftGeometry2 = new THREE.BoxBufferGeometry(1, s2, 1)
+          // .translate(-s2/2, 0, 0);
+        const rightGeometry2 = leftGeometry.clone()
+          // .translate(s2/2, 0, 0);
+
+        const rectangleGeometry2 = BufferGeometryUtils.mergeBufferGeometries([
+          topGeometry2,
+          bottomGeometry2,
+          leftGeometry2,
+          rightGeometry2,
+        ]);
+        rectangleGeometry2.setAttribute('direction', new THREE.BufferAttribute(directions, 2));
+        // rectangleGeometry.translate(s2/2, -s2/2, 0);
+        const s2Inv = 1 / s2;
+        rectangleGeometry2.scale(s2Inv, s2Inv, s2Inv);
+
+        return rectangleGeometry2;
+      })();
+
+      const _makeFrameMaterial = () => new THREE.ShaderMaterial({
+        uniforms: {
+          uTime: {
+            value: 0,
+            needsUpdate: false,
           },
-          vertexShader: `\
-            uniform float uTime;
-            uniform vec3 uWorldViewport;
-            attribute vec2 direction;
-            varying vec2 vUv;
-            varying vec2 vDirection;
-            
-            void main() {
-              vUv = uv;
-              vDirection = direction;
+          uWorldViewport: {
+            value: new THREE.Vector3(),
+            needsUpdate: false,
+          },
+          uRunning: {
+            value: 0,
+            needsUpdate: false,
+          },
+        },
+        vertexShader: `\
+          uniform float uTime;
+          uniform vec3 uWorldViewport;
+          attribute vec2 direction;
+          varying vec2 vUv;
+          varying vec2 vDirection;
+          
+          void main() {
+            vUv = uv;
+            vDirection = direction;
 
-              vec3 offset = vec3(direction, 1.) * uWorldViewport;
-              // gl_Position = projectionMatrix * modelViewMatrix * vec4(position + offset, 1.0);
-              gl_Position = projectionMatrix * vec4(position + offset, 1.0);
+            vec3 offset = vec3(direction, 1.) * uWorldViewport;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position + offset, 1.0);
+            // gl_Position = projectionMatrix * vec4(position + offset, 1.0);
+          }
+        `,
+        fragmentShader: `\
+          uniform float uTime;
+          uniform vec3 uWorldViewport;
+          uniform float uRunning;
+          varying vec2 vUv;
+          varying vec2 vDirection;
+          
+          void main() {
+            if (uRunning > 0.5) {
+              float modTime = mod(uTime, 0.15) / 0.15;
+              float f = modTime < 0.5 ? 0. : 1.;
+              vec3 c = mix(vec3(1., 0.5, 0.5), vec3(0., 0., 0.), f);
+              gl_FragColor = vec4(c, 1.);
+            } else {
+              gl_FragColor = vec4(0., 0., 0., 1.);
             }
-          `,
-          fragmentShader: `\
-            uniform float uTime;
-            uniform vec3 uWorldViewport;
-            uniform float uRunning;
-            varying vec2 vUv;
-            varying vec2 vDirection;
-            
-            void main() {
-              if (uRunning > 0.5) {
-                float modTime = mod(uTime, 0.15) / 0.15;
-                float f = modTime < 0.5 ? 0. : 1.;
-                vec3 c = mix(vec3(1., 0.5, 0.5), vec3(0., 0., 0.), f);
-                gl_FragColor = vec4(c, 1.);
-              } else {
-                gl_FragColor = vec4(0., 0., 0., 1.);
-              }
-              // gl_FragColor = vec4(vUv, uTime, 1.0);
-            }
-          `,
-          side: THREE.DoubleSide,
-        });
-        const material = lensMaterial;
+            // gl_FragColor = vec4(vUv, uTime, 1.0);
+          }
+        `,
+        side: THREE.DoubleSide,
+      });
 
-        const outmeshTargetMesh = new THREE.Mesh(geometry, material);
-        return outmeshTargetMesh;
-      };
-      const outmeshMesh = _makeOutmeshMesh();
-      outmeshMesh.frustumCulled = false;
-      outmeshMesh.visible = false;
+      const targetMesh = new THREE.Mesh(targetGeometry, _makeFrameMaterial());
+      targetMesh.frustumCulled = false;
+      targetMesh.visible = true;
+
+      const rectangleMesh = new THREE.Mesh(rectangleGeometry, _makeFrameMaterial());
+      globalThis.rectangleMesh = rectangleMesh;
+      rectangleMesh.frustumCulled = false;
+      rectangleMesh.visible = false;
+      
+      const outmeshMesh = new THREE.Object3D();
+
+      outmeshMesh.add(targetMesh);
+      outmeshMesh.targetMesh = targetMesh;
+      outmeshMesh.add(rectangleMesh);
+      outmeshMesh.rectangleMesh = rectangleMesh;
+
+      const meshes = [
+        targetMesh,
+        rectangleMesh,
+      ];
+
+      let running = false;
       outmeshMesh.update = () => {
         // update position
-        outmeshMesh.position.copy(camera.position);
-        outmeshMesh.quaternion.copy(camera.quaternion);
-        outmeshMesh.updateMatrixWorld();
+        if (!running) {
+          outmeshMesh.position.copy(camera.position);
+          outmeshMesh.quaternion.copy(camera.quaternion);
+          outmeshMesh.updateMatrixWorld();
+        }
         
-        // update uTime
-        outmeshMesh.material.uniforms.uTime.value = performance.now() / 1000;
-        outmeshMesh.material.uniforms.uTime.needsUpdate = true;
+        // update meshes
+        for (const mesh of meshes) {
+          // update uTime
+          mesh.material.uniforms.uTime.value = performance.now() / 1000;
+          mesh.material.uniforms.uTime.needsUpdate = true;
 
-        // world viewport
-        outmeshMesh.material.uniforms.uWorldViewport.value.set(1, 1, -1)
-          .applyMatrix4(camera.projectionMatrixInverse);
-        outmeshMesh.material.uniforms.uWorldViewport.needsUpdate = true;
-
-        // globalThis.viewport = outmeshMesh.material.uniforms.uWorldViewport.value.toArray();
+          // world viewport
+          mesh.material.uniforms.uWorldViewport.value.set(1, 1, -1)
+            .applyMatrix4(camera.projectionMatrixInverse);
+          mesh.material.uniforms.uWorldViewport.needsUpdate = true;
+        }
       };
-      outmeshMesh.setRunning = running => {
-        outmeshMesh.material.uniforms.uRunning.value = running ? 1 : 0;
-        outmeshMesh.material.uniforms.uRunning.needsUpdate = true;
+      outmeshMesh.setRunning = newRunning => {
+        running = newRunning;
+
+        const runningValue = running ? 1 : 0;
+        for (const mesh of meshes) {
+          mesh.material.uniforms.uRunning.value = runningValue;
+          mesh.material.uniforms.uRunning.needsUpdate = true;
+          mesh.visible = false;
+        }
+
+        if (!running) {
+          targetMesh.visible = true;
+        } else {
+          rectangleMesh.visible = true;
+        }
       };
       this.outmeshMesh = outmeshMesh;
       this.scene.add(outmeshMesh);
