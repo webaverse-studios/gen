@@ -34,41 +34,6 @@ const Panel3DCanvas = ({
       };
     }
   }, [panel, canvasRef.current]);
-
-  // listen for snapshot outmesh keys
-  useEffect(() => {
-    const keydown = e => {
-      if (!e.repeat) {
-        switch (e.key) {
-          case '1':
-          case '2':
-          case '3':
-          case '4':
-          case '5':
-          case '6':
-          case '7':
-          case '8':
-          case '9': {
-            const keyIndex = parseInt(e.key, 10) - 1;
-            renderer.setTool(tools[keyIndex] ?? tools[0]);
-            break;
-          }
-          case ' ': {
-            e.preventDefault();
-            e.stopPropagation();
-
-            panel.outmesh(renderer);
-            break;
-          }
-        }
-      }
-    };
-    document.addEventListener('keydown', keydown);
-
-    return () => {
-      document.removeEventListener('keydown', keydown);
-    };
-  }, [panel, renderer]);
   
   return (
     <canvas

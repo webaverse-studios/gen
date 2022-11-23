@@ -2361,7 +2361,7 @@ class PanelRenderer extends EventTarget {
         ]);
         geometry.scale(s, s, s);
 
-        const material = new THREE.ShaderMaterial({
+        const lensMaterial = new THREE.ShaderMaterial({
           uniforms: {
             uTime: {
               value: 0,
@@ -2369,6 +2369,10 @@ class PanelRenderer extends EventTarget {
             },
             uWorldViewport: {
               value: new THREE.Vector3(),
+              needsUpdate: false,
+            },
+            uRunning: {
+              value: 0,
               needsUpdate: false,
             },
           },
@@ -2391,15 +2395,26 @@ class PanelRenderer extends EventTarget {
           fragmentShader: `\
             uniform float uTime;
             uniform vec3 uWorldViewport;
+            uniform float uRunning;
             varying vec2 vUv;
             varying vec2 vDirection;
             
             void main() {
-              gl_FragColor = vec4(vUv, uTime, 1.0);
+              if (uRunning > 0.5) {
+                float modTime = mod(uTime, 0.15) / 0.15;
+                float f = modTime < 0.5 ? 0. : 1.;
+                vec3 c = mix(vec3(1., 0.5, 0.5), vec3(0., 0., 0.), f);
+                gl_FragColor = vec4(c, 1.);
+              } else {
+                gl_FragColor = vec4(0., 0., 0., 1.);
+              }
+              // gl_FragColor = vec4(vUv, uTime, 1.0);
             }
           `,
           side: THREE.DoubleSide,
         });
+        const material = lensMaterial;
+
         const outmeshTargetMesh = new THREE.Mesh(geometry, material);
         return outmeshTargetMesh;
       };
@@ -2421,8 +2436,11 @@ class PanelRenderer extends EventTarget {
           .applyMatrix4(camera.projectionMatrixInverse);
         outmeshMesh.material.uniforms.uWorldViewport.needsUpdate = true;
 
-        //
-        globalThis.viewport = outmeshMesh.material.uniforms.uWorldViewport.value.toArray();
+        // globalThis.viewport = outmeshMesh.material.uniforms.uWorldViewport.value.toArray();
+      };
+      outmeshMesh.setRunning = running => {
+        outmeshMesh.material.uniforms.uRunning.value = running ? 1 : 0;
+        outmeshMesh.material.uniforms.uRunning.needsUpdate = true;
       };
       this.outmeshMesh = outmeshMesh;
       this.scene.add(outmeshMesh);
@@ -2474,15 +2492,44 @@ class PanelRenderer extends EventTarget {
   listen() {
     const keydown = e => {
       if (!e.repeat) {
-        // page up
-        if (e.key === 'PageUp') {
-          this.sceneMesh.material.uniforms.uColorEnabled.value = 1;
-          this.sceneMesh.material.uniforms.uColorEnabled.needsUpdate = true;
-          blockEvent(e);
-        } else if (e.key === 'PageDown') {
-          this.sceneMesh.material.uniforms.uColorEnabled.value = 0;
-          this.sceneMesh.material.uniforms.uColorEnabled.needsUpdate = true;
-          blockEvent(e);
+        switch (e.key) {
+          case '1':
+          case '2':
+          case '3':
+          case '4':
+          case '5':
+          case '6':
+          case '7':
+          case '8':
+          case '9': {
+            const keyIndex = parseInt(e.key, 10) - 1;
+            this.setTool(tools[keyIndex] ?? tools[0]);
+            break;
+          }
+          case ' ': {
+            e.preventDefault();
+            e.stopPropagation();
+
+            // XXX hack
+            if (this.tool === 'camera') {
+              this.panel.outmesh();
+            } else if (this.tool === 'outmesh') {
+              this.outmeshMesh.setRunning(true);
+            }
+            break;
+          }
+          case 'PageUp': {
+            this.sceneMesh.material.uniforms.uColorEnabled.value = 1;
+            this.sceneMesh.material.uniforms.uColorEnabled.needsUpdate = true;
+            blockEvent(e);
+            break;
+          }
+          case 'PageDown': {
+            this.sceneMesh.material.uniforms.uColorEnabled.value = 0;
+            this.sceneMesh.material.uniforms.uColorEnabled.needsUpdate = true;
+            blockEvent(e);
+            break;
+          }
         }
       }
     };
@@ -2562,8 +2609,8 @@ class PanelRenderer extends EventTarget {
     };
     _startLoop();
   }
-  async renderOutmesh(panel) {
-    const prompt = panel.getData(promptKey);
+  async renderOutmesh() {
+    const prompt = this.panel.getData(promptKey);
     if (!prompt) {
       throw new Error('no prompt, so cannot outmesh');
     }
@@ -3507,13 +3554,14 @@ export class Panel extends EventTarget {
   async outmesh(renderer) {
     // console.log('outmesh start', renderer);
     try {
-      const outmeshResult = await renderer.renderOutmesh(this);
+      const outmeshResult = await renderer.renderOutmesh();
 
       for (const {name, type} of layer2Specs) {
         this.setData('layer2/' + name, outmeshResult[name], type);
       }
     } catch(err) {
       console.warn(err);
+      debugger;
     }
   }
 
