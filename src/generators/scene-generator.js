@@ -708,10 +708,12 @@ const getMaskSpecsByValue = (geometry, mask, width, height) => {
               [Infinity, Infinity, Infinity],
               [-Infinity, -Infinity, -Infinity],
             ],
+            numPixels: 0,
           };
           labels.set(value, label);
         }
         labelIndices[index] = label.index;
+        label.numPixels++;
 
         const boundingBox = localBox.set(
           localVector.fromArray(label.bbox[0]),
@@ -744,6 +746,7 @@ const getMaskSpecsByValue = (geometry, mask, width, height) => {
                     seenIndices.add(aIndex);
                     segmentIndices.push(aIndex);
                     labelIndices[aIndex] = label.index;
+                    label.numPixels++;
                   }
                 }
               }
@@ -2292,10 +2295,10 @@ class Overlay {
         const _getPlanesBySegmentIndices = selectSegmentIndices => {
           const planeAcc = new Map();
 
-          if (selectSegmentIndices.some(n => n === -1)) {
+          /* if (selectSegmentIndices.some(n => n === -1)) {
             console.log('invalid selection');
             debugger;
-          }
+          } */
           
           /* if (segmentSpecs.mask.length !== planeLabelIndices.length) {
             console.log('invalid plane detection length', segmentSpecs.mask.length, planeLabelIndices.length);
@@ -2316,15 +2319,8 @@ class Overlay {
           // divide planeAcc by numVertices
           for (const planeIndex of planeAcc.keys()) {
             let acc = planeAcc.get(planeIndex);
-            if (typeof planeSpecs.labels[planeIndex].numVertices !== 'number') {
-              console.warn('invalid type', planeSpecs.labels[planeIndex].numVertices);
-              debugger;
-            }
-            acc /= planeSpecs.labels[planeIndex].numVertices; // XXX should numVertices be computed from the raw index array?
-            if (acc > 1) {
-              console.warn('acc overflow', acc);
-              debugger;
-            }
+            acc /= planeSpecs.labels[planeIndex].numPixels;
+            // acc /= planeSpecs.labels[planeIndex].distanceSquaredF;
             planeAcc.set(planeIndex, acc);
           }
 
