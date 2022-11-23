@@ -2442,7 +2442,7 @@ class PanelRenderer extends EventTarget {
         return rectangleGeometry;
       })();
 
-      const _makeFrameMaterial = () => new THREE.ShaderMaterial({
+      const _makeFrameMaterial = running => new THREE.ShaderMaterial({
         uniforms: {
           uTime: {
             value: 0,
@@ -2453,8 +2453,8 @@ class PanelRenderer extends EventTarget {
             needsUpdate: false,
           },
           uRunning: {
-            value: 0,
-            needsUpdate: false,
+            value: running,
+            needsUpdate: true,
           },
         },
         vertexShader: `\
@@ -2500,11 +2500,11 @@ class PanelRenderer extends EventTarget {
         side: THREE.DoubleSide,
       });
 
-      const targetMesh = new THREE.Mesh(targetGeometry, _makeFrameMaterial());
+      const targetMesh = new THREE.Mesh(targetGeometry, _makeFrameMaterial(false));
       targetMesh.frustumCulled = false;
       targetMesh.visible = true;
 
-      const rectangleMesh = new THREE.Mesh(rectangleGeometry, _makeFrameMaterial());
+      const rectangleMesh = new THREE.Mesh(rectangleGeometry, _makeFrameMaterial(true));
       rectangleMesh.frustumCulled = false;
       rectangleMesh.visible = false;
 
@@ -2712,13 +2712,16 @@ class PanelRenderer extends EventTarget {
           rectangleMesh.visible = true;
         }
 
-        for (const mesh of worldViewportMeshes) {
-          mesh.material.uniforms.uRunning.value = +_isRunning();
-          mesh.material.uniforms.uRunning.needsUpdate = true;
-        }
+        // for (const mesh of worldViewportMeshes) {
+        //   mesh.material.uniforms.uRunning.value = +_isRunning();
+        //   mesh.material.uniforms.uRunning.needsUpdate = true;
+        // }
       };
       this.outmeshMesh = outmeshMesh;
       this.scene.add(outmeshMesh);
+
+      globalThis.outmeshMesh = outmeshMesh;
+      globalThis.state = state;
     }
 
     // floor mesh
