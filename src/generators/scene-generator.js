@@ -2658,10 +2658,11 @@ class PanelRenderer extends EventTarget {
 
       //
 
-      let running = false;
+      let state = null;
+      const _isRunning = () => state === 'running';
       outmeshMesh.update = () => {
         // update position
-        if (!running) {
+        if (!_isRunning()) {
           outmeshMesh.position.copy(camera.position);
           outmeshMesh.quaternion.copy(camera.quaternion);
           outmeshMesh.updateMatrixWorld();
@@ -2696,22 +2697,23 @@ class PanelRenderer extends EventTarget {
           ];
         }
       };
-      outmeshMesh.setRunning = newRunning => {
-        running = newRunning;
+      outmeshMesh.setState = newState => {
+        state = newState;
 
         for (const mesh of meshes) {
           mesh.visible = false;
         }
-        if (!running) {
+        if (state === null) {
           targetMesh.visible = true;
-        } else {
+        } else if (state === 'running') {
           rectangleMesh.visible = true;
           frustumMesh.visible = true;
+        } else if (state === 'finished') {
+          rectangleMesh.visible = true;
         }
 
-        const runningValue = running ? 1 : 0;
         for (const mesh of worldViewportMeshes) {
-          mesh.material.uniforms.uRunning.value = runningValue;
+          mesh.material.uniforms.uRunning.value = +_isRunning();
           mesh.material.uniforms.uRunning.needsUpdate = true;
         }
       };
@@ -2784,12 +2786,22 @@ class PanelRenderer extends EventTarget {
             e.stopPropagation();
 
             // XXX hack
-            if (this.tool === 'camera') {
-              this.panel.outmesh();
-            } else if (this.tool === 'outmesh') {
-              this.outmeshMesh.setRunning(true);
+            if (this.tool === 'outmesh') {
+              (async () => {
+                this.outmeshMesh.setState('running');
 
-              defaultCameraMatrix.copy(this.camera.matrixWorld);
+                try {
+                  const outmeshResult = await this.renderOutmesh();
+
+                  for (const {name, type} of layer2Specs) {
+                    this.panel.setData('layer2/' + name, outmeshResult[name], type);
+                  }
+
+                  defaultCameraMatrix.copy(this.camera.matrixWorld);
+                } finally {
+                  this.outmeshMesh.setState('finished');
+                }
+              })();
             }
             break;
           }
@@ -3854,19 +3866,6 @@ export class Panel extends EventTarget {
         this.setData('layer1/' + name, compileResult[name], type);
       }
     }, 'compiling');
-  }
-  async outmesh(renderer) {
-    // console.log('outmesh start', renderer);
-    try {
-      const outmeshResult = await renderer.renderOutmesh();
-
-      for (const {name, type} of layer2Specs) {
-        this.setData('layer2/' + name, outmeshResult[name], type);
-      }
-    } catch(err) {
-      console.warn(err);
-      debugger;
-    }
   }
 
   createRenderer(canvas, opts) {
