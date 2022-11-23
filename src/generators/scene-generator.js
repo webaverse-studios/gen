@@ -2442,7 +2442,51 @@ class PanelRenderer extends EventTarget {
         return rectangleGeometry;
       })();
 
-      const _makeFrameMaterial = running => new THREE.ShaderMaterial({
+      const targetMaterial = new THREE.ShaderMaterial({
+        uniforms: {
+          uTime: {
+            value: 0,
+            needsUpdate: false,
+          },
+          uWorldViewport: {
+            value: new THREE.Vector3(),
+            needsUpdate: false,
+          },
+        },
+        vertexShader: `\
+          uniform float uTime;
+          uniform vec3 uWorldViewport;
+          attribute vec2 direction;
+          varying vec2 vUv;
+          varying vec2 vDirection;
+          
+          void main() {
+            vUv = uv;
+            vDirection = direction;
+
+            vec3 offset = vec3(direction, 1.) * uWorldViewport;
+            vec3 p = position + offset;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+          }
+        `,
+        fragmentShader: `\
+          uniform float uTime;
+          uniform vec3 uWorldViewport;
+          varying vec2 vUv;
+          varying vec2 vDirection;
+          
+          void main() {
+            gl_FragColor = vec4(0., 0., 0., 1.);
+          }
+        `,
+        side: THREE.DoubleSide,
+      });
+
+      const targetMesh = new THREE.Mesh(targetGeometry, targetMaterial);
+      targetMesh.frustumCulled = false;
+      targetMesh.visible = true;
+
+      const rectangleMaterial = new THREE.ShaderMaterial({
         uniforms: {
           uTime: {
             value: 0,
@@ -2453,8 +2497,8 @@ class PanelRenderer extends EventTarget {
             needsUpdate: false,
           },
           uRunning: {
-            value: running,
-            needsUpdate: true,
+            value: 0,
+            needsUpdate: false,
           },
         },
         vertexShader: `\
@@ -2469,14 +2513,8 @@ class PanelRenderer extends EventTarget {
             vUv = uv;
             vDirection = direction;
 
-            if (uRunning > 0.5) {
-              vec3 p = vec3(position.xy * uWorldViewport.xy * 2., position.z + uWorldViewport.z);
-              gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
-            } else {
-              vec3 offset = vec3(direction, 1.) * uWorldViewport;
-              vec3 p = position + offset;
-              gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
-            }
+            vec3 p = vec3(position.xy * uWorldViewport.xy * 2., position.z + uWorldViewport.z);
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
           }
         `,
         fragmentShader: `\
@@ -2486,11 +2524,13 @@ class PanelRenderer extends EventTarget {
           varying vec2 vUv;
           varying vec2 vDirection;
           
+          const vec3 color = vec3(1., 0.5, 0.5);
+
           void main() {
             if (uRunning > 0.5) {
               float modTime = mod(uTime, 0.15) / 0.15;
               float f = modTime < 0.5 ? 0. : 1.;
-              vec3 c = mix(vec3(1., 0.5, 0.5), vec3(0., 0., 0.), f);
+              vec3 c = mix(color, vec3(0., 0., 0.), f);
               gl_FragColor = vec4(c, 1.);
             } else {
               gl_FragColor = vec4(0., 0., 0., 1.);
@@ -2500,11 +2540,7 @@ class PanelRenderer extends EventTarget {
         side: THREE.DoubleSide,
       });
 
-      const targetMesh = new THREE.Mesh(targetGeometry, _makeFrameMaterial(false));
-      targetMesh.frustumCulled = false;
-      targetMesh.visible = true;
-
-      const rectangleMesh = new THREE.Mesh(rectangleGeometry, _makeFrameMaterial(true));
+      const rectangleMesh = new THREE.Mesh(rectangleGeometry, rectangleMaterial);
       rectangleMesh.frustumCulled = false;
       rectangleMesh.visible = false;
 
@@ -2659,10 +2695,9 @@ class PanelRenderer extends EventTarget {
       //
 
       let state = null;
-      const _isRunning = () => state === 'running';
       outmeshMesh.update = () => {
         // update position
-        if (!_isRunning()) {
+        if (state === null) {
           outmeshMesh.position.copy(camera.position);
           outmeshMesh.quaternion.copy(camera.quaternion);
           outmeshMesh.updateMatrixWorld();
@@ -2712,10 +2747,8 @@ class PanelRenderer extends EventTarget {
           rectangleMesh.visible = true;
         }
 
-        // for (const mesh of worldViewportMeshes) {
-        //   mesh.material.uniforms.uRunning.value = +_isRunning();
-        //   mesh.material.uniforms.uRunning.needsUpdate = true;
-        // }
+        rectangleMesh.material.uniforms.uRunning.value = +(state === 'running');
+        rectangleMesh.material.uniforms.uRunning.needsUpdate = true;
       };
       this.outmeshMesh = outmeshMesh;
       this.scene.add(outmeshMesh);
