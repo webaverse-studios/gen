@@ -2366,11 +2366,11 @@ class PanelRenderer extends EventTarget {
 
       const rectangleGeometry = (() => {
         const s2 = 1 / s;
-        const topGeometry = new THREE.BoxBufferGeometry(s2 - 1, 1, 1)
-          .translate((s2 - 1) / 2, 0, 0);
+        const topGeometry = new THREE.BoxBufferGeometry(s2, 1, 1)
+          .translate(s2 / 2 - 0.5, 0, 0);
         const bottomGeometry = topGeometry.clone();
-        const leftGeometry = new THREE.BoxBufferGeometry(1, s2 - 1, 1)
-          .translate(0, (s2 - 1) / 2, 0);
+        const leftGeometry = new THREE.BoxBufferGeometry(1, s2, 1)
+          .translate(0, s2 / 2 - 0.5, 0);
         const rightGeometry = leftGeometry.clone();
 
         _decorateDirectionAttribute(topGeometry, new THREE.Vector2(-1, 1));
@@ -2385,8 +2385,7 @@ class PanelRenderer extends EventTarget {
           rightGeometry,
         ]);
 
-        const s2Inv = 1 / s2;
-        rectangleGeometry.scale(s2Inv, s2Inv, s2Inv);
+        rectangleGeometry.scale(s, s, s);
 
         return rectangleGeometry;
       })();
