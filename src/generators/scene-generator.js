@@ -3659,25 +3659,32 @@ class PanelRenderer extends EventTarget {
       const heightSegments = panelSize - 1;
       // geometry is camera-relative
       const geometry = new THREE.PlaneGeometry(1, 1, widthSegments, heightSegments);
-      pointCloudArrayBufferToPositionAttributeArray(pointCloud, geometry.attributes.position.array, 1 / panelSize);
+      // pointCloudArrayBufferToPositionAttributeArray(pointCloud, geometry.attributes.position.array, 1 / panelSize);
+      depthFloat32ArrayToPositionAttributeArray(
+        reconstructedDepthFloats,
+        this.renderer,
+        this.camera, // XXX wrong camera -- need to save the camera used to render the depth
+        geometry.attributes.position.array,
+        // 1 / panelSize
+      );
       // _cutMask(geometry, maskImageData);
-      if (!segmentMask) {
+      /* if (!segmentMask) {
         console.warn('missing segment mask 2', segmentMask);
         debugger;
-      }
+      } */
       const segmentSpecs = getMaskSpecsByConnectivity(geometry, segmentMask, this.canvas.width, this.canvas.height);
       let planeSpecs = getMaskSpecsByValue(geometry, planesMask, this.canvas.width, this.canvas.height);
       planeSpecs = zipPlanesSegmentsJson(planeSpecs, planesJson);
-      geometry.setAttribute('segment', new THREE.BufferAttribute(segmentSpecs.array, 1));
-      geometry.setAttribute('segmentColor', new THREE.BufferAttribute(segmentSpecs.colorArray, 3));
-      geometry.setAttribute('plane', new THREE.BufferAttribute(planeSpecs.array, 1));
-      geometry.setAttribute('planeColor', new THREE.BufferAttribute(planeSpecs.colorArray, 3));
+      // geometry.setAttribute('segment', new THREE.BufferAttribute(segmentSpecs.array, 1));
+      // geometry.setAttribute('segmentColor', new THREE.BufferAttribute(segmentSpecs.colorArray, 3));
+      // geometry.setAttribute('plane', new THREE.BufferAttribute(planeSpecs.array, 1));
+      // geometry.setAttribute('planeColor', new THREE.BufferAttribute(planeSpecs.colorArray, 3));
       geometry.computeVertexNormals();
 
       const material = new THREE.MeshPhongMaterial({
         color: 0xff0000,
-        transparent: true,
-        opacity: 0.8,
+        // transparent: true,
+        // opacity: 0.8,
       });
       backgroundMesh = new THREE.Mesh(geometry, material);
       backgroundMesh.name = 'backgroundMesh';
