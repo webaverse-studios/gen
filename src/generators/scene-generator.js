@@ -3629,9 +3629,9 @@ class PanelRenderer extends EventTarget {
       depthPreviewReconstructedMesh.geometry.setAttribute('color', new THREE.InstancedBufferAttribute(colors, 3));
       layerScene.add(depthPreviewReconstructedMesh);
     }
-    globalThis.reconstructedDepthFloats = reconstructedDepthFloats;
-    globalThis.depthFloatImageData = depthFloatImageData;
-    globalThis.newDepthFloatImageData = newDepthFloatImageData;
+    // globalThis.reconstructedDepthFloats = reconstructedDepthFloats;
+    // globalThis.depthFloatImageData = depthFloatImageData;
+    // globalThis.newDepthFloatImageData = newDepthFloatImageData;
     console.timeEnd('depthPreviewReconstructed');
 
     console.time('depthPreviewNew');
