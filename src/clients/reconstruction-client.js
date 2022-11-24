@@ -1,9 +1,17 @@
 import * as THREE from 'three';
 import materialColors from '../constants/material-colors.js';
 
+//
+
 export const skyboxDistance = 5;
 export const skyboxScaleFactor = 5;
 export const pointcloudStride = 4 + 4 + 4 + 1 + 1 + 1;
+
+//
+
+const localVector = new THREE.Vector3();
+
+//
 
 export function drawPointCloudCanvas(arrayBuffer) {
   // python_types = (float, float, float, int, int, int)
@@ -60,6 +68,97 @@ export function pointCloudArrayBufferToPositionAttributeArray(arrayBuffer, float
     float32Array[j + 2] = z;
   }
 }
+export function depthFloat32ArrayToPositionAttributeArray(
+  depthFloat32Array,
+  renderer,
+  camera,
+  float32Array,
+  // scaleFactor,
+) { // result in float32Array
+  /* if (!renderer || !camera) {
+    console.warn('missing renderer or camera');
+    debugger;
+  } */
+  const numPixels = depthFloat32Array.length;
+  const width = Math.sqrt(numPixels);
+  const height = width;
+  // if (width * height !== numPixels) {
+  //   throw new Error('invalid point cloud dimensions');
+  // }
+  for (let i = 0; i < depthFloat32Array.length; i++) {
+    const x = (i % renderer.domElement.width) / renderer.domElement.width;
+    let y = Math.floor(i / renderer.domElement.width) / renderer.domElement.height;
+    y = 1 - y;
+  
+    const viewZ = depthFloat32Array[i];
+    const worldPoint = setCameraViewPositionFromViewZ(x, y, viewZ, camera, localVector);
+    const target = worldPoint.applyMatrix4(camera.matrixWorld);
+
+    target.toArray(float32Array, i * 3);
+  
+
+    
+    
+    // localMatrix.makeTranslation(target.x, target.y, target.z);
+    // depthCubesMesh.setMatrixAt(i / depthRenderSkipRatio, localMatrix);
+    // depthCubesMesh.count++;
+
+
+    
+
+    // let x = dataView.getFloat32(i + 0, true);
+    // let y = dataView.getFloat32(i + 4, true);
+    // let z = dataView.getFloat32(i + 8, true);
+
+    // x *= scaleFactor;
+    // y *= -scaleFactor;
+    // z *= -scaleFactor;
+
+    // float32Array[j + 0] = x;
+    // float32Array[j + 1] = y;
+    // float32Array[j + 2] = z;
+  }
+}
+
+//
+
+export const setCameraViewPositionFromViewZ = (() => {
+  function viewZToOrthographicDepth(viewZ, near, far) {
+    return ( viewZ + near ) / ( near - far );
+  }
+  // function orthographicDepthToViewZ(orthoZ, near, far) {
+  //   return orthoZ * ( near - far ) - near;
+  // }
+
+  return (x, y, viewZ, camera, target) => {
+    const {near, far, projectionMatrix, projectionMatrixInverse} = camera;
+    
+    const depth = viewZToOrthographicDepth(viewZ, near, far);
+
+    // float clipW = cameraProjection[2][3] * viewZ + cameraProjection[3][3];
+    // vec4 clipPosition = vec4( ( vec3( gl_FragCoord.xy / viewport.zw, depth ) - 0.5 ) * 2.0, 1.0 );
+    // clipPosition *= clipW;
+    // vec4 viewPosition = inverseProjection * clipPosition;
+    // vec4 vorldPosition = cameraMatrixWorld * vec4( viewPosition.xyz, 1.0 );
+
+    const clipW = projectionMatrix.elements[2 * 4 + 3] * viewZ + projectionMatrix.elements[3 * 4 + 3];
+    const clipPosition = new THREE.Vector4(
+      (x - 0.5) * 2,
+      (y - 0.5) * 2,
+      (depth - 0.5) * 2,
+      1
+    );
+    clipPosition.multiplyScalar(clipW);
+    const viewPosition = clipPosition.applyMatrix4(projectionMatrixInverse);
+    
+    target.x = viewPosition.x;
+    target.y = viewPosition.y;
+    target.z = viewPosition.z;
+    return target;
+  };
+})();
+
+//
 
 export function applySkybox(float32Array) { // // result in float32Array
   const numPixels = float32Array.length / 3;

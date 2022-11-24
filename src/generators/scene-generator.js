@@ -11,6 +11,8 @@ import {
   getPointCloud,
   drawPointCloudCanvas,
   pointCloudArrayBufferToPositionAttributeArray,
+  depthFloat32ArrayToPositionAttributeArray,
+  setCameraViewPositionFromViewZ,
   applySkybox,
   pointCloudArrayBufferToColorAttributeArray,
   skyboxDistance,
@@ -878,41 +880,6 @@ const depthFragmentShader = `\
     gl_FragColor = encode_float(viewZ).abgr;
   }
 `;
-const setCameraViewPositionFromViewZ = (() => {
-  function viewZToOrthographicDepth(viewZ, near, far) {
-    return ( viewZ + near ) / ( near - far );
-  }
-  function orthographicDepthToViewZ(orthoZ, near, far) {
-    return orthoZ * ( near - far ) - near;
-  }
-
-  return (x, y, viewZ, camera, target) => {
-    const {near, far, projectionMatrix, projectionMatrixInverse} = camera;
-    
-    const depth = viewZToOrthographicDepth(viewZ, near, far);
-
-    // float clipW = cameraProjection[2][3] * viewZ + cameraProjection[3][3];
-    // vec4 clipPosition = vec4( ( vec3( gl_FragCoord.xy / viewport.zw, depth ) - 0.5 ) * 2.0, 1.0 );
-    // clipPosition *= clipW;
-    // vec4 viewPosition = inverseProjection * clipPosition;
-    // vec4 vorldPosition = cameraMatrixWorld * vec4( viewPosition.xyz, 1.0 );
-
-    const clipW = projectionMatrix.elements[2 * 4 + 3] * viewZ + projectionMatrix.elements[3 * 4 + 3];
-    const clipPosition = new THREE.Vector4(
-      (x - 0.5) * 2,
-      (y - 0.5) * 2,
-      (depth - 0.5) * 2,
-      1
-    );
-    clipPosition.multiplyScalar(clipW);
-    const viewPosition = clipPosition.applyMatrix4(projectionMatrixInverse);
-    
-    target.x = viewPosition.x;
-    target.y = viewPosition.y;
-    target.z = viewPosition.z;
-    return target;
-  };
-})();
 const getDepthFloatsFromPointCloud = (pointCloudArrayBuffer, ) => {
   const geometryPositions = new Float32Array(panelSize * panelSize * 3);
   pointCloudArrayBufferToPositionAttributeArray(pointCloudArrayBuffer, geometryPositions, 1 / panelSize);
