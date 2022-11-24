@@ -21,6 +21,16 @@ import {makeId} from '../utils/id-utils.js';
 import {classes, categories} from '../../constants/classes.js';
 import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 // import {labelClasses} from '../constants/prompts.js';
+import {
+  frameSize,
+  canvasSize,
+  numFramesPerRow,
+  numFrames,
+  
+  arrowUpBrightUrl,
+  arrowUpDimUrl,
+  arrowsUpUrl,
+} from '../components/LightArrow.jsx';
 
 //
 
@@ -1794,6 +1804,7 @@ class Overlay {
     this.overlayScene = overlayScene;
 
     this.sceneOverlayMeshes = [];
+    this.arrowsMeshes = [];
   }
   addMesh(sceneMesh) {
     const geometry = sceneMesh.geometry.clone();
@@ -1812,6 +1823,123 @@ class Overlay {
     };
     this.overlayScene.add(sceneOverlayMesh);
     this.sceneOverlayMeshes.push(sceneOverlayMesh);
+
+    // arrows spritesheet mesh
+    const arrowSize = 0.2;
+    const arrowGeometry = new THREE.PlaneGeometry(arrowSize, arrowSize);
+    const _makeArrowsMesh = () => {
+      const tex = new THREE.Texture();
+      tex.minFilter = THREE.NearestFilter;
+      tex.magFilter = THREE.NearestFilter;
+
+      (async () => {
+        const img = new Image();
+        img.crossOrigin = true;
+        img.src = arrowsUpUrl;
+        await new Promise((accept, reject) => {
+          img.onload = accept;
+          img.onerror = reject;
+        });
+
+        tex.image = img;
+        tex.needsUpdate = true;
+      })();
+
+      const material = new THREE.ShaderMaterial({
+        uniforms: {
+          tex: {
+            value: tex,
+            needsUpdate: true,
+          },
+          uTime: {
+            value: 0,
+            needsUpdate: true,
+          },
+        },
+        vertexShader: `\
+          varying vec2 vUv;
+          void main() {
+            vUv = uv;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `,
+        fragmentShader: `\
+          uniform sampler2D tex;
+          uniform float uTime;
+          varying vec2 vUv;
+
+          const float numFrames = ${numFrames.toFixed(8)};
+          const float numFramesPerRow = ${numFramesPerRow.toFixed(8)};
+          const float frameSize = ${frameSize.toFixed(8)};
+          const float canvasSize = ${canvasSize.toFixed(8)};
+          const float frameTime = 50.;
+
+          void main() {
+            float frameIndex = mod(floor(uTime / frameTime), numFrames);
+            float frameX = mod(frameIndex, numFramesPerRow);
+            float frameY = floor(frameIndex / numFramesPerRow);
+            vec2 frameUv = vec2(
+              (frameX + vUv.x) * frameSize / canvasSize,
+              (frameY + vUv.y) * frameSize / canvasSize
+            );
+
+            gl_FragColor = texture2D(tex, frameUv);
+          }
+        `,
+        transparent: true,
+      });
+      const mesh = new THREE.Mesh(arrowGeometry, material);
+      mesh.frustumCulled = false;
+      mesh.update = () => {
+        mesh.material.uniforms.uTime.value = performance.now();
+        mesh.material.uniforms.uTime.needsUpdate = true;
+      };
+      return mesh;
+    };
+    const arrowsMesh = _makeArrowsMesh();
+    sceneOverlayMesh.add(arrowsMesh);
+    this.arrowsMeshes.push(arrowsMesh);
+
+    // arrow meshes
+    const _makeArrowMesh = arrowUrl => {
+      const tex = new THREE.Texture();
+      tex.minFilter = THREE.NearestFilter;
+      tex.magFilter = THREE.NearestFilter;
+
+      (async () => {
+        const img = new Image();
+        img.crossOrigin = true;
+        img.src = arrowUrl;
+        await new Promise((accept, reject) => {
+          img.onload = accept;
+          img.onerror = reject;
+        });
+        tex.image = img;
+        tex.needsUpdate = true;
+      })();
+      
+      const material = new THREE.MeshBasicMaterial({
+        // color: 0x000000,
+        map: tex,
+        transparent: true,
+        // opacity: 0.5,
+      });
+      const mesh = new THREE.Mesh(arrowGeometry, material);
+      mesh.frustumCulled = false;
+      return mesh;
+    };
+    const arrowUrls = [
+      arrowUpBrightUrl,
+      arrowUpDimUrl,
+    ];
+    for (let i = 0; i < arrowUrls.length; i++) {
+      const arrowUrl = arrowUrls[i];
+      const arrowMesh = _makeArrowMesh(arrowUrl);
+      arrowMesh.position.x = -arrowSize + i * arrowSize * 2;
+      arrowMesh.updateMatrixWorld();
+      arrowMesh.frustumCulled = false;
+      sceneOverlayMesh.add(arrowMesh);
+    }
 
     /* // add barycentric coordinates
     const barycentric = new THREE.BufferAttribute(new Float32Array(geometry.attributes.position.array.length), 3);
@@ -2119,9 +2247,11 @@ class Overlay {
     }
   }
   update() {
-    // this.overlayScene.position.copy();
     for (const mesh of this.sceneOverlayMeshes) {
       mesh.setTransformToParent();
+    }
+    for (const mesh of this.arrowsMeshes) {
+      mesh.update();
     }
   }
 }
