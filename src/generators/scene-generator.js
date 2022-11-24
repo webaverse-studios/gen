@@ -1884,9 +1884,13 @@ class Overlay {
             );
 
             gl_FragColor = texture2D(tex, frameUv);
+            if (gl_FragColor.a < 0.9) {
+              discard;
+            }
           }
         `,
         transparent: true,
+        alphaTest: 0.9,
       });
       const mesh = new THREE.Mesh(arrowGeometry, material);
       mesh.frustumCulled = false;
