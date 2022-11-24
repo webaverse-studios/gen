@@ -2797,9 +2797,14 @@ class PanelRenderer extends EventTarget {
         `,
         transparent: true,
         side: THREE.BackSide,
+        polygonOffset: true,
+        polygonOffsetFactor: 1,
+        polygonOffsetUnits: 1,
       });
 
       const frustumMesh = new THREE.Mesh(frustumGeometry, frustumMaterial);
+      // frustumMesh.position.z -= 0.01;
+      // frustumMesh.updateMatrixWorld();
       frustumMesh.frustumCulled = false;
       frustumMesh.visible = false;
 
