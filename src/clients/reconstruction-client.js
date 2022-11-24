@@ -226,12 +226,18 @@ export function applySkybox(float32Array) { // // result in float32Array
   }
 }
 
-export async function getPointCloud(blob) {
-  const res = await fetch('https://depth.webaverse.com/pointcloud', {
-    method: "POST",
+export async function getPointCloud(blob, {
+  forceFov,
+} = {}) {
+  const u = new URL('https://depth.webaverse.com/pointcloud');
+  if (forceFov !== undefined) {
+    u.searchParams.set('fov', forceFov);
+  }
+  const res = await fetch(u, {
+    method: 'POST',
     body: blob,
     headers: {
-      "Content-Type": "image/png",
+      'Content-Type': 'image/png',
     },
     mode: 'cors',
   });
