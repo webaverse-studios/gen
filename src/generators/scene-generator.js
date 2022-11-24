@@ -3211,13 +3211,8 @@ class PanelRenderer extends EventTarget {
       `;
       const backgroundContext = maskCanvas.getContext('2d');
 
-
       // render without overlay
       {
-        /* if (!this.overlay.overlayScene || !this.outmeshMesh) {
-          console.warn('no overlay or outmesh mesh', this.overlay.overlayScene, this.outmeshMesh);
-          debugger;
-        } */
         const auxMeshes = [
           this.overlay.overlayScene,
           this.outmeshMesh,
