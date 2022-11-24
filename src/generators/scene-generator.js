@@ -3335,7 +3335,9 @@ class PanelRenderer extends EventTarget {
     let pointCloudHeaders;
     let pointCloudArrayBuffer;
     {
-      const pc = await getPointCloud(editedImgBlob);
+      const pc = await getPointCloud(editedImgBlob, {
+        forceFov: editCamera.fov,
+      });
       pointCloudHeaders = pc.headers;
       pointCloudArrayBuffer = pc.arrayBuffer;
       // const pointCloudCanvas = drawPointCloudCanvas(pointCloudArrayBuffer);
