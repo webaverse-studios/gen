@@ -3651,6 +3651,23 @@ class PanelRenderer extends EventTarget {
     }
     console.timeEnd('depthPreviewNew');
 
+    console.time('depthPreviewOld');
+    {
+      const depthPreviewOldMesh = _makeDepthCubesMesh(depthFloatImageData);
+      const colors = new Float32Array(depthPreviewOldMesh.count * 3);
+      const color = localColor.setHex(0xFF00FF);
+      let j = 0;
+      for (let i = 0; i < depthFloatImageData.length; i += depthRenderSkipRatio) {
+        colors[j*3 + 0] = color.r;
+        colors[j*3 + 1] = color.g;
+        colors[j*3 + 2] = color.b;
+        j++;
+      }
+      depthPreviewOldMesh.geometry.setAttribute('color', new THREE.InstancedBufferAttribute(colors, 3));
+      layerScene.add(depthPreviewOldMesh);
+    }
+    console.timeEnd('depthPreviewOld');
+
     // create background mesh
     console.time('backgroundMesh');
     let backgroundMesh;
