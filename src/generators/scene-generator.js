@@ -118,6 +118,14 @@ export const layer2Specs = [
     name: 'depthFloatImageData',
     type: 'arrayBuffer',
   },
+  {
+    name: 'distanceNearestIndex',
+    type: 'arrayBuffer',
+  },
+  {
+    name: 'distanceNearestPositions',
+    type: 'arrayBuffer',
+  },
   // {
   //   name: 'indexColorsAlphasArray',
   //   type: 'json',
@@ -985,8 +993,39 @@ const _cutSkybox = geometry => {
   geometry.setIndex(new THREE.BufferAttribute(newIndices.subarray(0, numIndices), 1));
 };
 const _cutMask = (geometry, depthFloatImageData, distanceNearestPositions) => {
-  // XXX use distanceNearestPositions
+  // copy over snapped positions
+  const newPositions = geometry.attributes.position.array.slice();
+  const _snapPointDelta = (index, ax, ay) => {
+    if (ax >= 0 && ax < panelSize && ay >= 0 && ay < panelSize) {
+      const index2 = ay * panelSize + ax;
+      if (depthFloatImageData[index2] !== 0) {
+        localVector.fromArray(distanceNearestPositions, index2 * 3)
+          .toArray(newPositions, index * 3);
+        return true;
+      } else {
+        return false;
+      }
+    } else {
+      return false;
+    }
+  };
+  const _snapPoint = index => {
+    const x = index % panelSize;
+    const y = Math.floor(index / panelSize);
 
+    _snapPointDelta(index, x - 1, y) ||
+    _snapPointDelta(index, x + 1, y) ||
+    _snapPointDelta(index, x, y - 1) ||
+    _snapPointDelta(index, x, y + 1) ||
+    _snapPointDelta(index, x - 1, y - 1) ||
+    _snapPointDelta(index, x + 1, y - 1) ||
+    _snapPointDelta(index, x - 1, y + 1) ||
+    _snapPointDelta(index, x + 1, y + 1) || (() => {
+      console.warn('bad snap', x, y, index);
+      debugger;
+    })();
+  };
+  
   // copy over only the triangles that are not completely masked
   const newIndices = new geometry.index.array.constructor(geometry.index.array.length);
   let numIndices = 0;
@@ -997,15 +1036,21 @@ const _cutMask = (geometry, depthFloatImageData, distanceNearestPositions) => {
     const aMasked = depthFloatImageData[a] !== 0;
     const bMasked = depthFloatImageData[b] !== 0;
     const cMasked = depthFloatImageData[c] !== 0;
-    // if not all are masked, then keep the triangle
-    if (!(aMasked && bMasked && cMasked)) {
+    if (!(aMasked && bMasked && cMasked)) { // if not all are masked, then keep the triangle
       newIndices[numIndices + 0] = a;
       newIndices[numIndices + 1] = b;
       newIndices[numIndices + 2] = c;
       numIndices += 3;
+      
+      // if (aMasked || bMasked || cMasked) { // if any are masked, then snap the non-masked points
+      //   !aMasked && _snapPoint(a);
+      //   !bMasked && _snapPoint(b);
+      //   !cMasked && _snapPoint(c);
+      // }
     }
   }
-  // set the new indices
+  // set the new attributes
+  geometry.setAttribute('position', new THREE.BufferAttribute(newPositions, 3));
   geometry.setIndex(new THREE.BufferAttribute(newIndices.subarray(0, numIndices), 1));
 };
 const _isValidZDepth = z => z < 0;
@@ -3034,6 +3079,8 @@ class PanelRenderer extends EventTarget {
 
             // XXX hack
             if (this.tool === 'outmesh') {
+              defaultCameraMatrix.copy(this.camera.matrixWorld);
+              
               (async () => {
                 this.outmeshMesh.setState('running');
 
@@ -3058,8 +3105,6 @@ class PanelRenderer extends EventTarget {
                     const value = outmeshImageResult[name] ?? outmeshMeshResult[name];
                     this.panel.setData('layer2/' + name, value, type);
                   }
-
-                  defaultCameraMatrix.copy(this.camera.matrixWorld);
                 } finally {
                   this.outmeshMesh.setState('finished');
                 }
@@ -3196,6 +3241,7 @@ class PanelRenderer extends EventTarget {
 
     // snapshot camera state
     const editCameraJson = _getCameraJson(this.camera);
+    console.log('edit camera json init', editCameraJson);
 
     // render the mask image
     console.time('maskImage');
@@ -3446,6 +3492,20 @@ class PanelRenderer extends EventTarget {
         this.renderer.setRenderTarget(renderTarget);
         // this.scene.overrideMaterial = overrideMaterial;
 
+        console.log(
+          'edit camera transform',
+          {
+            editCamera: editCamera.clone(),
+            position: editCamera.position.toArray(),
+            quaternion: editCamera.quaternion.toArray(),
+            scale: editCamera.scale.toArray(),
+            fov: editCamera.fov,
+            near: editCamera.near,
+            far: editCamera.far,
+            editCameraJson,
+          }
+        );
+
         this.renderer.clear();
         this.renderer.render(depthScene, editCamera);
         
@@ -3502,10 +3562,10 @@ class PanelRenderer extends EventTarget {
         const r = distanceFloatImageData[i];
         const g = distanceFloatImageData[i+1];
 
-        const j = i/4;
+        const j = i / 4;
 
-        const x = Math.floor(r * distanceRenderTarget.width);
-        const y = Math.floor(g * distanceRenderTarget.height);
+        const x = Math.round(r * distanceRenderTarget.width);
+        const y = Math.round(g * distanceRenderTarget.height);
         const index = x + y * distanceRenderTarget.width;
         distanceNearestIndex[j] = index;
 
@@ -3749,7 +3809,7 @@ class PanelRenderer extends EventTarget {
     }
     console.timeEnd('depthPreviewNew');
 
-    console.time('depthPreviewOld');
+    /* console.time('depthPreviewOld');
     {
       const depthPreviewOldMesh = _makeDepthCubesMesh(depthFloatImageData);
       const colors = new Float32Array(depthPreviewOldMesh.count * 3);
@@ -3764,7 +3824,7 @@ class PanelRenderer extends EventTarget {
       depthPreviewOldMesh.geometry.setAttribute('color', new THREE.InstancedBufferAttribute(colors, 3));
       layerScene.add(depthPreviewOldMesh);
     }
-    console.timeEnd('depthPreviewOld');
+    console.timeEnd('depthPreviewOld'); */
 
     // create background mesh
     console.time('backgroundMesh');
