@@ -1804,7 +1804,7 @@ class Overlay {
     this.overlayScene = overlayScene;
 
     this.sceneOverlayMeshes = [];
-    this.arrowsMeshes = [];
+    this.arrowMeshes = [];
   }
   addMesh(sceneMesh) {
     const geometry = sceneMesh.geometry.clone();
@@ -1898,7 +1898,7 @@ class Overlay {
     };
     const arrowsMesh = _makeArrowsMesh();
     sceneOverlayMesh.add(arrowsMesh);
-    this.arrowsMeshes.push(arrowsMesh);
+    this.arrowMeshes.push(arrowsMesh);
 
     // arrow meshes
     const _makeArrowMesh = arrowUrl => {
@@ -1938,7 +1938,11 @@ class Overlay {
       arrowMesh.position.x = -arrowSize + i * arrowSize * 2;
       arrowMesh.updateMatrixWorld();
       arrowMesh.frustumCulled = false;
+      arrowMesh.update = () => {
+        // nothing
+      };
       sceneOverlayMesh.add(arrowMesh);
+      this.arrowMeshes.push(arrowMesh);
     }
 
     /* // add barycentric coordinates
@@ -2250,7 +2254,7 @@ class Overlay {
     for (const mesh of this.sceneOverlayMeshes) {
       mesh.setTransformToParent();
     }
-    for (const mesh of this.arrowsMeshes) {
+    for (const mesh of this.arrowMeshes) {
       mesh.update();
     }
   }
@@ -2796,6 +2800,54 @@ class PanelRenderer extends EventTarget {
       frustumMesh.visible = false;
 
       //
+
+      const imageGeometry = new THREE.PlaneBufferGeometry(1, 1);
+      const imageMaterial = new THREE.ShaderMaterial({
+        uniforms: {
+          uTime: {
+            value: 0,
+            needsUpdate: false,
+          },
+          uWorldViewport: {
+            value: new THREE.Vector3(),
+            needsUpdate: false,
+          },
+          uImage: {
+            value: new THREE.Texture(),
+            needsUpdate: true,
+          },
+        },
+        vertexShader: `\
+          uniform vec3 uWorldViewport;
+          varying vec2 vUv;
+
+          void main() {
+            vUv = uv;
+
+            vec3 p = vec3(position.xy * uWorldViewport.xy * 2., position.z + uWorldViewport.z);
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+          }
+        `,
+        fragmentShader: `\
+          uniform float uTime;
+          uniform sampler2D uImage;
+          varying vec2 vUv;
+
+          void main() {
+            float f = sin(uTime * 10.) * 0.5 + 0.5;
+            gl_FragColor = texture2D(uImage, vUv);
+            gl_FragColor.rgb += f * 0.1;
+            gl_FragColor.a = 0.7 + f * 0.3;
+          }
+        `,
+      });
+      const imageMesh = new THREE.Mesh(imageGeometry, imageMaterial);
+      // imageMesh.position.z = 0.01;
+      // imageMesh.updateMatrixWorld();
+      imageMesh.frustumCulled = false;
+      imageMesh.visible = false;
+
+      //
       
       const outmeshMesh = new THREE.Object3D();
       outmeshMesh.visible = false;
@@ -2806,6 +2858,8 @@ class PanelRenderer extends EventTarget {
       outmeshMesh.rectangleMesh = rectangleMesh;
       outmeshMesh.add(frustumMesh);
       outmeshMesh.frustumMesh = frustumMesh;
+      outmeshMesh.add(imageMesh);
+      outmeshMesh.imageMesh = imageMesh;
 
       //
 
@@ -2813,10 +2867,12 @@ class PanelRenderer extends EventTarget {
         targetMesh,
         rectangleMesh,
         frustumMesh,
+        imageMesh,
       ];
       const worldViewportMeshes = [
         targetMesh,
         rectangleMesh,
+        imageMesh,
       ];
       const worldBoxMeshes = [
         frustumMesh,
@@ -2868,13 +2924,19 @@ class PanelRenderer extends EventTarget {
         for (const mesh of meshes) {
           mesh.visible = false;
         }
+        // null -> running -> preview -> finished
         if (state === null) {
           targetMesh.visible = true;
         } else if (state === 'running') {
           rectangleMesh.visible = true;
           frustumMesh.visible = true;
+        } else if (state === 'preview') {
+          rectangleMesh.visible = true;
+          frustumMesh.visible = true;
+          imageMesh.visible = true;
         } else if (state === 'finished') {
           rectangleMesh.visible = true;
+          imageMesh.visible = true;
         }
 
         rectangleMesh.material.uniforms.uRunning.value = +(state === 'running');
@@ -2930,6 +2992,15 @@ class PanelRenderer extends EventTarget {
     
     this.overlay.setTool(this.tool);
   }
+  setPreviewImage(img) {
+    if (img) {
+      this.outmeshMesh.imageMesh.material.uniforms.uImage.value.image = img;
+      this.outmeshMesh.imageMesh.material.uniforms.uImage.value.needsUpdate = true;
+      this.outmeshMesh.imageMesh.visible = true;
+    } else {
+      this.outmeshMesh.imageMesh.visible = false;
+    }
+  }
   listen() {
     const keydown = e => {
       if (!e.repeat && !e.ctrlKey) {
@@ -2957,10 +3028,25 @@ class PanelRenderer extends EventTarget {
                 this.outmeshMesh.setState('running');
 
                 try {
-                  const outmeshResult = await this.renderOutmesh();
+                  const outmeshImageResult = await this.renderOutmeshImage();
+                  
+                  (async () => {
+                    const {
+                      editedImgBlob,
+                      // maskBlob,
+                    } = outmeshImageResult;
+                    const editedImg = await blob2img(editedImgBlob);
+                    this.setPreviewImage(editedImg);
+                    if (this.state === 'running') {
+                      this.setState('preview');
+                    }
+                  })();
+
+                  const outmeshMeshResult = await this.renderOutmeshMesh(outmeshImageResult);
 
                   for (const {name, type} of layer2Specs) {
-                    this.panel.setData('layer2/' + name, outmeshResult[name], type);
+                    const value = outmeshImageResult[name] ?? outmeshMeshResult[name];
+                    this.panel.setData('layer2/' + name, value, type);
                   }
 
                   defaultCameraMatrix.copy(this.camera.matrixWorld);
@@ -3052,36 +3138,37 @@ class PanelRenderer extends EventTarget {
       this.panel.removeEventListener('update', update);
     });
   }
+  render() {
+    // update tools
+    switch (this.tool) {
+      case 'camera': {
+        this.controls.update();
+        this.camera.updateMatrixWorld();
+        break;
+      }
+      case 'outmesh': {
+        this.outmeshMesh.update();
+        break;
+      }
+      case 'eraser': {
+        this.selector.update();
+        break;
+      }
+    }
+
+    // update overlay
+    this.overlay.update();
+
+    // render
+    this.renderer.render(this.scene, this.camera);
+  }
   animate() {
     const _startLoop = () => {
-      const _render = () => {
-        // update tools
-        switch (this.tool) {
-          case 'camera': {
-            this.controls.update();
-            this.camera.updateMatrixWorld();
-            break;
-          }
-          case 'outmesh': {
-            this.outmeshMesh.update();
-            break;
-          }
-          case 'eraser': {
-            this.selector.update();
-            break;
-          }
-        }
-
-        // update overlay
-        this.overlay.update();
-
-        // render
-        this.renderer.render(this.scene, this.camera);
-      };
       let frame;
       const _loop = () => {
         frame = requestAnimationFrame(_loop);
-        _render();
+
+        this.render();
       };
       _loop();
 
@@ -3091,7 +3178,7 @@ class PanelRenderer extends EventTarget {
     };
     _startLoop();
   }
-  async renderOutmesh() {
+  async renderOutmeshImage() {
     const prompt = this.panel.getData(promptKey);
     if (!prompt) {
       throw new Error('no prompt, so cannot outmesh');
@@ -3111,6 +3198,22 @@ class PanelRenderer extends EventTarget {
         background: red;
       `;
       const backgroundContext = maskCanvas.getContext('2d');
+
+
+      // render without overlay
+      {
+        /* if (!this.overlay.overlayScene || !this.outmeshMesh) {
+          console.warn('no overlay or outmesh mesh', this.overlay.overlayScene, this.outmeshMesh);
+          debugger;
+        } */
+        this.scene.remove(this.overlay.overlayScene);
+        this.scene.remove(this.outmeshMesh);
+        this.render();
+        this.scene.add(this.overlay.overlayScene);
+        this.scene.add(this.outmeshMesh);
+      }
+
+      // draw to canvas
       backgroundContext.drawImage(this.renderer.domElement, 0, 0);
       // this.element.appendChild(maskCanvas);
       document.body.appendChild(maskCanvas);
@@ -3129,17 +3232,39 @@ class PanelRenderer extends EventTarget {
     // edit the image
     console.time('editImg');
     let editedImgBlob;
-    let editedImgArrayBuffer;
     let editedImg;
     {
       editedImgBlob = await imageAiClient.editImgBlob(blob, maskBlob, prompt);
-      editedImgArrayBuffer = await editedImgBlob.arrayBuffer();
       editedImg = await blob2img(editedImgBlob);
       editedImg.classList.add('editImg');
       // this.element.appendChild(editedImg);
       document.body.appendChild(editedImg);
     }
     console.timeEnd('editImg');
+
+    return {
+      editedImgBlob,
+      maskBlob,
+    };
+  }
+  async renderOutmeshMesh({
+    editedImgBlob,
+    maskBlob,
+  }) {
+    // extract image array buffers
+    let maskImgArrayBuffer;
+    {
+      maskImgArrayBuffer = await maskBlob.arrayBuffer();
+    }
+
+    let editedImgArrayBuffer;
+    let editedImg;
+    {
+      editedImgArrayBuffer = await editedImgBlob.arrayBuffer();
+      editedImg = await blob2img(editedImgBlob);
+      editedImg.classList.add('editImg');
+      document.body.appendChild(editedImg);
+    }
 
     // image segmentation
     console.time('imageSegmentation');
@@ -3433,6 +3558,7 @@ class PanelRenderer extends EventTarget {
     return {
       maskImg: maskImgArrayBuffer,
       editedImg: editedImgArrayBuffer,
+
       pointCloudHeaders,
       pointCloud: pointCloudArrayBuffer,
       depthFloatImageData,
