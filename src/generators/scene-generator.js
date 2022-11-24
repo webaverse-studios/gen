@@ -3705,11 +3705,11 @@ class PanelRenderer extends EventTarget {
       });
       backgroundMesh = new THREE.Mesh(geometry, material);
       backgroundMesh.name = 'backgroundMesh';
-      backgroundMesh.position.copy(this.camera.position);
-      backgroundMesh.quaternion.copy(this.camera.quaternion);
-      backgroundMesh.scale.copy(this.camera.scale);
-      backgroundMesh.matrix.copy(this.camera.matrix);
-      backgroundMesh.matrixWorld.copy(this.camera.matrixWorld);
+      // backgroundMesh.position.copy(this.camera.position);
+      // backgroundMesh.quaternion.copy(this.camera.quaternion);
+      // backgroundMesh.scale.copy(this.camera.scale);
+      // backgroundMesh.matrix.copy(this.camera.matrix);
+      // backgroundMesh.matrixWorld.copy(this.camera.matrixWorld);
       backgroundMesh.frustumCulled = false;
       backgroundMesh.segmentSpecs = segmentSpecs;
       backgroundMesh.planeSpecs = planeSpecs;
