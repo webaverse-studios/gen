@@ -30,7 +30,7 @@ import {
   arrowUpBrightUrl,
   arrowUpDimUrl,
   arrowsUpUrl,
-} from '../components/LightArrow.jsx';
+} from '../utils/light-arrow.js';
 
 //
 
