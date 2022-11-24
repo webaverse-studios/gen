@@ -95,28 +95,38 @@ export function depthFloat32ArrayToPositionAttributeArray(
     const target = worldPoint.applyMatrix4(camera.matrixWorld);
 
     target.toArray(float32Array, i * 3);
-  
 
-    
-    
-    // localMatrix.makeTranslation(target.x, target.y, target.z);
-    // depthCubesMesh.setMatrixAt(i / depthRenderSkipRatio, localMatrix);
-    // depthCubesMesh.count++;
 
 
     
 
-    // let x = dataView.getFloat32(i + 0, true);
-    // let y = dataView.getFloat32(i + 4, true);
-    // let z = dataView.getFloat32(i + 8, true);
+    /* // render an instanced cubes mesh to show the depth
+    const depthCubesGeometry = new THREE.BoxBufferGeometry(0.01, 0.01, 0.01);
+    const depthCubesMaterial = new THREE.MeshPhongMaterial({
+      // color: 0x00FFFF,
+      vertexColors: true,
+    });
+    const depthCubesMesh = new THREE.InstancedMesh(depthCubesGeometry, depthCubesMaterial, depthFloats.length);
+    depthCubesMesh.name = 'depthCubesMesh';
+    depthCubesMesh.frustumCulled = false;
 
-    // x *= scaleFactor;
-    // y *= -scaleFactor;
-    // z *= -scaleFactor;
+    // set the matrices by projecting the depth from the perspective camera
+    depthCubesMesh.count = 0;
+    for (let i = 0; i < depthFloats.length; i += depthRenderSkipRatio) {
+      const x = (i % this.renderer.domElement.width) / this.renderer.domElement.width;
+      let y = Math.floor(i / this.renderer.domElement.width) / this.renderer.domElement.height;
+      y = 1 - y;
 
-    // float32Array[j + 0] = x;
-    // float32Array[j + 1] = y;
-    // float32Array[j + 2] = z;
+      const viewZ = depthFloats[i];
+      const worldPoint = setCameraViewPositionFromViewZ(x, y, viewZ, this.camera, localVector);
+      const target = worldPoint.applyMatrix4(this.camera.matrixWorld);
+
+      localMatrix.makeTranslation(target.x, target.y, target.z);
+      depthCubesMesh.setMatrixAt(i / depthRenderSkipRatio, localMatrix);
+      depthCubesMesh.count++;
+    }
+    depthCubesMesh.instanceMatrix.needsUpdate = true;
+    return depthCubesMesh; */
   }
 }
 

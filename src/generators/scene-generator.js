@@ -144,6 +144,10 @@ export const layer2Specs = [
     name: 'segmentMask',
     type: 'arrayBuffer',
   },
+  {
+    name: 'editCameraJson',
+    type: 'json',
+  },
 ];
 export const tools = [
   'camera',
@@ -3163,6 +3167,14 @@ class PanelRenderer extends EventTarget {
       throw new Error('no prompt, so cannot outmesh');
     }
 
+    // snapshot camera state
+    const editCameraJson = {
+      position: camera.position.toArray(),
+      quaternion: camera.quaternion.toArray(),
+      scale: camera.scale.toArray(),
+      fov: camera.fov,
+    };
+
     // render the mask image
     console.time('maskImage');
     let blob;
@@ -3227,11 +3239,13 @@ class PanelRenderer extends EventTarget {
     return {
       editedImgBlob,
       maskBlob,
+      editCameraJson,
     };
   }
   async renderOutmeshMesh({
     editedImgBlob,
     maskBlob,
+    editCameraJson,
   }) {
     // extract image array buffers
     let maskImgArrayBuffer;
@@ -3550,6 +3564,7 @@ class PanelRenderer extends EventTarget {
       planesJson,
       planesMask,
       segmentMask,
+      editCameraJson,
     };
   }
   createOutmeshLayer(layerEntries) {
@@ -3571,6 +3586,19 @@ class PanelRenderer extends EventTarget {
     const planesJson = _getLayerEntry('planesJson');
     const planesMask = _getLayerEntry('planesMask');
     const segmentMask = _getLayerEntry('segmentMask');
+    const editCameraJson = _getLayerEntry('editCameraJson');
+
+    //
+
+    const editCamera = new THREE.PerspectiveCamera();
+    editCamera.position.fromArray(editCameraJson.position);
+    editCamera.quaternion.fromArray(editCameraJson.quaternion);
+    editCamera.scale.fromArray(editCameraJson.scale);
+    editCamera.updateMatrixWorld();
+    editCamera.fov = editCameraJson.fov;
+    editCamera.updateProjectionMatrix();
+
+    //
 
     const layerScene = new THREE.Scene();
     layerScene.autoUpdate = false;
@@ -3680,7 +3708,7 @@ class PanelRenderer extends EventTarget {
       depthFloat32ArrayToPositionAttributeArray(
         reconstructedDepthFloats,
         this.renderer,
-        this.camera, // XXX wrong camera -- need to save the camera used to render the depth
+        editCamera,
         geometry.attributes.position.array,
         // 1 / panelSize
       );
