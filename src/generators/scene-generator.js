@@ -46,6 +46,7 @@ const localQuaternion = new THREE.Quaternion();
 const localQuaternion2 = new THREE.Quaternion();
 const localMatrix = new THREE.Matrix4();
 const localBox = new THREE.Box3();
+const localCamera = new THREE.PerspectiveCamera();
 const localColor = new THREE.Color();
 
 //
@@ -420,6 +421,30 @@ const getFirstFloorPlaneIndex = (segmentSpecs, planeSpecs) => {
   const floorPlaneIndices = _getPlanesBySegmentIndices(categoryClassIndices.floor);
   // const floorPlaneLabels = floorPlaneIndices.map(planeIndex => planeSpecs.labels[planeIndex]);
   return floorPlaneIndices.length > 0 ? floorPlaneIndices[0] : -1;
+};
+
+//
+
+const _setCameraFromJson = (camera, cameraJson) => {
+  camera.position.fromArray(cameraJson.position);
+  camera.quaternion.fromArray(cameraJson.quaternion);
+  camera.scale.fromArray(cameraJson.scale);
+  camera.updateMatrixWorld();
+  camera.near = cameraJson.near;
+  camera.far = cameraJson.far;
+  camera.fov = cameraJson.fov;
+  camera.updateProjectionMatrix();
+  return camera;
+};
+const _getCameraJson = camera => {
+  return {
+    position: camera.position.toArray(),
+    quaternion: camera.quaternion.toArray(),
+    scale: camera.scale.toArray(),
+    near: camera.near,
+    far: camera.far,
+    fov: camera.fov,
+  };
 };
 
 //
@@ -3168,18 +3193,13 @@ class PanelRenderer extends EventTarget {
     }
 
     // snapshot camera state
-    const editCameraJson = {
-      position: camera.position.toArray(),
-      quaternion: camera.quaternion.toArray(),
-      scale: camera.scale.toArray(),
-      fov: camera.fov,
-    };
+    const editCameraJson = _getCameraJson(this.camera);
 
     // render the mask image
     console.time('maskImage');
     let blob;
     let maskBlob;
-    let maskImgArrayBuffer;
+    // let maskImgArrayBuffer;
     {
       const maskCanvas = document.createElement('canvas');
       maskCanvas.classList.add('maskCanvas');
@@ -3218,7 +3238,7 @@ class PanelRenderer extends EventTarget {
         });
       });
       maskBlob = blob; // same as blob
-      maskImgArrayBuffer = await blob.arrayBuffer();
+      // maskImgArrayBuffer = await blob.arrayBuffer();
       // const maskImg = await blob2img(maskBlob);
     }
     console.timeEnd('maskImage');
@@ -3247,6 +3267,9 @@ class PanelRenderer extends EventTarget {
     maskBlob,
     editCameraJson,
   }) {
+    // extract edit camera
+    const editCamera = _setCameraFromJson(localCamera, editCameraJson).clone();
+
     // extract image array buffers
     let maskImgArrayBuffer;
     {
@@ -3343,11 +3366,25 @@ class PanelRenderer extends EventTarget {
     }
     console.timeEnd('planeDetection');
 
+    // // reproject fov from new to old
+    // {
+    //   const oldFov = editCamera.fov;
+    //   const newFov = Number(pointCloudHeaders['x-fov']);
+    //   // XXX
+    // }
+
     // set fov
     console.time('fov');
     {
-      this.camera.fov = Number(pointCloudHeaders['x-fov']);
+      const fov = Number(pointCloudHeaders['x-fov']);
+
+      this.camera.fov = fov;
       this.camera.updateProjectionMatrix();
+      
+      editCamera.fov = fov;
+      editCamera.updateMatrixWorld();
+      
+      editCameraJson = _getCameraJson(editCamera);
     }
     console.timeEnd('fov');
 
@@ -3358,11 +3395,11 @@ class PanelRenderer extends EventTarget {
       const depthMaterial = new THREE.ShaderMaterial({
         uniforms: {
           cameraNear: {
-            value: this.camera.near,
+            value: editCamera.near,
             needsUpdate: true,
           },
           cameraFar: {
-            value: this.camera.far,
+            value: editCamera.far,
             needsUpdate: true,
           },
         },
@@ -3391,7 +3428,7 @@ class PanelRenderer extends EventTarget {
         // this.scene.overrideMaterial = overrideMaterial;
 
         this.renderer.clear();
-        this.renderer.render(depthScene, this.camera);
+        this.renderer.render(depthScene, editCamera);
         
         // this.scene.overrideMaterial = null;
         
@@ -3425,7 +3462,7 @@ class PanelRenderer extends EventTarget {
       const targets = makeFloatRenderTargetSwapChain(this.renderer.domElement.width, this.renderer.domElement.height);
 
       const jfaOutline = new JFAOutline(targets, iResolution);
-      jfaOutline.renderSelected(this.renderer, tempScene, this.camera, targets);
+      jfaOutline.renderSelected(this.renderer, tempScene, editCamera, targets);
       const outlineUniforms = undefined;
       const distanceIndex = jfaOutline.renderDistanceTex(this.renderer, targets, iResolution, outlineUniforms);
       distanceRenderTarget = targets[distanceIndex];
@@ -3525,14 +3562,8 @@ class PanelRenderer extends EventTarget {
         const px = x / canvas.width;
         const py = y / canvas.height;
 
-        // const viewZ = r;
-        // const localViewPoint = localVector.set(x / canvas.width, y / canvas.height, viewZ)
-        //   .applyMatrix4(this.camera.projectionMatrixInverse);
-        // const localViewZ = localViewPoint.z;
-        // const localDepthZ = -localViewZ;
-
         const viewZ = reconstructedDepthFloats[i];
-        const worldPoint = setCameraViewPositionFromViewZ(px, py, viewZ, this.camera, localVector);
+        const worldPoint = setCameraViewPositionFromViewZ(px, py, viewZ, editCamera, localVector);
 
         const index = y * canvas.width + x;
         data[index*4 + 0] = -worldPoint.z / 30 * 255;
@@ -3544,11 +3575,6 @@ class PanelRenderer extends EventTarget {
       document.body.appendChild(canvas);
     }
     console.timeEnd('reconstructZ');
-
-    /* if (!segmentMask) {
-      console.warn('missing segment mask 1', segmentMask);
-      debugger;
-    } */
 
     // return result
     return {
@@ -3590,13 +3616,7 @@ class PanelRenderer extends EventTarget {
 
     //
 
-    const editCamera = new THREE.PerspectiveCamera();
-    editCamera.position.fromArray(editCameraJson.position);
-    editCamera.quaternion.fromArray(editCameraJson.quaternion);
-    editCamera.scale.fromArray(editCameraJson.scale);
-    editCamera.updateMatrixWorld();
-    editCamera.fov = editCameraJson.fov;
-    editCamera.updateProjectionMatrix();
+    const editCamera = _setCameraFromJson(localCamera, editCameraJson).clone();
 
     //
 
