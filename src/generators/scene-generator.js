@@ -2726,10 +2726,10 @@ class PanelRenderer extends EventTarget {
           mesh.material.uniforms.uWorldBoxMin.needsUpdate = true;
           mesh.material.uniforms.uWorldBoxMax.value.copy(worldBox.max);
           mesh.material.uniforms.uWorldBoxMax.needsUpdate = true;
-          globalThis.box = [
-            worldBox.min.toArray(),
-            worldBox.max.toArray(),
-          ];
+          // globalThis.box = [
+          //   worldBox.min.toArray(),
+          //   worldBox.max.toArray(),
+          // ];
         }
       };
       outmeshMesh.setState = newState => {
@@ -2753,8 +2753,8 @@ class PanelRenderer extends EventTarget {
       this.outmeshMesh = outmeshMesh;
       this.scene.add(outmeshMesh);
 
-      globalThis.outmeshMesh = outmeshMesh;
-      globalThis.state = state;
+      // globalThis.outmeshMesh = outmeshMesh;
+      // globalThis.state = state;
     }
 
     // floor mesh
