@@ -3215,11 +3215,19 @@ class PanelRenderer extends EventTarget {
           console.warn('no overlay or outmesh mesh', this.overlay.overlayScene, this.outmeshMesh);
           debugger;
         } */
-        this.scene.remove(this.overlay.overlayScene);
-        this.scene.remove(this.outmeshMesh);
+        const auxMeshes = [
+          this.overlay.overlayScene,
+          this.outmeshMesh,
+          this.selector.lensOutputMesh,
+          this.selector.indicesOutputMesh,
+        ];
+        for (const auxMesh of auxMeshes) {
+          this.scene.remove(auxMesh);
+        }
         this.render();
-        this.scene.add(this.overlay.overlayScene);
-        this.scene.add(this.outmeshMesh);
+        for (const auxMesh of auxMeshes) {
+          this.scene.add(auxMesh);
+        }
       }
 
       // draw to canvas
