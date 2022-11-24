@@ -984,7 +984,9 @@ const _cutSkybox = geometry => {
   // set the new indices
   geometry.setIndex(new THREE.BufferAttribute(newIndices.subarray(0, numIndices), 1));
 };
-const _cutMask = (geometry, depthFloatImageData) => {
+const _cutMask = (geometry, depthFloatImageData, distanceNearestPositions) => {
+  // XXX use distanceNearestPositions
+
   // copy over only the triangles that are not completely masked
   const newIndices = new geometry.index.array.constructor(geometry.index.array.length);
   let numIndices = 0;
@@ -3466,6 +3468,8 @@ class PanelRenderer extends EventTarget {
     console.time('outline');
     const iResolution = new THREE.Vector2(this.renderer.domElement.width, this.renderer.domElement.height);
     let distanceRenderTarget;
+    let distanceNearestIndex;
+    let distanceNearestPositions;
     {
       const tempScene = new THREE.Scene();
       tempScene.autoUpdate = false;
@@ -3482,6 +3486,35 @@ class PanelRenderer extends EventTarget {
       // get the image data back out of the render target, as a Float32Array
       const distanceFloatImageData = new Float32Array(distanceRenderTarget.width * distanceRenderTarget.height * 4);
       this.renderer.readRenderTargetPixels(distanceRenderTarget, 0, 0, distanceRenderTarget.width, distanceRenderTarget.height, distanceFloatImageData);
+
+      // accumulate distance index
+      distanceNearestIndex = new Int32Array(distanceRenderTarget.width * distanceRenderTarget.height);
+      if (distanceNearestIndex.length * 4 !== distanceFloatImageData.length) {
+        console.warn('distance index length mismatch', distanceNearestIndex.length, distanceFloatImageData.length);
+        debugger;
+      }
+      distanceNearestPositions = new Float32Array(distanceRenderTarget.width * distanceRenderTarget.height * 3);
+      if (distanceNearestPositions.length / 3 * 4 !== distanceFloatImageData.length) {
+        console.warn('distance positions length mismatch', distanceNearestPositions.length, distanceFloatImageData.length);
+        debugger;
+      }
+      for (let i = 0; i < distanceFloatImageData.length; i += 4) {
+        const r = distanceFloatImageData[i];
+        const g = distanceFloatImageData[i+1];
+
+        const j = i/4;
+
+        const x = Math.floor(r * distanceRenderTarget.width);
+        const y = Math.floor(g * distanceRenderTarget.height);
+        const index = x + y * distanceRenderTarget.width;
+        distanceNearestIndex[j] = index;
+
+        // set distanceNearestPositions to be editCamera relative
+        localVector.fromArray(this.sceneMesh.geometry.attributes.position.array, index * 3)
+          .applyMatrix4(this.sceneMesh.matrixWorld)
+          .applyMatrix4(editCamera.matrixWorldInverse)
+          .toArray(distanceNearestPositions, j * 3);
+      }
 
       // output to canvas
       const canvas = document.createElement('canvas');
@@ -3597,6 +3630,8 @@ class PanelRenderer extends EventTarget {
       pointCloudHeaders,
       pointCloud: pointCloudArrayBuffer,
       depthFloatImageData,
+      distanceNearestIndex,
+      distanceNearestPositions,
       // indexColorsAlphasArray,
       newDepthFloatImageData,
       reconstructedDepthFloats,
@@ -3619,6 +3654,8 @@ class PanelRenderer extends EventTarget {
     const pointCloudHeaders = _getLayerEntry('pointCloudHeaders');
     const pointCloud = _getLayerEntry('pointCloud');
     const depthFloatImageData = _getLayerEntry('depthFloatImageData');
+    const distanceNearestIndex = _getLayerEntry('distanceNearestIndex');
+    const distanceNearestPositions = _getLayerEntry('distanceNearestPositions');
     // const indexColorsAlphasArray = _getLayerEntry('indexColorsAlphasArray');
     const newDepthFloatImageData = _getLayerEntry('newDepthFloatImageData');
     const reconstructedDepthFloats = _getLayerEntry('reconstructedDepthFloats');
@@ -3745,7 +3782,7 @@ class PanelRenderer extends EventTarget {
         geometry.attributes.position.array,
         // 1 / panelSize
       );
-      _cutMask(geometry, depthFloatImageData);
+      _cutMask(geometry, depthFloatImageData, distanceNearestPositions);
       /* if (!segmentMask) {
         console.warn('missing segment mask 2', segmentMask);
         debugger;
