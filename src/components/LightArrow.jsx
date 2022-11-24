@@ -1,18 +1,25 @@
-// import * as THREE from 'three';
-import React, {useState, useEffect, useRef} from 'react';
+import * as THREE from 'three';
+import {useEffect, useRef} from 'react';
 import classnames from 'classnames';
 // import dioramaManager from '../diorama.js';
-import styles from './LightArrow.module.css';
-import {createCanvas} from '../renderer.js';
+import styles from '../../styles/LightArrow.module.css';
+// import {createCanvas} from '../renderer.js';
+import {downloadFile} from '../utils/http-utils.js';
 
-const frameSize = 64;
-const numFrames = 64;
-const numFramesPerRow = Math.sqrt(numFrames);
-// const canvasSize = frameSize * numFramesPerRow;
-const arrowTime = 5000;
-const timeDiff = arrowTime / numFrames;
+export const frameSize = 64;
+export const numFrames = 64;
+export const numFramesPerRow = Math.sqrt(numFrames);
+export const canvasSize = frameSize * numFramesPerRow;
+export const arrowTime = 5000;
+export const timeDiff = arrowTime / numFrames;
 
-/* import {downloadFile} from '../util.js';
+//
+
+export const arrowUpBrightUrl = '/images/arrow-up-bright.png';
+export const arrowUpDimUrl = '/images/arrow-up-dim.png';
+export const arrowsUpUrl = '/images/arrows-up.png';
+
+//
 
 const localColor = new THREE.Color();
 const localColor2 = new THREE.Color();
@@ -89,7 +96,7 @@ const colors = [
 ];
 
 const _renderArrowSpritesheet = async () => {
-  const res = await fetch('./images/ui/arrow.svg');
+  const res = await fetch('./images/arrow.svg');
   const svgData = await res.text();
 
   const domParser = new DOMParser();
@@ -160,22 +167,39 @@ const _renderArrowSpritesheet = async () => {
   const renderedCanvas = _renderCanvasFromFrames(frames);
   return renderedCanvas;
 };
-const _renderCanvasFromFrames = frames => {
-  const canvas = createCanvas(canvasSize);
+const _renderCanvasFromFrames = (frames, {
+  rotate = false,
+} = {}) => {
+  const canvas = document.createElement('canvas');
+  canvas.width = canvasSize;
+  canvas.height = canvasSize;
   const ctx = canvas.getContext('2d');
   for (let i = 0; i < frames.length; i++) {
     const frame = frames[i];
     const x = (i % numFramesPerRow) * frameSize;
     const y = Math.floor(i / numFramesPerRow) * frameSize;
     
-    ctx.resetTransform();
-    ctx.translate(x + frameSize / 2, y + frameSize / 2);
-    ctx.rotate(-Math.PI / 4);
-    ctx.translate(-x - frameSize / 2, -y - frameSize / 2);
+    if (rotate) {
+      ctx.resetTransform();
+      ctx.translate(x + frameSize / 2, y + frameSize / 2);
+      ctx.rotate(-Math.PI / 4);
+      ctx.translate(-x - frameSize / 2, -y - frameSize / 2);
+    }
     ctx.drawImage(frame, x, y);
   }
   return canvas;
-}; */
+};
+globalThis.generateArrowSpriteSheet = async () => {
+  const renderedCanvas = await _renderArrowSpritesheet();
+
+  const blob = await new Promise((accept, reject) => {
+    renderedCanvas.toBlob(accept, 'image/png');
+  });
+  downloadFile(blob, 'arrows.png');
+};
+
+//
+
 const _downloadArrowImage = async () => {
    const img = new Image();
    img.crossOrigin = 'Anonymous';
@@ -184,7 +208,7 @@ const _downloadArrowImage = async () => {
       accept();
     };
     img.onerror = reject;
-    img.src = './images/ui/arrows.png';
+    img.src = './images/arrows.png';
   });
   return img;
 };
@@ -211,15 +235,6 @@ export const LightArrow = function({
       let live = true;
       let interval = null;
       (async () => {
-        /* const renderedCanvas = await _renderArrowSpritesheet();
-        if (!live) return;
-        
-        const blob = await new Promise((accept, reject) => {
-          renderedCanvas.toBlob(accept, 'image/png');
-        });
-        if (!live) return;
-        downloadFile(blob, 'light-arrow.png'); */
-
         const renderedCanvas = await _downloadArrowImage();
 
         let index = 0;
