@@ -19,7 +19,7 @@ import styles from '../styles/Gen.module.css';
 //
 
 const Gen = () => {
-  const [tab, setTab] = useState('');
+  const [tab, setTab] = useState('sceneGenerator');
 
   const _setTab = newTab => () => {
     setTab(newTab);
