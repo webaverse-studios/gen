@@ -1890,7 +1890,8 @@ class Overlay {
           }
         `,
         transparent: true,
-        alphaTest: 0.1,
+        // alphaTest: 0.1,
+        alphaToCoverage: true,
       });
       const mesh = new THREE.Mesh(arrowGeometry, material);
       mesh.frustumCulled = false;
@@ -1927,6 +1928,8 @@ class Overlay {
         map: tex,
         transparent: true,
         // opacity: 0.5,
+        alphaTest: 0.1,
+        alphaToCoverage: true,
       });
       const mesh = new THREE.Mesh(arrowGeometry, material);
       mesh.frustumCulled = false;
