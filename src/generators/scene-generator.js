@@ -3608,6 +3608,82 @@ class PanelRenderer extends EventTarget {
     const layerScene = new THREE.Scene();
     layerScene.autoUpdate = false;
 
+    //
+
+    const depthRenderSkipRatio = 8;
+    const _makeDepthCubesMesh = depthFloats => {
+      // render an instanced cubes mesh to show the depth
+      const depthCubesGeometry = new THREE.BoxBufferGeometry(0.01, 0.01, 0.01);
+      const depthCubesMaterial = new THREE.MeshPhongMaterial({
+        // color: 0x00FFFF,
+        vertexColors: true,
+      });
+      const depthCubesMesh = new THREE.InstancedMesh(depthCubesGeometry, depthCubesMaterial, depthFloats.length);
+      depthCubesMesh.name = 'depthCubesMesh';
+      depthCubesMesh.frustumCulled = false;
+
+      // set the matrices by projecting the depth from the perspective camera
+      depthCubesMesh.count = 0;
+      for (let i = 0; i < depthFloats.length; i += depthRenderSkipRatio) {
+        const x = (i % this.renderer.domElement.width) / this.renderer.domElement.width;
+        let y = Math.floor(i / this.renderer.domElement.width) / this.renderer.domElement.height;
+        y = 1 - y;
+
+        const viewZ = depthFloats[i];
+        const worldPoint = setCameraViewPositionFromViewZ(x, y, viewZ, this.camera, localVector);
+        const target = worldPoint.applyMatrix4(this.camera.matrixWorld);
+
+        localMatrix.makeTranslation(target.x, target.y, target.z);
+        depthCubesMesh.setMatrixAt(i / depthRenderSkipRatio, localMatrix);
+        depthCubesMesh.count++;
+      }
+      depthCubesMesh.instanceMatrix.needsUpdate = true;
+      return depthCubesMesh;
+    };
+
+    //
+
+    console.time('depthPreviewReconstructed');
+    {
+      // globalThis.depths = [];
+
+      const depthPreviewReconstructedMesh = _makeDepthCubesMesh(reconstructedDepthFloats);
+      const colors = new Float32Array(depthPreviewReconstructedMesh.count * 3);
+      let j = 0;
+      for (let i = 0; i < reconstructedDepthFloats.length; i += depthRenderSkipRatio) {
+        const d = depthFloatImageData[i];
+        const color = localColor.setHex(d !== 0 ? 0x00FF00 : 0x0000FF);
+        // globalThis.depths.push([d, color.clone()]);
+        colors[j*3 + 0] = color.r;
+        colors[j*3 + 1] = color.g;
+        colors[j*3 + 2] = color.b;
+        j++;
+      }
+      depthPreviewReconstructedMesh.geometry.setAttribute('color', new THREE.InstancedBufferAttribute(colors, 3));
+      layerScene.add(depthPreviewReconstructedMesh);
+    }
+    globalThis.reconstructedDepthFloats = reconstructedDepthFloats;
+    globalThis.depthFloatImageData = depthFloatImageData;
+    globalThis.newDepthFloatImageData = newDepthFloatImageData;
+    console.timeEnd('depthPreviewReconstructed');
+
+    console.time('depthPreviewNew');
+    {
+      const depthPreviewNewMesh = _makeDepthCubesMesh(newDepthFloatImageData);
+      const colors = new Float32Array(depthPreviewNewMesh.count * 3);
+      const color = localColor.setHex(0xFF0000);
+      let j = 0;
+      for (let i = 0; i < newDepthFloatImageData.length; i += depthRenderSkipRatio) {
+        colors[j*3 + 0] = color.r;
+        colors[j*3 + 1] = color.g;
+        colors[j*3 + 2] = color.b;
+        j++;
+      }
+      depthPreviewNewMesh.geometry.setAttribute('color', new THREE.InstancedBufferAttribute(colors, 3));
+      layerScene.add(depthPreviewNewMesh);
+    }
+    console.timeEnd('depthPreviewNew');
+
     // create background mesh
     console.time('backgroundMesh');
     let backgroundMesh;
@@ -3651,45 +3727,12 @@ class PanelRenderer extends EventTarget {
     }
     console.timeEnd('backgroundMesh');
 
-    console.time('reconstructZ');
-    {
-      // render an instanced cubes mesh to show the depth
-      // const depthCubesGeometry = new THREE.BoxBufferGeometry(1, 1, 1);
-      const depthCubesGeometry = new THREE.BoxBufferGeometry(0.01, 0.01, 0.01);
-      const depthCubesMaterial = new THREE.MeshPhongMaterial({
-        color: 0x00FFFF,
-      });
-      const depthCubesMesh = new THREE.InstancedMesh(depthCubesGeometry, depthCubesMaterial, newDepthFloatImageData.length);
-      depthCubesMesh.name = 'depthCubesMesh';
-      depthCubesMesh.frustumCulled = false;
-      layerScene.add(depthCubesMesh);
-
-      // set the matrices by projecting the depth from the perspective camera
-      const depthRenderSkipRatio = 8;
-      depthCubesMesh.count = 0;
-      for (let i = 0; i < newDepthFloatImageData.length; i += depthRenderSkipRatio) {
-        const x = (i % this.renderer.domElement.width) / this.renderer.domElement.width;
-        let y = Math.floor(i / this.renderer.domElement.width) / this.renderer.domElement.height;
-        y = 1 - y;
-
-        const viewZ = reconstructedDepthFloats[i];
-        const worldPoint = setCameraViewPositionFromViewZ(x, y, viewZ, this.camera, localVector);
-        const target = worldPoint.applyMatrix4(this.camera.matrixWorld);
-
-        localMatrix.makeTranslation(target.x, target.y, target.z);
-        depthCubesMesh.setMatrixAt(i / depthRenderSkipRatio, localMatrix);
-        depthCubesMesh.count++;
-      }
-      depthCubesMesh.instanceMatrix.needsUpdate = true;
-    }
-    console.timeEnd('reconstructZ');
-
     // console.time('cutDepth');
     // // const wrappedPositions = geometry.attributes.position.array.slice();
     // _cutDepth(geometry, depthFloatImageData);
     // console.timeEnd('cutDepth');
 
-    console.time('backgroundMesh2');
+    /* console.time('backgroundMesh2');
     {
       // copy the geometry, including the attributes
       const {geometry} = backgroundMesh;
@@ -3710,7 +3753,7 @@ class PanelRenderer extends EventTarget {
       
       layerScene.add(backgroundMesh2);
     }
-    console.timeEnd('backgroundMesh2');
+    console.timeEnd('backgroundMesh2'); */
 
     return layerScene;
   }
