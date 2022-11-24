@@ -132,24 +132,41 @@ export function depthFloat32ArrayToPositionAttributeArray(
 
 //
 
-export const setCameraViewPositionFromViewZ = (() => {
-  function viewZToOrthographicDepth(viewZ, near, far) {
-    return ( viewZ + near ) / ( near - far );
-  }
-  // function orthographicDepthToViewZ(orthoZ, near, far) {
-  //   return orthoZ * ( near - far ) - near;
-  // }
+function viewZToOrthographicDepth(viewZ, near, far) {
+  return ( viewZ + near ) / ( near - far );
+}
+function orthographicDepthToViewZ(orthoZ, near, far) {
+  return orthoZ * ( near - far ) - near;
+}
+export const setCameraViewPositionFromViewZ = (x, y, viewZ, camera, target) => {
+  const {near, far, projectionMatrix, projectionMatrixInverse} = camera;
+  
+  const depth = viewZToOrthographicDepth(viewZ, near, far);
 
-  return (x, y, viewZ, camera, target) => {
-    const {near, far, projectionMatrix, projectionMatrixInverse} = camera;
+  const clipW = projectionMatrix.elements[2 * 4 + 3] * viewZ + projectionMatrix.elements[3 * 4 + 3];
+  const clipPosition = new THREE.Vector4(
+    (x - 0.5) * 2,
+    (y - 0.5) * 2,
+    (depth - 0.5) * 2,
+    1
+  );
+  clipPosition.multiplyScalar(clipW);
+  const viewPosition = clipPosition.applyMatrix4(projectionMatrixInverse);
+  
+  target.x = viewPosition.x;
+  target.y = viewPosition.y;
+  target.z = viewPosition.z;
+  return target;
+};
+
+//
+
+export const reprojectCameraFov = (() => {
+  return (x, y, viewZ, oldCamera, newCamera) => { // XXX support oldCamera, newCamera
+    const {near, far, projectionMatrix} = oldCamera;
+    const {near: near2, far: far2, projectionMatrix: projectionMatrix2} = newCamera;
     
     const depth = viewZToOrthographicDepth(viewZ, near, far);
-
-    // float clipW = cameraProjection[2][3] * viewZ + cameraProjection[3][3];
-    // vec4 clipPosition = vec4( ( vec3( gl_FragCoord.xy / viewport.zw, depth ) - 0.5 ) * 2.0, 1.0 );
-    // clipPosition *= clipW;
-    // vec4 viewPosition = inverseProjection * clipPosition;
-    // vec4 vorldPosition = cameraMatrixWorld * vec4( viewPosition.xyz, 1.0 );
 
     const clipW = projectionMatrix.elements[2 * 4 + 3] * viewZ + projectionMatrix.elements[3 * 4 + 3];
     const clipPosition = new THREE.Vector4(
@@ -159,14 +176,33 @@ export const setCameraViewPositionFromViewZ = (() => {
       1
     );
     clipPosition.multiplyScalar(clipW);
-    const viewPosition = clipPosition.applyMatrix4(projectionMatrixInverse);
-    
-    target.x = viewPosition.x;
-    target.y = viewPosition.y;
-    target.z = viewPosition.z;
-    return target;
+
+    // reverse the process
+    const clipPosition2 = clipPosition;
+    const clipW2 = projectionMatrix2.elements[2 * 4 + 3] * viewZ + projectionMatrix2.elements[3 * 4 + 3];
+    clipPosition2.multiplyScalar(1 / clipW2);
+    clipPosition2.x = (clipPosition2.x / 2 + 0.5);
+    clipPosition2.y = (clipPosition2.y / 2 + 0.5);
+    clipPosition2.z = (clipPosition2.z / 2 + 0.5);
+    clipPosition2.w = 1;
+
+    const viewZ2 = orthographicDepthToViewZ(clipPosition2.z, near2, far2);
+    return viewZ2;
   };
 })();
+export const reprojectCameraFovArray = (depthFloats, width, height, oldCamera, newCamera) => {
+  const result = new Float32Array(depthFloats.length);
+  for (let i = 0; i < depthFloats.length; i++) {
+    const x = (i % width) / width;
+    let y = Math.floor(i / width) / height;
+    y = 1 - y;
+
+    let viewZ = depthFloats[i];
+    viewZ = reprojectCameraFov(x, y, viewZ, oldCamera, newCamera);
+    result[i] = viewZ;
+  }
+  return result;
+};
 
 //
 

@@ -13,6 +13,7 @@ import {
   pointCloudArrayBufferToPositionAttributeArray,
   depthFloat32ArrayToPositionAttributeArray,
   setCameraViewPositionFromViewZ,
+  reprojectCameraFovArray,
   applySkybox,
   pointCloudArrayBufferToColorAttributeArray,
   skyboxDistance,
@@ -983,8 +984,7 @@ const _cutSkybox = geometry => {
   // set the new indices
   geometry.setIndex(new THREE.BufferAttribute(newIndices.subarray(0, numIndices), 1));
 };
-const _isPointMasked = (maskImageData, i) => maskImageData.data[i * 4 + 3] > 0;
-const _cutMask = (geometry, maskImageData) => {
+const _cutMask = (geometry, depthFloatImageData) => {
   // copy over only the triangles that are not completely masked
   const newIndices = new geometry.index.array.constructor(geometry.index.array.length);
   let numIndices = 0;
@@ -992,9 +992,9 @@ const _cutMask = (geometry, maskImageData) => {
     const a = geometry.index.array[i + 0];
     const b = geometry.index.array[i + 1];
     const c = geometry.index.array[i + 2];
-    const aMasked = _isPointMasked(maskImageData, a);
-    const bMasked = _isPointMasked(maskImageData, b);
-    const cMasked = _isPointMasked(maskImageData, c);
+    const aMasked = depthFloatImageData[a] !== 0;
+    const bMasked = depthFloatImageData[b] !== 0;
+    const cMasked = depthFloatImageData[c] !== 0;
     // if not all are masked, then keep the triangle
     if (!(aMasked && bMasked && cMasked)) {
       newIndices[numIndices + 0] = a;
@@ -3343,15 +3343,37 @@ class PanelRenderer extends EventTarget {
     }
     console.timeEnd('pointCloud');
 
+    console.time('extractDepths');
+    let newDepthFloatImageData = getDepthFloatsFromPointCloud(pointCloudArrayBuffer);
+    console.timeEnd('extractDepths');
+
+    /* // reproject fov from new to old
+    console.time('reprojectFov');
+    {
+      const oldCamera = editCamera;
+      // const oldFov = oldCamera.fov;
+      const newFov = Number(pointCloudHeaders['x-fov']);
+      const newCamera = editCamera.clone();
+      newCamera.fov = newFov;
+      newCamera.updateProjectionMatrix();
+
+      newDepthFloatImageData = reprojectCameraFovArray(
+        newDepthFloatImageData,
+        this.renderer.domElement.width,
+        this.renderer.domElement.height,
+        newCamera,
+        oldCamera,
+      );
+    }
+    console.timeEnd('reprojectFov'); */
+
     // plane detection
     console.time('planeDetection');
     let planesJson;
     let planesMask;
     {
-      const depthFloats32Array = getDepthFloatsFromPointCloud(pointCloudArrayBuffer);
-      
       const {width, height} = editedImg;
-      const planesSpec = await getPlanesRgbd(width, height, depthFloats32Array);
+      const planesSpec = await getPlanesRgbd(width, height, newDepthFloatImageData);
       planesJson = planesSpec.planesJson;
       planesMask = planesSpec.planesMask;
 
@@ -3366,27 +3388,20 @@ class PanelRenderer extends EventTarget {
     }
     console.timeEnd('planeDetection');
 
-    // // reproject fov from new to old
+    // // set fov
+    // console.time('fov');
     // {
-    //   const oldFov = editCamera.fov;
-    //   const newFov = Number(pointCloudHeaders['x-fov']);
-    //   // XXX
+    //   const fov = Number(pointCloudHeaders['x-fov']);
+
+    //   this.camera.fov = fov;
+    //   this.camera.updateProjectionMatrix();
+      
+    //   editCamera.fov = fov;
+    //   editCamera.updateMatrixWorld();
+      
+    //   editCameraJson = _getCameraJson(editCamera);
     // }
-
-    // set fov
-    console.time('fov');
-    {
-      const fov = Number(pointCloudHeaders['x-fov']);
-
-      this.camera.fov = fov;
-      this.camera.updateProjectionMatrix();
-      
-      editCamera.fov = fov;
-      editCamera.updateMatrixWorld();
-      
-      editCameraJson = _getCameraJson(editCamera);
-    }
-    console.timeEnd('fov');
+    // console.timeEnd('fov');
 
     // render depth
     console.time('renderDepth');
@@ -3444,10 +3459,6 @@ class PanelRenderer extends EventTarget {
       depthFloatImageData = floatImageData(_renderOverrideMaterial(depthRenderTarget)); // viewZ
     }
     console.timeEnd('renderDepth');
-
-    console.time('extractDepths');
-    const newDepthFloatImageData = getDepthFloatsFromPointCloud(pointCloudArrayBuffer);
-    console.timeEnd('extractDepths');
 
     // render outline
     console.time('outline');
@@ -3732,7 +3743,7 @@ class PanelRenderer extends EventTarget {
         geometry.attributes.position.array,
         // 1 / panelSize
       );
-      // _cutMask(geometry, maskImageData);
+      _cutMask(geometry, depthFloatImageData);
       /* if (!segmentMask) {
         console.warn('missing segment mask 2', segmentMask);
         debugger;
