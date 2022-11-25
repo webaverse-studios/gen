@@ -37,6 +37,12 @@ import {
 
 //
 
+globalThis.reds = [];
+globalThis.greens = [];
+globalThis.blues = [];
+
+//
+
 const imageAiClient = new ImageAiClient();
 const abortError = new Error();
 abortError.isAbortError = true;
@@ -116,6 +122,10 @@ export const layer2Specs = [
   },
   {
     name: 'depthFloatImageData',
+    type: 'arrayBuffer',
+  },
+  {
+    name: 'distanceFloatImageData',
     type: 'arrayBuffer',
   },
   {
@@ -999,7 +1009,11 @@ const _cutMask = (geometry, depthFloatImageData, distanceNearestPositions) => {
     if (ax >= 0 && ax < panelSize && ay >= 0 && ay < panelSize) {
       const index2 = ay * panelSize + ax;
       if (depthFloatImageData[index2] !== 0) {
-        localVector.fromArray(distanceNearestPositions, index2 * 3)
+        // const ay2 = panelSize - 1 - ay;
+        // const ax2 = ax;
+        // const index3 = ay2 * panelSize + ax2;
+        const index3 = index2;
+        localVector.fromArray(distanceNearestPositions, index3 * 3)
           .toArray(newPositions, index * 3);
         return true;
       } else {
@@ -1020,9 +1034,11 @@ const _cutMask = (geometry, depthFloatImageData, distanceNearestPositions) => {
     _snapPointDelta(index, x - 1, y - 1) ||
     _snapPointDelta(index, x + 1, y - 1) ||
     _snapPointDelta(index, x - 1, y + 1) ||
-    _snapPointDelta(index, x + 1, y + 1) || (() => {
+    _snapPointDelta(index, x + 1, y + 1) ||
+    (() => {
       console.warn('bad snap', x, y, index);
       debugger;
+      throw new Error('bad snap');
     })();
   };
   
@@ -1042,11 +1058,12 @@ const _cutMask = (geometry, depthFloatImageData, distanceNearestPositions) => {
       newIndices[numIndices + 2] = c;
       numIndices += 3;
       
-      // if (aMasked || bMasked || cMasked) { // if any are masked, then snap the non-masked points
-      //   !aMasked && _snapPoint(a);
-      //   !bMasked && _snapPoint(b);
-      //   !cMasked && _snapPoint(c);
-      // }
+      // if at least one of them is masked, we have a boundary point
+      if (aMasked || bMasked || cMasked) {
+        !aMasked && _snapPoint(a);
+        !bMasked && _snapPoint(b);
+        !cMasked && _snapPoint(c);
+      }
     }
   }
   // set the new attributes
@@ -2356,7 +2373,7 @@ class PanelRenderer extends EventTarget {
     const controls = new OrbitControls(this.camera, canvas);
     // controls.enableDamping = true;
     // controls.dampingFactor = 0.05;
-    controls.screenSpacePanning = false;
+    // controls.screenSpacePanning = false;
     controls.minDistance = 1;
     controls.maxDistance = 100;
     // controls.maxPolarAngle = Math.PI / 2;
@@ -2422,6 +2439,7 @@ class PanelRenderer extends EventTarget {
     geometry.setAttribute('plane', new THREE.BufferAttribute(planeSpecs.array, 1));
     geometry.setAttribute('planeColor', new THREE.BufferAttribute(planeSpecs.colorArray, 3));
     // globalThis.oldGeometry = geometry;
+    const indexedGeometry = geometry;
     geometry = geometry.toNonIndexed();
     // globalThis.newGeometry = geometry;
     // add extra triangeId attribute
@@ -2498,6 +2516,7 @@ class PanelRenderer extends EventTarget {
     );
     sceneMesh.name = 'sceneMesh';
     sceneMesh.frustumCulled = false;
+    sceneMesh.indexedGeometry = indexedGeometry;
     sceneMesh.segmentSpecs = segmentSpecs;
     sceneMesh.planeSpecs = planeSpecs;
     sceneMesh.firstFloorPlaneIndex = firstFloorPlaneIndex;
@@ -2891,10 +2910,11 @@ class PanelRenderer extends EventTarget {
           void main() {
             float f = sin(uTime * 10.) * 0.5 + 0.5;
             gl_FragColor = texture2D(uImage, vUv);
-            gl_FragColor.rgb += f * 0.1;
-            gl_FragColor.a = 0.7 + f * 0.3;
+            gl_FragColor.rgb += f * 0.2;
+            gl_FragColor.a = 0.3 + f * 0.7;
           }
         `,
+        transparent: true,
       });
       const imageMesh = new THREE.Mesh(imageGeometry, imageMaterial);
       // imageMesh.position.z = 0.01;
@@ -3528,6 +3548,7 @@ class PanelRenderer extends EventTarget {
     console.time('outline');
     const iResolution = new THREE.Vector2(this.renderer.domElement.width, this.renderer.domElement.height);
     let distanceRenderTarget;
+    let distanceFloatImageData;
     let distanceNearestIndex;
     let distanceNearestPositions;
     {
@@ -3544,7 +3565,7 @@ class PanelRenderer extends EventTarget {
       const distanceIndex = jfaOutline.renderDistanceTex(this.renderer, targets, iResolution, outlineUniforms);
       distanceRenderTarget = targets[distanceIndex];
       // get the image data back out of the render target, as a Float32Array
-      const distanceFloatImageData = new Float32Array(distanceRenderTarget.width * distanceRenderTarget.height * 4);
+      distanceFloatImageData = new Float32Array(distanceRenderTarget.width * distanceRenderTarget.height * 4);
       this.renderer.readRenderTargetPixels(distanceRenderTarget, 0, 0, distanceRenderTarget.width, distanceRenderTarget.height, distanceFloatImageData);
 
       // accumulate distance index
@@ -3561,19 +3582,52 @@ class PanelRenderer extends EventTarget {
       for (let i = 0; i < distanceFloatImageData.length; i += 4) {
         const r = distanceFloatImageData[i];
         const g = distanceFloatImageData[i+1];
+        const b = distanceFloatImageData[i+2];
+        const a = distanceFloatImageData[i+3];
 
         const j = i / 4;
+        const x = j % distanceRenderTarget.width;
+        const y = Math.floor(j / distanceRenderTarget.width);
 
-        const x = Math.round(r * distanceRenderTarget.width);
-        const y = Math.round(g * distanceRenderTarget.height);
-        const index = x + y * distanceRenderTarget.width;
-        distanceNearestIndex[j] = index;
+        const ax = Math.floor(r);
+        let ay = Math.floor(g);
+        ay = distanceRenderTarget.height - 1 - ay;
+        const i3 = ax + ay * distanceRenderTarget.width;
 
         // set distanceNearestPositions to be editCamera relative
-        localVector.fromArray(this.sceneMesh.geometry.attributes.position.array, index * 3)
+        localVector.fromArray(this.sceneMesh.indexedGeometry.attributes.position.array, i3 * 3)
           .applyMatrix4(this.sceneMesh.matrixWorld)
-          .applyMatrix4(editCamera.matrixWorldInverse)
+          // .applyMatrix4(editCamera.matrixWorldInverse)
           .toArray(distanceNearestPositions, j * 3);
+      }
+      {
+        const distanceGeometry = new THREE.PlaneGeometry(1, 1, distanceRenderTarget.width - 1, distanceRenderTarget.height - 1);
+        distanceGeometry.setAttribute('position', new THREE.BufferAttribute(distanceNearestPositions, 3));
+        const distanceMaterial = new THREE.ShaderMaterial({
+          vertexShader: `\
+            varying vec2 vUv;
+            
+            void main() {
+              vUv = uv;
+              gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+            }
+          `,
+          fragmentShader: `\
+            uniform sampler2D distanceFloatImageDataTex;
+
+            varying vec2 vUv;
+              
+            void main() {
+              // vec4 c = texture2D(distanceFloatImageDataTex, vUv);
+              // gl_FragColor = vec4(c.rg / 1024., 0., 1.);
+              gl_FragColor = vec4(vUv, 0., 1.);
+            }
+          `,
+        });
+        const distanceMesh = new THREE.Mesh(distanceGeometry, distanceMaterial);
+        distanceMesh.frustumCulled = false;
+        this.scene.add(distanceMesh);
+        // globalThis.distanceMesh = distanceMesh;
       }
 
       // output to canvas
@@ -3690,6 +3744,7 @@ class PanelRenderer extends EventTarget {
       pointCloudHeaders,
       pointCloud: pointCloudArrayBuffer,
       depthFloatImageData,
+      distanceFloatImageData,
       distanceNearestIndex,
       distanceNearestPositions,
       // indexColorsAlphasArray,
@@ -3714,6 +3769,7 @@ class PanelRenderer extends EventTarget {
     const pointCloudHeaders = _getLayerEntry('pointCloudHeaders');
     const pointCloud = _getLayerEntry('pointCloud');
     const depthFloatImageData = _getLayerEntry('depthFloatImageData');
+    const distanceFloatImageData = _getLayerEntry('distanceFloatImageData');
     const distanceNearestIndex = _getLayerEntry('distanceNearestIndex');
     const distanceNearestPositions = _getLayerEntry('distanceNearestPositions');
     // const indexColorsAlphasArray = _getLayerEntry('indexColorsAlphasArray');
@@ -3755,8 +3811,8 @@ class PanelRenderer extends EventTarget {
         y = 1 - y;
 
         const viewZ = depthFloats[i];
-        const worldPoint = setCameraViewPositionFromViewZ(x, y, viewZ, this.camera, localVector);
-        const target = worldPoint.applyMatrix4(this.camera.matrixWorld);
+        const worldPoint = setCameraViewPositionFromViewZ(x, y, viewZ, editCamera, localVector);
+        const target = worldPoint.applyMatrix4(editCamera.matrixWorld);
 
         localMatrix.makeTranslation(target.x, target.y, target.z);
         depthCubesMesh.setMatrixAt(i / depthRenderSkipRatio, localMatrix);
@@ -3856,10 +3912,44 @@ class PanelRenderer extends EventTarget {
       // geometry.setAttribute('planeColor', new THREE.BufferAttribute(planeSpecs.colorArray, 3));
       geometry.computeVertexNormals();
 
-      const material = new THREE.MeshPhongMaterial({
-        color: 0xff0000,
+      const distanceFloatImageDataTex = new THREE.DataTexture(
+        distanceFloatImageData,
+        this.canvas.width,
+        this.canvas.height,
+        THREE.RGBAFormat,
+        THREE.FloatType,
+      );
+      distanceFloatImageDataTex.needsUpdate = true;
+
+      const material = new THREE.ShaderMaterial({
+        // color: 0xff0000,
         // transparent: true,
         // opacity: 0.8,
+        uniforms: {
+          distanceFloatImageDataTex: {
+            value: distanceFloatImageDataTex,
+            needsUpdate: true,
+          },
+        },
+        vertexShader: `\
+          varying vec2 vUv;
+          
+          void main() {
+            vUv = uv;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `,
+        fragmentShader: `\
+          uniform sampler2D distanceFloatImageDataTex;
+
+          varying vec2 vUv;
+            
+          void main() {
+            vec4 c = texture2D(distanceFloatImageDataTex, vUv);
+            gl_FragColor = vec4(c.rg / 1024., 0., 1.);
+          }
+        `,
+        transparent: true,
       });
       backgroundMesh = new THREE.Mesh(geometry, material);
       backgroundMesh.name = 'backgroundMesh';
@@ -3875,6 +3965,10 @@ class PanelRenderer extends EventTarget {
       layerScene.add(backgroundMesh);
     }
     console.timeEnd('backgroundMesh');
+    
+    globalThis.distanceFloatImageData = distanceFloatImageData;
+    globalThis.backgroundMesh = backgroundMesh;
+    globalThis.distanceNearestPositions = distanceNearestPositions;
 
     // console.time('cutDepth');
     // // const wrappedPositions = geometry.attributes.position.array.slice();

@@ -16,6 +16,8 @@ export class JFAOutline {
       uniform sampler2D tex;
     
       void main() {
+        vec2 coord = gl_FragCoord.xy - 0.5;
+
         // sample silhouette texture for sobel
         mat3 values;
         for(int u=0; u<3; u++)
@@ -23,12 +25,12 @@ export class JFAOutline {
             for(int v=0; v<3; v++)
             {
                 vec2 offset = vec2(float(u-1), float(v-1));
-                vec2 sampleUV = clamp(gl_FragCoord.xy + offset, vec2(0.0), iResolution.xy - vec2(1.0));
+                vec2 sampleUV = clamp(coord + offset, vec2(0.0), iResolution.xy - vec2(1.0));
                 values[u][v] = texture2D(tex, sampleUV / iResolution).x;
             }
         }    
     
-        vec4 outColor = vec4(gl_FragCoord.xy, 0.0, 0.0);
+        vec4 outColor = vec4(coord, 0.0, 0.0);
     
         if (values[1][1] > 0.99) {
           gl_FragColor = outColor;
