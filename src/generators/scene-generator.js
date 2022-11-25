@@ -4115,14 +4115,14 @@ class PanelRenderer extends EventTarget {
       // geometry.setAttribute('planeColor', new THREE.BufferAttribute(planeSpecs.colorArray, 3));
       geometry.computeVertexNormals();
 
-      const distanceFloatImageDataTex = new THREE.DataTexture(
-        distanceFloatImageData,
-        this.canvas.width,
-        this.canvas.height,
-        THREE.RGBAFormat,
-        THREE.FloatType,
-      );
-      distanceFloatImageDataTex.needsUpdate = true;
+      // const distanceFloatImageDataTex = new THREE.DataTexture(
+      //   distanceFloatImageData,
+      //   this.canvas.width,
+      //   this.canvas.height,
+      //   THREE.RGBAFormat,
+      //   THREE.FloatType,
+      // );
+      // distanceFloatImageDataTex.needsUpdate = true;
 
       const editedImgTex = new THREE.Texture();
       (async () => {
@@ -4144,10 +4144,10 @@ class PanelRenderer extends EventTarget {
             value: editedImgTex,
             needsUpdate: true,
           },
-          distanceFloatImageDataTex: {
-            value: distanceFloatImageDataTex,
-            needsUpdate: true,
-          },
+          // distanceFloatImageDataTex: {
+          //   value: distanceFloatImageDataTex,
+          //   needsUpdate: true,
+          // },
         },
         vertexShader: `\
           varying vec2 vUv;
@@ -4159,7 +4159,7 @@ class PanelRenderer extends EventTarget {
         `,
         fragmentShader: `\
           uniform sampler2D editedImgTex;
-          uniform sampler2D distanceFloatImageDataTex;
+          // uniform sampler2D distanceFloatImageDataTex;
 
           varying vec2 vUv;
             
