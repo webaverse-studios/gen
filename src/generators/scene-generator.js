@@ -43,6 +43,12 @@ abortError.isAbortError = true;
 
 const localVector = new THREE.Vector3();
 const localVector2 = new THREE.Vector3();
+const localVectorA = new THREE.Vector3();
+const localVectorA2 = new THREE.Vector3();
+const localVectorB = new THREE.Vector3();
+const localVectorB2 = new THREE.Vector3();
+const localVectorC = new THREE.Vector3();
+const localVectorC2 = new THREE.Vector3();
 const localQuaternion = new THREE.Quaternion();
 const localQuaternion2 = new THREE.Quaternion();
 const localMatrix = new THREE.Matrix4();
