@@ -264,13 +264,16 @@ void main() {
     float totalDelta = 0.;
 
     {
-      int range = 16;
+      int range = 32;
+
       for (int x = -range; x <= range; x++) {
         for (int y = -range; y <= range; y++) {
           vec2 offset = vec2(float(x), float(y));
 
           vec2 pixelUv2 = pixelUv + offset;
           if (pixelUv2.x >= 0. && pixelUv2.x < iResolution.x && pixelUv2.y >= 0. && pixelUv2.y < iResolution.y) {
+            // vec2 pixelUv3 = min(max(pixelUv2, vec2(0.)), iResolution - 1.);
+            // vec2 uv2 = pixelUv3 / iResolution;
             vec2 uv2 = pixelUv2 / iResolution;
 
             vec4 distanceRgba2 = texture2D(distanceTex, uv2);
@@ -290,18 +293,16 @@ void main() {
             // compute the predicted depth:
             float delta = remoteOldDepth - remoteNewDepth;
 
-            float denom = (1. + length(offset));
-            denom *= denom;
-            float weight = 1. / denom;
+            float weight = mix(1., 0., length(offset) / float(range));
 
             sumDelta += delta * weight;
-            totalDelta += weight;
+            totalDelta += 1.;
           }
         }
       }
-      if (totalDelta != 0.) {
+      // if (totalDelta != 0.) {
         sumDelta /= totalDelta;
-      }
+      // }
     }
 
     feedbackRgba.r = localNewDepth + sumDelta;
