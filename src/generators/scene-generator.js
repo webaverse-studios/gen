@@ -1025,10 +1025,18 @@ const _cutMask = (geometry, depthFloatImageData, distanceNearestPositions, editC
     }
   };
   const _snapPoint = index => {
+    // flip y
     const x = index % panelSize;
-    const y = Math.floor(index / panelSize);
+    let y = Math.floor(index / panelSize);
+    y = panelSize - 1 - y;
+    const srcIndex = y * panelSize + x;
+    const dstIndex = index;
 
-    _snapPointDelta(index, x - 1, y) ||
+    localVector.fromArray(distanceNearestPositions, srcIndex * 3)
+      // .applyMatrix4(editCamera.matrixWorld)
+      .toArray(newPositions, dstIndex * 3);
+
+    /* _snapPointDelta(index, x - 1, y) ||
     _snapPointDelta(index, x + 1, y) ||
     _snapPointDelta(index, x, y - 1) ||
     _snapPointDelta(index, x, y + 1) ||
@@ -1040,7 +1048,7 @@ const _cutMask = (geometry, depthFloatImageData, distanceNearestPositions, editC
       console.warn('bad snap', x, y, index);
       debugger;
       throw new Error('bad snap');
-    })();
+    })(); */
   };
   
   // copy over only the triangles that are not completely masked
@@ -1059,12 +1067,12 @@ const _cutMask = (geometry, depthFloatImageData, distanceNearestPositions, editC
       newIndices[numIndices + 2] = c;
       numIndices += 3;
       
-      // // if at least one of them is masked, we have a boundary point
-      // if (aMasked || bMasked || cMasked) {
-      //   !aMasked && _snapPoint(a);
-      //   !bMasked && _snapPoint(b);
-      //   !cMasked && _snapPoint(c);
-      // }
+      // if at least one of them is masked, we have a boundary point
+      if (aMasked || bMasked || cMasked) {
+        !aMasked && _snapPoint(a);
+        !bMasked && _snapPoint(b);
+        !cMasked && _snapPoint(c);
+      }
     }
   }
   // set the new attributes
@@ -3760,7 +3768,7 @@ class PanelRenderer extends EventTarget {
         const bVector = localVectorB.fromArray(positions, (triangleStartIndex + 1) * 3);
         const cVector = localVectorC.fromArray(positions, (triangleStartIndex + 2) * 3);
 
-        // project the points onto the camera, and find the one closest to x, y
+        /* // project the points onto the camera, and find the one closest to x, y
         const aScreen = localVectorA2.copy(aVector)
           .applyMatrix4(editCamera.matrixWorldInverse)
           .applyMatrix4(editCamera.projectionMatrix);
@@ -3795,14 +3803,15 @@ class PanelRenderer extends EventTarget {
         if (cDistance < nearestDistance) {
           nearestPoint = cVector;
           nearestDistance = cDistance;
-        }
+        } */
+        const nearestPoint = aVector
 
         distanceNearestIndex[j] = i3;
         distanceNearestPositions[j * 3 + 0] = nearestPoint.x;
         distanceNearestPositions[j * 3 + 1] = nearestPoint.y;
         distanceNearestPositions[j * 3 + 2] = nearestPoint.z;
       }
-      {
+      /* {
         const distanceGeometry = new THREE.PlaneGeometry(1, 1, distanceRenderTarget.width - 1, distanceRenderTarget.height - 1);
         distanceGeometry.setAttribute('position', new THREE.BufferAttribute(distanceNearestPositions, 3));
         const distanceMaterial = new THREE.ShaderMaterial({
@@ -3840,7 +3849,7 @@ class PanelRenderer extends EventTarget {
         const distanceMesh = new THREE.Mesh(distanceGeometry, distanceMaterial);
         distanceMesh.frustumCulled = false;
         this.scene.add(distanceMesh);
-      }
+      } */
 
       // output to canvas
       const canvas = document.createElement('canvas');
