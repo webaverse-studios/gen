@@ -4063,7 +4063,8 @@ class PanelRenderer extends EventTarget {
         j++;
       }
       depthPreviewReconstructedMesh.geometry.setAttribute('color', new THREE.InstancedBufferAttribute(colors, 3));
-      // layerScene.add(depthPreviewReconstructedMesh);
+      
+      layerScene.add(depthPreviewReconstructedMesh);
     }
     // globalThis.reconstructedDepthFloats = reconstructedDepthFloats;
     // globalThis.depthFloatImageData = depthFloatImageData;
@@ -4083,7 +4084,8 @@ class PanelRenderer extends EventTarget {
         j++;
       }
       depthPreviewNewMesh.geometry.setAttribute('color', new THREE.InstancedBufferAttribute(colors, 3));
-      // layerScene.add(depthPreviewNewMesh);
+      
+      layerScene.add(depthPreviewNewMesh);
     }
     console.timeEnd('depthPreviewNew');
 
