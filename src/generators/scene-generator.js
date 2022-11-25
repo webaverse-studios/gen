@@ -3594,7 +3594,7 @@ class PanelRenderer extends EventTarget {
           // .applyMatrix4(editCamera.matrixWorldInverse)
           .toArray(distanceNearestPositions, j * 3);
       }
-      {
+      /* {
         const distanceGeometry = new THREE.PlaneGeometry(1, 1, distanceRenderTarget.width - 1, distanceRenderTarget.height - 1);
         distanceGeometry.setAttribute('position', new THREE.BufferAttribute(distanceNearestPositions, 3));
         const distanceMaterial = new THREE.ShaderMaterial({
@@ -3621,8 +3621,7 @@ class PanelRenderer extends EventTarget {
         const distanceMesh = new THREE.Mesh(distanceGeometry, distanceMaterial);
         distanceMesh.frustumCulled = false;
         this.scene.add(distanceMesh);
-        // globalThis.distanceMesh = distanceMesh;
-      }
+      } */
 
       // output to canvas
       const canvas = document.createElement('canvas');
