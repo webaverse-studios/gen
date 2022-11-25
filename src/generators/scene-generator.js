@@ -1006,8 +1006,9 @@ const _cutMask = (geometry, depthFloatImageData, distanceNearestPositions, editC
         const ay2 = panelSize - 1 - ay;
         const ax2 = ax;
         const index3 = ay2 * panelSize + ax2;
+        // const index3 = index2;
         localVector.fromArray(distanceNearestPositions, index3 * 3)
-          // .applyMatrix4(editCamera.matrixWorldInverse)
+          // .applyMatrix4(editCamera.matrixWorld)
           .toArray(newPositions, index * 3);
         return true;
       } else {
@@ -1052,12 +1053,12 @@ const _cutMask = (geometry, depthFloatImageData, distanceNearestPositions, editC
       newIndices[numIndices + 2] = c;
       numIndices += 3;
       
-      // if at least one of them is masked, we have a boundary point
-      if (aMasked || bMasked || cMasked) {
-        !aMasked && _snapPoint(a);
-        !bMasked && _snapPoint(b);
-        !cMasked && _snapPoint(c);
-      }
+      // // if at least one of them is masked, we have a boundary point
+      // if (aMasked || bMasked || cMasked) {
+      //   !aMasked && _snapPoint(a);
+      //   !bMasked && _snapPoint(b);
+      //   !cMasked && _snapPoint(c);
+      // }
     }
   }
   // set the new attributes
@@ -1307,36 +1308,35 @@ const _clipGeometryToMask = (
 //
 
 const selectorSize = 8 + 1;
-class Selector {
+const lensFragmentShader = `\
+varying float vIndex;
+
+void main() {
+  float fIndex = vIndex;
+
+  // encode the index as rgb
+  float r = floor(fIndex / 65536.0);
+  fIndex -= r * 65536.0;
+  float g = floor(fIndex / 256.0);
+  fIndex -= g * 256.0;
+  float b = fIndex;
+
+  gl_FragColor = vec4(r, g, b, 1.);
+}
+`;
+class LensMaterial extends THREE.ShaderMaterial {
   constructor({
-    renderer,
-    camera,
-    mouse,
-    raycaster,
+    width,
+    height,
   }) {
-    this.renderer = renderer;
-    this.camera = camera;
-    this.mouse = mouse;
-    this.raycaster = raycaster;
-
-    this.sceneMeshes = [];
-    this.indexMeshes = [];
-    
-    const lensRenderTarget = new THREE.WebGLRenderTarget(selectorSize, selectorSize, {
-      minFilter: THREE.NearestFilter,
-      magFilter: THREE.NearestFilter,
-      type: THREE.FloatType,
-    });
-    this.lensRenderTarget = lensRenderTarget;
-
-    const lensMaterial = new THREE.ShaderMaterial({
+    super({
       uniforms: {
         viewport: {
           value: new THREE.Vector4(),
           needsUpdate: true,
         },
         iResolution: {
-          value: new THREE.Vector2(this.renderer.domElement.width, this.renderer.domElement.height),
+          value: new THREE.Vector2(width, height),
           needsUpdate: true,
         },
         selectorSize: {
@@ -1374,25 +1374,60 @@ class Selector {
           gl_Position *= w;
         }
       `,
-      fragmentShader: `\
+      fragmentShader: lensFragmentShader,
+    });
+  }
+}
+class LensFullscreenMaterial extends THREE.ShaderMaterial {
+  constructor() {
+    super({
+      // uniforms: {
+      // },
+      vertexShader: `\
+        attribute float triangleId;
         varying float vIndex;
 
         void main() {
-          float fIndex = vIndex;
+          vIndex = triangleId;
 
-          // encode the index as rgb
-          float r = floor(fIndex / 65536.0);
-          fIndex -= r * 65536.0;
-          float g = floor(fIndex / 256.0);
-          fIndex -= g * 256.0;
-          float b = fIndex;
-
-          gl_FragColor = vec4(r, g, b, 1.);
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
         }
       `,
+      fragmentShader: lensFragmentShader,
+    });
+  }
+}
+
+//
+
+class Selector {
+  constructor({
+    renderer,
+    camera,
+    mouse,
+    raycaster,
+  }) {
+    this.renderer = renderer;
+    this.camera = camera;
+    this.mouse = mouse;
+    this.raycaster = raycaster;
+
+    this.sceneMeshes = [];
+    this.indexMeshes = [];
+    
+    const lensRenderTarget = new THREE.WebGLRenderTarget(selectorSize, selectorSize, {
+      minFilter: THREE.NearestFilter,
+      magFilter: THREE.NearestFilter,
+      type: THREE.FloatType,
+    });
+    this.lensRenderTarget = lensRenderTarget;
+
+    const lensMaterial = new LensMaterial({
+      width: this.renderer.domElement.width,
+      height: this.renderer.domElement.height,
     });
     this.lensMaterial = lensMaterial;
-2
+    
     const lensScene = new THREE.Scene();
     lensScene.autoUpdate = false;
     lensScene.overrideMaterial = lensMaterial;
@@ -3268,11 +3303,28 @@ class PanelRenderer extends EventTarget {
     const editCameraJson = _getCameraJson(this.camera);
     console.log('edit camera json init', editCameraJson);
 
+    // helpers
+    const auxMeshes = [
+      this.overlay.overlayScene,
+      this.outmeshMesh,
+      this.selector.lensOutputMesh,
+      this.selector.indicesOutputMesh,
+    ];
+    const _pushAuxMeshes = () => {
+      for (const auxMesh of auxMeshes) {
+        this.scene.remove(auxMesh);
+      }
+      return () => {
+        for (const auxMesh of auxMeshes) {
+          this.scene.add(auxMesh);
+        }
+      };
+    };
+
     // render the mask image
     console.time('maskImage');
     let blob;
     let maskBlob;
-    // let maskImgArrayBuffer;
     {
       const maskCanvas = document.createElement('canvas');
       maskCanvas.classList.add('maskCanvas');
@@ -3285,19 +3337,9 @@ class PanelRenderer extends EventTarget {
 
       // render without overlay
       {
-        const auxMeshes = [
-          this.overlay.overlayScene,
-          this.outmeshMesh,
-          this.selector.lensOutputMesh,
-          this.selector.indicesOutputMesh,
-        ];
-        for (const auxMesh of auxMeshes) {
-          this.scene.remove(auxMesh);
-        }
+        const _popAuxMeshes = _pushAuxMeshes();
         this.render();
-        for (const auxMesh of auxMeshes) {
-          this.scene.add(auxMesh);
-        }
+        _popAuxMeshes();
       }
 
       // draw to canvas
@@ -3311,8 +3353,6 @@ class PanelRenderer extends EventTarget {
         });
       });
       maskBlob = blob; // same as blob
-      // maskImgArrayBuffer = await blob.arrayBuffer();
-      // const maskImg = await blob2img(maskBlob);
     }
     console.timeEnd('maskImage');
 
@@ -3357,6 +3397,91 @@ class PanelRenderer extends EventTarget {
       editedImg.classList.add('editImg');
       document.body.appendChild(editedImg);
     }
+
+    console.time('maskIndex');
+    let maskIndex;
+    {
+      const lensFullscreenMaterial = new LensFullscreenMaterial();
+      
+      const lensFullscreenScene = new THREE.Scene();
+      lensFullscreenScene.autoUpdate = false;
+      lensFullscreenScene.overrideMaterial = lensFullscreenMaterial;
+
+      const lensFullscreenRenderTarget = new THREE.WebGLRenderTarget(
+        this.renderer.domElement.width,
+        this.renderer.domElement.height,
+        {
+          minFilter: THREE.NearestFilter,
+          magFilter: THREE.NearestFilter,
+          format: THREE.RGBAFormat,
+          type: THREE.FloatType,
+        }
+      );
+
+      {
+        // add mesh
+        lensFullscreenScene.add(this.sceneMesh); // note: stealing the scene mesh for a moment
+
+        // push old state
+        const oldRenderTarget = this.renderer.getRenderTarget();
+        // const oldClearColor = this.renderer.getClearColor(localColor);
+        // const oldClearAlpha = this.renderer.getClearAlpha();
+
+        // render
+        this.renderer.setRenderTarget(lensFullscreenRenderTarget);
+        // this.renderer.setClearColor(0x000000, 0);
+        // this.renderer.clear();
+        this.renderer.render(lensFullscreenScene, editCamera);
+
+        // read back the indices
+        const float32Array = new Float32Array(this.renderer.domElement.width * this.renderer.domElement.height * 4);
+        this.renderer.readRenderTargetPixels(lensFullscreenRenderTarget, 0, 0, this.renderer.domElement.width, this.renderer.domElement.height, float32Array);
+
+        /* the above was encoded with the following glsl shader. we need to decode it. */
+        // float r = floor(fIndex / 65536.0);
+        // fIndex -= r * 65536.0;
+        // float g = floor(fIndex / 256.0);
+        // fIndex -= g * 256.0;
+        // float b = fIndex;
+        maskIndex = new Int32Array(this.renderer.domElement.width * this.renderer.domElement.height);
+        for (let i = 0; i < maskIndex.length; i++) {
+          const j = i * 4;
+          const r = float32Array[j + 0];
+          const g = float32Array[j + 1];
+          const b = float32Array[j + 2];
+          const index = r * 65536 + g * 256 + b;
+          maskIndex[i] = index;
+        }
+
+        // pop old state
+        this.renderer.setRenderTarget(oldRenderTarget);
+        // this.renderer.setClearColor(oldClearColor, oldClearAlpha);
+
+        // done with this, put it back
+        this.scene.add(this.sceneMesh);
+      }
+      {
+        // draw maskIndex to canvas
+        const canvas = document.createElement('canvas');
+        canvas.width = this.renderer.domElement.width;
+        canvas.height = this.renderer.domElement.height;
+        canvas.classList.add('maskIndexCanvas');
+        const ctx = canvas.getContext('2d');
+        const imageData = ctx.createImageData(this.renderer.domElement.width, this.renderer.domElement.height);
+        const data = imageData.data;
+        for (let i = 0; i < maskIndex.length; i++) {
+          const j = i * 4;
+          const index = maskIndex[i];
+          data[j + 0] = ((index & 0xFF0000) >> 16);
+          data[j + 1] = ((index & 0x00FF00) >> 8);
+          data[j + 2] = (index & 0x0000FF);
+          data[j + 3] = 255;
+        }
+        ctx.putImageData(imageData, 0, 0);
+        document.body.appendChild(canvas);
+      }
+    }
+    console.timeEnd('maskIndex');
 
     // image segmentation
     console.time('imageSegmentation');
@@ -3596,24 +3721,27 @@ class PanelRenderer extends EventTarget {
 
         const ax = Math.floor(r);
         let ay = Math.floor(g);
-        ay = distanceRenderTarget.height - 1 - ay;
+        // ay = distanceRenderTarget.height - 1 - ay;
         const i3 = ax + ay * distanceRenderTarget.width;
 
         // set distanceNearestPositions to be editCamera relative
         localVector.fromArray(this.sceneMesh.indexedGeometry.attributes.position.array, i3 * 3)
-          .applyMatrix4(this.sceneMesh.matrixWorld)
+          // .applyMatrix4(this.sceneMesh.matrixWorld)
           // .applyMatrix4(editCamera.matrixWorldInverse)
+          // .applyMatrix4(editCamera.matrixWorld)
           .toArray(distanceNearestPositions, j * 3);
       }
-      /* {
+      {
         const distanceGeometry = new THREE.PlaneGeometry(1, 1, distanceRenderTarget.width - 1, distanceRenderTarget.height - 1);
         distanceGeometry.setAttribute('position', new THREE.BufferAttribute(distanceNearestPositions, 3));
         const distanceMaterial = new THREE.ShaderMaterial({
           vertexShader: `\
             varying vec2 vUv;
+            varying vec3 vPosition;
             
             void main() {
               vUv = uv;
+              vPosition = position;
               gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
             }
           `,
@@ -3621,18 +3749,27 @@ class PanelRenderer extends EventTarget {
             uniform sampler2D distanceFloatImageDataTex;
 
             varying vec2 vUv;
-              
+            varying vec3 vPosition;
+
             void main() {
               // vec4 c = texture2D(distanceFloatImageDataTex, vUv);
               // gl_FragColor = vec4(c.rg / 1024., 0., 1.);
-              gl_FragColor = vec4(vUv, 0., 1.);
+
+              // derive normal from vPosition
+              vec3 n = normalize(cross(dFdx(vPosition), dFdy(vPosition)));
+              vec3 l = normalize(vec3(2., 3., 4.));
+              float d = dot(n, l);
+
+              gl_FragColor = vec4(vUv * d * 0.5 * (vUv.y < 0.5 ? 0.5 : 1.), 0., 0.7);
             }
           `,
+          side: THREE.DoubleSide,
+          transparent: true,
         });
         const distanceMesh = new THREE.Mesh(distanceGeometry, distanceMaterial);
         distanceMesh.frustumCulled = false;
         this.scene.add(distanceMesh);
-      } */
+      }
 
       // output to canvas
       const canvas = document.createElement('canvas');
@@ -3744,6 +3881,7 @@ class PanelRenderer extends EventTarget {
     return {
       maskImg: maskImgArrayBuffer,
       editedImg: editedImgArrayBuffer,
+      maskIndex,
 
       pointCloudHeaders,
       pointCloud: pointCloudArrayBuffer,
@@ -3770,6 +3908,7 @@ class PanelRenderer extends EventTarget {
     const _getLayerEntry = key => layerEntries.find(layerEntry => layerEntry.key.endsWith('/' + key))?.value;
     const maskImg = _getLayerEntry('maskImg');
     const editedImg = _getLayerEntry('editedImg');
+    const maskIndex = _getLayerEntry('maskIndex');
     const pointCloudHeaders = _getLayerEntry('pointCloudHeaders');
     const pointCloud = _getLayerEntry('pointCloud');
     const depthFloatImageData = _getLayerEntry('depthFloatImageData');
@@ -3845,7 +3984,7 @@ class PanelRenderer extends EventTarget {
         j++;
       }
       depthPreviewReconstructedMesh.geometry.setAttribute('color', new THREE.InstancedBufferAttribute(colors, 3));
-      layerScene.add(depthPreviewReconstructedMesh);
+      // layerScene.add(depthPreviewReconstructedMesh);
     }
     // globalThis.reconstructedDepthFloats = reconstructedDepthFloats;
     // globalThis.depthFloatImageData = depthFloatImageData;
@@ -3865,7 +4004,7 @@ class PanelRenderer extends EventTarget {
         j++;
       }
       depthPreviewNewMesh.geometry.setAttribute('color', new THREE.InstancedBufferAttribute(colors, 3));
-      layerScene.add(depthPreviewNewMesh);
+      // layerScene.add(depthPreviewNewMesh);
     }
     console.timeEnd('depthPreviewNew');
 
