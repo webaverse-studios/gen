@@ -37,12 +37,6 @@ import {
 
 //
 
-globalThis.reds = [];
-globalThis.greens = [];
-globalThis.blues = [];
-
-//
-
 const imageAiClient = new ImageAiClient();
 const abortError = new Error();
 abortError.isAbortError = true;
