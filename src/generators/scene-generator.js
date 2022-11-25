@@ -3746,32 +3746,42 @@ class PanelRenderer extends EventTarget {
         //   triangleIdAttribute.array[i] = Math.floor(i / 3);
         // }
         // geometry.setAttribute('triangleId', triangleIdAttribute);
-        if (i3 >= 0 && i3 < maskIndex.length) {
+        /* if (i3 >= 0 && i3 < maskIndex.length) {
+          // nothing
         } else {
           console.warn('invalid index', i3, maskIndex.length);
           debugger;
-        }
+        } */
         const triangleId = maskIndex[i3];
         const triangleStartIndex = triangleId * 3;
 
-        const aVector = localVectorA.fromArray(this.sceneMesh.geometry.attributes.position.array, triangleStartIndex * 3);
-        const bVector = localVectorB.fromArray(this.sceneMesh.geometry.attributes.position.array, (triangleStartIndex + 1) * 3);
-        const cVector = localVectorC.fromArray(this.sceneMesh.geometry.attributes.position.array, (triangleStartIndex + 2) * 3);
+        const positions = this.sceneMesh.geometry.attributes.position.array;
+        const aVector = localVectorA.fromArray(positions, triangleStartIndex * 3);
+        const bVector = localVectorB.fromArray(positions, (triangleStartIndex + 1) * 3);
+        const cVector = localVectorC.fromArray(positions, (triangleStartIndex + 2) * 3);
 
         // project the points onto the camera, and find the one closest to x, y
-        const aScreen = aVector.clone().applyMatrix4(editCamera.matrixWorldInverse).applyMatrix4(editCamera.projectionMatrix);
-        const bScreen = bVector.clone().applyMatrix4(editCamera.matrixWorldInverse).applyMatrix4(editCamera.projectionMatrix);
-        const cScreen = cVector.clone().applyMatrix4(editCamera.matrixWorldInverse).applyMatrix4(editCamera.projectionMatrix);
+        const aScreen = localVectorA2.copy(aVector)
+          .applyMatrix4(editCamera.matrixWorldInverse)
+          .applyMatrix4(editCamera.projectionMatrix);
+        const bScreen = localVectorB2.copy(bVector)
+          .applyMatrix4(editCamera.matrixWorldInverse)
+          .applyMatrix4(editCamera.projectionMatrix);
+        const cScreen = localVectorC2.copy(cVector)
+          .applyMatrix4(editCamera.matrixWorldInverse)
+          .applyMatrix4(editCamera.projectionMatrix);
+
         aScreen.x = (aScreen.x + 1) / 2 * distanceRenderTarget.width;
         aScreen.y = (aScreen.y + 1) / 2 * distanceRenderTarget.height;
         bScreen.x = (bScreen.x + 1) / 2 * distanceRenderTarget.width;
         bScreen.y = (bScreen.y + 1) / 2 * distanceRenderTarget.height;
         cScreen.x = (cScreen.x + 1) / 2 * distanceRenderTarget.width;
         cScreen.y = (cScreen.y + 1) / 2 * distanceRenderTarget.height;
+
         const aDistance = Math.hypot(aScreen.x - x, aScreen.y - y);
         const bDistance = Math.hypot(bScreen.x - x, bScreen.y - y);
         const cDistance = Math.hypot(cScreen.x - x, cScreen.y - y);
-        // console.log('distance', aScreen.toArray(), aDistance, x, y);
+
         let nearestPoint;
         let nearestDistance = Infinity;
         if (aDistance < nearestDistance) {
