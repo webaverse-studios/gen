@@ -1315,7 +1315,7 @@ const _clipGeometryToMask = (
 
 const selectorSize = 8 + 1;
 const lensFragmentShader = `\
-varying float vIndex;
+flat varying float vIndex;
 
 void main() {
   float fIndex = vIndex;
@@ -1355,7 +1355,7 @@ class LensMaterial extends THREE.ShaderMaterial {
         uniform vec2 iResolution;
         uniform float selectorSize;
         attribute float triangleId;
-        varying float vIndex;
+        flat varying float vIndex;
 
         void main() {
           // get the triangle index, dividing by 3
@@ -1391,7 +1391,7 @@ class LensFullscreenMaterial extends THREE.ShaderMaterial {
       // },
       vertexShader: `\
         attribute float triangleId;
-        varying float vIndex;
+        flat varying float vIndex;
 
         void main() {
           vIndex = triangleId;
@@ -3731,20 +3731,66 @@ class PanelRenderer extends EventTarget {
         // const a = distanceFloatImageData[i+3];
 
         const j = i / 4;
-        // const x = j % distanceRenderTarget.width;
-        // const y = Math.floor(j / distanceRenderTarget.width);
+        const x = j % distanceRenderTarget.width;
+        const y = Math.floor(j / distanceRenderTarget.width);
 
-        const ax = Math.floor(r);
+        let ax = Math.floor(r);
         let ay = Math.floor(g);
-        // ay = distanceRenderTarget.height - 1 - ay;
+        ax = Math.min(Math.max(ax, 0), distanceRenderTarget.width - 1);
+        ay = Math.min(Math.max(ay, 0), distanceRenderTarget.height - 1);
+        ay = distanceRenderTarget.height - 1 - ay;
         const i3 = ax + ay * distanceRenderTarget.width;
 
-        // set distanceNearestPositions to be editCamera relative
-        localVector.fromArray(this.sceneMesh.indexedGeometry.attributes.position.array, i3 * 3)
-          // .applyMatrix4(this.sceneMesh.matrixWorld)
-          // .applyMatrix4(editCamera.matrixWorldInverse)
-          // .applyMatrix4(editCamera.matrixWorld)
-          .toArray(distanceNearestPositions, j * 3);
+        // const triangleIdAttribute = new THREE.BufferAttribute(new Float32Array(geometry.attributes.position.count), 1);
+        // for (let i = 0; i < triangleIdAttribute.count; i++) {
+        //   triangleIdAttribute.array[i] = Math.floor(i / 3);
+        // }
+        // geometry.setAttribute('triangleId', triangleIdAttribute);
+        if (i3 >= 0 && i3 < maskIndex.length) {
+        } else {
+          console.warn('invalid index', i3, maskIndex.length);
+          debugger;
+        }
+        const triangleId = maskIndex[i3];
+        const triangleStartIndex = triangleId * 3;
+
+        const aVector = localVectorA.fromArray(this.sceneMesh.geometry.attributes.position.array, triangleStartIndex * 3);
+        const bVector = localVectorB.fromArray(this.sceneMesh.geometry.attributes.position.array, (triangleStartIndex + 1) * 3);
+        const cVector = localVectorC.fromArray(this.sceneMesh.geometry.attributes.position.array, (triangleStartIndex + 2) * 3);
+
+        // project the points onto the camera, and find the one closest to x, y
+        const aScreen = aVector.clone().applyMatrix4(editCamera.matrixWorldInverse).applyMatrix4(editCamera.projectionMatrix);
+        const bScreen = bVector.clone().applyMatrix4(editCamera.matrixWorldInverse).applyMatrix4(editCamera.projectionMatrix);
+        const cScreen = cVector.clone().applyMatrix4(editCamera.matrixWorldInverse).applyMatrix4(editCamera.projectionMatrix);
+        aScreen.x = (aScreen.x + 1) / 2 * distanceRenderTarget.width;
+        aScreen.y = (aScreen.y + 1) / 2 * distanceRenderTarget.height;
+        bScreen.x = (bScreen.x + 1) / 2 * distanceRenderTarget.width;
+        bScreen.y = (bScreen.y + 1) / 2 * distanceRenderTarget.height;
+        cScreen.x = (cScreen.x + 1) / 2 * distanceRenderTarget.width;
+        cScreen.y = (cScreen.y + 1) / 2 * distanceRenderTarget.height;
+        const aDistance = Math.hypot(aScreen.x - x, aScreen.y - y);
+        const bDistance = Math.hypot(bScreen.x - x, bScreen.y - y);
+        const cDistance = Math.hypot(cScreen.x - x, cScreen.y - y);
+        // console.log('distance', aScreen.toArray(), aDistance, x, y);
+        let nearestPoint;
+        let nearestDistance = Infinity;
+        if (aDistance < nearestDistance) {
+          nearestPoint = aVector;
+          nearestDistance = aDistance;
+        }
+        if (bDistance < nearestDistance) {
+          nearestPoint = bVector;
+          nearestDistance = bDistance;
+        }
+        if (cDistance < nearestDistance) {
+          nearestPoint = cVector;
+          nearestDistance = cDistance;
+        }
+
+        distanceNearestIndex[j] = i3;
+        distanceNearestPositions[j * 3 + 0] = nearestPoint.x;
+        distanceNearestPositions[j * 3 + 1] = nearestPoint.y;
+        distanceNearestPositions[j * 3 + 2] = nearestPoint.z;
       }
       {
         const distanceGeometry = new THREE.PlaneGeometry(1, 1, distanceRenderTarget.width - 1, distanceRenderTarget.height - 1);
@@ -3794,7 +3840,6 @@ class PanelRenderer extends EventTarget {
       const context = canvas.getContext('2d');
       const imageData = context.createImageData(canvas.width, canvas.height);
       const data = imageData.data;
-      // globalThis.distanceU8ImageData = data;
       for (let i = 0; i < distanceFloatImageData.length; i += 4) {
         const r = distanceFloatImageData[i];
         const g = distanceFloatImageData[i+1];
