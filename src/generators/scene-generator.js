@@ -3444,13 +3444,22 @@ class PanelRenderer extends EventTarget {
         // fIndex -= g * 256.0;
         // float b = fIndex;
         maskIndex = new Int32Array(this.renderer.domElement.width * this.renderer.domElement.height);
-        for (let i = 0; i < maskIndex.length; i++) {
-          const j = i * 4;
-          const r = float32Array[j + 0];
-          const g = float32Array[j + 1];
-          const b = float32Array[j + 2];
-          const index = r * 65536 + g * 256 + b;
-          maskIndex[i] = index;
+        for (let y = 0; y < this.renderer.domElement.height; y++) {
+          for (let x = 0; x < this.renderer.domElement.width; x++) {
+            const i = y * this.renderer.domElement.width + x;
+
+            // flip y when reading
+            const ax = x;
+            const ay = this.renderer.domElement.height - 1 - y;
+            const j = ay * this.renderer.domElement.width + ax;
+
+            const r = float32Array[j * 4 + 0];
+            const g = float32Array[j * 4 + 1];
+            const b = float32Array[j * 4 + 2];
+
+            const index = r * 65536 + g * 256 + b;
+            maskIndex[i] = index;
+          }
         }
 
         // pop old state
@@ -3469,20 +3478,13 @@ class PanelRenderer extends EventTarget {
         const ctx = canvas.getContext('2d');
         const imageData = ctx.createImageData(this.renderer.domElement.width, this.renderer.domElement.height);
         const data = imageData.data;
-        for (let y = 0; y < this.renderer.domElement.height; y++) {
-          for (let x = 0; x < this.renderer.domElement.width; x++) {
-            const i = y * this.renderer.domElement.width + x;
-
-            const ax = x;
-            const ay = this.renderer.domElement.height - 1 - y;
-            const j = ay * this.renderer.domElement.width + ax;
-
-            const index = maskIndex[i];
-            data[j * 4 + 0] = ((index & 0xFF0000) >> 16);
-            data[j * 4 + 1] = ((index & 0x00FF00) >> 8);
-            data[j * 4 + 2] = (index & 0x0000FF);
-            data[j * 4 + 3] = 255;
-          }
+        for (let i = 0; i < maskIndex.length; i++) {
+          const j = i * 4;
+          const index = maskIndex[i];
+          data[j + 0] = ((index & 0xFF0000) >> 16);
+          data[j + 1] = ((index & 0x00FF00) >> 8);
+          data[j + 2] = (index & 0x0000FF);
+          data[j + 3] = 255;
         }
         ctx.putImageData(imageData, 0, 0);
         document.body.appendChild(canvas);
