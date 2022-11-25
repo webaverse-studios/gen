@@ -996,18 +996,18 @@ const _cutSkybox = geometry => {
   // set the new indices
   geometry.setIndex(new THREE.BufferAttribute(newIndices.subarray(0, numIndices), 1));
 };
-const _cutMask = (geometry, depthFloatImageData, distanceNearestPositions) => {
+const _cutMask = (geometry, depthFloatImageData, distanceNearestPositions, editCamera) => {
   // copy over snapped positions
   const newPositions = geometry.attributes.position.array.slice();
   const _snapPointDelta = (index, ax, ay) => {
     if (ax >= 0 && ax < panelSize && ay >= 0 && ay < panelSize) {
       const index2 = ay * panelSize + ax;
       if (depthFloatImageData[index2] !== 0) {
-        // const ay2 = panelSize - 1 - ay;
-        // const ax2 = ax;
-        // const index3 = ay2 * panelSize + ax2;
-        const index3 = index2;
+        const ay2 = panelSize - 1 - ay;
+        const ax2 = ax;
+        const index3 = ay2 * panelSize + ax2;
         localVector.fromArray(distanceNearestPositions, index3 * 3)
+          // .applyMatrix4(editCamera.matrixWorldInverse)
           .toArray(newPositions, index * 3);
         return true;
       } else {
@@ -2323,6 +2323,71 @@ class Overlay {
 
 //
 
+class SceneMaterial extends THREE.ShaderMaterial {
+  constructor({
+    map,
+  }) {
+    super({
+      uniforms: {
+        map: {
+          value: map,
+          needsUpdate: true,
+        },
+        selectedIndicesMap: {
+          value: null,
+          needsUpdate: false,
+        },
+        iSelectedIndicesMapResolution: {
+          value: new THREE.Vector2(),
+          needsUpdate: false,
+        },
+        uEraser: {
+          value: 0,
+          needsUpdate: true,
+        },
+      },
+      vertexShader: `\
+        attribute float triangleId;
+        varying vec2 vUv;
+        varying float vTriangleId;
+        
+        void main() {
+          vUv = uv;
+          vTriangleId = triangleId;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `\
+        uniform sampler2D map;
+        uniform sampler2D selectedIndicesMap;
+        uniform vec2 iSelectedIndicesMapResolution;
+        uniform int uEraser;
+
+        varying vec2 vUv;
+        varying float vTriangleId;
+
+        void main() {
+          gl_FragColor = texture2D(map, vUv);
+          
+          if (uEraser == 1) {
+            // check for selection
+            float x = mod(vTriangleId, iSelectedIndicesMapResolution.x);
+            float y = floor(vTriangleId / iSelectedIndicesMapResolution.x);
+            vec2 uv = (vec2(x, y) + 0.5) / iSelectedIndicesMapResolution;
+            vec4 selectedIndexRgba = texture2D(selectedIndicesMap, uv);
+            bool isSelected = selectedIndexRgba.r > 0.5;
+            if (isSelected) {
+              gl_FragColor.rgb *= 0.2;
+            }
+          }
+        }
+      `,
+    })
+  }
+}
+
+//
+
 class PanelRenderer extends EventTarget {
   constructor(canvas, panel, {
     debug = false,
@@ -2445,69 +2510,15 @@ class PanelRenderer extends EventTarget {
 
     const firstFloorPlaneIndex = getFirstFloorPlaneIndex(segmentSpecs, planeSpecs);
 
-    // texture
+    //
+
     const map = new THREE.Texture();
+    const material = new SceneMaterial({
+      map,
+    });
 
     // mesh
-    const sceneMesh = new THREE.Mesh(
-      geometry,
-      new THREE.ShaderMaterial({
-        uniforms: {
-          map: {
-            value: map,
-            needsUpdate: true,
-          },
-          selectedIndicesMap: {
-            value: null,
-            needsUpdate: false,
-          },
-          iSelectedIndicesMapResolution: {
-            value: new THREE.Vector2(),
-            needsUpdate: false,
-          },
-          uEraser: {
-            value: 0,
-            needsUpdate: true,
-          },
-        },
-        vertexShader: `\
-          attribute float triangleId;
-          varying vec2 vUv;
-          varying float vTriangleId;
-          
-          void main() {
-            vUv = uv;
-            vTriangleId = triangleId;
-            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-          }
-        `,
-        fragmentShader: `\
-          uniform sampler2D map;
-          uniform sampler2D selectedIndicesMap;
-          uniform vec2 iSelectedIndicesMapResolution;
-          uniform int uEraser;
-
-          varying vec2 vUv;
-          varying float vTriangleId;
-
-          void main() {
-            gl_FragColor = texture2D(map, vUv);
-            
-            if (uEraser == 1) {
-              // check for selection
-              float x = mod(vTriangleId, iSelectedIndicesMapResolution.x);
-              float y = floor(vTriangleId / iSelectedIndicesMapResolution.x);
-              vec2 uv = (vec2(x, y) + 0.5) / iSelectedIndicesMapResolution;
-              vec4 selectedIndexRgba = texture2D(selectedIndicesMap, uv);
-              bool isSelected = selectedIndexRgba.r > 0.5;
-              if (isSelected) {
-                gl_FragColor.rgb *= 0.2;
-              }
-            }
-          }
-        `,
-      }),
-    );
+    const sceneMesh = new THREE.Mesh(geometry, material);
     sceneMesh.name = 'sceneMesh';
     sceneMesh.frustumCulled = false;
     sceneMesh.indexedGeometry = indexedGeometry;
@@ -3576,12 +3587,12 @@ class PanelRenderer extends EventTarget {
       for (let i = 0; i < distanceFloatImageData.length; i += 4) {
         const r = distanceFloatImageData[i];
         const g = distanceFloatImageData[i+1];
-        const b = distanceFloatImageData[i+2];
-        const a = distanceFloatImageData[i+3];
+        // const b = distanceFloatImageData[i+2];
+        // const a = distanceFloatImageData[i+3];
 
         const j = i / 4;
-        const x = j % distanceRenderTarget.width;
-        const y = Math.floor(j / distanceRenderTarget.width);
+        // const x = j % distanceRenderTarget.width;
+        // const y = Math.floor(j / distanceRenderTarget.width);
 
         const ax = Math.floor(r);
         let ay = Math.floor(g);
@@ -3891,7 +3902,7 @@ class PanelRenderer extends EventTarget {
         geometry.attributes.position.array,
         // 1 / panelSize
       );
-      _cutMask(geometry, depthFloatImageData, distanceNearestPositions);
+      _cutMask(geometry, depthFloatImageData, distanceNearestPositions, editCamera);
       /* if (!segmentMask) {
         console.warn('missing segment mask 2', segmentMask);
         debugger;
@@ -3914,11 +3925,26 @@ class PanelRenderer extends EventTarget {
       );
       distanceFloatImageDataTex.needsUpdate = true;
 
+      const editedImgTex = new THREE.Texture();
+      (async () => {
+        const editedImgBlob = new Blob([
+          editedImg,
+        ], {
+          type: 'image/png',
+        });
+         editedImgTex.image = await blob2img(editedImgBlob);
+         editedImgTex.needsUpdate = true;
+      })();
+
       const material = new THREE.ShaderMaterial({
         // color: 0xff0000,
         // transparent: true,
         // opacity: 0.8,
         uniforms: {
+          editedImgTex: {
+            value: editedImgTex,
+            needsUpdate: true,
+          },
           distanceFloatImageDataTex: {
             value: distanceFloatImageDataTex,
             needsUpdate: true,
@@ -3933,13 +3959,16 @@ class PanelRenderer extends EventTarget {
           }
         `,
         fragmentShader: `\
+          uniform sampler2D editedImgTex;
           uniform sampler2D distanceFloatImageDataTex;
 
           varying vec2 vUv;
             
           void main() {
-            vec4 c = texture2D(distanceFloatImageDataTex, vUv);
-            gl_FragColor = vec4(c.rg / 1024., 0., 1.);
+            // vec4 c = texture2D(distanceFloatImageDataTex, vUv);
+            // gl_FragColor = vec4(c.rg / 1024., 0., 1.);
+            vec4 c = texture2D(editedImgTex, vUv);
+            gl_FragColor = vec4(c.rgb, 1.);
           }
         `,
         transparent: true,
