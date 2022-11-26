@@ -4509,7 +4509,7 @@ const getPlanesRgbd = async (width, height, depthFloats32Array) => {
     // parse the planes
     const planesJson = [];
     for (let i = 0; i < numPlanes; i++) {
-      try {
+      // try {
         const normal = new Float32Array(planesArrayBuffer, index, 3);
         index += Float32Array.BYTES_PER_ELEMENT * 3;
         const center = new Float32Array(planesArrayBuffer, index, 3);
@@ -4527,10 +4527,10 @@ const getPlanesRgbd = async (width, height, depthFloats32Array) => {
           distanceSquaredF,
         };
         planesJson.push(planeJson);
-      } catch(err) {
-        console.warn('fail', err.stack);
-        debugger;
-      }
+      // } catch(err) {
+      //   console.warn('fail', err.stack);
+      //   debugger;
+      // }
     }
 
     // the remainder is a Int32Array(width * height) of plane indices
