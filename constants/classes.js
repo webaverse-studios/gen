@@ -141,7 +141,6 @@ export const categories = {
     "railroad",
     "river",
     "road",
-    "roof",
     "sand",
     "sea",
     "snow",
@@ -162,6 +161,7 @@ export const categories = {
     "window-blind",
     "fence-merged",
     "wall-other-merged",
+    "roof",
   ],
   ceiling: [
     "ceiling-merged",
