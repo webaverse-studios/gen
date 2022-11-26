@@ -4534,9 +4534,13 @@ async function compileVirtualScene(arrayBuffer) {
   let planesMask;
   {
     const depthFloats32Array = getDepthFloatsFromPointCloud(pointCloudArrayBuffer);
+    const depthFloats32Array2 = depthFloats32Array.map((n, index) => {
+      const maskIndex = segmentMask[index];
+      return categoryClassIndices.floor.includes(maskIndex) ? n : Infinity;
+    });
     
     const {width, height} = img;
-    const planesSpec = await getPlanesRgbd(width, height, depthFloats32Array);
+    const planesSpec = await getPlanesRgbd(width, height, depthFloats32Array2);
     // console.log('got planes spec', planesSpec);
     planesJson = planesSpec.planesJson;
     planesMask = planesSpec.planesMask;
