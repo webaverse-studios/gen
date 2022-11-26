@@ -773,6 +773,29 @@ const getMaskSpecsByValue = (geometry, mask, width, height) => {
     labelIndices,
   };
 };
+const getMaskSpecsByMatch = (mask, highlightIndices, width, height) => {
+  const array = new Float32Array(width * height);
+  const colorArray = new Float32Array(width * height * 3);
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const index = y * width + x;
+      
+      const value = mask[index];
+      const highlight = highlightIndices.includes(value);
+      array[index] = highlight ? 1 : 0;
+    
+      const c = localColor.setHex(highlight ? 0xFFFFFF : 0x000000);
+      colorArray[index * 3 + 0] = c.r;
+      colorArray[index * 3 + 1] = c.g;
+      colorArray[index * 3 + 2] = c.b;
+    }
+  }
+  return {
+    array,
+    colorArray,
+  };
+};
 const zipPlanesSegmentsJson = (planeSpecs, planesJson) => {
   for (let i = 0; i < planeSpecs.labels.length; i++) {
     const label = planeSpecs.labels[i];
@@ -2085,13 +2108,17 @@ class Overlay {
           attribute vec3 segmentColor;
           attribute float plane;
           attribute vec3 planeColor;
-          attribute vec3 barycentric;
+          attribute float portal;
+          attribute vec3 portalColor;
+          // attribute vec3 barycentric;
           
           varying float vSegment;
           flat varying vec3 vSegmentColor;
           varying float vPlane;
           flat varying vec3 vPlaneColor;
-          varying vec3 vBarycentric;
+          // varying vec3 vBarycentric;
+          varying float vPortal;
+          flat varying vec3 vPortalColor;
           varying vec2 vUv;
           varying vec3 vPosition;
   
@@ -2100,8 +2127,10 @@ class Overlay {
             vSegmentColor = segmentColor;
             vPlane = plane;
             vPlaneColor = planeColor;
+            vPortal = portal;
+            vPortalColor = portalColor;
   
-            vBarycentric = barycentric;
+            // vBarycentric = barycentric;
             vUv = uv;
             vPosition = position;
             gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
@@ -2114,7 +2143,9 @@ class Overlay {
           flat varying vec3 vSegmentColor;
           varying float vPlane;
           flat varying vec3 vPlaneColor;
-          varying vec3 vBarycentric;
+          // varying vec3 vBarycentric;
+          varying float vPortal;
+          flat varying vec3 vPortalColor;
           varying vec2 vUv;
           varying vec3 vPosition;
   
@@ -2149,6 +2180,8 @@ class Overlay {
               gl_FragColor = vec4(vSegmentColor, a);
             } else if (uRenderMode == 2) {
               gl_FragColor = vec4(vPlaneColor, 0.7);
+            } else if (uRenderMode == 3) {
+              gl_FragColor = vec4(vPortalColor, 0.7);
             } else {
               // gl_FragColor = vec4(1., 0., 0., 1.);
               discard;
@@ -2184,6 +2217,10 @@ class Overlay {
       {
         name: 'plane',
         renderMode: 2,
+      },
+      {
+        name: 'portal',
+        renderMode: 3,
       },
     ];
     this.toolOverlayMeshes = {};
@@ -2540,14 +2577,19 @@ class PanelRenderer extends EventTarget {
     const segmentSpecs = getMaskSpecsByConnectivity(geometry, segmentMask, this.canvas.width, this.canvas.height);
     let planeSpecs = getMaskSpecsByValue(geometry, planesMask, this.canvas.width, this.canvas.height);
     planeSpecs = zipPlanesSegmentsJson(planeSpecs, planesJson);
+    const portalSpecs = getMaskSpecsByMatch(segmentMask, categoryClassIndices.portal, this.canvas.width, this.canvas.height);
     geometry.setAttribute('segment', new THREE.BufferAttribute(segmentSpecs.array, 1));
     geometry.setAttribute('segmentColor', new THREE.BufferAttribute(segmentSpecs.colorArray, 3));
     geometry.setAttribute('plane', new THREE.BufferAttribute(planeSpecs.array, 1));
     geometry.setAttribute('planeColor', new THREE.BufferAttribute(planeSpecs.colorArray, 3));
-    // globalThis.oldGeometry = geometry;
+    geometry.setAttribute('portal', new THREE.BufferAttribute(portalSpecs.array, 1));
+    geometry.setAttribute('portalColor', new THREE.BufferAttribute(portalSpecs.colorArray, 3));
+    globalThis.segmentMask = segmentMask;
+    globalThis.portalClasses = categoryClassIndices.portal;
+    globalThis.portalIndices = categories.portal;
+    globalThis.portalSpecs = portalSpecs;
     const indexedGeometry = geometry;
     geometry = geometry.toNonIndexed();
-    // globalThis.newGeometry = geometry;
     // add extra triangeId attribute
     const triangleIdAttribute = new THREE.BufferAttribute(new Float32Array(geometry.attributes.position.count), 1);
     for (let i = 0; i < triangleIdAttribute.count; i++) {
