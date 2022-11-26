@@ -3095,6 +3095,9 @@ class PanelRenderer extends EventTarget {
       this.floorMesh = floorMesh;
     }
 
+    // initial render
+    this.updateOutmeshLayers();
+
     // bootstrap
     this.listen();
     this.animate();
@@ -3311,7 +3314,7 @@ class PanelRenderer extends EventTarget {
 
     // snapshot camera state
     const editCameraJson = _getCameraJson(this.camera);
-    console.log('edit camera json init', editCameraJson);
+    // console.log('edit camera json init', editCameraJson);
 
     // helpers
     const auxMeshes = [
@@ -3661,7 +3664,7 @@ class PanelRenderer extends EventTarget {
         this.renderer.setRenderTarget(renderTarget);
         // this.scene.overrideMaterial = overrideMaterial;
 
-        console.log(
+        /* console.log(
           'edit camera transform',
           {
             editCamera: editCamera.clone(),
@@ -3673,7 +3676,7 @@ class PanelRenderer extends EventTarget {
             far: editCamera.far,
             editCameraJson,
           }
-        );
+        ); */
 
         this.renderer.clear();
         this.renderer.render(depthScene, editCamera);
