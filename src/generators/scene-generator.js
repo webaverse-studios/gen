@@ -43,14 +43,15 @@ abortError.isAbortError = true;
 
 const localVector = new THREE.Vector3();
 const localVector2 = new THREE.Vector3();
+const localVector3 = new THREE.Vector3();
 const localVectorA = new THREE.Vector3();
-const localVectorA2 = new THREE.Vector3();
-const localVectorB = new THREE.Vector3();
-const localVectorB2 = new THREE.Vector3();
-const localVectorC = new THREE.Vector3();
-const localVectorC2 = new THREE.Vector3();
+// const localVectorA2 = new THREE.Vector3();
+// const localVectorB = new THREE.Vector3();
+// const localVectorB2 = new THREE.Vector3();
+// const localVectorC = new THREE.Vector3();
+// const localVectorC2 = new THREE.Vector3();
 const localQuaternion = new THREE.Quaternion();
-const localQuaternion2 = new THREE.Quaternion();
+// const localQuaternion2 = new THREE.Quaternion();
 const localMatrix = new THREE.Matrix4();
 const localBox = new THREE.Box3();
 const localCamera = new THREE.PerspectiveCamera();
@@ -798,17 +799,17 @@ const getMaskSpecsByValue = (geometry, mask, width, height) => {
     labelIndices,
   };
 };
-const getMaskSpecsByMatch = (mask, highlightIndices, width, height) => {
-  const array = new Float32Array(width * height);
+const getMaskSpecsByMatch = (labels, segmentMask, highlightIndices, width, height) => {
+  // const array = new Float32Array(width * height);
   const colorArray = new Float32Array(width * height * 3);
 
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const index = y * width + x;
       
-      const value = mask[index];
+      const value = segmentMask[index];
       const highlight = highlightIndices.includes(value);
-      array[index] = highlight ? 1 : 0;
+      // array[index] = highlight ? 1 : 0;
     
       const c = localColor.setHex(highlight ? 0xFFFFFF : 0x000000);
       colorArray[index * 3 + 0] = c.r;
@@ -817,7 +818,8 @@ const getMaskSpecsByMatch = (mask, highlightIndices, width, height) => {
     }
   }
   return {
-    array,
+    labels,
+    // array,
     colorArray,
   };
 };
@@ -1433,6 +1435,85 @@ const getSemanticPortals = async (img, newDepthFloatImageData, segmentMask) => {
 
 //
 
+const planeArrowGeometry = (() => {
+  const shape = new THREE.Shape();
+  shape.moveTo(0, 0);
+  shape.lineTo(1, -1);
+  shape.lineTo(0, 2);
+  shape.lineTo(-1, -1);
+
+  const geometry = new THREE.ExtrudeGeometry(shape, {
+    depth: 0.25,
+    bevelEnabled: false,
+  });
+  geometry.translate(0, 1, 0);
+  geometry.rotateX(Math.PI / 2);
+  const s = 0.1;
+  geometry.scale(s, s, s);
+
+  return geometry;
+})();
+const makePlaneArrowMesh = () => {
+  const material = new THREE.MeshPhongMaterial({
+    color: 0xFF0000,
+  });
+
+  const arrowMesh = new THREE.Mesh(planeArrowGeometry, material);
+  return arrowMesh;
+};
+const gridGeometry = new THREE.PlaneGeometry(1, 1);
+const makeGridMesh = () => {
+  const material = new THREE.ShaderMaterial({
+    uniforms: {
+      uColor: {
+        value: new THREE.Color(0xFF0000),
+        needsUpdate: true,
+      },
+    },
+    vertexShader: `\
+      varying vec2 vUv;
+
+      void main() {
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `\
+      uniform vec3 uColor;
+      varying vec2 vUv;
+
+      const vec3 lineColor = vec3(${new THREE.Vector3(0x00BBCC).toArray().map(n => n.toFixed(8)).join(',')});
+
+      void main() {
+        vec2 uv = vUv;
+
+        // draw a grid based on uv
+        float b = 0.1;
+        float f = min(mod(uv.x, b), mod(uv.y, b));
+        f = min(f, mod(1.-uv.x, b));
+        f = min(f, mod(1.-uv.y, b));
+        f *= 200.;
+
+        float a = max(1. - f, 0.);
+        a = max(a, 0.5);
+
+        // vec3 c = lineColor;
+        vec3 c = uColor;
+
+        gl_FragColor = vec4(c, a);
+        // gl_FragColor.rg = uv;
+      }
+    `,
+    transparent: true,
+    side: THREE.DoubleSide,
+  });
+
+  const gridMesh = new THREE.Mesh(gridGeometry, material);
+  return gridMesh;
+};
+
+//
+
 const selectorSize = 8 + 1;
 const lensFragmentShader = `\
 flat varying float vIndex;
@@ -2022,10 +2103,16 @@ class Overlay {
     this.arrowMeshes = [];
   }
   addMesh(sceneMesh) {
+    // if (!sceneMesh) {
+    //   console.warn('no sceneMesh', sceneMesh);
+    //   debugger;
+    // }
+
     const geometry = sceneMesh.geometry.clone();
     const {
       segmentSpecs,
       planeSpecs,
+      portalSpecs,
       firstFloorPlaneIndex,
     } = sceneMesh;
 
@@ -2040,9 +2127,10 @@ class Overlay {
     this.sceneOverlayMeshes.push(sceneOverlayMesh);
 
     // arrows spritesheet mesh
-    const arrowSize = 0.2;
+    const arrowSize = 0.5;
+    const arrowDemoSize = 0.2;
     const arrowGeometry = new THREE.PlaneGeometry(arrowSize, arrowSize);
-    const _makeArrowsMesh = () => {
+    const makeArrowsMesh = () => {
       const tex = new THREE.Texture();
       tex.minFilter = THREE.NearestFilter;
       tex.magFilter = THREE.NearestFilter;
@@ -2099,6 +2187,9 @@ class Overlay {
             );
 
             gl_FragColor = texture2D(tex, frameUv);
+            if (!gl_FrontFacing) {
+              gl_FragColor.rgb *= 0.5;
+            }
             if (gl_FragColor.a < 0.1) {
               discard;
             }
@@ -2107,6 +2198,7 @@ class Overlay {
         transparent: true,
         // alphaTest: 0.1,
         alphaToCoverage: true,
+        side: THREE.DoubleSide,
       });
       const mesh = new THREE.Mesh(arrowGeometry, material);
       mesh.frustumCulled = false;
@@ -2116,12 +2208,14 @@ class Overlay {
       };
       return mesh;
     };
-    const arrowsMesh = _makeArrowsMesh();
+    const arrowsMesh = makeArrowsMesh();
+    arrowsMesh.scale.setScalar(arrowDemoSize / arrowSize);
+    arrowsMesh.updateMatrixWorld();
     sceneOverlayMesh.add(arrowsMesh);
     this.arrowMeshes.push(arrowsMesh);
 
     // arrow meshes
-    const _makeArrowMesh = arrowUrl => {
+    const makeArrowMesh = arrowUrl => {
       const tex = new THREE.Texture();
       tex.minFilter = THREE.NearestFilter;
       tex.magFilter = THREE.NearestFilter;
@@ -2156,8 +2250,9 @@ class Overlay {
     ];
     for (let i = 0; i < arrowUrls.length; i++) {
       const arrowUrl = arrowUrls[i];
-      const arrowMesh = _makeArrowMesh(arrowUrl);
-      arrowMesh.position.x = -arrowSize + i * arrowSize * 2;
+      const arrowMesh = makeArrowMesh(arrowUrl);
+      arrowMesh.position.x = -arrowDemoSize + i * arrowDemoSize * 2;
+      arrowMesh.scale.setScalar(arrowDemoSize / arrowSize);
       arrowMesh.updateMatrixWorld();
       arrowMesh.frustumCulled = false;
       arrowMesh.update = () => {
@@ -2199,7 +2294,7 @@ class Overlay {
           attribute vec3 segmentColor;
           attribute float plane;
           attribute vec3 planeColor;
-          attribute float portal;
+          // attribute float portal;
           attribute vec3 portalColor;
           // attribute vec3 barycentric;
           
@@ -2207,9 +2302,9 @@ class Overlay {
           flat varying vec3 vSegmentColor;
           varying float vPlane;
           flat varying vec3 vPlaneColor;
-          // varying vec3 vBarycentric;
-          varying float vPortal;
+          // varying float vPortal;
           flat varying vec3 vPortalColor;
+          // varying vec3 vBarycentric;
           varying vec2 vUv;
           varying vec3 vPosition;
   
@@ -2218,7 +2313,7 @@ class Overlay {
             vSegmentColor = segmentColor;
             vPlane = plane;
             vPlaneColor = planeColor;
-            vPortal = portal;
+            // vPortal = portal;
             vPortalColor = portalColor;
   
             // vBarycentric = barycentric;
@@ -2235,7 +2330,7 @@ class Overlay {
           varying float vPlane;
           flat varying vec3 vPlaneColor;
           // varying vec3 vBarycentric;
-          varying float vPortal;
+          // varying float vPortal;
           flat varying vec3 vPortalColor;
           varying vec2 vUv;
           varying vec3 vPosition;
@@ -2329,7 +2424,7 @@ class Overlay {
       this.toolOverlayMeshes[name] = overlayMesh;
     }
 
-    // segment meshes
+    // segment text meshes
     {
       const segmentMesh = this.toolOverlayMeshes['segment'];
       const {labels} = segmentSpecs;
@@ -2362,121 +2457,70 @@ class Overlay {
       }
     }
 
-    // plane meshes
+    // plane gizmo meshes
     {
       const planeMesh = this.toolOverlayMeshes['plane'];
 
-      if (planeSpecs.labels.length > 0) {
-        const arrowGeometry = (() => {
-          const shape = new THREE.Shape();
-          shape.moveTo(0, 0);
-          shape.lineTo(1, -1);
-          shape.lineTo(0, 2);
-          shape.lineTo(-1, -1);
+      const planeArrowMeshes = [];
+      const planeMeshes = [];
+      for (const label of planeSpecs.labels) {
+        // compute label planes
+        const center = localVector.fromArray(label.center);
+        const normal = localVector2.fromArray(label.normal);
 
-          const geometry = new THREE.ExtrudeGeometry(shape, {
-            depth: 0.25,
-            bevelEnabled: false,
-          });
-          geometry.translate(0, 1, 0);
-          geometry.rotateX(Math.PI / 2);
-          const s = 0.1;
-          geometry.scale(s, s, s);
+        // arrow mesh
+        const arrowMesh = makePlaneArrowMesh();
+        arrowMesh.position.copy(center);
+        normalToQuaternion(normal, arrowMesh.quaternion);
+        arrowMesh.updateMatrixWorld();
+        arrowMesh.frustumCulled = false;
+        planeMesh.add(arrowMesh);
+        planeArrowMeshes.push(arrowMesh);
 
-          return geometry;
-        })();
-        const gridGeometry = new THREE.PlaneGeometry(1, 1);
+        // grid mesh
+        const gridMesh = makeGridMesh();
+        gridMesh.position.copy(arrowMesh.position);
+        gridMesh.quaternion.copy(arrowMesh.quaternion);
+        gridMesh.updateMatrixWorld();
+        gridMesh.frustumCulled = false;
+        planeMesh.add(gridMesh);
+        planeMeshes.push(gridMesh);
+      }
 
-        const makeArrowMesh = () => {
-          const material = new THREE.MeshPhongMaterial({
-            color: 0xFF0000,
-          });
+      if (firstFloorPlaneIndex !== -1) {
+        planeArrowMeshes[firstFloorPlaneIndex].material.color.set(0x00FF00);
 
-          const arrowMesh = new THREE.Mesh(arrowGeometry, material);
-          return arrowMesh;
-        };
-        const makeGridMesh = () => {
-          const material = new THREE.ShaderMaterial({
-            uniforms: {
-              uColor: {
-                value: new THREE.Color(0xFF0000),
-                needsUpdate: true,
-              },
-            },
-            vertexShader: `\
-              varying vec2 vUv;
-      
-              void main() {
-                vUv = uv;
-                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-              }
-            `,
-            fragmentShader: `\
-              uniform vec3 uColor;
-              varying vec2 vUv;
-  
-              const vec3 lineColor = vec3(${new THREE.Vector3(0x00BBCC).toArray().map(n => n.toFixed(8)).join(',')});
-      
-              void main() {
-                vec2 uv = vUv;
-  
-                // draw a grid based on uv
-                float b = 0.1;
-                float f = min(mod(uv.x, b), mod(uv.y, b));
-                f = min(f, mod(1.-uv.x, b));
-                f = min(f, mod(1.-uv.y, b));
-                f *= 200.;
-  
-                float a = max(1. - f, 0.);
-                a = max(a, 0.5);
-  
-                // vec3 c = lineColor;
-                vec3 c = uColor;
-  
-                gl_FragColor = vec4(c, a);
-                // gl_FragColor.rg = uv;
-              }
-            `,
-            transparent: true,
-            side: THREE.DoubleSide,
-          });
+        planeMeshes[firstFloorPlaneIndex].material.uniforms.uColor.value.set(0x00FF00);
+        planeMeshes[firstFloorPlaneIndex].material.uniforms.uColor.needsUpdate = true;
+      }
+      // globalThis.planeArrowMeshes = planeArrowMeshes;
+      // globalThis.planeMeshes = planeMeshes;
+    }
 
-          const gridMesh = new THREE.Mesh(gridGeometry, material);
-          return gridMesh;
-        };
+    // portal gizmo meshes
+    {
+      const portalMesh = this.toolOverlayMeshes['portal'];
 
-        const arrowMeshes = [];
-        const planeMeshes = [];
-        for (const label of planeSpecs.labels) {
-          // compute label planes
-          const center = localVector.fromArray(label.center);
-          const normal = localVector2.fromArray(label.normal);
+      if (!portalSpecs.labels) {
+        console.warn('no portal labels', portalSpecs);
+        debugger;
+      }
+      for (const label of portalSpecs.labels) {
+        // compute label planes
+        const center = localVector.fromArray(label.center);
+        const normal = localVector2.fromArray(label.normal);
 
-          // arrow mesh
-          const arrowMesh = makeArrowMesh();
-          arrowMesh.position.copy(center);
-          normalToQuaternion(normal, arrowMesh.quaternion);
-          arrowMesh.updateMatrixWorld();
-          arrowMesh.frustumCulled = false;
-          planeMesh.add(arrowMesh);
-          arrowMeshes.push(arrowMesh);
-
-          // grid mesh
-          const gridMesh = makeGridMesh();
-          gridMesh.position.copy(arrowMesh.position);
-          gridMesh.quaternion.copy(arrowMesh.quaternion);
-          gridMesh.updateMatrixWorld();
-          gridMesh.frustumCulled = false;
-          planeMesh.add(gridMesh);
-          planeMeshes.push(gridMesh);
-        }
-
-        if (firstFloorPlaneIndex !== -1) {
-          arrowMeshes[firstFloorPlaneIndex].material.color.set(0x00FF00);
-
-          planeMeshes[firstFloorPlaneIndex].material.uniforms.uColor.value.set(0x00FF00);
-          planeMeshes[firstFloorPlaneIndex].material.uniforms.uColor.needsUpdate = true;
-        }
+        // arrow mesh
+        const arrowMesh = makeArrowsMesh();
+        arrowMesh.position.copy(center);
+        normalToQuaternion(normal, arrowMesh.quaternion)
+          .premultiply(localQuaternion.setFromAxisAngle(localVector3.set(0, 0, 1), Math.PI))
+          .premultiply(localQuaternion.setFromAxisAngle(localVector3.set(1, 0, 0), -Math.PI/2))
+          .premultiply(localQuaternion.setFromAxisAngle(localVector3.set(0, 0, 1), -Math.PI));
+        arrowMesh.updateMatrixWorld();
+        arrowMesh.frustumCulled = false;
+        portalMesh.add(arrowMesh);
+        this.arrowMeshes.push(arrowMesh);
       }
     }
   }
@@ -2670,12 +2714,12 @@ class PanelRenderer extends EventTarget {
     const segmentSpecs = getMaskSpecsByConnectivity(geometry, segmentMask, this.canvas.width, this.canvas.height);
     let planeSpecs = getMaskSpecsByValue(geometry, planesMask, this.canvas.width, this.canvas.height);
     planeSpecs = zipPlanesSegmentsJson(planeSpecs, planesJson);
-    const portalSpecs = getMaskSpecsByMatch(segmentMask, categoryClassIndices.portal, this.canvas.width, this.canvas.height);
+    const portalSpecs = getMaskSpecsByMatch(portalJson, segmentMask, categoryClassIndices.portal, this.canvas.width, this.canvas.height);
     geometry.setAttribute('segment', new THREE.BufferAttribute(segmentSpecs.array, 1));
     geometry.setAttribute('segmentColor', new THREE.BufferAttribute(segmentSpecs.colorArray, 3));
     geometry.setAttribute('plane', new THREE.BufferAttribute(planeSpecs.array, 1));
     geometry.setAttribute('planeColor', new THREE.BufferAttribute(planeSpecs.colorArray, 3));
-    geometry.setAttribute('portal', new THREE.BufferAttribute(portalSpecs.array, 1));
+    // geometry.setAttribute('portal', new THREE.BufferAttribute(portalSpecs.array, 1));
     geometry.setAttribute('portalColor', new THREE.BufferAttribute(portalSpecs.colorArray, 3));
     // globalThis.segmentMask = segmentMask;
     // globalThis.portalClasses = categoryClassIndices.portal;
@@ -2706,6 +2750,7 @@ class PanelRenderer extends EventTarget {
     sceneMesh.indexedGeometry = indexedGeometry;
     sceneMesh.segmentSpecs = segmentSpecs;
     sceneMesh.planeSpecs = planeSpecs;
+    sceneMesh.portalSpecs = portalSpecs;
     sceneMesh.firstFloorPlaneIndex = firstFloorPlaneIndex;
     this.scene.add(sceneMesh);
     this.sceneMesh = sceneMesh;
