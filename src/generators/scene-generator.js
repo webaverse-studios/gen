@@ -621,72 +621,75 @@ const getMaskSpecsByConnectivity = (geometry, mask, width, height) => {
       const index = y * width + x;
 
       if (!seenIndices.has(index)) {
+        seenIndices.add(index);
+
         // initialize loop
         const value = mask[index];
-        const segmentIndices = [];
-        const boundingBox = localBox.set(
-          localVector.set(Infinity, Infinity, Infinity),
-          localVector2.set(-Infinity, -Infinity, -Infinity)
-        );
-        const labelIndex = labels.length;
+        if (value !== -1) {
+          const segmentIndices = [];
+          const boundingBox = localBox.set(
+            localVector.set(Infinity, Infinity, Infinity),
+            localVector2.set(-Infinity, -Infinity, -Infinity)
+          );
+          const labelIndex = labels.length;
 
-        // push initial queue entry
-        const queue = [index];
-        seenIndices.add(index);
-        segmentIndices.push(index);
-        labelIndices[index] = labelIndex;
+          // push initial queue entry
+          const queue = [index];
+          segmentIndices.push(index);
+          labelIndices[index] = labelIndex;
 
-        // loop
-        while (queue.length > 0) {
-          const index = queue.shift();
+          // loop
+          while (queue.length > 0) {
+            const index = queue.shift();
 
-          const localValue = mask[index];
-          if (localValue === value) {
-            const x = index % width;
-            const y = Math.floor(index / width);
+            const localValue = mask[index];
+            if (localValue === value) {
+              const x = index % width;
+              const y = Math.floor(index / width);
 
-            for (let dx = -1; dx <= 1; dx++) {
-              for (let dy = -1; dy <= 1; dy++) {
-                if (dx === 0 && dy === 0) {
-                  continue;
-                }
+              for (let dx = -1; dx <= 1; dx++) {
+                for (let dy = -1; dy <= 1; dy++) {
+                  if (dx === 0 && dy === 0) {
+                    continue;
+                  }
 
-                const ax = x + dx;
-                const ay = y + dy;
+                  const ax = x + dx;
+                  const ay = y + dy;
 
-                if (ax >= 0 && ax < width && ay >= 0 && ay < height) {
-                  const aIndex = ay * width + ax;
-                  
-                  if (!seenIndices.has(aIndex)) {
-                    queue.push(aIndex);
-                    seenIndices.add(aIndex);
-                    segmentIndices.push(aIndex);
-                    labelIndices[aIndex] = labelIndex;
+                  if (ax >= 0 && ax < width && ay >= 0 && ay < height) {
+                    const aIndex = ay * width + ax;
+                    
+                    if (!seenIndices.has(aIndex)) {
+                      queue.push(aIndex);
+                      seenIndices.add(aIndex);
+                      segmentIndices.push(aIndex);
+                      labelIndices[aIndex] = labelIndex;
+                    }
                   }
                 }
               }
             }
           }
+
+          const c = localColor.setHex(colors[value % colors.length]);
+          for (const index of segmentIndices) {
+            const position = localVector.fromArray(positions, index * 3);
+            boundingBox.expandByPoint(position);
+
+            array[index] = value;
+
+            colorArray[index * 3 + 0] = c.r;
+            colorArray[index * 3 + 1] = c.g;
+            colorArray[index * 3 + 2] = c.b;
+          }
+          labels.push({
+            index: value,
+            bbox: [
+              boundingBox.min.toArray(),
+              boundingBox.max.toArray(),
+            ],
+          });
         }
-
-        const c = localColor.setHex(colors[value % colors.length]);
-        for (const index of segmentIndices) {
-          const position = localVector.fromArray(positions, index * 3);
-          boundingBox.expandByPoint(position);
-
-          array[index] = value;
-
-          colorArray[index * 3 + 0] = c.r;
-          colorArray[index * 3 + 1] = c.g;
-          colorArray[index * 3 + 2] = c.b;
-        }
-        labels.push({
-          index: value,
-          bbox: [
-            boundingBox.min.toArray(),
-            boundingBox.max.toArray(),
-          ],
-        });
       }
     }
   }
@@ -712,83 +715,86 @@ const getMaskSpecsByValue = (geometry, mask, width, height) => {
       const index = y * width + x;
 
       if (!seenIndices.has(index)) {
+        seenIndices.add(index);
+
         // initialize loop
         const value = mask[index];
-        const segmentIndices = [];
+        if (value !== -1) {
+          const segmentIndices = [];
 
-        // push initial queue entry
-        const queue = [index];
-        seenIndices.add(index);
-        segmentIndices.push(index);
+          // push initial queue entry
+          const queue = [index];
+          segmentIndices.push(index);
 
-        let label = labels.get(value);
-        if (!label) {
-          label = {
-            index: labels.size,
-            bbox: [
-              [Infinity, Infinity, Infinity],
-              [-Infinity, -Infinity, -Infinity],
-            ],
-            numPixels: 0,
-          };
-          labels.set(value, label);
-        }
-        labelIndices[index] = label.index;
-        label.numPixels++;
+          let label = labels.get(value);
+          if (!label) {
+            label = {
+              index: labels.size,
+              bbox: [
+                [Infinity, Infinity, Infinity],
+                [-Infinity, -Infinity, -Infinity],
+              ],
+              numPixels: 0,
+            };
+            labels.set(value, label);
+          }
+          labelIndices[index] = label.index;
+          label.numPixels++;
 
-        const boundingBox = localBox.set(
-          localVector.fromArray(label.bbox[0]),
-          localVector2.fromArray(label.bbox[1])
-        );
+          const boundingBox = localBox.set(
+            localVector.fromArray(label.bbox[0]),
+            localVector2.fromArray(label.bbox[1])
+          );
 
-        // loop
-        while (queue.length > 0) {
-          const index = queue.shift();
+          // loop
+          while (queue.length > 0) {
+            const index = queue.shift();
 
-          const localValue = mask[index];
-          if (localValue === value) {
-            const x = index % width;
-            const y = Math.floor(index / width);
+            const localValue = mask[index];
+            if (localValue === value) {
+              const x = index % width;
+              const y = Math.floor(index / width);
 
-            for (let dx = -1; dx <= 1; dx++) {
-              for (let dy = -1; dy <= 1; dy++) {
-                if (dx === 0 && dy === 0) {
-                  continue;
-                }
+              for (let dx = -1; dx <= 1; dx++) {
+                for (let dy = -1; dy <= 1; dy++) {
+                  if (dx === 0 && dy === 0) {
+                    continue;
+                  }
 
-                const ax = x + dx;
-                const ay = y + dy;
+                  const ax = x + dx;
+                  const ay = y + dy;
 
-                if (ax >= 0 && ax < width && ay >= 0 && ay < height) {
-                  const aIndex = ay * width + ax;
-                  
-                  if (!seenIndices.has(aIndex)) {
-                    queue.push(aIndex);
-                    seenIndices.add(aIndex);
-                    segmentIndices.push(aIndex);
-                    labelIndices[aIndex] = label.index;
-                    label.numPixels++;
+                  if (ax >= 0 && ax < width && ay >= 0 && ay < height) {
+                    const aIndex = ay * width + ax;
+                    
+                    if (!seenIndices.has(aIndex)) {
+                      queue.push(aIndex);
+                      seenIndices.add(aIndex);
+                      segmentIndices.push(aIndex);
+                      labelIndices[aIndex] = label.index;
+                      label.numPixels++;
+                    }
                   }
                 }
               }
             }
           }
+
+          const c = localColor.setHex(colors[value % colors.length]);
+          for (const index of segmentIndices) {
+            const position = localVector.fromArray(positions, index * 3);
+            boundingBox.expandByPoint(position);
+
+            array[index] = value;
+
+            colorArray[index * 3 + 0] = c.r;
+            colorArray[index * 3 + 1] = c.g;
+            colorArray[index * 3 + 2] = c.b;
+          }
+
+          boundingBox.min.toArray(label.bbox[0]);
+          boundingBox.max.toArray(label.bbox[1]);
         }
-
-        const c = localColor.setHex(colors[value % colors.length]);
-        for (const index of segmentIndices) {
-          const position = localVector.fromArray(positions, index * 3);
-          boundingBox.expandByPoint(position);
-
-          array[index] = value;
-
-          colorArray[index * 3 + 0] = c.r;
-          colorArray[index * 3 + 1] = c.g;
-          colorArray[index * 3 + 2] = c.b;
-        }
-
-        boundingBox.min.toArray(label.bbox[0]);
-        boundingBox.max.toArray(label.bbox[1]);
       }
     }
   }
