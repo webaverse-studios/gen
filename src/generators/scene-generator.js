@@ -476,7 +476,7 @@ const normalToQuaternion = (() => {
       localMatrix.lookAt(
         localVector.set(0, 0, 0),
         normal,
-        localVector2.set(0, 1, 0)
+        localVector2.set(0, 0, 1)
       )
     );
   };
