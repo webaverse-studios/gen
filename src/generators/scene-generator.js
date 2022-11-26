@@ -11,12 +11,15 @@ import {
   getPointCloud,
   drawPointCloudCanvas,
   pointCloudArrayBufferToPositionAttributeArray,
+  pointCloudArrayBufferToGeometry,
   depthFloat32ArrayToPositionAttributeArray,
   setCameraViewPositionFromViewZ,
   reprojectCameraFovArray,
   applySkybox,
   pointCloudArrayBufferToColorAttributeArray,
   skyboxDistance,
+  depthFloat32ArrayToGeometry,
+  depthFloat32ArrayToOrthographicGeometry,
 } from '../clients/reconstruction-client.js';
 
 import {blob2img, img2ImageData} from '../utils/convert-utils.js';
@@ -55,6 +58,7 @@ const localQuaternion = new THREE.Quaternion();
 const localMatrix = new THREE.Matrix4();
 const localBox = new THREE.Box3();
 const localCamera = new THREE.PerspectiveCamera();
+const localOrthographicCamera = new THREE.OrthographicCamera();
 const localColor = new THREE.Color();
 
 //
@@ -64,6 +68,10 @@ const defaultCameraMatrix = new THREE.Matrix4();
 //
 
 export const panelSize = 1024;
+const floorNetWorldSize = 100;
+const floorNetWorldDepth = 1000;
+const floorNetResolution = 0.1;
+const floorNetPixelSize = floorNetWorldSize / floorNetResolution;
 export const mainImageKey = 'layer0/image';
 export const promptKey = 'layer0/prompt';
 export const layer1Specs = [
@@ -101,6 +109,14 @@ export const layer1Specs = [
   },
   {
     name: 'portalJson',
+    type: 'json',
+  },
+  {
+    name: 'floorNetDepths',
+    type: 'arrayBuffer',
+  },
+  {
+    name: 'floorNetCameraJson',
     type: 'json',
   },
   {
@@ -163,6 +179,14 @@ export const layer2Specs = [
   },
   {
     name: 'portalJson',
+    type: 'json',
+  },
+  {
+    name: 'floorNetDepths',
+    type: 'arrayBuffer',
+  },
+  {
+    name: 'floorNetCameraJson',
     type: 'json',
   },
   {
@@ -409,6 +433,39 @@ const categoryClassIndices = (() => {
 
 //
 
+const depthRenderSkipRatio = 8;
+const makeDepthCubesMesh = depthFloats => {
+  // render an instanced cubes mesh to show the depth
+  const depthCubesGeometry = new THREE.BoxBufferGeometry(0.01, 0.01, 0.01);
+  const depthCubesMaterial = new THREE.MeshPhongMaterial({
+    // color: 0x00FFFF,
+    vertexColors: true,
+  });
+  const depthCubesMesh = new THREE.InstancedMesh(depthCubesGeometry, depthCubesMaterial, depthFloats.length);
+  depthCubesMesh.name = 'depthCubesMesh';
+  depthCubesMesh.frustumCulled = false;
+
+  // set the matrices by projecting the depth from the perspective camera
+  depthCubesMesh.count = 0;
+  for (let i = 0; i < depthFloats.length; i += depthRenderSkipRatio) {
+    const x = (i % this.renderer.domElement.width) / this.renderer.domElement.width;
+    let y = Math.floor(i / this.renderer.domElement.width) / this.renderer.domElement.height;
+    y = 1 - y;
+
+    const viewZ = depthFloats[i];
+    const worldPoint = setCameraViewPositionFromViewZ(x, y, viewZ, editCamera, localVector);
+    const target = worldPoint.applyMatrix4(editCamera.matrixWorld);
+
+    localMatrix.makeTranslation(target.x, target.y, target.z);
+    depthCubesMesh.setMatrixAt(i / depthRenderSkipRatio, localMatrix);
+    depthCubesMesh.count++;
+  }
+  depthCubesMesh.instanceMatrix.needsUpdate = true;
+  return depthCubesMesh;
+};
+
+//
+
 const getFirstFloorPlaneIndex = (/*segmentSpecs, */planeSpecs) => {
   const labelSpecs = planeSpecs.labels.map((label, index) => {
     const {distanceSquaredF} = label;
@@ -468,7 +525,7 @@ const getFirstFloorPlaneIndex = (/*segmentSpecs, */planeSpecs) => {
 
 //
 
-const _setCameraFromJson = (camera, cameraJson) => {
+const _setPerspectiveCameraFromJson = (camera, cameraJson) => {
   camera.position.fromArray(cameraJson.position);
   camera.quaternion.fromArray(cameraJson.quaternion);
   camera.scale.fromArray(cameraJson.scale);
@@ -479,7 +536,7 @@ const _setCameraFromJson = (camera, cameraJson) => {
   camera.updateProjectionMatrix();
   return camera;
 };
-const _getCameraJson = camera => {
+const _getPerspectiveCameraJson = camera => {
   return {
     position: camera.position.toArray(),
     quaternion: camera.quaternion.toArray(),
@@ -487,6 +544,33 @@ const _getCameraJson = camera => {
     near: camera.near,
     far: camera.far,
     fov: camera.fov,
+  };
+};
+const _setOrthographicCameraFromJson = (camera, cameraJson) => {
+  camera.position.fromArray(cameraJson.position);
+  camera.quaternion.fromArray(cameraJson.quaternion);
+  camera.scale.fromArray(cameraJson.scale);
+  camera.updateMatrixWorld();
+  camera.near = cameraJson.near;
+  camera.far = cameraJson.far;
+  camera.left = cameraJson.left;
+  camera.right = cameraJson.right;
+  camera.top = cameraJson.top;
+  camera.bottom = cameraJson.bottom;
+  camera.updateProjectionMatrix();
+  return camera;
+};
+const _getOrthographicCameraJson = camera => {
+  return {
+    position: camera.position.toArray(),
+    quaternion: camera.quaternion.toArray(),
+    scale: camera.scale.toArray(),
+    near: camera.near,
+    far: camera.far,
+    left: camera.left,
+    right: camera.right,
+    top: camera.top,
+    bottom: camera.bottom,
   };
 };
 
@@ -858,7 +942,7 @@ const zipPlanesSegmentsJson = (planeSpecs, planesJson) => {
 
 //
 
-const floatImageData = imageData => {
+const reinterpretFloatImageData = imageData => {
   const result = new Float32Array(
     imageData.data.buffer,
     imageData.data.byteOffset,
@@ -880,35 +964,15 @@ const floatImageData = imageData => {
 const depthVertexShader = `\
   precision highp float;
   precision highp int;
-  /* uniform float uVertexOffset;
-  varying vec3 vViewPosition;
-  varying vec2 vUv;
-  varying vec2 vWorldUv;
-  varying vec3 vPos;
-  varying vec3 vNormal; */
 
   void main() {
-    // vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-    // vec3 newPosition = position + normal * vec3( uVertexOffset, uVertexOffset, uVertexOffset );
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-
-    // vViewPosition = -mvPosition.xyz;
-    // vUv = uv;
-    // vPos = position;
-    // vNormal = normal;
   }
 `;
 const depthFragmentShader = `\
-  // uniform vec3 uColor;
-  // uniform float uTime;
   uniform float cameraNear;
   uniform float cameraFar;
-
-  // varying vec3 vViewPosition;
-  // varying vec2 vUv;
-
-  // varying vec3 vPos;
-  // varying vec3 vNormal;
+  uniform float isPerspective;
 
   #define FLOAT_MAX  1.70141184e38
   #define FLOAT_MIN  1.17549435e-38
@@ -981,7 +1045,12 @@ const depthFragmentShader = `\
     // get the view Z
     // first, we need to reconstruct the depth value in this fragment
     float depth = gl_FragCoord.z;
-    float viewZ = perspectiveDepthToViewZ(depth, cameraNear, cameraFar);
+    float viewZ;
+    if (isPerspective > 0.) {
+      viewZ = perspectiveDepthToViewZ(depth, cameraNear, cameraFar);
+    } else {
+      viewZ = orthographicDepthToViewZ(depth, cameraNear, cameraFar);
+    }
     
     // convert to orthographic depth
     // float orthoZ = viewZToOrthographicDepth(viewZ, cameraNear, cameraFar);
@@ -990,9 +1059,9 @@ const depthFragmentShader = `\
     gl_FragColor = encode_float(viewZ).abgr;
   }
 `;
-const getDepthFloatsFromPointCloud = (pointCloudArrayBuffer, ) => {
+const getDepthFloatsFromPointCloud = pointCloudArrayBuffer => {
   const geometryPositions = new Float32Array(panelSize * panelSize * 3);
-  pointCloudArrayBufferToPositionAttributeArray(pointCloudArrayBuffer, geometryPositions, 1 / panelSize);
+  pointCloudArrayBufferToPositionAttributeArray(pointCloudArrayBuffer, panelSize, panelSize, geometryPositions);
 
   const newDepthFloatImageData = new Float32Array(geometryPositions.length / 3);
   for (let i = 0; i < newDepthFloatImageData.length; i++) {
@@ -2680,15 +2749,15 @@ class PanelRenderer extends EventTarget {
 
     this.sceneMesh = null;
 
-    const defaultCubeMesh = new THREE.Mesh(
-      new THREE.BoxBufferGeometry(1, 1, 1),
-      new THREE.MeshPhongMaterial({
-        color: 0x00ff00,
-      }),
-    );
-    defaultCubeMesh.name = 'defaultCubeMesh';
-    defaultCubeMesh.frustumCulled = false;
-    // scene.add(defaultCubeMesh);
+    // const defaultCubeMesh = new THREE.Mesh(
+    //   new THREE.BoxBufferGeometry(1, 1, 1),
+    //   new THREE.MeshPhongMaterial({
+    //     color: 0x00ff00,
+    //   }),
+    // );
+    // defaultCubeMesh.name = 'defaultCubeMesh';
+    // defaultCubeMesh.frustumCulled = false;
+    // // scene.add(defaultCubeMesh);
 
     // read the mesh from the panel
     const imgArrayBuffer = panel.getData(mainImageKey);
@@ -2700,19 +2769,30 @@ class PanelRenderer extends EventTarget {
     const planesJson = panel.getData('layer1/planesJson');
     const planesMask = panel.getData('layer1/planesMask');
     const portalJson = panel.getData('layer1/portalJson');
+    const floorNetDepths = panel.getData('layer1/floorNetDepths');
+    const floorNetCameraJson = panel.getData('layer1/floorNetCameraJson');
     const predictedHeight = panel.getData('layer1/predictedHeight');
 
-    globalThis.portalJson = portalJson;
+    globalThis.floorNetDepths = floorNetDepths;
+    globalThis.floorNetCameraJson = floorNetCameraJson;
 
     // camera
     this.camera.fov = Number(pointCloudHeaders['x-fov']);
     this.camera.updateProjectionMatrix();
 
+    // floor net camera
+    const floorNetCamera = _setOrthographicCameraFromJson(localOrthographicCamera, floorNetCameraJson);
+
     // scene mesh
     const widthSegments = this.canvas.width - 1;
     const heightSegments = this.canvas.height - 1;
     let geometry = new THREE.PlaneGeometry(1, 1, widthSegments, heightSegments);
-    pointCloudArrayBufferToPositionAttributeArray(pointCloudArrayBuffer, geometry.attributes.position.array, 1/this.canvas.width);
+    pointCloudArrayBufferToPositionAttributeArray(
+      pointCloudArrayBuffer,
+      this.canvas.width,
+      this.canvas.height,
+      geometry.attributes.position.array
+    );
     // geometry.setAttribute('color', new THREE.BufferAttribute(new Uint8Array(pointCloudArrayBuffer.byteLength / pointcloudStride * 3), 3, true));
     // pointCloudArrayBufferToColorAttributeArray(labelImageData, geometry.attributes.color.array);
     // _cutSkybox(geometry);
@@ -2740,6 +2820,8 @@ class PanelRenderer extends EventTarget {
     }
     geometry.setAttribute('triangleId', triangleIdAttribute);
 
+    //
+
     const firstFloorPlaneIndex = getFirstFloorPlaneIndex(planeSpecs);
 
     //
@@ -2758,9 +2840,6 @@ class PanelRenderer extends EventTarget {
     sceneMesh.planeSpecs = planeSpecs;
     sceneMesh.portalSpecs = portalSpecs;
     sceneMesh.firstFloorPlaneIndex = firstFloorPlaneIndex;
-    this.scene.add(sceneMesh);
-    this.sceneMesh = sceneMesh;
-
     (async () => { // load the texture image
       sceneMesh.visible = false;
 
@@ -2775,6 +2854,82 @@ class PanelRenderer extends EventTarget {
 
       sceneMesh.visible = true;
     })();
+    this.scene.add(sceneMesh);
+    this.sceneMesh = sceneMesh;
+
+    /* // floor render mesh test for debugging
+    {
+      const geometry = pointCloudArrayBufferToGeometry(
+        pointCloudArrayBuffer,
+        this.canvas.width,
+        this.canvas.height,
+      );
+      // _cutMask(geometry, depthFloatImageData, distanceNearestPositions, editCamera);
+      geometry.computeVertexNormals();
+
+      const floorNetMaterial = new THREE.ShaderMaterial({
+        uniforms: {
+          cameraNear: {
+            value: this.camera.near,
+            needsUpdate: true,
+          },
+          cameraFar: {
+            value: this.camera.far,
+            needsUpdate: true,
+          },
+          isPerspective: {
+            value: 1,
+            needsUpdate: true,
+          },
+        },
+        vertexShader: `\
+          precision highp float;
+          precision highp int;
+        
+          void main() {
+            vec3 p = position;
+            // p.x *= -1.; // we are looking from the bottom, so flip x
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+          }
+        `,
+        fragmentShader: depthFragmentShader,
+        side: THREE.DoubleSide,
+      });
+      const floorNetDepthRenderMesh = new THREE.Mesh(geometry, floorNetMaterial);
+      // floorNetDepthRenderMesh.onBeforeRender = () => {
+      //   console.log('floorNetDepthRenderMesh render', floorNetDepthRenderMesh);
+      // };
+      floorNetDepthRenderMesh.frustumCulled = false;
+      this.scene.add(floorNetDepthRenderMesh);
+    } */
+
+    // floor net depths
+    {
+      const geometry = depthFloat32ArrayToOrthographicGeometry(
+        floorNetDepths,
+        floorNetPixelSize,
+        floorNetPixelSize,
+        floorNetCamera,
+      );
+      geometry.computeVertexNormals();
+      
+      const material = new THREE.MeshPhongMaterial({
+        color: 0xFF0000,
+        transparent: true,
+        opacity: 0.7,
+        side: THREE.DoubleSide,
+      });
+
+      const floorNetMesh = new THREE.Mesh(geometry, material);
+      // floorNetMesh.position.copy(floorNetCamera.position);
+      // floorNetMesh.quaternion.copy(floorNetCamera.quaternion);
+      // floorNetMesh.updateMatrixWorld();
+      floorNetMesh.frustumCulled = false;
+      this.scene.add(floorNetMesh);
+      this.floorNetMesh = floorNetMesh;
+
+      globalThis.floorNetMesh = floorNetMesh;
+    }
 
     // selector
     {
@@ -3503,7 +3658,7 @@ class PanelRenderer extends EventTarget {
     }
 
     // snapshot camera state
-    const editCameraJson = _getCameraJson(this.camera);
+    const editCameraJson = _getPerspectiveCameraJson(this.camera);
     // console.log('edit camera json init', editCameraJson);
 
     // helpers
@@ -3584,7 +3739,7 @@ class PanelRenderer extends EventTarget {
     editCameraJson,
   }) {
     // extract edit camera
-    const editCamera = _setCameraFromJson(localCamera, editCameraJson).clone();
+    const editCamera = _setPerspectiveCameraFromJson(localCamera, editCameraJson).clone();
 
     // extract image array buffers
     let maskImgArrayBuffer;
@@ -3786,6 +3941,7 @@ class PanelRenderer extends EventTarget {
       planesMask,
       portalJson,
       portalMask,
+      floorNetDepths,
     } = await getSemanticPortals(editedImg, newDepthFloatImageData, segmentMask);
     console.timeEnd('planeDetection');
 
@@ -3800,7 +3956,7 @@ class PanelRenderer extends EventTarget {
     //   editCamera.fov = fov;
     //   editCamera.updateMatrixWorld();
       
-    //   editCameraJson = _getCameraJson(editCamera);
+    //   editCameraJson = _getPerspectiveCameraJson(editCamera);
     // }
     // console.timeEnd('fov');
 
@@ -3816,6 +3972,10 @@ class PanelRenderer extends EventTarget {
           },
           cameraFar: {
             value: editCamera.far,
+            needsUpdate: true,
+          },
+          isPerspective: {
+            value: 1,
             needsUpdate: true,
           },
         },
@@ -3871,7 +4031,7 @@ class PanelRenderer extends EventTarget {
         this.renderer.setRenderTarget(null);
         return imageData;
       };
-      depthFloatImageData = floatImageData(_renderOverrideMaterial(depthRenderTarget)); // viewZ
+      depthFloatImageData = reinterpretFloatImageData(_renderOverrideMaterial(depthRenderTarget)); // viewZ
     }
     console.timeEnd('renderDepth');
 
@@ -4152,6 +4312,7 @@ class PanelRenderer extends EventTarget {
       planesJson,
       planesMask,
       portalJson,
+      floorNetDepths,
       segmentMask,
       editCameraJson,
     };
@@ -4179,14 +4340,13 @@ class PanelRenderer extends EventTarget {
     const planesJson = _getLayerEntry('planesJson');
     const planesMask = _getLayerEntry('planesMask');
     const portalJson = _getLayerEntry('portalJson');
+    const floorNetDepths = _getLayerEntry('floorNetDepths');
     const segmentMask = _getLayerEntry('segmentMask');
     const editCameraJson = _getLayerEntry('editCameraJson');
 
-    globalThis.portalJson2 = portalJson;
-
     //
 
-    const editCamera = _setCameraFromJson(localCamera, editCameraJson).clone();
+    const editCamera = _setPerspectiveCameraFromJson(localCamera, editCameraJson).clone();
 
     //
 
@@ -4195,44 +4355,11 @@ class PanelRenderer extends EventTarget {
 
     //
 
-    const depthRenderSkipRatio = 8;
-    const _makeDepthCubesMesh = depthFloats => {
-      // render an instanced cubes mesh to show the depth
-      const depthCubesGeometry = new THREE.BoxBufferGeometry(0.01, 0.01, 0.01);
-      const depthCubesMaterial = new THREE.MeshPhongMaterial({
-        // color: 0x00FFFF,
-        vertexColors: true,
-      });
-      const depthCubesMesh = new THREE.InstancedMesh(depthCubesGeometry, depthCubesMaterial, depthFloats.length);
-      depthCubesMesh.name = 'depthCubesMesh';
-      depthCubesMesh.frustumCulled = false;
-
-      // set the matrices by projecting the depth from the perspective camera
-      depthCubesMesh.count = 0;
-      for (let i = 0; i < depthFloats.length; i += depthRenderSkipRatio) {
-        const x = (i % this.renderer.domElement.width) / this.renderer.domElement.width;
-        let y = Math.floor(i / this.renderer.domElement.width) / this.renderer.domElement.height;
-        y = 1 - y;
-
-        const viewZ = depthFloats[i];
-        const worldPoint = setCameraViewPositionFromViewZ(x, y, viewZ, editCamera, localVector);
-        const target = worldPoint.applyMatrix4(editCamera.matrixWorld);
-
-        localMatrix.makeTranslation(target.x, target.y, target.z);
-        depthCubesMesh.setMatrixAt(i / depthRenderSkipRatio, localMatrix);
-        depthCubesMesh.count++;
-      }
-      depthCubesMesh.instanceMatrix.needsUpdate = true;
-      return depthCubesMesh;
-    };
-
-    //
-
     console.time('depthPreviewReconstructed');
     {
       // globalThis.depths = [];
 
-      const depthPreviewReconstructedMesh = _makeDepthCubesMesh(reconstructedDepthFloats);
+      const depthPreviewReconstructedMesh = makeDepthCubesMesh(reconstructedDepthFloats);
       const colors = new Float32Array(depthPreviewReconstructedMesh.count * 3);
       let j = 0;
       for (let i = 0; i < reconstructedDepthFloats.length; i += depthRenderSkipRatio) {
@@ -4255,7 +4382,7 @@ class PanelRenderer extends EventTarget {
 
     console.time('depthPreviewNew');
     {
-      const depthPreviewNewMesh = _makeDepthCubesMesh(newDepthFloatImageData);
+      const depthPreviewNewMesh = makeDepthCubesMesh(newDepthFloatImageData);
       const colors = new Float32Array(depthPreviewNewMesh.count * 3);
       const color = localColor.setHex(0xFF0000);
       let j = 0;
@@ -4273,7 +4400,7 @@ class PanelRenderer extends EventTarget {
 
     /* console.time('depthPreviewOld');
     {
-      const depthPreviewOldMesh = _makeDepthCubesMesh(depthFloatImageData);
+      const depthPreviewOldMesh = makeDepthCubesMesh(depthFloatImageData);
       const colors = new Float32Array(depthPreviewOldMesh.count * 3);
       const color = localColor.setHex(0xFF00FF);
       let j = 0;
@@ -4292,17 +4419,11 @@ class PanelRenderer extends EventTarget {
     console.time('backgroundMesh');
     let backgroundMesh;
     {
-      const widthSegments = panelSize - 1;
-      const heightSegments = panelSize - 1;
-      // geometry is camera-relative
-      const geometry = new THREE.PlaneGeometry(1, 1, widthSegments, heightSegments);
-      // pointCloudArrayBufferToPositionAttributeArray(pointCloud, geometry.attributes.position.array, 1 / panelSize);
-      depthFloat32ArrayToPositionAttributeArray(
+      const geometry = depthFloat32ArrayToGeometry(
         reconstructedDepthFloats,
-        this.renderer,
+        this.renderer.domElement.width,
+        this.renderer.domElement.height,
         editCamera,
-        geometry.attributes.position.array,
-        // 1 / panelSize
       );
       _cutMask(geometry, depthFloatImageData, distanceNearestPositions, editCamera);
       /* if (!segmentMask) {
@@ -4711,7 +4832,6 @@ async function compileVirtualScene(arrayBuffer) {
 
   // plane detection
   console.time('planeDetection');
-
   const depthFloats32Array = getDepthFloatsFromPointCloud(pointCloudArrayBuffer);
   const {
     planesJson,
@@ -4720,6 +4840,147 @@ async function compileVirtualScene(arrayBuffer) {
     portalMask,
   } = await getSemanticPortals(img, depthFloats32Array, segmentMask);
   console.timeEnd('planeDetection');
+
+  console.time('floorReconstruction');
+  let floorNetDepths;
+  let floorNetCameraJson;
+  {
+    // renderer
+    const canvas = document.createElement('canvas');
+    canvas.width = floorNetPixelSize;
+    canvas.height = floorNetPixelSize;
+    canvas.classList.add('floorReconstructionCanvas');
+    document.body.appendChild(canvas);
+
+    const renderer = new THREE.WebGLRenderer({
+      canvas,
+      alpha: true,
+      preserveDrawingBuffer: true,
+    });
+    renderer.setClearColor(0x000000, 0);
+
+    // render target
+    const floorRenderTarget = new THREE.WebGLRenderTarget(floorNetPixelSize, floorNetPixelSize, {
+      type: THREE.UnsignedByteType,
+      format: THREE.RGBAFormat,
+    });
+
+    // scene
+    const floorNetScene = new THREE.Scene();
+    floorNetScene.autoUpdate = false;
+
+    // camera
+    const floorNetCamera = new THREE.OrthographicCamera(
+      -floorNetWorldSize / 2,
+      floorNetWorldSize / 2,
+      floorNetWorldSize / 2,
+      -floorNetWorldSize / 2,
+      0,
+      floorNetWorldDepth
+    );
+    floorNetCamera.position.set(0, -floorNetWorldDepth/2, 0);
+    // floorNetCamera.position.set(0, -30, 0);
+    floorNetCamera.quaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI/2)
+      .multiply(
+        localQuaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI)
+      );
+    floorNetCamera.updateMatrixWorld();
+
+    globalThis.floorNetCamera = floorNetCamera;
+
+    const v = new THREE.Vector3(0, 0, -1)
+      .applyQuaternion(floorNetCamera.quaternion);
+    console.log('got v', v.toArray().join(','));
+
+    // mesh
+    floorNetCameraJson = _getOrthographicCameraJson(floorNetCamera);
+    {
+      const geometry = pointCloudArrayBufferToGeometry(pointCloudArrayBuffer, img.width, img.height);
+      // _cutMask(geometry, depthFloatImageData, distanceNearestPositions, editCamera);
+      geometry.computeVertexNormals();
+
+      const floorNetMaterial = new THREE.ShaderMaterial({
+        uniforms: {
+          cameraNear: {
+            value: floorNetCamera.near,
+            needsUpdate: true,
+          },
+          cameraFar: {
+            value: floorNetCamera.far,
+            needsUpdate: true,
+          },
+          isPerspective: {
+            value: 0,
+            needsUpdate: true,
+          },
+        },
+        vertexShader: `\
+          precision highp float;
+          precision highp int;
+        
+          void main() {
+            vec3 p = position;
+            // p.x *= -1.; // we are looking from the bottom, so flip x
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+          }
+        `,
+        fragmentShader: depthFragmentShader,
+        side: THREE.DoubleSide,
+      });
+      const floorNetDepthRenderMesh = new THREE.Mesh(geometry, floorNetMaterial);
+      // floorNetDepthRenderMesh.onBeforeRender = () => {
+      //   console.log('floorNetDepthRenderMesh render', floorNetDepthRenderMesh);
+      // };
+      floorNetDepthRenderMesh.frustumCulled = false;
+      floorNetScene.add(floorNetDepthRenderMesh);
+
+      globalThis.floorNetDepthFloat32Array = depthFloats32Array;
+      globalThis.floorNetDepthRenderMesh = floorNetDepthRenderMesh;
+    }
+    
+    // render
+    // render to the canvas, for debugging
+    // renderer.clear();
+    renderer.render(floorNetScene, floorNetCamera);
+    
+    // real render to render target
+    renderer.setRenderTarget(floorRenderTarget);
+    // renderer.clear();
+    renderer.render(floorNetScene, floorNetCamera);
+    renderer.setRenderTarget(null);
+
+    // read back the depth
+    const imageData = {
+      data: new Uint8Array(floorNetPixelSize * floorNetPixelSize * 4),
+      width: floorNetPixelSize,
+      height: floorNetPixelSize,
+    };
+    // console.log('pre read 1');
+    renderer.readRenderTargetPixels(
+      floorRenderTarget,
+      0,
+      0,
+      floorNetPixelSize,
+      floorNetPixelSize,
+      imageData.data
+    );
+    // console.log('post read 1', imageData);
+    floorNetDepths = reinterpretFloatImageData(imageData);
+    const filteredFloorNetDepths = floorNetDepths.filter(n => n !== 0);
+    if (filteredFloorNetDepths.length > 0) {
+      console.log('floor net depths found:', filteredFloorNetDepths.length);
+    } else {
+      console.warn('no floor net depths found', floorNetDepths);
+      debugger;
+    }
+    // floorNetDepths = floorNetDepths.map(n => {
+    //   n *= -1;
+    //   n = floorNetWorldDepth - n;
+    //   n *= -1;
+    //   return n;
+    // });
+  }
+  console.timeEnd('floorReconstruction');
 
   // query the height
   const predictedHeight = await _getPredictedHeight(blob);
@@ -4736,6 +4997,8 @@ async function compileVirtualScene(arrayBuffer) {
     planesJson,
     planesMask,
     portalJson,
+    floorNetDepths,
+    floorNetCameraJson,
     predictedHeight,
   };
 }

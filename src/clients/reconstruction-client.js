@@ -46,13 +46,19 @@ export function drawPointCloudCanvas(arrayBuffer) {
   ctx.putImageData(imageData, 0, 0);
   return canvas;
 }
-export function pointCloudArrayBufferToPositionAttributeArray(arrayBuffer, float32Array, scaleFactor) { // result in float32Array
-  const numPixels = arrayBuffer.byteLength / pointcloudStride;
-  const width = Math.sqrt(numPixels);
-  const height = width;
-  // if (width * height !== numPixels) {
-  //   throw new Error('invalid point cloud dimensions');
-  // }
+
+//
+
+export function pointCloudArrayBufferToPositionAttributeArray(arrayBuffer, width, height, float32Array) { // result in float32Array
+  // const numPixels = arrayBuffer.byteLength / pointcloudStride;
+  // const width = Math.sqrt(numPixels);
+  // const height = width;
+  // // if (width * height !== numPixels) {
+  // //   throw new Error('invalid point cloud dimensions');
+  // // }
+
+  const scaleFactor = 1 / width;
+
   const dataView = new DataView(arrayBuffer);
   for (let i = 0, j = 0; i < arrayBuffer.byteLength; i += pointcloudStride, j += 3) {
     let x = dataView.getFloat32(i + 0, true);
@@ -68,26 +74,29 @@ export function pointCloudArrayBufferToPositionAttributeArray(arrayBuffer, float
     float32Array[j + 2] = z;
   }
 }
+export function pointCloudArrayBufferToGeometry(arrayBuffer, width, height) {
+  const widthSegments = width - 1;
+  const heightSegments = height - 1;
+  let geometry = new THREE.PlaneGeometry(1, 1, widthSegments, heightSegments);
+  pointCloudArrayBufferToPositionAttributeArray(arrayBuffer, width, height, geometry.attributes.position.array);
+  return geometry;
+}
+
+//
+
 export function depthFloat32ArrayToPositionAttributeArray(
   depthFloat32Array,
-  renderer,
+  width,
+  height,
   camera,
   float32Array,
-  // scaleFactor,
 ) { // result in float32Array
-  /* if (!renderer || !camera) {
-    console.warn('missing renderer or camera');
-    debugger;
-  } */
-  const numPixels = depthFloat32Array.length;
-  const width = Math.sqrt(numPixels);
-  const height = width;
-  // if (width * height !== numPixels) {
-  //   throw new Error('invalid point cloud dimensions');
-  // }
+  // const numPixels = depthFloat32Array.length;
+  // const width = Math.sqrt(numPixels);
+  // const height = width;
   for (let i = 0; i < depthFloat32Array.length; i++) {
-    const x = (i % renderer.domElement.width) / renderer.domElement.width;
-    let y = Math.floor(i / renderer.domElement.width) / renderer.domElement.height;
+    const x = (i % width) / width;
+    let y = Math.floor(i / width) / height;
     y = 1 - y;
   
     const viewZ = depthFloat32Array[i];
@@ -95,39 +104,67 @@ export function depthFloat32ArrayToPositionAttributeArray(
     const target = worldPoint.applyMatrix4(camera.matrixWorld);
 
     target.toArray(float32Array, i * 3);
-
-
-
-    
-
-    /* // render an instanced cubes mesh to show the depth
-    const depthCubesGeometry = new THREE.BoxBufferGeometry(0.01, 0.01, 0.01);
-    const depthCubesMaterial = new THREE.MeshPhongMaterial({
-      // color: 0x00FFFF,
-      vertexColors: true,
-    });
-    const depthCubesMesh = new THREE.InstancedMesh(depthCubesGeometry, depthCubesMaterial, depthFloats.length);
-    depthCubesMesh.name = 'depthCubesMesh';
-    depthCubesMesh.frustumCulled = false;
-
-    // set the matrices by projecting the depth from the perspective camera
-    depthCubesMesh.count = 0;
-    for (let i = 0; i < depthFloats.length; i += depthRenderSkipRatio) {
-      const x = (i % this.renderer.domElement.width) / this.renderer.domElement.width;
-      let y = Math.floor(i / this.renderer.domElement.width) / this.renderer.domElement.height;
-      y = 1 - y;
-
-      const viewZ = depthFloats[i];
-      const worldPoint = setCameraViewPositionFromViewZ(x, y, viewZ, this.camera, localVector);
-      const target = worldPoint.applyMatrix4(this.camera.matrixWorld);
-
-      localMatrix.makeTranslation(target.x, target.y, target.z);
-      depthCubesMesh.setMatrixAt(i / depthRenderSkipRatio, localMatrix);
-      depthCubesMesh.count++;
-    }
-    depthCubesMesh.instanceMatrix.needsUpdate = true;
-    return depthCubesMesh; */
   }
+}
+export function depthFloat32ArrayToGeometry(
+  depthFloat32Array,
+  width,
+  height,
+  camera,
+) { // result in float32Array
+  const widthSegments = width - 1;
+  const heightSegments = height - 1;
+  // geometry is camera-relative
+  const geometry = new THREE.PlaneGeometry(1, 1, widthSegments, heightSegments);
+  depthFloat32ArrayToPositionAttributeArray(
+    depthFloat32Array,
+    width,
+    height,
+    camera,
+    geometry.attributes.position.array,
+  );
+  return geometry;
+}
+
+//
+
+export function depthFloat32ArrayToOrthographicPositionAttributeArray(
+  depthFloat32Array,
+  width,
+  height,
+  camera,
+  float32Array,
+) { // result in float32Array
+  for (let i = 0; i < depthFloat32Array.length; i++) {
+    const x = (i % width) / width;
+    let y = Math.floor(i / width) / height;
+    y = 1 - y;
+  
+    const viewZ = depthFloat32Array[i];
+    const worldPoint = setCameraViewPositionFromOrthographicViewZ(x, y, viewZ, camera, localVector);
+    const target = worldPoint.applyMatrix4(camera.matrixWorld);
+
+    target.toArray(float32Array, i * 3);
+  }
+}
+export function depthFloat32ArrayToOrthographicGeometry(
+  depthFloat32Array,
+  width,
+  height,
+  camera,
+) { // result in float32Array
+  const widthSegments = width - 1;
+  const heightSegments = height - 1;
+  // geometry is camera-relative
+  const geometry = new THREE.PlaneGeometry(1, 1, widthSegments, heightSegments);
+  depthFloat32ArrayToOrthographicPositionAttributeArray(
+    depthFloat32Array,
+    width,
+    height,
+    camera,
+    geometry.attributes.position.array,
+  );
+  return geometry;
 }
 
 //
@@ -158,6 +195,47 @@ export const setCameraViewPositionFromViewZ = (x, y, viewZ, camera, target) => {
   target.z = viewPosition.z;
   return target;
 };
+export const setCameraViewPositionFromOrthographicViewZ = (x, y, viewZ, camera, target) => {
+  const {near, far, projectionMatrix, projectionMatrixInverse} = camera;
+
+  // if (isNaN(viewZ)) {
+  //   console.warn('viewZ is nan', viewZ, near, far);
+  //   debugger;
+  // }
+
+  const depth = viewZToOrthographicDepth(viewZ, near, far);
+  // const depth = viewZ;
+  // if (isNaN(depth)) {
+  //   console.warn('depth is nan', depth, viewZ, near, far);
+  //   debugger;
+  // }
+
+  // get the ndc point, which we will use for the unproject
+  const ndcPoint = new THREE.Vector3(
+    (x - 0.5) * 2,
+    (y - 0.5) * 2,
+    (depth - 0.5) * 2
+  );
+  // if (isNaN(ndcPoint.x)) {
+  //   console.warn('ndcPoint.x is nan', ndcPoint.toArray());
+  //   debugger;
+  // }
+
+  // apply the unprojection
+  const worldPoint = ndcPoint.clone()
+    // .unproject(camera);
+    .applyMatrix4(projectionMatrixInverse);
+
+  // if (isNaN(worldPoint.x)) {
+  //   console.warn('worldPoint.x is nan', worldPoint.toArray());
+  //   debugger;
+  // }
+
+  target.x = worldPoint.x;
+  target.y = worldPoint.y;
+  target.z = worldPoint.z;
+  return target;
+}
 
 //
 
