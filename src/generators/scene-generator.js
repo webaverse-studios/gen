@@ -421,12 +421,12 @@ const getFirstFloorPlaneIndex = (segmentSpecs, planeSpecs) => {
     // divide planeAcc by numVertices
     for (const planeIndex of planeAcc.keys()) {
       let acc = planeAcc.get(planeIndex);
-      acc /= planeSpecs.labels[planeIndex].numPixels;
-      // acc /= planeSpecs.labels[planeIndex].distanceSquaredF;
-      if (isNaN(acc)) {
+      // acc /= planeSpecs.labels[planeIndex].numPixels;
+      acc /= planeSpecs.labels[planeIndex].distanceSquaredF;
+      /* if (isNaN(acc)) {
         console.warn('invalid plane acc', planeIndex, planeAcc.get(planeIndex), planeSpecs.labels[planeIndex].numPixels);
         debugger;
-      }
+      } */
       planeAcc.set(planeIndex, acc);
     }
 
