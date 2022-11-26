@@ -797,6 +797,14 @@ const getMaskSpecsByMatch = (mask, highlightIndices, width, height) => {
   };
 };
 const zipPlanesSegmentsJson = (planeSpecs, planesJson) => {
+  if (planeSpecs.labels.length !== planesJson.length) {
+    console.warn('invalid planes zip lengths', {
+      planeSpecs,
+      planesJson,
+    });
+    debugger;
+  }
+
   for (let i = 0; i < planeSpecs.labels.length; i++) {
     const label = planeSpecs.labels[i];
     // if (!planeSpec) {
