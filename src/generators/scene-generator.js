@@ -141,10 +141,6 @@ export const layer2Specs = [
   //   type: 'json',
   // },
   {
-    name: 'oldDepthFloatImageData',
-    type: 'arrayBuffer',
-  },
-  {
     name: 'newDepthFloatImageData',
     type: 'arrayBuffer',
   },
