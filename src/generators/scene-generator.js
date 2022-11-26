@@ -99,6 +99,10 @@ export const layer1Specs = [
     type: 'arrayBuffer',
   },
   {
+    name: 'portalJson',
+    type: 'json',
+  },
+  {
     name: 'predictedHeight',
     type: 'json',
   },
@@ -155,6 +159,10 @@ export const layer2Specs = [
   {
     name: 'planesMask',
     type: 'arrayBuffer',
+  },
+  {
+    name: 'portalJson',
+    type: 'json',
   },
   {
     name: 'segmentMask',
@@ -400,7 +408,24 @@ const categoryClassIndices = (() => {
 
 //
 
-const getFirstFloorPlaneIndex = (segmentSpecs, planeSpecs) => {
+const getFirstFloorPlaneIndex = (/*segmentSpecs, */planeSpecs) => {
+  const labelSpecs = planeSpecs.labels.map((label, index) => {
+    const {distanceSquaredF} = label;
+    return {
+      index,
+      distanceSquaredF,
+    };
+  });
+  labelSpecs.sort((a, b) => a.distanceSquaredF - b.distanceSquaredF);
+  const firstFloorPlaneIndex = labelSpecs[0].index;
+  return firstFloorPlaneIndex;
+
+  /* console.log('get first floor plane index', {
+    segmentSpecs,
+    planeSpecs,
+  });
+  debugger;
+
   // const segmentLabelIndices = segmentSpecs.labelIndices;
   const planeLabelIndices = planeSpecs.labelIndices;
 
@@ -423,10 +448,10 @@ const getFirstFloorPlaneIndex = (segmentSpecs, planeSpecs) => {
       let acc = planeAcc.get(planeIndex);
       // acc /= planeSpecs.labels[planeIndex].numPixels;
       acc /= planeSpecs.labels[planeIndex].distanceSquaredF;
-      /* if (isNaN(acc)) {
-        console.warn('invalid plane acc', planeIndex, planeAcc.get(planeIndex), planeSpecs.labels[planeIndex].numPixels);
-        debugger;
-      } */
+      // if (isNaN(acc)) {
+      //   console.warn('invalid plane acc', planeIndex, planeAcc.get(planeIndex), planeSpecs.labels[planeIndex].numPixels);
+      //   debugger;
+      // }
       planeAcc.set(planeIndex, acc);
     }
 
@@ -437,7 +462,7 @@ const getFirstFloorPlaneIndex = (segmentSpecs, planeSpecs) => {
   };
   const floorPlaneIndices = _getPlanesBySegmentIndices(categoryClassIndices.floor);
   // const floorPlaneLabels = floorPlaneIndices.map(planeIndex => planeSpecs.labels[planeIndex]);
-  return floorPlaneIndices.length > 0 ? floorPlaneIndices[0] : -1;
+  return floorPlaneIndices.length > 0 ? floorPlaneIndices[0] : -1; */
 };
 
 //
@@ -1347,6 +1372,64 @@ const _clipGeometryToMask = (
   geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3)); */
   geometry.setIndex(new THREE.BufferAttribute(Uint32Array.from(indices), 1));
 };
+const getSemanticPortals = async (img, newDepthFloatImageData, segmentMask) => {
+  let planesJson;
+  let planesMask;
+  let portalJson;
+  let portalMask;
+  await Promise.all([
+    // floor planes
+    (async () => {
+      const newDepthFloatImageData2 = newDepthFloatImageData.map((n, index) => {
+        const maskIndex = segmentMask[index];
+        return categoryClassIndices.floor.includes(maskIndex) ? n : Infinity;
+      });
+      
+      const {width, height} = img;
+      const planesSpec = await getPlanesRgbd(width, height, newDepthFloatImageData2);
+      // console.log('read planes spec', {planesSpec, newDepthFloatImageData2});
+      planesJson = planesSpec.planesJson;
+      planesMask = planesSpec.planesMask;
+
+      const planesCanvas = planesMask2Canvas(planesMask, {
+        color: true,
+      });
+      planesCanvas.classList.add('planeDetectionCanvas');
+      planesCanvas.style.cssText = `\
+        background-color: red;
+      `;
+      document.body.appendChild(planesCanvas);
+    })(),
+    // portal planes
+    (async () => {
+      const newDepthFloatImageData2 = newDepthFloatImageData.map((n, index) => {
+        const maskIndex = segmentMask[index];
+        return categoryClassIndices.portal.includes(maskIndex) ? n : Infinity;
+      });
+
+      const {width, height} = img;
+      const portalSpec = await getPlanesRgbd(width, height, newDepthFloatImageData2);
+      // console.log('read portal spec', {portalSpec, newDepthFloatImageData2});
+      portalJson = portalSpec.planesJson;
+      portalMask = portalSpec.planesMask;
+
+      const portalCanvas = planesMask2Canvas(portalMask, {
+        color: true,
+      });
+      portalCanvas.classList.add('portalDetectionCanvas');
+      portalCanvas.style.cssText = `\
+        background-color: red;
+      `;
+      document.body.appendChild(portalCanvas);
+    })(),
+  ]);
+  return {
+    planesJson,
+    planesMask,
+    portalJson,
+    portalMask,
+  };
+}
 
 //
 
@@ -2566,8 +2649,10 @@ class PanelRenderer extends EventTarget {
     // const planeMatrices = panel.getData('layer1/planeMatrices');
     const planesJson = panel.getData('layer1/planesJson');
     const planesMask = panel.getData('layer1/planesMask');
+    const portalJson = panel.getData('layer1/portalJson');
     const predictedHeight = panel.getData('layer1/predictedHeight');
-    // console.log('got panel datas', panel.getDatas());
+
+    globalThis.portalJson = portalJson;
 
     // camera
     this.camera.fov = Number(pointCloudHeaders['x-fov']);
@@ -2592,10 +2677,10 @@ class PanelRenderer extends EventTarget {
     geometry.setAttribute('planeColor', new THREE.BufferAttribute(planeSpecs.colorArray, 3));
     geometry.setAttribute('portal', new THREE.BufferAttribute(portalSpecs.array, 1));
     geometry.setAttribute('portalColor', new THREE.BufferAttribute(portalSpecs.colorArray, 3));
-    globalThis.segmentMask = segmentMask;
-    globalThis.portalClasses = categoryClassIndices.portal;
-    globalThis.portalIndices = categories.portal;
-    globalThis.portalSpecs = portalSpecs;
+    // globalThis.segmentMask = segmentMask;
+    // globalThis.portalClasses = categoryClassIndices.portal;
+    // globalThis.portalIndices = categories.portal;
+    // globalThis.portalSpecs = portalSpecs;
     const indexedGeometry = geometry;
     geometry = geometry.toNonIndexed();
     // add extra triangeId attribute
@@ -2605,7 +2690,7 @@ class PanelRenderer extends EventTarget {
     }
     geometry.setAttribute('triangleId', triangleIdAttribute);
 
-    const firstFloorPlaneIndex = getFirstFloorPlaneIndex(segmentSpecs, planeSpecs);
+    const firstFloorPlaneIndex = getFirstFloorPlaneIndex(planeSpecs);
 
     //
 
@@ -3645,23 +3730,12 @@ class PanelRenderer extends EventTarget {
 
     // plane detection
     console.time('planeDetection');
-    let planesJson;
-    let planesMask;
-    {
-      const {width, height} = editedImg;
-      const planesSpec = await getPlanesRgbd(width, height, newDepthFloatImageData);
-      planesJson = planesSpec.planesJson;
-      planesMask = planesSpec.planesMask;
-
-      const planesCanvas = planesMask2Canvas(planesMask, {
-        color: true,
-      });
-      planesCanvas.classList.add('planeDetectionCanvas');
-      planesCanvas.style.cssText = `\
-        background-color: red;
-      `;
-      document.body.appendChild(planesCanvas);
-    }
+    const {
+      planesJson,
+      planesMask,
+      portalJson,
+      portalMask,
+    } = await getSemanticPortals(editedImg, newDepthFloatImageData, segmentMask);
     console.timeEnd('planeDetection');
 
     // // set fov
@@ -3818,8 +3892,8 @@ class PanelRenderer extends EventTarget {
 
         const positions = this.sceneMesh.geometry.attributes.position.array;
         const aVector = localVectorA.fromArray(positions, triangleStartIndex * 3);
-        const bVector = localVectorB.fromArray(positions, (triangleStartIndex + 1) * 3);
-        const cVector = localVectorC.fromArray(positions, (triangleStartIndex + 2) * 3);
+        // const bVector = localVectorB.fromArray(positions, (triangleStartIndex + 1) * 3);
+        // const cVector = localVectorC.fromArray(positions, (triangleStartIndex + 2) * 3);
 
         /* // project the points onto the camera, and find the one closest to x, y
         const aScreen = localVectorA2.copy(aVector)
@@ -4026,6 +4100,7 @@ class PanelRenderer extends EventTarget {
       reconstructedDepthFloats,
       planesJson,
       planesMask,
+      portalJson,
       segmentMask,
       editCameraJson,
     };
@@ -4052,8 +4127,11 @@ class PanelRenderer extends EventTarget {
     const reconstructedDepthFloats = _getLayerEntry('reconstructedDepthFloats');
     const planesJson = _getLayerEntry('planesJson');
     const planesMask = _getLayerEntry('planesMask');
+    const portalJson = _getLayerEntry('portalJson');
     const segmentMask = _getLayerEntry('segmentMask');
     const editCameraJson = _getLayerEntry('editCameraJson');
+
+    globalThis.portalJson2 = portalJson;
 
     //
 
@@ -4582,35 +4660,14 @@ async function compileVirtualScene(arrayBuffer) {
 
   // plane detection
   console.time('planeDetection');
-  let planesJson;
-  let planesMask;
-  {
-    const depthFloats32Array = getDepthFloatsFromPointCloud(pointCloudArrayBuffer);
-    const depthFloats32Array2 = depthFloats32Array.map((n, index) => {
-      const maskIndex = segmentMask[index];
-      return categoryClassIndices.floor.includes(maskIndex) ? n : Infinity;
-    });
-    
-    const {width, height} = img;
-    const planesSpec = await getPlanesRgbd(width, height, depthFloats32Array2);
-    // console.log('got planes spec', planesSpec);
-    planesJson = planesSpec.planesJson;
-    planesMask = planesSpec.planesMask;
 
-    // if (!planesMask) {
-    //   console.warn('no planes mask');
-    //   debugger;
-    // }
-
-    const planesCanvas = planesMask2Canvas(planesMask, {
-      color: true,
-    });
-    planesCanvas.classList.add('planeDetectionCanvas');
-    planesCanvas.style.cssText = `\
-      background-color: red;
-    `;
-    document.body.appendChild(planesCanvas);
-  }
+  const depthFloats32Array = getDepthFloatsFromPointCloud(pointCloudArrayBuffer);
+  const {
+    planesJson,
+    planesMask,
+    portalJson,
+    portalMask,
+  } = await getSemanticPortals(img, depthFloats32Array, segmentMask);
   console.timeEnd('planeDetection');
 
   // query the height
@@ -4627,6 +4684,7 @@ async function compileVirtualScene(arrayBuffer) {
     // planeMatrices,
     planesJson,
     planesMask,
+    portalJson,
     predictedHeight,
   };
 }
