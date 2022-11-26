@@ -390,17 +390,19 @@ const detectronColors = [
   return hex;
 });
 const colors = detectronColors;
+const categoryClassIndices = (() => {
+  const categoryClassIndices = {};
+  for (const category in categories) {
+    categoryClassIndices[category] = categories[category].map(className => classes.indexOf(className));
+  }
+  return categoryClassIndices;
+})();
 
 //
 
 const getFirstFloorPlaneIndex = (segmentSpecs, planeSpecs) => {
   // const segmentLabelIndices = segmentSpecs.labelIndices;
   const planeLabelIndices = planeSpecs.labelIndices;
-
-  const categoryClassIndices = {};
-  for (const category in categories) {
-    categoryClassIndices[category] = categories[category].map(className => classes.indexOf(className));
-  }
 
   const _getPlanesBySegmentIndices = selectSegmentIndices => {
     const planeAcc = new Map();
