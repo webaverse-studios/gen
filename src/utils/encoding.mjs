@@ -256,6 +256,7 @@ function zbdecode(uint8Array) {
     }
     if (currentAddendum !== addendums.length) {
       console.warn('did not bind all addendums', j, currentAddendum, addendums);
+      debugger;
     }
     return j;
   }
