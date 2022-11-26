@@ -3203,6 +3203,7 @@ class PanelRenderer extends EventTarget {
               //     )
               // );
               .premultiply(localQuaternion.setFromAxisAngle(localVector.set(1, 0, 0), -Math.PI/2))
+              .premultiply(localQuaternion.setFromAxisAngle(localVector.set(0, 1, 0), Math.PI))
             this.sceneMesh.updateMatrixWorld();
 
             defaultCameraMatrix.copy(this.sceneMesh.matrixWorld);
