@@ -3366,7 +3366,6 @@ class PanelRenderer extends EventTarget {
     // render outline
     console.time('outline');
     const iResolution = new THREE.Vector2(this.renderer.domElement.width, this.renderer.domElement.height);
-    let distanceRenderTarget;
     let distanceFloatImageData;
     let distanceNearestPositions;
     {
@@ -3380,7 +3379,7 @@ class PanelRenderer extends EventTarget {
       jfaOutline.renderSelected(this.renderer, tempScene, editCamera, targets);
       const outlineUniforms = undefined;
       const distanceIndex = jfaOutline.renderDistanceTex(this.renderer, targets, iResolution, outlineUniforms);
-      distanceRenderTarget = targets[distanceIndex];
+      const distanceRenderTarget = targets[distanceIndex];
       // get the image data back out of the render target, as a Float32Array
       distanceFloatImageData = new Float32Array(distanceRenderTarget.width * distanceRenderTarget.height * 4);
       this.renderer.readRenderTargetPixels(distanceRenderTarget, 0, 0, distanceRenderTarget.width, distanceRenderTarget.height, distanceFloatImageData);
@@ -3462,8 +3461,8 @@ class PanelRenderer extends EventTarget {
       // output to canvas
       const canvas = document.createElement('canvas');
       canvas.classList.add('outlineCanvas');
-      canvas.width = distanceRenderTarget.width;
-      canvas.height = distanceRenderTarget.height;
+      canvas.width = this.renderer.domElement.width;
+      canvas.height = this.renderer.domElement.height;
       const context = canvas.getContext('2d');
       const imageData = context.createImageData(canvas.width, canvas.height);
       const data = imageData.data;
@@ -3503,7 +3502,7 @@ class PanelRenderer extends EventTarget {
     {
       reconstructedDepthFloats = renderDepthReconstruction(
         this.renderer,
-        distanceRenderTarget,
+        distanceFloatImageData,
         depthFloatImageData,
         newDepthFloatImageData,
         iResolution
@@ -3784,7 +3783,7 @@ class PanelRenderer extends EventTarget {
             gl_FragColor = vec4(c.rgb, 1.);
           }
         `,
-        transparent: true,
+        // transparent: true,
       });
       backgroundMesh = new THREE.Mesh(geometry, material);
       backgroundMesh.name = 'backgroundMesh';

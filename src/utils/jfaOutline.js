@@ -339,12 +339,17 @@ export function makeFloatRenderTargetSwapChain(width, height) {
 
 export function renderDepthReconstruction(
   renderer,
-  distanceTarget,
+  distanceFloatImageData,
   oldDepthFloats,
   newDepthFloats,
   iResolution
 ) {
   const targets = makeFloatRenderTargetSwapChain(iResolution.x, iResolution.y);
+
+  const distanceTex = new three_1.DataTexture(distanceFloatImageData, iResolution.x, iResolution.y, three_1.RGBAFormat, three_1.FloatType);
+  distanceTex.minFilter = three_1.NearestFilter;
+  distanceTex.magFilter = three_1.NearestFilter;
+  distanceTex.needsUpdate = true;
 
   const oldNewDepthTextureData = new Float32Array(oldDepthFloats.length * 4);
   for (let i = 0; i < oldDepthFloats.length; i++) {
@@ -363,7 +368,7 @@ export function renderDepthReconstruction(
 
     renderer.setRenderTarget(writeTarget);
     reconstructionPass(renderer, {
-      distanceTex: distanceTarget.texture,
+      distanceTex,
       iResolution,
       oldNewDepthTexture,
       feedbackDepthTexture: readTarget.texture,
