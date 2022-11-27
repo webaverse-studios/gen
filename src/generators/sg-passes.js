@@ -28,8 +28,9 @@ const localQuaternion = new THREE.Quaternion();
 //
 
 export function reconstructFloor({
-  img,
   pointCloudArrayBuffer,
+  width,
+  height,
 }) {
   let floorNetDepths;
   let floorNetCameraJson;

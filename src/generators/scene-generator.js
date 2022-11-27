@@ -4386,8 +4386,9 @@ async function compileVirtualScene(arrayBuffer) {
     floorNetDepths,
     floorNetCameraJson,
   } = passes.reconstructFloor({
-    img,
     pointCloudArrayBuffer,
+    width: img.width,
+    height: img.height,
   });
   console.timeEnd('floorReconstruction');
 
