@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 // import alea from '../utils/alea.js';
 import {Text} from 'troika-three-text';
-import {JFAOutline, renderDepthReconstruction} from '../utils/jfaOutline.js';
+import {renderJfa, renderDepthReconstruction} from '../utils/jfaOutline.js';
 import * as passes from './sg-passes.js';
 import {
   setPerspectiveCameraFromJson,
@@ -255,16 +255,20 @@ const makeDepthCubesMesh = (depthFloats, width, height, camera) => {
 //
 
 const getFirstFloorPlaneIndex = (/*segmentSpecs, */planeSpecs) => {
-  const labelSpecs = planeSpecs.labels.map((label, index) => {
-    const {distanceSquaredF} = label;
-    return {
-      index,
-      distanceSquaredF,
-    };
-  });
-  labelSpecs.sort((a, b) => a.distanceSquaredF - b.distanceSquaredF);
-  const firstFloorPlaneIndex = labelSpecs[0].index;
-  return firstFloorPlaneIndex;
+  if (planeSpecs.labels.length > 0) {
+    const labelSpecs = planeSpecs.labels.map((label, index) => {
+      const {distanceSquaredF} = label;
+      return {
+        index,
+        distanceSquaredF,
+      };
+    });
+    labelSpecs.sort((a, b) => a.distanceSquaredF - b.distanceSquaredF);
+    const firstFloorPlaneIndex = labelSpecs[0].index;
+    return firstFloorPlaneIndex;
+  } else {
+    return -1;
+  }
 
   /* console.log('get first floor plane index', {
     segmentSpecs,
@@ -3365,99 +3369,17 @@ class PanelRenderer extends EventTarget {
 
     // render outline
     console.time('outline');
-    const iResolution = new THREE.Vector2(this.renderer.domElement.width, this.renderer.domElement.height);
-    let distanceFloatImageData;
-    let distanceNearestPositions;
+    const {
+      distanceFloatImageData,
+      distanceNearestPositions,
+    } = renderJfa({
+      renderer: this.renderer,
+      meshes: [
+        this.sceneMesh,
+      ],
+      camera: editCamera,
+    });
     {
-      const tempScene = new THREE.Scene();
-      tempScene.autoUpdate = false;
-      tempScene.add(this.sceneMesh); // note: stealing the scene mesh for a moment
-
-      // We need two render targets to ping-pong in between.  
-      const jfaOutline = new JFAOutline(iResolution);
-      const {targets} = jfaOutline;
-      jfaOutline.renderSelected(this.renderer, tempScene, editCamera, targets);
-      const outlineUniforms = undefined;
-      const distanceIndex = jfaOutline.renderDistanceTex(this.renderer, targets, iResolution, outlineUniforms);
-      const distanceRenderTarget = targets[distanceIndex];
-      // get the image data back out of the render target, as a Float32Array
-      distanceFloatImageData = new Float32Array(distanceRenderTarget.width * distanceRenderTarget.height * 4);
-      this.renderer.readRenderTargetPixels(distanceRenderTarget, 0, 0, distanceRenderTarget.width, distanceRenderTarget.height, distanceFloatImageData);
-
-      // accumulate distance nearest positions
-      distanceNearestPositions = new Float32Array(distanceRenderTarget.width * distanceRenderTarget.height * 3);
-      if (distanceNearestPositions.length / 3 * 4 !== distanceFloatImageData.length) {
-        console.warn('distance positions length mismatch', distanceNearestPositions.length, distanceFloatImageData.length);
-        debugger;
-      }
-      for (let i = 0; i < distanceFloatImageData.length; i += 4) {
-        const r = distanceFloatImageData[i];
-        const g = distanceFloatImageData[i+1];
-        // const b = distanceFloatImageData[i+2];
-        // const a = distanceFloatImageData[i+3];
-
-        const j = i / 4;
-        const x = j % distanceRenderTarget.width;
-        const y = Math.floor(j / distanceRenderTarget.width);
-
-        let ax = Math.floor(r);
-        let ay = Math.floor(g);
-        ax = Math.min(Math.max(ax, 0), distanceRenderTarget.width - 1);
-        ay = Math.min(Math.max(ay, 0), distanceRenderTarget.height - 1);
-        ay = distanceRenderTarget.height - 1 - ay;
-        const i3 = ax + ay * distanceRenderTarget.width;
-
-        const triangleId = maskIndex[i3];
-        const triangleStartIndex = triangleId * 3;
-
-        const positions = this.sceneMesh.geometry.attributes.position.array;
-        const aVector = localVectorA.fromArray(positions, triangleStartIndex * 3);
-        // const bVector = localVectorB.fromArray(positions, (triangleStartIndex + 1) * 3);
-        // const cVector = localVectorC.fromArray(positions, (triangleStartIndex + 2) * 3);
-
-        /* // project the points onto the camera, and find the one closest to x, y
-        const aScreen = localVectorA2.copy(aVector)
-          .applyMatrix4(editCamera.matrixWorldInverse)
-          .applyMatrix4(editCamera.projectionMatrix);
-        const bScreen = localVectorB2.copy(bVector)
-          .applyMatrix4(editCamera.matrixWorldInverse)
-          .applyMatrix4(editCamera.projectionMatrix);
-        const cScreen = localVectorC2.copy(cVector)
-          .applyMatrix4(editCamera.matrixWorldInverse)
-          .applyMatrix4(editCamera.projectionMatrix);
-
-        aScreen.x = (aScreen.x + 1) / 2 * distanceRenderTarget.width;
-        aScreen.y = (aScreen.y + 1) / 2 * distanceRenderTarget.height;
-        bScreen.x = (bScreen.x + 1) / 2 * distanceRenderTarget.width;
-        bScreen.y = (bScreen.y + 1) / 2 * distanceRenderTarget.height;
-        cScreen.x = (cScreen.x + 1) / 2 * distanceRenderTarget.width;
-        cScreen.y = (cScreen.y + 1) / 2 * distanceRenderTarget.height;
-
-        const aDistance = Math.hypot(aScreen.x - x, aScreen.y - y);
-        const bDistance = Math.hypot(bScreen.x - x, bScreen.y - y);
-        const cDistance = Math.hypot(cScreen.x - x, cScreen.y - y);
-
-        let nearestPoint;
-        let nearestDistance = Infinity;
-        if (aDistance < nearestDistance) {
-          nearestPoint = aVector;
-          nearestDistance = aDistance;
-        }
-        if (bDistance < nearestDistance) {
-          nearestPoint = bVector;
-          nearestDistance = bDistance;
-        }
-        if (cDistance < nearestDistance) {
-          nearestPoint = cVector;
-          nearestDistance = cDistance;
-        } */
-        const nearestPoint = aVector;
-
-        distanceNearestPositions[j * 3 + 0] = nearestPoint.x;
-        distanceNearestPositions[j * 3 + 1] = nearestPoint.y;
-        distanceNearestPositions[j * 3 + 2] = nearestPoint.z;
-      }
-
       // output to canvas
       const canvas = document.createElement('canvas');
       canvas.classList.add('outlineCanvas');
@@ -3490,9 +3412,6 @@ class PanelRenderer extends EventTarget {
       }
       context.putImageData(imageData, 0, 0);
       document.body.appendChild(canvas);
-
-      // done with this, put it back
-      this.scene.add(this.sceneMesh);
     }
     console.timeEnd('outline');
 
