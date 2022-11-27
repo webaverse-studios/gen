@@ -13,7 +13,7 @@ void main() {
   fIndex -= r * 65536.0;
   float g = floor(fIndex / 256.0);
   fIndex -= g * 256.0;
-  float b = fIndex;
+  float b = floor(fIndex);
 
   gl_FragColor = vec4(r, g, b, 1.);
 }

@@ -86,6 +86,7 @@ const localBox = new THREE.Box3();
 const localCamera = new THREE.PerspectiveCamera();
 const localOrthographicCamera = new THREE.OrthographicCamera();
 const localColor = new THREE.Color();
+const localFloat32Array4 = new Float32Array(4);
 
 // constants
 
@@ -987,6 +988,11 @@ class Selector {
     this.mouse = mouse;
     this.raycaster = raycaster;
 
+    this.lensEnabled = false;
+    this.indicesEnabled = false;
+    this.pickerEnabled = false;
+    this.pickerIndex = -1;
+
     this.sceneMeshes = [];
     this.indexMeshes = [];
     
@@ -1282,6 +1288,19 @@ class Selector {
     })();
     this.indicesOutputMesh = indicesOutputMesh;
   }
+  setTool(tool) {
+    this.lensEnabled = [
+      'eraser',
+      'segment',
+      'plane',
+    ].includes(tool);
+    this.indicesEnabled = [
+      'eraser',
+    ].includes(tool);
+    this.pickerEnabled = [
+      'segment',
+    ].includes(tool);
+  }
   addMesh(sceneMesh) {
     this.sceneMeshes.push(sceneMesh);
 
@@ -1441,12 +1460,59 @@ class Selector {
     })();
 
     // render lens
-    this.renderer.setRenderTarget(this.lensRenderTarget);
-    this.renderer.render(this.lensScene, this.camera);
+    if (this.lensEnabled) {
+      this.renderer.setRenderTarget(this.lensRenderTarget);
+      this.renderer.render(this.lensScene, this.camera);
+    }
 
     // render indices scene
-    this.renderer.setRenderTarget(this.indicesRenderTarget);
-    this.renderer.render(this.indicesScene, this.camera);
+    if (this.indicesEnabled) {
+      this.renderer.setRenderTarget(this.indicesRenderTarget);
+      this.renderer.render(this.indicesScene, this.camera);
+    }
+
+    if (this.pickerEnabled) {
+      // read the middle pixel
+      const lensFloat32Data = localFloat32Array4;
+      const selectorSizeM1 = selectorSize - 1;
+      this.renderer.readRenderTargetPixels(this.lensRenderTarget, selectorSizeM1 / 2, selectorSizeM1 / 2, 1, 1, lensFloat32Data);
+      // encode the index as rgba
+      // float r = floor(fIndex / 65536.0);
+      // fIndex -= r * 65536.0;
+      // float g = floor(fIndex / 256.0);
+      // fIndex -= g * 256.0;
+      // float b = floor(fIndex / 1.0);
+      // fIndex -= b * 1.0;
+      // gl_FragColor = vec4(r, g, b, 1.);
+      const a = lensFloat32Data[3];
+      if (a > 0) {
+        const index = Math.floor(lensFloat32Data[0] * 65536 + lensFloat32Data[1] * 256 + lensFloat32Data[2]);
+        
+        // look up the position index in the scene mesh indexed geometry
+        if (this.sceneMeshes.length === 1) {
+          // nothing
+        } else {
+          console.warn('only implemented for one scene mesh');
+          debugger;
+        }
+        const firstSceneMesh = this.sceneMeshes[0]; // note: using first scene mesh only
+        const index2 = firstSceneMesh.indexedGeometry.index.array[index] * 3;
+        if (index2 === undefined) {
+          console.warn('index2 is undefined');
+          debugger;
+        }
+
+        if (index2 >= 0 && index2 < (this.renderer.domElement.width * this.renderer.domElement.height)) {
+          this.pickerIndex = index2;
+        } else {
+          this.pickerIndex = -1;
+        }
+      } else {
+        this.pickerIndex = -1;
+      }
+    } else {
+      this.pickerIndex = -1;
+    }
 
     // restore
     _restoreParents();
@@ -1461,8 +1527,12 @@ class Selector {
 class Overlay {
   constructor({
     renderer,
+    selector,
   }) {
     this.renderer = renderer;
+    this.selector = selector;
+
+    this.segmentPickerEnabled = false;
 
     const overlayScene = new THREE.Scene();
     overlayScene.autoUpdate = false;
@@ -1491,6 +1561,9 @@ class Overlay {
       sceneOverlayMesh.quaternion.copy(sceneMesh.quaternion);
       sceneOverlayMesh.scale.copy(sceneMesh.scale);
       sceneOverlayMesh.updateMatrixWorld();
+    };
+    sceneOverlayMesh.update = () => {
+      sceneOverlayMesh.setTransformToParent();
     };
     this.overlayScene.add(sceneOverlayMesh);
     this.sceneOverlayMeshes.push(sceneOverlayMesh);
@@ -1657,6 +1730,10 @@ class Overlay {
             value: renderMode,
             needsUpdate: true,
           },
+          uSelectorIndex: {
+            value: -1,
+            needsUpdate: true,
+          },
         },
         vertexShader: `\
           attribute float segment;
@@ -1667,9 +1744,9 @@ class Overlay {
           attribute vec3 portalColor;
           // attribute vec3 barycentric;
           
-          varying float vSegment;
+          flat varying float vSegment;
           flat varying vec3 vSegmentColor;
-          varying float vPlane;
+          flat varying float vPlane;
           flat varying vec3 vPlaneColor;
           // varying float vPortal;
           flat varying vec3 vPortalColor;
@@ -1693,10 +1770,11 @@ class Overlay {
         `,
         fragmentShader: `\
           uniform int uRenderMode;
+          uniform int uSelectorIndex;
           
-          varying float vSegment;
+          flat varying float vSegment;
           flat varying vec3 vSegmentColor;
-          varying float vPlane;
+          flat varying float vPlane;
           flat varying vec3 vPlaneColor;
           // varying vec3 vBarycentric;
           // varying float vPortal;
@@ -1733,6 +1811,16 @@ class Overlay {
               gl_FragColor.rg = uv;
             } else if (uRenderMode == 1) {
               gl_FragColor = vec4(vSegmentColor, a);
+              
+              // highlight support
+              if (uSelectorIndex != -1) {
+                if (vSegment == float(uSelectorIndex)) {
+                  // nothing
+                } else {
+                  gl_FragColor.rgb *= 0.2;
+                }
+                gl_FragColor.a = max(gl_FragColor.a, 0.7);
+              }
             } else if (uRenderMode == 2) {
               gl_FragColor = vec4(vPlaneColor, 0.7);
             } else if (uRenderMode == 3) {
@@ -1756,6 +1844,26 @@ class Overlay {
         material,
       );
       mesh.frustumCulled = false;
+      mesh.update = () => {
+        if (this.segmentPickerEnabled) {
+          const {pickerIndex} = this.selector;
+          let selectorIndex;
+          if (pickerIndex !== -1) {
+            const {array, /*colorArray, labelIndices, labels, mask*/} = segmentSpecs;
+            const segmentIndex = array[pickerIndex];
+            if (segmentIndex !== undefined) {
+              selectorIndex = segmentIndex;
+            } else {
+              console.warn('no segment index', this, segmentSpecs, pickerIndex);
+              debugger;
+            }
+          } else {
+            selectorIndex = -1;
+          }
+          material.uniforms.uSelectorIndex.value = selectorIndex;
+          material.uniforms.uSelectorIndex.needsUpdate = true;
+        }
+      };
       return mesh;
     };
 
@@ -1898,10 +2006,18 @@ class Overlay {
       const toolOverlayMesh = this.toolOverlayMeshes[k];
       toolOverlayMesh.visible = k === tool;
     }
+
+    this.segmentPickerEnabled = [
+      'segment',
+    ].includes(tool);
   }
   update() {
     for (const mesh of this.sceneOverlayMeshes) {
-      mesh.setTransformToParent();
+      mesh.update();
+    }
+    for (const k in this.toolOverlayMeshes) {
+      const toolOverlayMesh = this.toolOverlayMeshes[k];
+      toolOverlayMesh.update();
     }
     for (const mesh of this.arrowMeshes) {
       mesh.update();
@@ -2223,6 +2339,7 @@ class PanelRenderer extends EventTarget {
     {
       const overlay = new Overlay({
         renderer,
+        selector: this.selector,
       });
 
       overlay.addMesh(sceneMesh);
@@ -2716,11 +2833,12 @@ class PanelRenderer extends EventTarget {
     this.controls.enabled = [
       'camera',
       'outmesh',
-      'segment',
+      // 'segment',
       'plane',
       'portal',
     ].includes(this.tool);
     
+    this.selector.setTool(this.tool);
     this.overlay.setTool(this.tool);
   }
   setPreviewImage(img) {
@@ -2883,7 +3001,8 @@ class PanelRenderer extends EventTarget {
         this.outmeshMesh.update();
         break;
       }
-      case 'eraser': {
+      case 'eraser':
+      case 'segment': {
         this.selector.update();
         break;
       }
