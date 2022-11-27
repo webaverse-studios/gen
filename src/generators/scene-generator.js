@@ -2412,7 +2412,7 @@ class PanelRenderer extends EventTarget {
     this.camera.updateProjectionMatrix();
 
     // floor net camera
-    const floorNetCamera = setOrthographicCameraFromJson(localOrthographicCamera, floorNetCameraJson);
+    const floorNetCamera = setOrthographicCameraFromJson(localOrthographicCamera, floorNetCameraJson).clone();
 
     // scene mesh
     const widthSegments = this.canvas.width - 1;
@@ -2490,14 +2490,8 @@ class PanelRenderer extends EventTarget {
 
     // floor net mesh
     {
-      const geometry = depthFloat32ArrayToOrthographicGeometry(
-        floorNetDepths,
-        floorNetPixelSize,
-        floorNetPixelSize,
-        floorNetCamera,
-      );
-      geometry.computeVertexNormals();
-      
+      const geometry = new THREE.PlaneBufferGeometry(1, 1);
+
       const material = new THREE.MeshPhongMaterial({
         color: 0xFF0000,
         transparent: true,
@@ -2509,10 +2503,31 @@ class PanelRenderer extends EventTarget {
       // floorNetMesh.position.copy(floorNetCamera.position);
       // floorNetMesh.quaternion.copy(floorNetCamera.quaternion);
       // floorNetMesh.updateMatrixWorld();
+      floorNetMesh.setGeometry = ({
+        floorNetDepths,
+        floorNetCamera,
+      }) => {
+        console.log('floorNetMesh set geometry', floorNetDepths, floorNetCamera);
+        const geometry = depthFloat32ArrayToOrthographicGeometry(
+          floorNetDepths,
+          floorNetPixelSize,
+          floorNetPixelSize,
+          floorNetCamera,
+        );
+        geometry.computeVertexNormals();
+        floorNetMesh.geometry = geometry;
+
+        floorNetMesh.visible = true;
+      }
       floorNetMesh.frustumCulled = false;
+      floorNetMesh.visible = false;
       this.scene.add(floorNetMesh);
       this.floorNetMesh = floorNetMesh;
     }
+    this.floorNetMesh.setGeometry({
+      floorNetDepths,
+      floorNetCamera,
+    });
 
     // selector
     {
@@ -3322,6 +3337,8 @@ class PanelRenderer extends EventTarget {
     maskBlob,
     editCameraJson,
   }) {
+    const oldPointCloudArrayBuffer = this.panel.getData('layer1/pointCloud');
+
     // extract edit camera
     const editCamera = setPerspectiveCameraFromJson(localCamera, editCameraJson).clone();
 
@@ -3525,9 +3542,26 @@ class PanelRenderer extends EventTarget {
       planesMask,
       portalJson,
       portalMask,
-      floorNetDepths,
     } = await getSemanticPlanes(editedImg, newDepthFloatImageData, segmentMask);
     console.timeEnd('planeDetection');
+
+    console.time('floorReconstruction');
+    const {
+      floorNetDepths,
+      floorNetCameraJson,
+    } = passes.reconstructFloor({
+      pointCloudArrayBuffers: [ // XXX instead of passing the buffers, should pass the meshes or geometries
+        oldPointCloudArrayBuffer,
+        pointCloudArrayBuffer,
+      ],
+      width: editedImg.width,
+      height: editedImg.height,
+    });
+    console.log('reconstruct floor 2', {
+      floorNetDepths,
+      floorNetCameraJson,
+    });
+    console.timeEnd('floorReconstruction');
 
     // // set fov
     // console.time('fov');
@@ -3832,6 +3866,7 @@ class PanelRenderer extends EventTarget {
       planesMask,
       portalJson,
       floorNetDepths,
+      floorNetCameraJson,
       segmentMask,
       editCameraJson,
     };
@@ -3860,12 +3895,14 @@ class PanelRenderer extends EventTarget {
     const planesMask = _getLayerEntry('planesMask');
     const portalJson = _getLayerEntry('portalJson');
     const floorNetDepths = _getLayerEntry('floorNetDepths');
+    const floorNetCameraJson = _getLayerEntry('floorNetCameraJson');
     const segmentMask = _getLayerEntry('segmentMask');
     const editCameraJson = _getLayerEntry('editCameraJson');
 
     //
 
     const editCamera = setPerspectiveCameraFromJson(localCamera, editCameraJson).clone();
+    const floorNetCamera = setOrthographicCameraFromJson(localOrthographicCamera, floorNetCameraJson).clone();
 
     //
 
@@ -4045,9 +4082,14 @@ class PanelRenderer extends EventTarget {
     }
     console.timeEnd('backgroundMesh');
     
-    globalThis.distanceFloatImageData = distanceFloatImageData;
-    globalThis.backgroundMesh = backgroundMesh;
-    globalThis.distanceNearestPositions = distanceNearestPositions;
+    // globalThis.distanceFloatImageData = distanceFloatImageData;
+    // globalThis.backgroundMesh = backgroundMesh;
+    // globalThis.distanceNearestPositions = distanceNearestPositions;
+
+    this.floorNetMesh.setGeometry({
+      floorNetDepths,
+      floorNetCamera,
+    });
 
     // console.time('cutDepth');
     // // const wrappedPositions = geometry.attributes.position.array.slice();
@@ -4386,9 +4428,15 @@ async function compileVirtualScene(arrayBuffer) {
     floorNetDepths,
     floorNetCameraJson,
   } = passes.reconstructFloor({
-    pointCloudArrayBuffer,
+    pointCloudArrayBuffers: [
+      pointCloudArrayBuffer,
+    ],
     width: img.width,
     height: img.height,
+  });
+  console.log('reconstruct floor 1', {
+    floorNetDepths,
+    floorNetCameraJson,
   });
   console.timeEnd('floorReconstruction');
 

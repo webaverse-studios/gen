@@ -28,7 +28,7 @@ const localQuaternion = new THREE.Quaternion();
 //
 
 export function reconstructFloor({
-  pointCloudArrayBuffer,
+  pointCloudArrayBuffers,
   width,
   height,
 }) {
@@ -84,40 +84,41 @@ export function reconstructFloor({
 
     // mesh
     floorNetCameraJson = getOrthographicCameraJson(floorNetCamera);
-    {
-      const geometry = pointCloudArrayBufferToGeometry(pointCloudArrayBuffer, img.width, img.height);
+    const floorNetDepthRenderMaterial = new THREE.ShaderMaterial({
+      uniforms: {
+        cameraNear: {
+          value: floorNetCamera.near,
+          needsUpdate: true,
+        },
+        cameraFar: {
+          value: floorNetCamera.far,
+          needsUpdate: true,
+        },
+        isPerspective: {
+          value: 0,
+          needsUpdate: true,
+        },
+      },
+      vertexShader: `\
+        precision highp float;
+        precision highp int;
+      
+        void main() {
+          vec3 p = position;
+          // p.x *= -1.; // we are looking from the bottom, so flip x
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+        }
+      `,
+      fragmentShader: depthFragmentShader,
+      side: THREE.DoubleSide,
+    });
+    console.log('render buffers', pointCloudArrayBuffers);
+    for (const pointCloudArrayBuffer of pointCloudArrayBuffers) {
+      const geometry = pointCloudArrayBufferToGeometry(pointCloudArrayBuffer, width, height);
       // _cutMask(geometry, depthFloatImageData, distanceNearestPositions, editCamera);
       geometry.computeVertexNormals();
 
-      const floorNetMaterial = new THREE.ShaderMaterial({
-        uniforms: {
-          cameraNear: {
-            value: floorNetCamera.near,
-            needsUpdate: true,
-          },
-          cameraFar: {
-            value: floorNetCamera.far,
-            needsUpdate: true,
-          },
-          isPerspective: {
-            value: 0,
-            needsUpdate: true,
-          },
-        },
-        vertexShader: `\
-          precision highp float;
-          precision highp int;
-        
-          void main() {
-            vec3 p = position;
-            // p.x *= -1.; // we are looking from the bottom, so flip x
-            gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
-          }
-        `,
-        fragmentShader: depthFragmentShader,
-        side: THREE.DoubleSide,
-      });
-      const floorNetDepthRenderMesh = new THREE.Mesh(geometry, floorNetMaterial);
+      const floorNetDepthRenderMesh = new THREE.Mesh(geometry, floorNetDepthRenderMaterial);
       // floorNetDepthRenderMesh.onBeforeRender = () => {
       //   console.log('floorNetDepthRenderMesh render', floorNetDepthRenderMesh);
       // };
