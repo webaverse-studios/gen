@@ -408,6 +408,7 @@ export function renderJfa({
   renderer,
   meshes,
   camera,
+  maskIndex,
 }) {
   const iResolution = new three_1.Vector2(renderer.domElement.width, renderer.domElement.height);
   

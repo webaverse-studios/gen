@@ -3378,6 +3378,7 @@ class PanelRenderer extends EventTarget {
         this.sceneMesh,
       ],
       camera: editCamera,
+      maskIndex,
     });
     {
       // output to canvas
