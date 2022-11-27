@@ -3424,8 +3424,7 @@ class PanelRenderer extends EventTarget {
         this.renderer,
         distanceFloatImageData,
         depthFloatImageData,
-        newDepthFloatImageData,
-        iResolution
+        newDepthFloatImageData
       );
 
       // draw to canvas

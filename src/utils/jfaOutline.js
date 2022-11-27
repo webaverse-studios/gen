@@ -1,6 +1,7 @@
 import * as three_1 from 'three';
 import * as fullScreenPass_1 from './fullscreenPass.js';
 
+const localVectorA = new three_1.Vector3();
 // const localColor = new three_1.Color();
 
 export class JFAOutline {
@@ -341,9 +342,9 @@ export function renderDepthReconstruction(
   renderer,
   distanceFloatImageData,
   oldDepthFloats,
-  newDepthFloats,
-  iResolution
+  newDepthFloats
 ) {
+  const iResolution = new three_1.Vector2(renderer.domElement.width, renderer.domElement.height);
   const targets = makeFloatRenderTargetSwapChain(iResolution.x, iResolution.y);
 
   const distanceTex = new three_1.DataTexture(distanceFloatImageData, iResolution.x, iResolution.y, three_1.RGBAFormat, three_1.FloatType);
@@ -410,6 +411,11 @@ export function renderJfa({
   camera,
   maskIndex,
 }) {
+  if (meshes.length !== 1) { // supporting more would require per-mesh indexing
+    console.warn('renderJfa currently only supports one mesh');
+    debugger;
+  }
+
   const iResolution = new three_1.Vector2(renderer.domElement.width, renderer.domElement.height);
   
   const tempScene = new three_1.Scene();
@@ -469,7 +475,8 @@ export function renderJfa({
     const triangleId = maskIndex[i3];
     const triangleStartIndex = triangleId * 3;
 
-    const positions = this.sceneMesh.geometry.attributes.position.array;
+    const firstMesh = meshes[0]; // note: assuming only one mesh...
+    const positions = firstMesh.geometry.attributes.position.array;
     const aVector = localVectorA.fromArray(positions, triangleStartIndex * 3);
     // const bVector = localVectorB.fromArray(positions, (triangleStartIndex + 1) * 3);
     // const cVector = localVectorC.fromArray(positions, (triangleStartIndex + 2) * 3);
