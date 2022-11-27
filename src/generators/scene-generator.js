@@ -225,6 +225,7 @@ export const layer2Specs = [
 //
 
 const defaultCameraMatrix = new THREE.Matrix4();
+const _makeDefaultCamera = () => new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
 
 //
 
@@ -2350,7 +2351,7 @@ class PanelRenderer extends EventTarget {
     scene.autoUpdate = false;
     this.scene = scene;
     
-    const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
+    const camera = _makeDefaultCamera();
     this.camera = camera;
 
     // orbit controls
@@ -2415,14 +2416,13 @@ class PanelRenderer extends EventTarget {
     const floorNetCamera = setOrthographicCameraFromJson(localOrthographicCamera, floorNetCameraJson).clone();
 
     // scene mesh
-    const widthSegments = this.canvas.width - 1;
-    const heightSegments = this.canvas.height - 1;
-    let geometry = new THREE.PlaneGeometry(1, 1, widthSegments, heightSegments);
-    pointCloudArrayBufferToPositionAttributeArray(
+    // const widthSegments = this.canvas.width - 1;
+    // const heightSegments = this.canvas.height - 1;
+    // let geometry = new THREE.PlaneGeometry(1, 1, widthSegments, heightSegments);
+    let geometry = pointCloudArrayBufferToGeometry(
       pointCloudArrayBuffer,
       this.canvas.width,
       this.canvas.height,
-      geometry.attributes.position.array
     );
     // geometry.setAttribute('color', new THREE.BufferAttribute(new Uint8Array(pointCloudArrayBuffer.byteLength / pointcloudStride * 3), 3, true));
     // pointCloudArrayBufferToColorAttributeArray(labelImageData, geometry.attributes.color.array);
@@ -3339,7 +3339,7 @@ class PanelRenderer extends EventTarget {
   }) {
     const oldPointCloudArrayBuffer = this.panel.getData('layer1/pointCloud');
 
-    // extract edit camera
+    // extract cameras
     const editCamera = setPerspectiveCameraFromJson(localCamera, editCameraJson).clone();
 
     // extract image array buffers
@@ -3544,24 +3544,6 @@ class PanelRenderer extends EventTarget {
       portalMask,
     } = await getSemanticPlanes(editedImg, newDepthFloatImageData, segmentMask);
     console.timeEnd('planeDetection');
-
-    console.time('floorReconstruction');
-    const {
-      floorNetDepths,
-      floorNetCameraJson,
-    } = passes.reconstructFloor({
-      pointCloudArrayBuffers: [ // XXX instead of passing the buffers, should pass the meshes or geometries
-        oldPointCloudArrayBuffer,
-        pointCloudArrayBuffer,
-      ],
-      width: editedImg.width,
-      height: editedImg.height,
-    });
-    console.log('reconstruct floor 2', {
-      floorNetDepths,
-      floorNetCameraJson,
-    });
-    console.timeEnd('floorReconstruction');
 
     // // set fov
     // console.time('fov');
@@ -3846,6 +3828,37 @@ class PanelRenderer extends EventTarget {
       document.body.appendChild(canvas);
     }
     console.timeEnd('reconstructZ');
+
+    console.time('floorReconstruction');
+    const oldFloorNetDepthRenderGeometry = pointCloudArrayBufferToGeometry(
+      oldPointCloudArrayBuffer,
+      this.renderer.domElement.width,
+      this.renderer.domElement.height,
+    );
+    const newFloorNetDepthRenderGeometry = depthFloat32ArrayToGeometry(
+      reconstructedDepthFloats,
+      this.renderer.domElement.width,
+      this.renderer.domElement.height,
+      editCamera,
+    );
+    const {
+      floorNetDepths,
+      floorNetCameraJson,
+    } = passes.reconstructFloor({
+      // pointCloudArrayBuffers: [
+      //   oldPointCloudArrayBuffer,
+      //   pointCloudArrayBuffer,
+      // ],
+      geometries: [
+        oldFloorNetDepthRenderGeometry,
+        newFloorNetDepthRenderGeometry,
+      ],
+      width: editedImg.width,
+      height: editedImg.height,
+    });
+    globalThis.oldFloorNetDepthRenderGeometry = oldFloorNetDepthRenderGeometry;
+    globalThis.newFloorNetDepthRenderGeometry = newFloorNetDepthRenderGeometry;
+    console.timeEnd('floorReconstruction');
 
     // return result
     return {
@@ -4344,9 +4357,9 @@ const _resizeFile = async file => {
 
 //
 
-async function compileVirtualScene(arrayBuffer) {
+async function compileVirtualScene(imageArrayBuffer, camera) {
   // color
-  const blob = new Blob([arrayBuffer], {
+  const blob = new Blob([imageArrayBuffer], {
     type: 'image/png',
   });
   const img = await blob2img(blob);
@@ -4422,21 +4435,21 @@ async function compileVirtualScene(arrayBuffer) {
   //   labels: planesJson,
   // });
   // const firstFloorPlane = planesJson[firstFloorPlaneIndex];
-
+  
   console.time('floorReconstruction');
+  const floorNetDepthRenderGeometry = pointCloudArrayBufferToGeometry(pointCloudArrayBuffer, img.width, img.height);
   const {
     floorNetDepths,
     floorNetCameraJson,
   } = passes.reconstructFloor({
-    pointCloudArrayBuffers: [
-      pointCloudArrayBuffer,
+    // pointCloudArrayBuffers: [
+    //   pointCloudArrayBuffer,
+    // ],
+    geometries: [
+      floorNetDepthRenderGeometry,
     ],
-    width: img.width,
-    height: img.height,
-  });
-  console.log('reconstruct floor 1', {
-    floorNetDepths,
-    floorNetCameraJson,
+    // width: img.width,
+    // height: img.height,
   });
   console.timeEnd('floorReconstruction');
 
@@ -4580,8 +4593,9 @@ export class Panel extends EventTarget {
 
   async compile() {
     await this.task(async ({signal}) => {
-      const image = this.getData(mainImageKey);
-      const compileResult = await compileVirtualScene(image);
+      const imageArrayBuffer = this.getData(mainImageKey);
+      const camera = _makeDefaultCamera();
+      const compileResult = await compileVirtualScene(imageArrayBuffer, camera);
       // console.log('got compile result', compileResult);
 
       for (const {name, type} of layer1Specs) {

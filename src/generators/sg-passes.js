@@ -28,9 +28,10 @@ const localQuaternion = new THREE.Quaternion();
 //
 
 export function reconstructFloor({
-  pointCloudArrayBuffers,
-  width,
-  height,
+  // pointCloudArrayBuffers,
+  // width,
+  // height,
+  geometries,
 }) {
   let floorNetDepths;
   let floorNetCameraJson;
@@ -112,9 +113,8 @@ export function reconstructFloor({
       fragmentShader: depthFragmentShader,
       side: THREE.DoubleSide,
     });
-    console.log('render buffers', pointCloudArrayBuffers);
-    for (const pointCloudArrayBuffer of pointCloudArrayBuffers) {
-      const geometry = pointCloudArrayBufferToGeometry(pointCloudArrayBuffer, width, height);
+    console.log('render geometries', geometries);
+    for (const geometry of geometries) {
       // _cutMask(geometry, depthFloatImageData, distanceNearestPositions, editCamera);
       geometry.computeVertexNormals();
 
