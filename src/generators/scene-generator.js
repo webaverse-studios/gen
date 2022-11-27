@@ -992,6 +992,7 @@ class Selector {
     this.indicesEnabled = false;
     this.pickerEnabled = false;
     this.pickerIndex = -1;
+    this.mousedown = false;
 
     this.sceneMeshes = [];
     this.indexMeshes = [];
@@ -1301,6 +1302,9 @@ class Selector {
       'segment',
     ].includes(tool);
   }
+  setMouseDown(mousedown) {
+    this.mousedown = mousedown;
+  }
   addMesh(sceneMesh) {
     this.sceneMeshes.push(sceneMesh);
 
@@ -1519,6 +1523,11 @@ class Selector {
 
     // pop
     this.renderer.setRenderTarget(oldRenderTarget);
+
+    // update scene meshes
+    for (const sceneMesh of this.sceneMeshes) {
+      sceneMesh.update();
+    }
   }
 }
 
@@ -2049,6 +2058,10 @@ class SceneMaterial extends THREE.ShaderMaterial {
           value: 0,
           needsUpdate: true,
         },
+        uMouseDown: {
+          value: 0,
+          needsUpdate: true,
+        },
       },
       vertexShader: `\
         attribute float triangleId;
@@ -2066,6 +2079,7 @@ class SceneMaterial extends THREE.ShaderMaterial {
         uniform sampler2D selectedIndicesMap;
         uniform vec2 iSelectedIndicesMapResolution;
         uniform int uEraser;
+        uniform int uMouseDown;
 
         varying vec2 vUv;
         varying float vTriangleId;
@@ -2081,7 +2095,11 @@ class SceneMaterial extends THREE.ShaderMaterial {
             vec4 selectedIndexRgba = texture2D(selectedIndicesMap, uv);
             bool isSelected = selectedIndexRgba.r > 0.5;
             if (isSelected) {
-              gl_FragColor.rgb *= 0.2;
+              if (uMouseDown == 1) {
+                gl_FragColor.rgb = vec3(${new THREE.Color(0xFF3333).toArray().join(', ')});
+              } else {
+                gl_FragColor.rgb *= 0.2;
+              }
             }
           }
         }
@@ -2249,6 +2267,10 @@ class PanelRenderer extends EventTarget {
     sceneMesh.planeSpecs = planeSpecs;
     sceneMesh.portalSpecs = portalSpecs;
     sceneMesh.firstFloorPlaneIndex = firstFloorPlaneIndex;
+    sceneMesh.update = () => {
+      sceneMesh.material.uniforms.uMouseDown.value = +this.selector.mousedown;
+      sceneMesh.material.uniforms.uMouseDown.needsUpdate = true;
+    };
     (async () => { // load the texture image
       sceneMesh.visible = false;
 
@@ -2952,6 +2974,12 @@ class PanelRenderer extends EventTarget {
     };
     document.addEventListener('keydown', keydown);
 
+    const mousedown = e => {
+      this.selector.setMouseDown(true);
+    };
+    const mouseup = e => {
+      this.selector.setMouseDown(false);
+    };
     const mousemove = e => {
       // set the THREE.js.Raycaster from the mouse event
       const rect = this.canvas.getBoundingClientRect();
@@ -2966,8 +2994,8 @@ class PanelRenderer extends EventTarget {
     };
 
     const canvas = this.renderer.domElement;
-    canvas.addEventListener('mousedown', blockEvent);
-    canvas.addEventListener('mouseup', blockEvent);
+    canvas.addEventListener('mousedown', mousedown);
+    document.addEventListener('mouseup', mouseup);
     canvas.addEventListener('mousemove', mousemove);
     canvas.addEventListener('click', blockEvent);
     canvas.addEventListener('wheel', blockEvent);
@@ -2980,8 +3008,8 @@ class PanelRenderer extends EventTarget {
     this.addEventListener('destroy', e => {
       document.removeEventListener('keydown', keydown);
 
-      canvas.removeEventListener('mousedown', blockEvent);
-      canvas.removeEventListener('mouseup', blockEvent);
+      canvas.removeEventListener('mousedown', mousedown);
+      document.removeEventListener('mouseup', mouseup);
       canvas.removeEventListener('mousemove', mousemove);
       canvas.removeEventListener('click', blockEvent);
       canvas.removeEventListener('wheel', blockEvent);
