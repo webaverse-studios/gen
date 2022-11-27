@@ -1,5 +1,8 @@
 import * as three_1 from 'three';
 import * as fullScreenPass_1 from './fullscreenPass.js';
+import {
+  LensFullscreenMaterial,
+} from '../generators/sg-materials.js';
 
 const localVectorA = new three_1.Vector3();
 // const localColor = new three_1.Color();
@@ -405,6 +408,104 @@ export function renderDepthReconstruction(
 
 //
 
+const _pushMeshes = (scene, meshes) => {
+  const originalParents = meshes.map(mesh => {
+    const {parent} = mesh;
+    scene.add(mesh);
+    return parent;
+  });
+  return () => {
+    for (let i = 0; i < meshes.length; i++) {
+      const mesh = meshes[i];
+      const originalParent = originalParents[i];
+      originalParent.add(mesh);
+    }
+  };
+};
+
+//
+
+export function renderMaskIndex({
+  renderer,
+  meshes,
+  camera,
+}) {
+  let maskIndex;
+
+  const lensFullscreenMaterial = new LensFullscreenMaterial();
+  
+  const lensFullscreenScene = new three_1.Scene();
+  lensFullscreenScene.autoUpdate = false;
+  lensFullscreenScene.overrideMaterial = lensFullscreenMaterial;
+
+  const lensFullscreenRenderTarget = new three_1.WebGLRenderTarget(
+    renderer.domElement.width,
+    renderer.domElement.height,
+    {
+      minFilter: three_1.NearestFilter,
+      magFilter: three_1.NearestFilter,
+      format: three_1.RGBAFormat,
+      type: three_1.FloatType,
+    }
+  );
+
+  {
+    // push meshes
+    const _popMeshes = _pushMeshes(lensFullscreenScene, meshes);
+
+    // push old state
+    const oldRenderTarget = renderer.getRenderTarget();
+    // const oldClearColor = this.renderer.getClearColor(localColor);
+    // const oldClearAlpha = this.renderer.getClearAlpha();
+
+    // render
+    renderer.setRenderTarget(lensFullscreenRenderTarget);
+    // renderer.setClearColor(0x000000, 0);
+    // renderer.clear();
+    renderer.render(lensFullscreenScene, camera);
+
+    // read back the indices
+    const float32Array = new Float32Array(renderer.domElement.width * renderer.domElement.height * 4);
+    renderer.readRenderTargetPixels(lensFullscreenRenderTarget, 0, 0, renderer.domElement.width, renderer.domElement.height, float32Array);
+
+    /* the above was encoded with the following glsl shader. we need to decode it. */
+    // float r = floor(fIndex / 65536.0);
+    // fIndex -= r * 65536.0;
+    // float g = floor(fIndex / 256.0);
+    // fIndex -= g * 256.0;
+    // float b = fIndex;
+    maskIndex = new Int32Array(renderer.domElement.width * renderer.domElement.height);
+    for (let y = 0; y < renderer.domElement.height; y++) {
+      for (let x = 0; x < renderer.domElement.width; x++) {
+        const i = y * renderer.domElement.width + x;
+
+        // flip y when reading
+        const ax = x;
+        const ay = renderer.domElement.height - 1 - y;
+        const j = ay * renderer.domElement.width + ax;
+
+        const r = float32Array[j * 4 + 0];
+        const g = float32Array[j * 4 + 1];
+        const b = float32Array[j * 4 + 2];
+
+        const index = r * 65536 + g * 256 + b;
+        maskIndex[i] = index;
+      }
+    }
+
+    // pop old state
+    renderer.setRenderTarget(oldRenderTarget);
+    // renderer.setClearColor(oldClearColor, oldClearAlpha);
+
+    // pop meshes
+    _popMeshes();
+  }
+
+  return maskIndex;
+}
+
+//
+
 export function renderJfa({
   renderer,
   meshes,
@@ -422,21 +523,7 @@ export function renderJfa({
   tempScene.autoUpdate = false;
 
   // note: stealing the meshes for a moment
-  const _pushMeshes = () => {
-    const originalParents = meshes.map(mesh => {
-      const {parent} = mesh;
-      tempScene.add(mesh);
-      return parent;
-    });
-    return () => {
-      for (let i = 0; i < meshes.length; i++) {
-        const mesh = meshes[i];
-        const originalParent = originalParents[i];
-        originalParent.add(mesh);
-      }
-    };
-  };
-  const _popMeshes = _pushMeshes();
+  const _popMeshes = _pushMeshes(tempScene, meshes);
 
   // We need two render targets to ping-pong in between.  
   const jfaOutline = new JFAOutline(iResolution);

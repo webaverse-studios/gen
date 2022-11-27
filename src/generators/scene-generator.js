@@ -2,7 +2,11 @@ import * as THREE from 'three';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 // import alea from '../utils/alea.js';
 import {Text} from 'troika-three-text';
-import {renderJfa, renderDepthReconstruction} from '../utils/jfaOutline.js';
+import {
+  renderMaskIndex,
+  renderJfa,
+  renderDepthReconstruction,
+} from '../utils/jfaOutline.js';
 import * as passes from './sg-passes.js';
 import {
   setPerspectiveCameraFromJson,
@@ -20,6 +24,9 @@ import {
   // floorNetResolution,
   floorNetPixelSize,
 } from '../constants/sg-constants.js';
+import {
+  LensMaterial,
+} from './sg-materials.js';
 
 import {ImageAiClient} from '../clients/image-client.js';
 // import {getLabel} from '../clients/perception-client.js';
@@ -83,6 +90,7 @@ const localColor = new THREE.Color();
 // constants
 
 export const panelSize = 1024;
+export const selectorSize = 8 + 1;
 export const tools = [
   'camera',
   'eraser',
@@ -836,8 +844,8 @@ const getSemanticPlanes = async (img, newDepthFloatImageData, segmentMask) => {
     // floor planes
     (async () => {
       const newDepthFloatImageData2 = newDepthFloatImageData.map((n, index) => {
-        const maskIndex = segmentMask[index];
-        return categoryClassIndices.floor.includes(maskIndex) ? n : Infinity;
+        const index2 = segmentMask[index];
+        return categoryClassIndices.floor.includes(index2) ? n : Infinity;
       });
       
       const {width, height} = img;
@@ -858,8 +866,8 @@ const getSemanticPlanes = async (img, newDepthFloatImageData, segmentMask) => {
     // portal planes
     (async () => {
       const newDepthFloatImageData2 = newDepthFloatImageData.map((n, index) => {
-        const maskIndex = segmentMask[index];
-        return categoryClassIndices.portal.includes(maskIndex) ? n : Infinity;
+        const index2 = segmentMask[index];
+        return categoryClassIndices.portal.includes(index2) ? n : Infinity;
       });
 
       const {width, height} = img;
@@ -967,99 +975,6 @@ const makeGridMesh = () => {
 
 //
 
-const selectorSize = 8 + 1;
-const lensFragmentShader = `\
-flat varying float vIndex;
-
-void main() {
-  float fIndex = vIndex;
-
-  // encode the index as rgb
-  float r = floor(fIndex / 65536.0);
-  fIndex -= r * 65536.0;
-  float g = floor(fIndex / 256.0);
-  fIndex -= g * 256.0;
-  float b = fIndex;
-
-  gl_FragColor = vec4(r, g, b, 1.);
-}
-`;
-class LensMaterial extends THREE.ShaderMaterial {
-  constructor({
-    width,
-    height,
-  }) {
-    super({
-      uniforms: {
-        viewport: {
-          value: new THREE.Vector4(),
-          needsUpdate: true,
-        },
-        iResolution: {
-          value: new THREE.Vector2(width, height),
-          needsUpdate: true,
-        },
-        selectorSize: {
-          value: selectorSize,
-          needsUpdate: true,
-        },
-      },
-      vertexShader: `\
-        uniform vec4 viewport;
-        uniform vec2 iResolution;
-        uniform float selectorSize;
-        attribute float triangleId;
-        flat varying float vIndex;
-
-        void main() {
-          // get the triangle index, dividing by 3
-          // vIndex = gl_VertexID / 3;
-          
-          vIndex = triangleId;
-
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-
-          float w = gl_Position.w;
-          gl_Position /= w;
-          
-          // viewport is [x, y, width, height], in the range [0, iResolution]
-          // iResolution is [width, height]
-          // update gl_Position so that the view is zoomed in on the viewport:
-          gl_Position.xy = (gl_Position.xy + 1.0) / 2.0;
-          gl_Position.xy *= iResolution;
-          gl_Position.xy -= viewport.xy;
-          gl_Position.xy /= viewport.zw;
-          gl_Position.xy = gl_Position.xy * 2.0 - 1.0;
-
-          gl_Position *= w;
-        }
-      `,
-      fragmentShader: lensFragmentShader,
-    });
-  }
-}
-class LensFullscreenMaterial extends THREE.ShaderMaterial {
-  constructor() {
-    super({
-      // uniforms: {
-      // },
-      vertexShader: `\
-        attribute float triangleId;
-        flat varying float vIndex;
-
-        void main() {
-          vIndex = triangleId;
-
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        }
-      `,
-      fragmentShader: lensFragmentShader,
-    });
-  }
-}
-
-//
-
 class Selector {
   constructor({
     renderer,
@@ -1085,6 +1000,7 @@ class Selector {
     const lensMaterial = new LensMaterial({
       width: this.renderer.domElement.width,
       height: this.renderer.domElement.height,
+      selectorSize,
     });
     this.lensMaterial = lensMaterial;
     
@@ -3104,96 +3020,32 @@ class PanelRenderer extends EventTarget {
     }
 
     console.time('maskIndex');
-    let maskIndex;
+    const maskIndex = renderMaskIndex({
+      renderer: this.renderer,
+      meshes: [
+        this.sceneMesh,
+      ],
+      camera: editCamera,
+    });
     {
-      const lensFullscreenMaterial = new LensFullscreenMaterial();
-      
-      const lensFullscreenScene = new THREE.Scene();
-      lensFullscreenScene.autoUpdate = false;
-      lensFullscreenScene.overrideMaterial = lensFullscreenMaterial;
-
-      const lensFullscreenRenderTarget = new THREE.WebGLRenderTarget(
-        this.renderer.domElement.width,
-        this.renderer.domElement.height,
-        {
-          minFilter: THREE.NearestFilter,
-          magFilter: THREE.NearestFilter,
-          format: THREE.RGBAFormat,
-          type: THREE.FloatType,
-        }
-      );
-
-      {
-        // add mesh
-        lensFullscreenScene.add(this.sceneMesh); // note: stealing the scene mesh for a moment
-
-        // push old state
-        const oldRenderTarget = this.renderer.getRenderTarget();
-        // const oldClearColor = this.renderer.getClearColor(localColor);
-        // const oldClearAlpha = this.renderer.getClearAlpha();
-
-        // render
-        this.renderer.setRenderTarget(lensFullscreenRenderTarget);
-        // this.renderer.setClearColor(0x000000, 0);
-        // this.renderer.clear();
-        this.renderer.render(lensFullscreenScene, editCamera);
-
-        // read back the indices
-        const float32Array = new Float32Array(this.renderer.domElement.width * this.renderer.domElement.height * 4);
-        this.renderer.readRenderTargetPixels(lensFullscreenRenderTarget, 0, 0, this.renderer.domElement.width, this.renderer.domElement.height, float32Array);
-
-        /* the above was encoded with the following glsl shader. we need to decode it. */
-        // float r = floor(fIndex / 65536.0);
-        // fIndex -= r * 65536.0;
-        // float g = floor(fIndex / 256.0);
-        // fIndex -= g * 256.0;
-        // float b = fIndex;
-        maskIndex = new Int32Array(this.renderer.domElement.width * this.renderer.domElement.height);
-        for (let y = 0; y < this.renderer.domElement.height; y++) {
-          for (let x = 0; x < this.renderer.domElement.width; x++) {
-            const i = y * this.renderer.domElement.width + x;
-
-            // flip y when reading
-            const ax = x;
-            const ay = this.renderer.domElement.height - 1 - y;
-            const j = ay * this.renderer.domElement.width + ax;
-
-            const r = float32Array[j * 4 + 0];
-            const g = float32Array[j * 4 + 1];
-            const b = float32Array[j * 4 + 2];
-
-            const index = r * 65536 + g * 256 + b;
-            maskIndex[i] = index;
-          }
-        }
-
-        // pop old state
-        this.renderer.setRenderTarget(oldRenderTarget);
-        // this.renderer.setClearColor(oldClearColor, oldClearAlpha);
-
-        // done with this, put it back
-        this.scene.add(this.sceneMesh);
+      // draw maskIndex to canvas
+      const canvas = document.createElement('canvas');
+      canvas.width = this.renderer.domElement.width;
+      canvas.height = this.renderer.domElement.height;
+      canvas.classList.add('maskIndexCanvas');
+      const ctx = canvas.getContext('2d');
+      const imageData = ctx.createImageData(this.renderer.domElement.width, this.renderer.domElement.height);
+      const data = imageData.data;
+      for (let i = 0; i < maskIndex.length; i++) {
+        const j = i * 4;
+        const index = maskIndex[i];
+        data[j + 0] = ((index & 0xFF0000) >> 16);
+        data[j + 1] = ((index & 0x00FF00) >> 8);
+        data[j + 2] = (index & 0x0000FF);
+        data[j + 3] = 255;
       }
-      {
-        // draw maskIndex to canvas
-        const canvas = document.createElement('canvas');
-        canvas.width = this.renderer.domElement.width;
-        canvas.height = this.renderer.domElement.height;
-        canvas.classList.add('maskIndexCanvas');
-        const ctx = canvas.getContext('2d');
-        const imageData = ctx.createImageData(this.renderer.domElement.width, this.renderer.domElement.height);
-        const data = imageData.data;
-        for (let i = 0; i < maskIndex.length; i++) {
-          const j = i * 4;
-          const index = maskIndex[i];
-          data[j + 0] = ((index & 0xFF0000) >> 16);
-          data[j + 1] = ((index & 0x00FF00) >> 8);
-          data[j + 2] = (index & 0x0000FF);
-          data[j + 3] = 255;
-        }
-        ctx.putImageData(imageData, 0, 0);
-        document.body.appendChild(canvas);
-      }
+      ctx.putImageData(imageData, 0, 0);
+      document.body.appendChild(canvas);
     }
     console.timeEnd('maskIndex');
 
