@@ -172,10 +172,6 @@ export const layer2Specs = [
     name: 'distanceFloatImageData',
     type: 'arrayBuffer',
   },
-  // {
-  //   name: 'distanceNearestIndex',
-  //   type: 'arrayBuffer',
-  // },
   {
     name: 'distanceNearestPositions',
     type: 'arrayBuffer',
@@ -3372,7 +3368,6 @@ class PanelRenderer extends EventTarget {
     const iResolution = new THREE.Vector2(this.renderer.domElement.width, this.renderer.domElement.height);
     let distanceRenderTarget;
     let distanceFloatImageData;
-    // let distanceNearestIndex;
     let distanceNearestPositions;
     {
       const tempScene = new THREE.Scene();
@@ -3391,11 +3386,6 @@ class PanelRenderer extends EventTarget {
       this.renderer.readRenderTargetPixels(distanceRenderTarget, 0, 0, distanceRenderTarget.width, distanceRenderTarget.height, distanceFloatImageData);
 
       // accumulate distance nearest positions
-      // distanceNearestIndex = new Int32Array(distanceRenderTarget.width * distanceRenderTarget.height);
-      // if (distanceNearestIndex.length * 4 !== distanceFloatImageData.length) {
-      //   console.warn('distance index length mismatch', distanceNearestIndex.length, distanceFloatImageData.length);
-      //   debugger;
-      // }
       distanceNearestPositions = new Float32Array(distanceRenderTarget.width * distanceRenderTarget.height * 3);
       if (distanceNearestPositions.length / 3 * 4 !== distanceFloatImageData.length) {
         console.warn('distance positions length mismatch', distanceNearestPositions.length, distanceFloatImageData.length);
@@ -3464,7 +3454,6 @@ class PanelRenderer extends EventTarget {
         } */
         const nearestPoint = aVector;
 
-        // distanceNearestIndex[j] = i3;
         distanceNearestPositions[j * 3 + 0] = nearestPoint.x;
         distanceNearestPositions[j * 3 + 1] = nearestPoint.y;
         distanceNearestPositions[j * 3 + 2] = nearestPoint.z;
@@ -3590,7 +3579,6 @@ class PanelRenderer extends EventTarget {
       pointCloud: pointCloudArrayBuffer,
       depthFloatImageData,
       distanceFloatImageData,
-      // distanceNearestIndex,
       distanceNearestPositions,
       // indexColorsAlphasArray,
       newDepthFloatImageData,
@@ -3619,9 +3607,7 @@ class PanelRenderer extends EventTarget {
     const pointCloud = _getLayerEntry('pointCloud');
     const depthFloatImageData = _getLayerEntry('depthFloatImageData');
     const distanceFloatImageData = _getLayerEntry('distanceFloatImageData');
-    // const distanceNearestIndex = _getLayerEntry('distanceNearestIndex');
     const distanceNearestPositions = _getLayerEntry('distanceNearestPositions');
-    // const indexColorsAlphasArray = _getLayerEntry('indexColorsAlphasArray');
     const newDepthFloatImageData = _getLayerEntry('newDepthFloatImageData');
     const reconstructedDepthFloats = _getLayerEntry('reconstructedDepthFloats');
     const planesJson = _getLayerEntry('planesJson');
