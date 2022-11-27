@@ -64,30 +64,6 @@ import {
   arrowsUpUrl,
 } from '../utils/light-arrow.js';
 
-//
-
-const imageAiClient = new ImageAiClient();
-const abortError = new Error();
-abortError.isAbortError = true;
-
-const localVector = new THREE.Vector3();
-const localVector2 = new THREE.Vector3();
-const localVector3 = new THREE.Vector3();
-const localVectorA = new THREE.Vector3();
-// const localVectorA2 = new THREE.Vector3();
-// const localVectorB = new THREE.Vector3();
-// const localVectorB2 = new THREE.Vector3();
-// const localVectorC = new THREE.Vector3();
-// const localVectorC2 = new THREE.Vector3();
-const localQuaternion = new THREE.Quaternion();
-// const localQuaternion2 = new THREE.Quaternion();
-const localMatrix = new THREE.Matrix4();
-const localBox = new THREE.Box3();
-const localCamera = new THREE.PerspectiveCamera();
-const localOrthographicCamera = new THREE.OrthographicCamera();
-const localColor = new THREE.Color();
-const localFloat32Array4 = new Float32Array(4);
-
 // constants
 
 export const panelSize = 1024;
@@ -101,6 +77,31 @@ export const tools = [
   'portal',
 ];
 const colors = detectronColors;
+
+// locals
+
+const localVector = new THREE.Vector3();
+const localVector2 = new THREE.Vector3();
+const localVector3 = new THREE.Vector3();
+// const localVectorA = new THREE.Vector3();
+// const localVectorA2 = new THREE.Vector3();
+// const localVectorB = new THREE.Vector3();
+// const localVectorB2 = new THREE.Vector3();
+// const localVectorC = new THREE.Vector3();
+// const localVectorC2 = new THREE.Vector3();
+const localQuaternion = new THREE.Quaternion();
+// const localQuaternion2 = new THREE.Quaternion();
+const localMatrix = new THREE.Matrix4();
+const localBox = new THREE.Box3();
+const localCamera = new THREE.PerspectiveCamera();
+const localOrthographicCamera = new THREE.OrthographicCamera();
+const localColor = new THREE.Color();
+const localFloat32Array4 = new Float32Array(4);
+const localFloat32ArraySelector = new Float32Array(selectorSize * selectorSize * 4);
+
+const imageAiClient = new ImageAiClient();
+const abortError = new Error();
+abortError.isAbortError = true;
 
 // data format spec
 
@@ -1421,113 +1422,176 @@ class Selector {
     this.indexMeshes.push(indexMesh);
   }
   update() {
-    // push
-    const oldRenderTarget = this.renderer.getRenderTarget();
+    const _renderSelector = () => {
+      // push
+      const oldRenderTarget = this.renderer.getRenderTarget();
 
-    // update
-    {
-      // lens material
-      const selectorSizeM1 = selectorSize - 1;
-      const halfSelectorSizeM1 = selectorSizeM1 / 2;
-      this.lensMaterial.uniforms.viewport.value.set(
-        (this.mouse.x / 2 + 0.5) * this.renderer.domElement.width - halfSelectorSizeM1 - 1,
-        (this.mouse.y / 2 + 0.5) * this.renderer.domElement.height - halfSelectorSizeM1 - 1,
-        selectorSize,
-        selectorSize
-      );
-      this.lensMaterial.uniforms.viewport.needsUpdate = true;
+      // update
+      {
+        // lens material
+        const selectorSizeM1 = selectorSize - 1;
+        const halfSelectorSizeM1 = selectorSizeM1 / 2;
+        this.lensMaterial.uniforms.viewport.value.set(
+          (this.mouse.x / 2 + 0.5) * this.renderer.domElement.width - halfSelectorSizeM1 - 1,
+          (this.mouse.y / 2 + 0.5) * this.renderer.domElement.height - halfSelectorSizeM1 - 1,
+          selectorSize,
+          selectorSize
+        );
+        this.lensMaterial.uniforms.viewport.needsUpdate = true;
 
-      // index material
-      const radiusPixels = 100;
-      const radius = radiusPixels / this.renderer.domElement.width;
-      this.indexMaterial.uniforms.uPointerCircle.value.set(this.mouse.x, this.mouse.y, radius);
-      this.indexMaterial.uniforms.uPointerCircle.needsUpdate = true;
+        // index material
+        const radiusPixels = 100;
+        const radius = radiusPixels / this.renderer.domElement.width;
+        this.indexMaterial.uniforms.uPointerCircle.value.set(this.mouse.x, this.mouse.y, radius);
+        this.indexMaterial.uniforms.uPointerCircle.needsUpdate = true;
 
-      // index meshes
-      for (const mesh of this.indexMeshes) {
-        mesh.setTransformToParent();
+        // index meshes
+        for (const mesh of this.indexMeshes) {
+          mesh.setTransformToParent();
+        }
       }
-    }
 
-    // attach
-    const _restoreParents = (() => {
-      const parents = this.sceneMeshes.map(sceneMesh => {
-        const {parent} = sceneMesh;
-        this.lensScene.add(sceneMesh);
-        return parent;
-      });
-      return () => {
-        for (let i = 0; i < parents.length; i++) {
-          parents[i].add(this.sceneMeshes[i]);
-        }
-      };
-    })();
+      // attach
+      const _restoreParents = (() => {
+        const parents = this.sceneMeshes.map(sceneMesh => {
+          const {parent} = sceneMesh;
+          this.lensScene.add(sceneMesh);
+          return parent;
+        });
+        return () => {
+          for (let i = 0; i < parents.length; i++) {
+            parents[i].add(this.sceneMeshes[i]);
+          }
+        };
+      })();
 
-    // render lens
-    if (this.lensEnabled) {
-      this.renderer.setRenderTarget(this.lensRenderTarget);
-      this.renderer.render(this.lensScene, this.camera);
-    }
+      // render lens
+      if (this.lensEnabled) {
+        this.renderer.setRenderTarget(this.lensRenderTarget);
+        this.renderer.render(this.lensScene, this.camera);
+      }
 
-    // render indices scene
-    if (this.indicesEnabled) {
-      this.renderer.setRenderTarget(this.indicesRenderTarget);
-      this.renderer.render(this.indicesScene, this.camera);
-    }
+      // render indices scene
+      if (this.indicesEnabled) {
+        this.renderer.setRenderTarget(this.indicesRenderTarget);
+        this.renderer.render(this.indicesScene, this.camera);
+      }
 
-    if (this.pickerEnabled) {
-      // read the middle pixel
-      const lensFloat32Data = localFloat32Array4;
-      const selectorSizeM1 = selectorSize - 1;
-      this.renderer.readRenderTargetPixels(this.lensRenderTarget, selectorSizeM1 / 2, selectorSizeM1 / 2, 1, 1, lensFloat32Data);
-      // encode the index as rgba
-      // float r = floor(fIndex / 65536.0);
-      // fIndex -= r * 65536.0;
-      // float g = floor(fIndex / 256.0);
-      // fIndex -= g * 256.0;
-      // float b = floor(fIndex / 1.0);
-      // fIndex -= b * 1.0;
-      // gl_FragColor = vec4(r, g, b, 1.);
-      const a = lensFloat32Data[3];
-      if (a > 0) {
-        const index = Math.floor(lensFloat32Data[0] * 65536 + lensFloat32Data[1] * 256 + lensFloat32Data[2]);
-        
-        // look up the position index in the scene mesh indexed geometry
-        if (this.sceneMeshes.length === 1) {
-          // nothing
-        } else {
-          console.warn('only implemented for one scene mesh');
-          debugger;
-        }
-        const firstSceneMesh = this.sceneMeshes[0]; // note: using first scene mesh only
-        const index2 = firstSceneMesh.indexedGeometry.index.array[index] * 3;
-        if (index2 === undefined) {
-          console.warn('index2 is undefined');
-          debugger;
-        }
+      if (this.pickerEnabled) {
+        // read the middle pixel
+        const lensFloat32Data = localFloat32Array4;
+        const selectorSizeM1 = selectorSize - 1;
+        this.renderer.readRenderTargetPixels(this.lensRenderTarget, selectorSizeM1 / 2, selectorSizeM1 / 2, 1, 1, lensFloat32Data);
+        // encode the index as rgba
+        // float r = floor(fIndex / 65536.0);
+        // fIndex -= r * 65536.0;
+        // float g = floor(fIndex / 256.0);
+        // fIndex -= g * 256.0;
+        // float b = floor(fIndex / 1.0);
+        // fIndex -= b * 1.0;
+        // gl_FragColor = vec4(r, g, b, 1.);
+        const a = lensFloat32Data[3];
+        if (a > 0) {
+          const index = Math.floor(lensFloat32Data[0] * 65536 + lensFloat32Data[1] * 256 + lensFloat32Data[2]);
+          
+          // look up the position index in the scene mesh indexed geometry
+          if (this.sceneMeshes.length === 1) {
+            // nothing
+          } else {
+            console.warn('only implemented for one scene mesh');
+            debugger;
+          }
+          const firstSceneMesh = this.sceneMeshes[0]; // note: using first scene mesh only
+          const index2 = firstSceneMesh.indexedGeometry.index.array[index] * 3;
+          if (index2 === undefined) {
+            console.warn('index2 is undefined');
+            debugger;
+          }
 
-        if (index2 >= 0 && index2 < (this.renderer.domElement.width * this.renderer.domElement.height)) {
-          this.pickerIndex = index2;
+          if (index2 >= 0 && index2 < (this.renderer.domElement.width * this.renderer.domElement.height)) {
+            this.pickerIndex = index2;
+          } else {
+            this.pickerIndex = -1;
+          }
         } else {
           this.pickerIndex = -1;
         }
       } else {
         this.pickerIndex = -1;
       }
-    } else {
-      this.pickerIndex = -1;
-    }
 
-    // restore
-    _restoreParents();
+      // restore
+      _restoreParents();
 
-    // pop
-    this.renderer.setRenderTarget(oldRenderTarget);
+      // pop
+      this.renderer.setRenderTarget(oldRenderTarget);
+    };
+    _renderSelector();
 
-    // update scene meshes
-    for (const sceneMesh of this.sceneMeshes) {
-      sceneMesh.update();
-    }
+    const _updateSceneMeshes = () => {
+      for (const sceneMesh of this.sceneMeshes) {
+        sceneMesh.update();
+      }
+    };
+    _updateSceneMeshes();
+
+    const _updateEraser = () => {
+      if (this.mousedown) {
+        const lensFloat32Data = localFloat32ArraySelector;
+        this.renderer.readRenderTargetPixels(
+          this.lensRenderTarget,
+          0,
+          0,
+          selectorSize,
+          selectorSize,
+          lensFloat32Data,
+        );
+        globalThis.deletes = [];
+
+        for (let y = 0; y < selectorSize; y++) {
+          for (let x = 0; x < selectorSize; x++) {
+            const ax = (x / (selectorSize - 1)) * 2 - 1;
+            const ay = (y / (selectorSize - 1)) * 2 - 1;
+
+            // check if within the circle
+            const distance = Math.sqrt(ax * ax + ay * ay);
+            if (distance <= 1) {
+              const i = y * selectorSize + x;
+              const index = Math.floor(lensFloat32Data[i * 4 + 0] * 65536 + lensFloat32Data[i * 4 + 1] * 256 + lensFloat32Data[i * 4 + 2]);
+              
+              // look up the position index in the scene mesh indexed geometry
+              if (this.sceneMeshes.length === 1) {
+                // nothing
+              } else {
+                console.warn('only implemented for one scene mesh');
+                debugger;
+              }
+              const firstSceneMesh = this.sceneMeshes[0]; // note: using first scene mesh only
+              
+              const index2 = index * 9;
+              // const index2 = firstSceneMesh.indexedGeometry.index.array[index] * 3;
+              // const index3 = firstSceneMesh.indexedGeometry.index.array[index + 1] * 3;
+              // const index4 = firstSceneMesh.indexedGeometry.index.array[index + 2] * 3;
+
+              firstSceneMesh.geometry.attributes.position.array[index2 + 0] = 0;
+              firstSceneMesh.geometry.attributes.position.array[index2 + 1] = 0;
+              firstSceneMesh.geometry.attributes.position.array[index2 + 2] = 0;
+
+              firstSceneMesh.geometry.attributes.position.array[index2 + 3] = 0;
+              firstSceneMesh.geometry.attributes.position.array[index2 + 4] = 0;
+              firstSceneMesh.geometry.attributes.position.array[index2 + 5] = 0;
+
+              firstSceneMesh.geometry.attributes.position.array[index2 + 6] = 0;
+              firstSceneMesh.geometry.attributes.position.array[index2 + 7] = 0;
+              firstSceneMesh.geometry.attributes.position.array[index2 + 8] = 0;
+
+              firstSceneMesh.geometry.attributes.position.needsUpdate = true;
+            }
+          }
+        }
+      }
+    };
+    _updateEraser();
   }
 }
 
