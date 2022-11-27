@@ -172,18 +172,14 @@ export const layer2Specs = [
     name: 'distanceFloatImageData',
     type: 'arrayBuffer',
   },
-  {
-    name: 'distanceNearestIndex',
-    type: 'arrayBuffer',
-  },
+  // {
+  //   name: 'distanceNearestIndex',
+  //   type: 'arrayBuffer',
+  // },
   {
     name: 'distanceNearestPositions',
     type: 'arrayBuffer',
   },
-  // {
-  //   name: 'indexColorsAlphasArray',
-  //   type: 'json',
-  // },
   {
     name: 'newDepthFloatImageData',
     type: 'arrayBuffer',
@@ -757,25 +753,25 @@ const _cutSkybox = geometry => {
 const _cutMask = (geometry, depthFloatImageData, distanceNearestPositions, editCamera) => {
   // copy over snapped positions
   const newPositions = geometry.attributes.position.array.slice();
-  const _snapPointDelta = (index, ax, ay) => {
-    if (ax >= 0 && ax < panelSize && ay >= 0 && ay < panelSize) {
-      const index2 = ay * panelSize + ax;
-      if (depthFloatImageData[index2] !== 0) {
-        const ay2 = panelSize - 1 - ay;
-        const ax2 = ax;
-        const index3 = ay2 * panelSize + ax2;
-        // const index3 = index2;
-        localVector.fromArray(distanceNearestPositions, index3 * 3)
-          // .applyMatrix4(editCamera.matrixWorld)
-          .toArray(newPositions, index * 3);
-        return true;
-      } else {
-        return false;
-      }
-    } else {
-      return false;
-    }
-  };
+  // const _snapPointDelta = (index, ax, ay) => {
+  //   if (ax >= 0 && ax < panelSize && ay >= 0 && ay < panelSize) {
+  //     const index2 = ay * panelSize + ax;
+  //     if (depthFloatImageData[index2] !== 0) {
+  //       const ay2 = panelSize - 1 - ay;
+  //       const ax2 = ax;
+  //       const index3 = ay2 * panelSize + ax2;
+  //       // const index3 = index2;
+  //       localVector.fromArray(distanceNearestPositions, index3 * 3)
+  //         // .applyMatrix4(editCamera.matrixWorld)
+  //         .toArray(newPositions, index * 3);
+  //       return true;
+  //     } else {
+  //       return false;
+  //     }
+  //   } else {
+  //     return false;
+  //   }
+  // };
   const _snapPoint = index => {
     // flip y
     const x = index % panelSize;
@@ -830,245 +826,6 @@ const _cutMask = (geometry, depthFloatImageData, distanceNearestPositions, editC
   // set the new attributes
   geometry.setAttribute('position', new THREE.BufferAttribute(newPositions, 3));
   geometry.setIndex(new THREE.BufferAttribute(newIndices.subarray(0, numIndices), 1));
-};
-const _isValidZDepth = z => z < 0;
-const _cutDepth = (geometry, depthFloatImageData) => {
-  // copy over only the triangles that are not completely far
-  const newIndices = new geometry.index.array.constructor(geometry.index.array.length);
-  let numIndices = 0;
-  for (let i = 0; i < geometry.index.count; i += 3) {
-    const a = geometry.index.array[i + 0];
-    const b = geometry.index.array[i + 1];
-    const c = geometry.index.array[i + 2];
-    const aValid = _isValidZDepth(depthFloatImageData[a]);
-    const bValid = _isValidZDepth(depthFloatImageData[b]);
-    const cValid = _isValidZDepth(depthFloatImageData[c]);
-    // if not all are valid, then keep the triangle
-    if (!(aValid && bValid && cValid)) {
-      newIndices[numIndices + 0] = a;
-      newIndices[numIndices + 1] = b;
-      newIndices[numIndices + 2] = c;
-      numIndices += 3;
-    }
-  }
-  // set the new indices
-  geometry.setIndex(new THREE.BufferAttribute(newIndices.subarray(0, numIndices), 1));
-};
-// same as above, but for a luminosity value
-function calculateValue(x, y, alphaSpecs /* : {x: number, y: number, a: number}[] */) {
-  let total = 0;
-  for (let i = 0; i < alphaSpecs.length; i++) {
-    let c = alphaSpecs[i];
-    let d = distance(c.x, c.y, x, y);
-    if (d === 0) {
-      return c;
-    }
-    d = 1 / (d * d);
-    c.d = d;
-    total += d;
-  }
-  let a = 0;
-  for (let i = 0; i < alphaSpecs.length; i++) {
-    let c = alphaSpecs[i];
-    let ratio = c.d / total;
-    a += ratio * c.value;
-  }
-  a = Math.floor(a);
-  // return {a:a};
-  return a;
-}
-const _clipGeometryToMask = (
-  geometry,
-  widthSegments,
-  heightSegments,
-  oldGeometry,
-  maskImageData,
-  depthFloatImageData,
-  indexColorsAlphasArray
-) => {
-  // check if the point was originally solid or a hole
-  const _isPointTransparent = i => maskImageData.data[i * 4 + 3] === 0;
-  // get the array which has the brightest alphas at this index
-  const _getBrightestIndexColorAlpha = (indexColorsAlphasArray, index) => {
-    let bestIndexColorAlpha = null;
-    let bestIndexColorAlphaValue = -1;
-    for (let i = 0; i < indexColorsAlphasArray.length; i++) {
-      const indexColorAlpha = indexColorsAlphasArray[i];
-      const a = indexColorAlpha[index * 4 + 3];
-      if (a > bestIndexColorAlphaValue) {
-        bestIndexColorAlpha = indexColorAlpha;
-        bestIndexColorAlphaValue = a;
-      }
-    }
-    return bestIndexColorAlpha;
-  };
-
-  // const positions = geometry.attributes.position.array.slice();
-  const indices = [];
-  const gridX = widthSegments;
-  const gridY = heightSegments;
-  const gridX1 = gridX + 1;
-  const gridY1 = gridY + 1;
-  const frontierPoints = new Set();
-  for (let iy = 0; iy < gridY; iy++) {
-    for (let ix = 0; ix < gridX; ix++) {
-      const a = ix + gridX1 * iy;
-      const b = ix + gridX1 * (iy + 1);
-      const c = (ix + 1) + gridX1 * (iy + 1);
-      const d = (ix + 1) + gridX1 * iy;
-
-      const aO = _isPointTransparent(a);
-      const bO = _isPointTransparent(b);
-      const cO = _isPointTransparent(c);
-      const dO = _isPointTransparent(d);
-
-      // if one of the points was in the hole, keep it; otherwise, discard it
-      // if a kept point neighbors a non-hole point, add it to the frontier set for welding
-      if (aO || bO || cO) {
-        indices.push(a, b, d);
-        if (!aO) {
-          frontierPoints.add(a);
-        }
-        if (!bO) {
-          frontierPoints.add(b);
-        }
-        if (!dO) {
-          frontierPoints.add(d);
-        }
-      }
-      if (bO || cO || dO) {
-        indices.push(b, c, d);
-        if (!bO) {
-          frontierPoints.add(b);
-        }
-        if (!cO) {
-          frontierPoints.add(c);
-        }
-        if (!dO) {
-          frontierPoints.add(d);
-        }
-      }
-    }
-  }
-  /* for (let ix = 0; ix < gridX1; ix++) {
-    for (let iy = 0; iy < gridX1; iy++) {
-      const index = ix + gridX1 * iy;
-
-      // if it's a frontier point, we need to weld it to the nearest existing point in the old geometry
-      if (frontierPoints.has(index)) {
-        const brightestIndexColorAlpha = _getBrightestIndexColorAlpha(indexColorsAlphasArray, index);
-        const r = brightestIndexColorAlpha[index * 4 + 0];
-        const g = brightestIndexColorAlpha[index * 4 + 1];
-        const b = brightestIndexColorAlpha[index * 4 + 2];
-        // const a = brightestIndexColorAlpha[index * 4 + 3];
-
-        const screenX = r * gridX1;
-        const screenY = g * gridY1;
-        const vertexIndex = b;
-
-        // ensure screenX, screenY, vertexIndex are integers; throw if not
-        if (screenX !== Math.floor(screenX)) {
-          console.warn('invalid screenX', screenX);
-          debugger;
-          throw new Error('invalid screenX');
-        }
-        if (screenY !== Math.floor(screenY)) {
-          console.warn('invalid screenY', screenY);
-          debugger;
-          throw new Error('invalid screenY');
-        }
-        if (vertexIndex !== Math.floor(vertexIndex)) {
-          console.warn('invalid vertexIndex', vertexIndex);
-          debugger;
-          throw new Error('invalid vertexIndex');
-        }
-
-        const positionIndex = vertexIndex * 3;
-        const oldPositions = oldGeometry.attributes.position.array;
-        positions[index * 3 + 0] = oldPositions[positionIndex + 0];
-        positions[index * 3 + 1] = oldPositions[positionIndex + 1];
-        positions[index * 3 + 2] = oldPositions[positionIndex + 2];
-      } else {
-        // otherwise, we need to perform a 6-point interpolation across the index colors alphas array
-
-        // colect [{x, y, value}]
-        const alphaSpecs = indexColorsAlphasArray.map(indexColorsAlphas => {
-          const r = indexColorsAlphas[index * 4 + 0];
-          const g = indexColorsAlphas[index * 4 + 1];
-          const b = indexColorsAlphas[index * 4 + 2];
-          const a = indexColorsAlphas[index * 4 + 3];
-
-          const screenX = r * gridX1;
-          const screenY = g * gridY1;
-          const vertexIndex = b;
-
-          // ensure screenX, screenY, vertexIndex are integers; throw if not
-          if (screenX !== Math.floor(screenX)) {
-            console.warn('invalid screenX', screenX);
-            debugger;
-            throw new Error('invalid screenX');
-          }
-          if (screenY !== Math.floor(screenY)) {
-            console.warn('invalid screenY', screenY);
-            debugger;
-            throw new Error('invalid screenY');
-          }
-          if (vertexIndex !== Math.floor(vertexIndex)) {
-            console.warn('invalid vertexIndex', vertexIndex);
-            debugger;
-            throw new Error('invalid vertexIndex');
-          }
-
-          if (a > 0) { // if it's a solid point, get the viewZ from the depth float image data
-            const depthFloatIndex = screenX + screenY * gridX1;
-            const viewZ = depthFloatImageData[depthFloatIndex];
-
-            return {
-              x: screenX,
-              y: screenY,
-              value: viewZ,
-            };
-          } else { // else if it's a transparent point, pretend it's the destination geometry's local Z at the corner
-            const {direction} = indexColorsAlphas;
-
-            // snap the screen position
-            let screenX2 = ix / gridX1;
-            let screenY2 = iy / gridY1;
-            if (direction.x < 0) {
-              screenX2 = gridX1 - 1;
-            } else if (direction.x > 0) {
-              screenX2 = 0;
-            }
-            if (direction.y < 0) {
-              screenY2 = gridY1 - 1;
-            } else if (direction.y > 0) {
-              screenY2 = 0;
-            }
-
-            const viewZ = 0; // XXX need to get this from the rendered depth of the destination geometry
-
-            return {
-              x: screenX2,
-              y: screenY2,
-              value: viewZ,
-            };
-          }
-        });
-        // XXX add to the list of candidates a centroid point at the axis intersection of the other points
-        // XXX viewZ should come from the depth float image data of the new geometry
-        
-        const resolvedViewZ = calculateValue(ix, iy, alphaSpecs);
-        // XXX convert viewZ to worldZ
-        const worldZ = 0; // XXX
-        // positions[index * 3 + 0] = oldPositions[positionIndex + 0];
-        // positions[index * 3 + 1] = oldPositions[positionIndex + 1];
-        positions[index * 3 + 2] = worldZ;
-      }
-    }
-  }
-  // set the new positions and indices on the geometry
-  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3)); */
-  geometry.setIndex(new THREE.BufferAttribute(Uint32Array.from(indices), 1));
 };
 const getSemanticPlanes = async (img, newDepthFloatImageData, segmentMask) => {
   let planesJson;
@@ -3615,7 +3372,7 @@ class PanelRenderer extends EventTarget {
     const iResolution = new THREE.Vector2(this.renderer.domElement.width, this.renderer.domElement.height);
     let distanceRenderTarget;
     let distanceFloatImageData;
-    let distanceNearestIndex;
+    // let distanceNearestIndex;
     let distanceNearestPositions;
     {
       const tempScene = new THREE.Scene();
@@ -3633,12 +3390,12 @@ class PanelRenderer extends EventTarget {
       distanceFloatImageData = new Float32Array(distanceRenderTarget.width * distanceRenderTarget.height * 4);
       this.renderer.readRenderTargetPixels(distanceRenderTarget, 0, 0, distanceRenderTarget.width, distanceRenderTarget.height, distanceFloatImageData);
 
-      // accumulate distance index
-      distanceNearestIndex = new Int32Array(distanceRenderTarget.width * distanceRenderTarget.height);
-      if (distanceNearestIndex.length * 4 !== distanceFloatImageData.length) {
-        console.warn('distance index length mismatch', distanceNearestIndex.length, distanceFloatImageData.length);
-        debugger;
-      }
+      // accumulate distance nearest positions
+      // distanceNearestIndex = new Int32Array(distanceRenderTarget.width * distanceRenderTarget.height);
+      // if (distanceNearestIndex.length * 4 !== distanceFloatImageData.length) {
+      //   console.warn('distance index length mismatch', distanceNearestIndex.length, distanceFloatImageData.length);
+      //   debugger;
+      // }
       distanceNearestPositions = new Float32Array(distanceRenderTarget.width * distanceRenderTarget.height * 3);
       if (distanceNearestPositions.length / 3 * 4 !== distanceFloatImageData.length) {
         console.warn('distance positions length mismatch', distanceNearestPositions.length, distanceFloatImageData.length);
@@ -3705,9 +3462,9 @@ class PanelRenderer extends EventTarget {
           nearestPoint = cVector;
           nearestDistance = cDistance;
         } */
-        const nearestPoint = aVector
+        const nearestPoint = aVector;
 
-        distanceNearestIndex[j] = i3;
+        // distanceNearestIndex[j] = i3;
         distanceNearestPositions[j * 3 + 0] = nearestPoint.x;
         distanceNearestPositions[j * 3 + 1] = nearestPoint.y;
         distanceNearestPositions[j * 3 + 2] = nearestPoint.z;
@@ -3833,7 +3590,7 @@ class PanelRenderer extends EventTarget {
       pointCloud: pointCloudArrayBuffer,
       depthFloatImageData,
       distanceFloatImageData,
-      distanceNearestIndex,
+      // distanceNearestIndex,
       distanceNearestPositions,
       // indexColorsAlphasArray,
       newDepthFloatImageData,
@@ -3862,7 +3619,7 @@ class PanelRenderer extends EventTarget {
     const pointCloud = _getLayerEntry('pointCloud');
     const depthFloatImageData = _getLayerEntry('depthFloatImageData');
     const distanceFloatImageData = _getLayerEntry('distanceFloatImageData');
-    const distanceNearestIndex = _getLayerEntry('distanceNearestIndex');
+    // const distanceNearestIndex = _getLayerEntry('distanceNearestIndex');
     const distanceNearestPositions = _getLayerEntry('distanceNearestPositions');
     // const indexColorsAlphasArray = _getLayerEntry('indexColorsAlphasArray');
     const newDepthFloatImageData = _getLayerEntry('newDepthFloatImageData');
