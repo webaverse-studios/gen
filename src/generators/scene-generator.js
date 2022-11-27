@@ -98,6 +98,7 @@ const localOrthographicCamera = new THREE.OrthographicCamera();
 const localColor = new THREE.Color();
 const localFloat32Array4 = new Float32Array(4);
 const localFloat32ArraySelector = new Float32Array(selectorSize * selectorSize * 4);
+const localUint8ArrayPanelSize = new Uint8Array(((panelSize - 1) * 2) * (panelSize - 1) * 4);
 
 const imageAiClient = new ImageAiClient();
 const abortError = new Error();
@@ -1062,7 +1063,7 @@ class Selector {
     const indicesRenderTarget = new THREE.WebGLRenderTarget((panelSize - 1) * 2, panelSize - 1, {
       minFilter: THREE.NearestFilter,
       magFilter: THREE.NearestFilter,
-      type: THREE.FloatType,
+      // type: THREE.FloatType,
     });
     this.indicesRenderTarget = indicesRenderTarget;
 
@@ -1357,7 +1358,6 @@ class Selector {
           const ndcy = uvy * 2 - 1;
 
           for (let i = 0; i < planeGeometry.attributes.position.array.length; i += 3) {
-
             // get the position offset
             // note: * 2 because we are in the range [-1, 1]
             const pox = planeGeometry.attributes.position.array[i + 0] / width * 2;
@@ -1537,56 +1537,50 @@ class Selector {
 
     const _updateEraser = () => {
       if (this.mousedown) {
-        const lensFloat32Data = localFloat32ArraySelector;
+        const lensUint8Data = localUint8ArrayPanelSize;
         this.renderer.readRenderTargetPixels(
-          this.lensRenderTarget,
+          this.indicesRenderTarget,
           0,
           0,
-          selectorSize,
-          selectorSize,
-          lensFloat32Data,
+          this.indicesRenderTarget.width,
+          this.indicesRenderTarget.height,
+          lensUint8Data,
         );
-        globalThis.deletes = [];
 
-        for (let y = 0; y < selectorSize; y++) {
-          for (let x = 0; x < selectorSize; x++) {
-            const ax = (x / (selectorSize - 1)) * 2 - 1;
-            const ay = (y / (selectorSize - 1)) * 2 - 1;
+        if (this.sceneMeshes.length === 1) {
+          // nothing
+        } else {
+          console.warn('only implemented for one scene mesh');
+          debugger;
+        }
+        const firstSceneMesh = this.sceneMeshes[0]; // note: using first scene mesh only
 
-            // check if within the circle
-            const distance = Math.sqrt(ax * ax + ay * ay);
-            if (distance <= 1) {
-              const i = y * selectorSize + x;
-              const index = Math.floor(lensFloat32Data[i * 4 + 0] * 65536 + lensFloat32Data[i * 4 + 1] * 256 + lensFloat32Data[i * 4 + 2]);
-              
-              // look up the position index in the scene mesh indexed geometry
-              if (this.sceneMeshes.length === 1) {
-                // nothing
-              } else {
-                console.warn('only implemented for one scene mesh');
-                debugger;
-              }
-              const firstSceneMesh = this.sceneMeshes[0]; // note: using first scene mesh only
-              
-              const index2 = index * 9;
-              // const index2 = firstSceneMesh.indexedGeometry.index.array[index] * 3;
-              // const index3 = firstSceneMesh.indexedGeometry.index.array[index + 1] * 3;
-              // const index4 = firstSceneMesh.indexedGeometry.index.array[index + 2] * 3;
+        const triangleIdAttribute = firstSceneMesh.geometry.attributes.triangleId;
+        for (let i = 0; i < triangleIdAttribute.count; i += 3) {
+          const triangleId = Math.floor(i / 3);
 
-              firstSceneMesh.geometry.attributes.position.array[index2 + 0] = 0;
-              firstSceneMesh.geometry.attributes.position.array[index2 + 1] = 0;
-              firstSceneMesh.geometry.attributes.position.array[index2 + 2] = 0;
+          const x = triangleId % this.indicesRenderTarget.width;
+          const y = Math.floor(triangleId / this.indicesRenderTarget.width);
 
-              firstSceneMesh.geometry.attributes.position.array[index2 + 3] = 0;
-              firstSceneMesh.geometry.attributes.position.array[index2 + 4] = 0;
-              firstSceneMesh.geometry.attributes.position.array[index2 + 5] = 0;
+          const j = y * this.indicesRenderTarget.width + x;
+          const r = lensUint8Data[j * 4 + 0];
 
-              firstSceneMesh.geometry.attributes.position.array[index2 + 6] = 0;
-              firstSceneMesh.geometry.attributes.position.array[index2 + 7] = 0;
-              firstSceneMesh.geometry.attributes.position.array[index2 + 8] = 0;
+          if (r > 0) {
+            const baseIndex = triangleId * 9;
 
-              firstSceneMesh.geometry.attributes.position.needsUpdate = true;
-            }
+            firstSceneMesh.geometry.attributes.position.array[baseIndex + 0] = 0;
+            firstSceneMesh.geometry.attributes.position.array[baseIndex + 1] = 0;
+            firstSceneMesh.geometry.attributes.position.array[baseIndex + 2] = 0;
+
+            firstSceneMesh.geometry.attributes.position.array[baseIndex + 3] = 0;
+            firstSceneMesh.geometry.attributes.position.array[baseIndex + 4] = 0;
+            firstSceneMesh.geometry.attributes.position.array[baseIndex + 5] = 0;
+
+            firstSceneMesh.geometry.attributes.position.array[baseIndex + 6] = 0;
+            firstSceneMesh.geometry.attributes.position.array[baseIndex + 7] = 0;
+            firstSceneMesh.geometry.attributes.position.array[baseIndex + 8] = 0;
+
+            firstSceneMesh.geometry.attributes.position.needsUpdate = true;
           }
         }
       }
