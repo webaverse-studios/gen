@@ -10,7 +10,9 @@ export class JFAOutline {
      * @param iResolution Three.Vector2 containing width and height of the screen.
      * @param outlinePass Optional custom outlining shader.
      */
-    constructor(targets, iResolution, outlinePass) {
+    constructor(iResolution, outlinePass) {
+        const targets = makeFloatRenderTargetSwapChain(iResolution.x, iResolution.y);
+        this.targets = targets;
         this.selectedMaterial = new three_1.MeshBasicMaterial({ color: 0xFFFFFF });
         this.uvPass = fullScreenPass_1.fullScreenPass(`
       uniform sampler2D tex;
@@ -318,16 +320,31 @@ void main() {
     maxDistance: { value: 2.0 },
     feedbackDepthTexture: { value: null },
 });
+
+//
+
+export function makeFloatRenderTargetSwapChain(width, height) {
+  const targets = Array(2);
+  for (let i = 0; i < 2; i++) {
+    targets[i] = new three_1.WebGLRenderTarget(width, height, {
+      type: three_1.FloatType,
+      magFilter: three_1.NearestFilter,
+      minFilter: three_1.NearestFilter,
+    });
+  }
+  return targets;
+};
+
+//
+
 export function renderDepthReconstruction(
   renderer,
   distanceTarget,
-  targets,
   oldDepthFloats,
   newDepthFloats,
   iResolution
 ) {
-  globalThis.oldDepthFloats = oldDepthFloats;
-  globalThis.newDepthFloats = newDepthFloats;
+  const targets = makeFloatRenderTargetSwapChain(iResolution.x, iResolution.y);
 
   const oldNewDepthTextureData = new Float32Array(oldDepthFloats.length * 4);
   for (let i = 0; i < oldDepthFloats.length; i++) {
@@ -339,10 +356,6 @@ export function renderDepthReconstruction(
   oldNewDepthTexture.magFilter = three_1.NearestFilter;
   oldNewDepthTexture.flipY = true;
   oldNewDepthTexture.needsUpdate = true;
-
-  // globalThis.oldNewDepthTextureData = oldNewDepthTextureData;
-  // globalThis.oldDepthFloats = oldDepthFloats;
-  // globalThis.newDepthFloats = newDepthFloats;
 
   const _render = () => {
     const readTarget = targets[0];
@@ -361,4 +374,25 @@ export function renderDepthReconstruction(
     [targets[0], targets[1]] = [targets[1], targets[0]];
   };
   _render();
+
+  // read the render target
+  const writeRenderTarget = targets[0];
+  const reconstructedDepthFloatsImageData = new Float32Array(writeRenderTarget.width * writeRenderTarget.height * 4);
+  renderer.readRenderTargetPixels(writeRenderTarget, 0, 0, writeRenderTarget.width, writeRenderTarget.height, reconstructedDepthFloatsImageData);
+
+  // extract to depth-only
+  // flip y
+  const reconstructedDepthFloats = new Float32Array(reconstructedDepthFloatsImageData.length / 4);
+  for (let i = 0; i < reconstructedDepthFloats.length; i++) {
+    const j = i * 4;
+
+    const x = i % writeRenderTarget.width;
+    let y = Math.floor(i / writeRenderTarget.width);
+    y = writeRenderTarget.height - y - 1;
+    
+    const index = y * writeRenderTarget.width + x;
+
+    reconstructedDepthFloats[index] = reconstructedDepthFloatsImageData[j];
+  }
+  return reconstructedDepthFloats;
 }

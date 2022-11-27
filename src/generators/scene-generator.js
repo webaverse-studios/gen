@@ -701,17 +701,6 @@ const getDepthFloatsFromPointCloud = pointCloudArrayBuffer => {
   }
   return newDepthFloatImageData;
 };
-const makeFloatRenderTargetSwapChain = (width, height) => {
-  const targets = Array(2);
-  for (let i = 0; i < 2; i++) {
-    targets[i] = new THREE.WebGLRenderTarget(width, height, {
-      type: THREE.FloatType,
-      magFilter: THREE.NearestFilter,
-      minFilter: THREE.NearestFilter,
-    });
-  }
-  return targets;
-};
 
 //
 
@@ -3634,9 +3623,8 @@ class PanelRenderer extends EventTarget {
       tempScene.add(this.sceneMesh); // note: stealing the scene mesh for a moment
 
       // We need two render targets to ping-pong in between.  
-      const targets = makeFloatRenderTargetSwapChain(this.renderer.domElement.width, this.renderer.domElement.height);
-
-      const jfaOutline = new JFAOutline(targets, iResolution);
+      const jfaOutline = new JFAOutline(iResolution);
+      const {targets} = jfaOutline;
       jfaOutline.renderSelected(this.renderer, tempScene, editCamera, targets);
       const outlineUniforms = undefined;
       const distanceIndex = jfaOutline.renderDistanceTex(this.renderer, targets, iResolution, outlineUniforms);
@@ -3767,44 +3755,19 @@ class PanelRenderer extends EventTarget {
     console.time('reconstructZ');
     let reconstructedDepthFloats;
     {
-      const targets = makeFloatRenderTargetSwapChain(this.renderer.domElement.width, this.renderer.domElement.height);
-      renderDepthReconstruction(
+      reconstructedDepthFloats = renderDepthReconstruction(
         this.renderer,
         distanceRenderTarget,
-        targets,
         depthFloatImageData,
         newDepthFloatImageData,
         iResolution
       );
 
-      // read the render target
-      const writeRenderTarget = targets[0];
-      const reconstructedDepthFloatsImageData = new Float32Array(writeRenderTarget.width * writeRenderTarget.height * 4);
-      this.renderer.readRenderTargetPixels(writeRenderTarget, 0, 0, writeRenderTarget.width, writeRenderTarget.height, reconstructedDepthFloatsImageData);
-
-      // extract to depth-only
-      // flip y
-      reconstructedDepthFloats = new Float32Array(reconstructedDepthFloatsImageData.length / 4);
-      for (let i = 0; i < reconstructedDepthFloats.length; i++) {
-        const j = i * 4;
-
-        const x = i % writeRenderTarget.width;
-        let y = Math.floor(i / writeRenderTarget.width);
-        y = writeRenderTarget.height - y - 1;
-        
-        const index = y * writeRenderTarget.width + x;
-
-        reconstructedDepthFloats[index] = reconstructedDepthFloatsImageData[j];
-      }
-      // globalThis.depthFloatImageData = depthFloatImageData;
-      // globalThis.newDepthFloatImageData = newDepthFloatImageData;
-      // globalThis.reconstructedDepthFloats = reconstructedDepthFloats;
-
       // draw to canvas
       const canvas = document.createElement('canvas');
       canvas.classList.add('reconstructionCanvas');
-      canvas.width = writeRenderTarget.width;
-      canvas.height = writeRenderTarget.height;
+      canvas.width = this.renderer.domElement.width;
+      canvas.height = this.renderer.domElement.height;
       const context = canvas.getContext('2d');
       const imageData = context.createImageData(canvas.width, canvas.height);
       const data = imageData.data;
