@@ -93,7 +93,7 @@ export const tools = [
 ];
 const colors = detectronColors;
 
-// data formats
+// data format spec
 
 export const mainImageKey = 'layer0/image';
 export const promptKey = 'layer0/prompt';
