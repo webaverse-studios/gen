@@ -84,6 +84,28 @@ export function pointCloudArrayBufferToGeometry(arrayBuffer, width, height) {
 
 //
 
+export const reinterpretFloatImageData = imageData => {
+  const result = new Float32Array(
+    imageData.data.buffer,
+    imageData.data.byteOffset,
+    imageData.data.byteLength / Float32Array.BYTES_PER_ELEMENT
+  );
+  const {width, height} = imageData;
+  // flip Y
+  for (let y = 0; y < height / 2; y++) {
+    for (let x = 0; x < width; x++) {
+      const i = y * width + x;
+      const j = (height - 1 - y) * width + x;
+      const tmp = result[i];
+      result[i] = result[j];
+      result[j] = tmp;
+    }
+  }
+  return result;
+};
+
+//
+
 export function depthFloat32ArrayToPositionAttributeArray(
   depthFloat32Array,
   width,

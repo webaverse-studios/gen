@@ -285,3 +285,10 @@ export const categories = {
     "towel",
   ],
 };
+export const categoryClassIndices = (() => {
+  const categoryClassIndices = {};
+  for (const category in categories) {
+    categoryClassIndices[category] = categories[category].map(className => classes.indexOf(className));
+  }
+  return categoryClassIndices;
+})();

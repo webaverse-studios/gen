@@ -3,6 +3,23 @@ import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 // import alea from '../utils/alea.js';
 import {Text} from 'troika-three-text';
 import {JFAOutline, renderDepthReconstruction} from '../utils/jfaOutline.js';
+import * as passes from './sg-passes.js';
+import {
+  setPerspectiveCameraFromJson,
+  getPerspectiveCameraJson,
+  setOrthographicCameraFromJson,
+  getOrthographicCameraJson,
+} from '../utils/camera-utils.js';
+import {
+  depthVertexShader,
+  depthFragmentShader,
+} from '../utils/sg-shaders.js';
+import {
+  // floorNetWorldSize,
+  // floorNetWorldDepth,
+  // floorNetResolution,
+  floorNetPixelSize,
+} from '../constants/sg-constants.js';
 
 import {ImageAiClient} from '../clients/image-client.js';
 // import {getLabel} from '../clients/perception-client.js';
@@ -20,11 +37,13 @@ import {
   skyboxDistance,
   depthFloat32ArrayToGeometry,
   depthFloat32ArrayToOrthographicGeometry,
+  reinterpretFloatImageData,
 } from '../clients/reconstruction-client.js';
 
 import {blob2img, img2ImageData} from '../utils/convert-utils.js';
 import {makeId} from '../utils/id-utils.js';
-import {classes, categories} from '../../constants/classes.js';
+import {classes, categories, categoryClassIndices} from '../../constants/classes.js';
+import {rainbowColors, detectronColors} from '../constants/detectron-colors.js';
 import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 // import {labelClasses} from '../constants/prompts.js';
 import {
@@ -61,13 +80,21 @@ const localCamera = new THREE.PerspectiveCamera();
 const localOrthographicCamera = new THREE.OrthographicCamera();
 const localColor = new THREE.Color();
 
-//
-
-const defaultCameraMatrix = new THREE.Matrix4();
-
-//
+// constants
 
 export const panelSize = 1024;
+export const tools = [
+  'camera',
+  'eraser',
+  'outmesh',
+  'segment',
+  'plane',
+  'portal',
+];
+const colors = detectronColors;
+
+// data formats
+
 export const mainImageKey = 'layer0/image';
 export const promptKey = 'layer0/prompt';
 export const layer1Specs = [
@@ -194,389 +221,10 @@ export const layer2Specs = [
     type: 'json',
   },
 ];
-export const tools = [
-  'camera',
-  'eraser',
-  'outmesh',
-  'segment',
-  'plane',
-  'portal',
-];
-const rainbowColors = [
-  0x881177,
-  0xaa3355,
-  0xcc6666,
-  0xee9944,
-  0xeedd00,
-  0x99dd55,
-  0x44dd88,
-  0x22ccbb,
-  0x00bbcc,
-  0x0099cc,
-  0x3366bb,
-  0x663399,
-];
-const detectronColors = [
-  {"color": [120, 120, 120], "id": 0, "isthing": 0, "name": "wall"},
-  {"color": [180, 120, 120], "id": 1, "isthing": 0, "name": "building"},
-  {"color": [6, 230, 230], "id": 2, "isthing": 0, "name": "sky"},
-  {"color": [80, 50, 50], "id": 3, "isthing": 0, "name": "floor"},
-  {"color": [4, 200, 3], "id": 4, "isthing": 0, "name": "tree"},
-  {"color": [120, 120, 80], "id": 5, "isthing": 0, "name": "ceiling"},
-  {"color": [140, 140, 140], "id": 6, "isthing": 0, "name": "road, route"},
-  {"color": [204, 5, 255], "id": 7, "isthing": 1, "name": "bed"},
-  {"color": [230, 230, 230], "id": 8, "isthing": 1, "name": "window "},
-  {"color": [4, 250, 7], "id": 9, "isthing": 0, "name": "grass"},
-  {"color": [224, 5, 255], "id": 10, "isthing": 1, "name": "cabinet"},
-  {"color": [235, 255, 7], "id": 11, "isthing": 0, "name": "sidewalk, pavement"},
-  {"color": [150, 5, 61], "id": 12, "isthing": 1, "name": "person"},
-  {"color": [120, 120, 70], "id": 13, "isthing": 0, "name": "earth, ground"},
-  {"color": [8, 255, 51], "id": 14, "isthing": 1, "name": "door"},
-  {"color": [255, 6, 82], "id": 15, "isthing": 1, "name": "table"},
-  {"color": [143, 255, 140], "id": 16, "isthing": 0, "name": "mountain, mount"},
-  {"color": [204, 255, 4], "id": 17, "isthing": 0, "name": "plant"},
-  {"color": [255, 51, 7], "id": 18, "isthing": 1, "name": "curtain"},
-  {"color": [204, 70, 3], "id": 19, "isthing": 1, "name": "chair"},
-  {"color": [0, 102, 200], "id": 20, "isthing": 1, "name": "car"},
-  {"color": [61, 230, 250], "id": 21, "isthing": 0, "name": "water"},
-  {"color": [255, 6, 51], "id": 22, "isthing": 1, "name": "painting, picture"},
-  {"color": [11, 102, 255], "id": 23, "isthing": 1, "name": "sofa"},
-  {"color": [255, 7, 71], "id": 24, "isthing": 1, "name": "shelf"},
-  {"color": [255, 9, 224], "id": 25, "isthing": 0, "name": "house"},
-  {"color": [9, 7, 230], "id": 26, "isthing": 0, "name": "sea"},
-  {"color": [220, 220, 220], "id": 27, "isthing": 1, "name": "mirror"},
-  {"color": [255, 9, 92], "id": 28, "isthing": 0, "name": "rug"},
-  {"color": [112, 9, 255], "id": 29, "isthing": 0, "name": "field"},
-  {"color": [8, 255, 214], "id": 30, "isthing": 1, "name": "armchair"},
-  {"color": [7, 255, 224], "id": 31, "isthing": 1, "name": "seat"},
-  {"color": [255, 184, 6], "id": 32, "isthing": 1, "name": "fence"},
-  {"color": [10, 255, 71], "id": 33, "isthing": 1, "name": "desk"},
-  {"color": [255, 41, 10], "id": 34, "isthing": 0, "name": "rock, stone"},
-  {"color": [7, 255, 255], "id": 35, "isthing": 1, "name": "wardrobe, closet, press"},
-  {"color": [224, 255, 8], "id": 36, "isthing": 1, "name": "lamp"},
-  {"color": [102, 8, 255], "id": 37, "isthing": 1, "name": "tub"},
-  {"color": [255, 61, 6], "id": 38, "isthing": 1, "name": "rail"},
-  {"color": [255, 194, 7], "id": 39, "isthing": 1, "name": "cushion"},
-  {"color": [255, 122, 8], "id": 40, "isthing": 0, "name": "base, pedestal, stand"},
-  {"color": [0, 255, 20], "id": 41, "isthing": 1, "name": "box"},
-  {"color": [255, 8, 41], "id": 42, "isthing": 1, "name": "column, pillar"},
-  {"color": [255, 5, 153], "id": 43, "isthing": 1, "name": "signboard, sign"},
-  {
-      "color": [6, 51, 255],
-      "id": 44,
-      "isthing": 1,
-      "name": "chest of drawers, chest, bureau, dresser",
-  },
-  {"color": [235, 12, 255], "id": 45, "isthing": 1, "name": "counter"},
-  {"color": [160, 150, 20], "id": 46, "isthing": 0, "name": "sand"},
-  {"color": [0, 163, 255], "id": 47, "isthing": 1, "name": "sink"},
-  {"color": [140, 140, 140], "id": 48, "isthing": 0, "name": "skyscraper"},
-  {"color": [250, 10, 15], "id": 49, "isthing": 1, "name": "fireplace"},
-  {"color": [20, 255, 0], "id": 50, "isthing": 1, "name": "refrigerator, icebox"},
-  {"color": [31, 255, 0], "id": 51, "isthing": 0, "name": "grandstand, covered stand"},
-  {"color": [255, 31, 0], "id": 52, "isthing": 0, "name": "path"},
-  {"color": [255, 224, 0], "id": 53, "isthing": 1, "name": "stairs"},
-  {"color": [153, 255, 0], "id": 54, "isthing": 0, "name": "runway"},
-  {"color": [0, 0, 255], "id": 55, "isthing": 1, "name": "case, display case, showcase, vitrine"},
-  {
-      "color": [255, 71, 0],
-      "id": 56,
-      "isthing": 1,
-      "name": "pool table, billiard table, snooker table",
-  },
-  {"color": [0, 235, 255], "id": 57, "isthing": 1, "name": "pillow"},
-  {"color": [0, 173, 255], "id": 58, "isthing": 1, "name": "screen door, screen"},
-  {"color": [31, 0, 255], "id": 59, "isthing": 0, "name": "stairway, staircase"},
-  {"color": [11, 200, 200], "id": 60, "isthing": 0, "name": "river"},
-  {"color": [255, 82, 0], "id": 61, "isthing": 0, "name": "bridge, span"},
-  {"color": [0, 255, 245], "id": 62, "isthing": 1, "name": "bookcase"},
-  {"color": [0, 61, 255], "id": 63, "isthing": 0, "name": "blind, screen"},
-  {"color": [0, 255, 112], "id": 64, "isthing": 1, "name": "coffee table"},
-  {
-      "color": [0, 255, 133],
-      "id": 65,
-      "isthing": 1,
-      "name": "toilet, can, commode, crapper, pot, potty, stool, throne",
-  },
-  {"color": [255, 0, 0], "id": 66, "isthing": 1, "name": "flower"},
-  {"color": [255, 163, 0], "id": 67, "isthing": 1, "name": "book"},
-  {"color": [255, 102, 0], "id": 68, "isthing": 0, "name": "hill"},
-  {"color": [194, 255, 0], "id": 69, "isthing": 1, "name": "bench"},
-  {"color": [0, 143, 255], "id": 70, "isthing": 1, "name": "countertop"},
-  {"color": [51, 255, 0], "id": 71, "isthing": 1, "name": "stove"},
-  {"color": [0, 82, 255], "id": 72, "isthing": 1, "name": "palm, palm tree"},
-  {"color": [0, 255, 41], "id": 73, "isthing": 1, "name": "kitchen island"},
-  {"color": [0, 255, 173], "id": 74, "isthing": 1, "name": "computer"},
-  {"color": [10, 0, 255], "id": 75, "isthing": 1, "name": "swivel chair"},
-  {"color": [173, 255, 0], "id": 76, "isthing": 1, "name": "boat"},
-  {"color": [0, 255, 153], "id": 77, "isthing": 0, "name": "bar"},
-  {"color": [255, 92, 0], "id": 78, "isthing": 1, "name": "arcade machine"},
-  {"color": [255, 0, 255], "id": 79, "isthing": 0, "name": "hovel, hut, hutch, shack, shanty"},
-  {"color": [255, 0, 245], "id": 80, "isthing": 1, "name": "bus"},
-  {"color": [255, 0, 102], "id": 81, "isthing": 1, "name": "towel"},
-  {"color": [255, 173, 0], "id": 82, "isthing": 1, "name": "light"},
-  {"color": [255, 0, 20], "id": 83, "isthing": 1, "name": "truck"},
-  {"color": [255, 184, 184], "id": 84, "isthing": 0, "name": "tower"},
-  {"color": [0, 31, 255], "id": 85, "isthing": 1, "name": "chandelier"},
-  {"color": [0, 255, 61], "id": 86, "isthing": 1, "name": "awning, sunshade, sunblind"},
-  {"color": [0, 71, 255], "id": 87, "isthing": 1, "name": "street lamp"},
-  {"color": [255, 0, 204], "id": 88, "isthing": 1, "name": "booth"},
-  {"color": [0, 255, 194], "id": 89, "isthing": 1, "name": "tv"},
-  {"color": [0, 255, 82], "id": 90, "isthing": 1, "name": "plane"},
-  {"color": [0, 10, 255], "id": 91, "isthing": 0, "name": "dirt track"},
-  {"color": [0, 112, 255], "id": 92, "isthing": 1, "name": "clothes"},
-  {"color": [51, 0, 255], "id": 93, "isthing": 1, "name": "pole"},
-  {"color": [0, 194, 255], "id": 94, "isthing": 0, "name": "land, ground, soil"},
-  {
-      "color": [0, 122, 255],
-      "id": 95,
-      "isthing": 1,
-      "name": "bannister, banister, balustrade, balusters, handrail",
-  },
-  {
-      "color": [0, 255, 163],
-      "id": 96,
-      "isthing": 0,
-      "name": "escalator, moving staircase, moving stairway",
-  },
-  {
-      "color": [255, 153, 0],
-      "id": 97,
-      "isthing": 1,
-      "name": "ottoman, pouf, pouffe, puff, hassock",
-  },
-  {"color": [0, 255, 10], "id": 98, "isthing": 1, "name": "bottle"},
-  {"color": [255, 112, 0], "id": 99, "isthing": 0, "name": "buffet, counter, sideboard"},
-  {
-      "color": [143, 255, 0],
-      "id": 100,
-      "isthing": 0,
-      "name": "poster, posting, placard, notice, bill, card",
-  },
-  {"color": [82, 0, 255], "id": 101, "isthing": 0, "name": "stage"},
-  {"color": [163, 255, 0], "id": 102, "isthing": 1, "name": "van"},
-  {"color": [255, 235, 0], "id": 103, "isthing": 1, "name": "ship"},
-  {"color": [8, 184, 170], "id": 104, "isthing": 1, "name": "fountain"},
-  {
-      "color": [133, 0, 255],
-      "id": 105,
-      "isthing": 0,
-      "name": "conveyer belt, conveyor belt, conveyer, conveyor, transporter",
-  },
-  {"color": [0, 255, 92], "id": 106, "isthing": 0, "name": "canopy"},
-  {
-      "color": [184, 0, 255],
-      "id": 107,
-      "isthing": 1,
-      "name": "washer, automatic washer, washing machine",
-  },
-  {"color": [255, 0, 31], "id": 108, "isthing": 1, "name": "plaything, toy"},
-  {"color": [0, 184, 255], "id": 109, "isthing": 0, "name": "pool"},
-  {"color": [0, 214, 255], "id": 110, "isthing": 1, "name": "stool"},
-  {"color": [255, 0, 112], "id": 111, "isthing": 1, "name": "barrel, cask"},
-  {"color": [92, 255, 0], "id": 112, "isthing": 1, "name": "basket, handbasket"},
-  {"color": [0, 224, 255], "id": 113, "isthing": 0, "name": "falls"},
-  {"color": [112, 224, 255], "id": 114, "isthing": 0, "name": "tent"},
-  {"color": [70, 184, 160], "id": 115, "isthing": 1, "name": "bag"},
-  {"color": [163, 0, 255], "id": 116, "isthing": 1, "name": "minibike, motorbike"},
-  {"color": [153, 0, 255], "id": 117, "isthing": 0, "name": "cradle"},
-  {"color": [71, 255, 0], "id": 118, "isthing": 1, "name": "oven"},
-  {"color": [255, 0, 163], "id": 119, "isthing": 1, "name": "ball"},
-  {"color": [255, 204, 0], "id": 120, "isthing": 1, "name": "food, solid food"},
-  {"color": [255, 0, 143], "id": 121, "isthing": 1, "name": "step, stair"},
-  {"color": [0, 255, 235], "id": 122, "isthing": 0, "name": "tank, storage tank"},
-  {"color": [133, 255, 0], "id": 123, "isthing": 1, "name": "trade name"},
-  {"color": [255, 0, 235], "id": 124, "isthing": 1, "name": "microwave"},
-  {"color": [245, 0, 255], "id": 125, "isthing": 1, "name": "pot"},
-  {"color": [255, 0, 122], "id": 126, "isthing": 1, "name": "animal"},
-  {"color": [255, 245, 0], "id": 127, "isthing": 1, "name": "bicycle"},
-  {"color": [10, 190, 212], "id": 128, "isthing": 0, "name": "lake"},
-  {"color": [214, 255, 0], "id": 129, "isthing": 1, "name": "dishwasher"},
-  {"color": [0, 204, 255], "id": 130, "isthing": 1, "name": "screen"},
-  {"color": [20, 0, 255], "id": 131, "isthing": 0, "name": "blanket, cover"},
-  {"color": [255, 255, 0], "id": 132, "isthing": 1, "name": "sculpture"},
-  {"color": [0, 153, 255], "id": 133, "isthing": 1, "name": "hood, exhaust hood"},
-  {"color": [0, 41, 255], "id": 134, "isthing": 1, "name": "sconce"},
-  {"color": [0, 255, 204], "id": 135, "isthing": 1, "name": "vase"},
-  {"color": [41, 0, 255], "id": 136, "isthing": 1, "name": "traffic light"},
-  {"color": [41, 255, 0], "id": 137, "isthing": 1, "name": "tray"},
-  {"color": [173, 0, 255], "id": 138, "isthing": 1, "name": "trash can"},
-  {"color": [0, 245, 255], "id": 139, "isthing": 1, "name": "fan"},
-  {"color": [71, 0, 255], "id": 140, "isthing": 0, "name": "pier"},
-  {"color": [122, 0, 255], "id": 141, "isthing": 0, "name": "crt screen"},
-  {"color": [0, 255, 184], "id": 142, "isthing": 1, "name": "plate"},
-  {"color": [0, 92, 255], "id": 143, "isthing": 1, "name": "monitor"},
-  {"color": [184, 255, 0], "id": 144, "isthing": 1, "name": "bulletin board"},
-  {"color": [0, 133, 255], "id": 145, "isthing": 0, "name": "shower"},
-  {"color": [255, 214, 0], "id": 146, "isthing": 1, "name": "radiator"},
-  {"color": [25, 194, 194], "id": 147, "isthing": 1, "name": "glass, drinking glass"},
-  {"color": [102, 255, 0], "id": 148, "isthing": 1, "name": "clock"},
-  {"color": [92, 0, 255], "id": 149, "isthing": 1, "name": "flag"},
-].map(o => {
-  const {color: [r, g, b]} = o;
-  const c = new THREE.Color(r / 255, g / 255, b / 255);
-  const hex = c.getHex();
-  return hex;
-});
-const colors = detectronColors;
-const categoryClassIndices = (() => {
-  const categoryClassIndices = {};
-  for (const category in categories) {
-    categoryClassIndices[category] = categories[category].map(className => classes.indexOf(className));
-  }
-  return categoryClassIndices;
-})();
 
 //
 
-const floorNetWorldSize = 100;
-const floorNetWorldDepth = 1000;
-const floorNetResolution = 0.1;
-const floorNetPixelSize = floorNetWorldSize / floorNetResolution;
-const passes = {
-  reconstructFloor({
-    img,
-    pointCloudArrayBuffer,
-  }) {
-    let floorNetDepths;
-    let floorNetCameraJson;
-    {
-      // renderer
-      const canvas = document.createElement('canvas');
-      canvas.width = floorNetPixelSize;
-      canvas.height = floorNetPixelSize;
-      canvas.classList.add('floorReconstructionCanvas');
-      document.body.appendChild(canvas);
-  
-      const renderer = new THREE.WebGLRenderer({
-        canvas,
-        alpha: true,
-        preserveDrawingBuffer: true,
-      });
-      renderer.setClearColor(0x000000, 0);
-  
-      // render target
-      const floorRenderTarget = new THREE.WebGLRenderTarget(floorNetPixelSize, floorNetPixelSize, {
-        type: THREE.UnsignedByteType,
-        format: THREE.RGBAFormat,
-      });
-  
-      // scene
-      const floorNetScene = new THREE.Scene();
-      floorNetScene.autoUpdate = false;
-  
-      // camera
-      const floorNetCamera = new THREE.OrthographicCamera(
-        -floorNetWorldSize / 2,
-        floorNetWorldSize / 2,
-        floorNetWorldSize / 2,
-        -floorNetWorldSize / 2,
-        0,
-        floorNetWorldDepth
-      );
-      floorNetCamera.position.set(0, -floorNetWorldDepth/2, 0);
-      // floorNetCamera.position.set(0, -30, 0);
-      floorNetCamera.quaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI/2)
-        .multiply(
-          localQuaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI)
-        );
-      floorNetCamera.updateMatrixWorld();
-  
-      // globalThis.floorNetCamera = floorNetCamera;
-  
-      const v = new THREE.Vector3(0, 0, -1)
-        .applyQuaternion(floorNetCamera.quaternion);
-      console.log('got v', v.toArray().join(','));
-  
-      // mesh
-      floorNetCameraJson = _getOrthographicCameraJson(floorNetCamera);
-      {
-        const geometry = pointCloudArrayBufferToGeometry(pointCloudArrayBuffer, img.width, img.height);
-        // _cutMask(geometry, depthFloatImageData, distanceNearestPositions, editCamera);
-        geometry.computeVertexNormals();
-  
-        const floorNetMaterial = new THREE.ShaderMaterial({
-          uniforms: {
-            cameraNear: {
-              value: floorNetCamera.near,
-              needsUpdate: true,
-            },
-            cameraFar: {
-              value: floorNetCamera.far,
-              needsUpdate: true,
-            },
-            isPerspective: {
-              value: 0,
-              needsUpdate: true,
-            },
-          },
-          vertexShader: `\
-            precision highp float;
-            precision highp int;
-          
-            void main() {
-              vec3 p = position;
-              // p.x *= -1.; // we are looking from the bottom, so flip x
-              gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
-            }
-          `,
-          fragmentShader: depthFragmentShader,
-          side: THREE.DoubleSide,
-        });
-        const floorNetDepthRenderMesh = new THREE.Mesh(geometry, floorNetMaterial);
-        // floorNetDepthRenderMesh.onBeforeRender = () => {
-        //   console.log('floorNetDepthRenderMesh render', floorNetDepthRenderMesh);
-        // };
-        floorNetDepthRenderMesh.frustumCulled = false;
-        floorNetScene.add(floorNetDepthRenderMesh);
-  
-        // globalThis.floorNetDepthFloat32Array = depthFloats32Array;
-        // globalThis.floorNetDepthRenderMesh = floorNetDepthRenderMesh;
-      }
-      
-      // render
-      // render to the canvas, for debugging
-      // renderer.clear();
-      renderer.render(floorNetScene, floorNetCamera); // XXX
-      
-      // real render to render target
-      renderer.setRenderTarget(floorRenderTarget);
-      // renderer.clear();
-      renderer.render(floorNetScene, floorNetCamera);
-      renderer.setRenderTarget(null);
-  
-      // read back the depth
-      const imageData = {
-        data: new Uint8Array(floorNetPixelSize * floorNetPixelSize * 4),
-        width: floorNetPixelSize,
-        height: floorNetPixelSize,
-      };
-      // console.log('pre read 1');
-      renderer.readRenderTargetPixels(
-        floorRenderTarget,
-        0,
-        0,
-        floorNetPixelSize,
-        floorNetPixelSize,
-        imageData.data
-      );
-      // console.log('post read 1', imageData);
-      floorNetDepths = reinterpretFloatImageData(imageData);
-      const filteredFloorNetDepths = floorNetDepths.filter(n => n !== 0);
-      if (filteredFloorNetDepths.length > 0) {
-        console.log('floor net depths found:', filteredFloorNetDepths.length);
-      } else {
-        console.warn('no floor net depths found', floorNetDepths);
-        debugger;
-      }
-    }
-
-    return {
-      floorNetDepths,
-      floorNetCameraJson,
-    };
-  },
-};
+const defaultCameraMatrix = new THREE.Matrix4();
 
 //
 
@@ -672,57 +320,6 @@ const getFirstFloorPlaneIndex = (/*segmentSpecs, */planeSpecs) => {
 
 //
 
-const _setPerspectiveCameraFromJson = (camera, cameraJson) => {
-  camera.position.fromArray(cameraJson.position);
-  camera.quaternion.fromArray(cameraJson.quaternion);
-  camera.scale.fromArray(cameraJson.scale);
-  camera.updateMatrixWorld();
-  camera.near = cameraJson.near;
-  camera.far = cameraJson.far;
-  camera.fov = cameraJson.fov;
-  camera.updateProjectionMatrix();
-  return camera;
-};
-const _getPerspectiveCameraJson = camera => {
-  return {
-    position: camera.position.toArray(),
-    quaternion: camera.quaternion.toArray(),
-    scale: camera.scale.toArray(),
-    near: camera.near,
-    far: camera.far,
-    fov: camera.fov,
-  };
-};
-const _setOrthographicCameraFromJson = (camera, cameraJson) => {
-  camera.position.fromArray(cameraJson.position);
-  camera.quaternion.fromArray(cameraJson.quaternion);
-  camera.scale.fromArray(cameraJson.scale);
-  camera.updateMatrixWorld();
-  camera.near = cameraJson.near;
-  camera.far = cameraJson.far;
-  camera.left = cameraJson.left;
-  camera.right = cameraJson.right;
-  camera.top = cameraJson.top;
-  camera.bottom = cameraJson.bottom;
-  camera.updateProjectionMatrix();
-  return camera;
-};
-const _getOrthographicCameraJson = camera => {
-  return {
-    position: camera.position.toArray(),
-    quaternion: camera.quaternion.toArray(),
-    scale: camera.scale.toArray(),
-    near: camera.near,
-    far: camera.far,
-    left: camera.left,
-    right: camera.right,
-    top: camera.top,
-    bottom: camera.bottom,
-  };
-};
-
-//
-
 const normalToQuaternion = (() => {
   const localVector = new THREE.Vector3();
   const localVector2 = new THREE.Vector3();
@@ -752,6 +349,10 @@ const segmentsImg2Canvas = (imageBitmap, {
   ctx.drawImage(imageBitmap, 0, 0);
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
   const {data} = imageData;
+  // if (!data) {
+  //   console.warn('missing data', data);
+  //   debugger;
+  // }
   for (let i = 0; i < data.length; i += 4) {
     const r = data[i + 0];
     const segmentIndex = r;
@@ -1089,123 +690,6 @@ const zipPlanesSegmentsJson = (planeSpecs, planesJson) => {
 
 //
 
-const reinterpretFloatImageData = imageData => {
-  const result = new Float32Array(
-    imageData.data.buffer,
-    imageData.data.byteOffset,
-    imageData.data.byteLength / Float32Array.BYTES_PER_ELEMENT
-  );
-  const {width, height} = imageData;
-  // flip Y
-  for (let y = 0; y < height / 2; y++) {
-    for (let x = 0; x < width; x++) {
-      const i = y * width + x;
-      const j = (height - 1 - y) * width + x;
-      const tmp = result[i];
-      result[i] = result[j];
-      result[j] = tmp;
-    }
-  }
-  return result;
-};
-const depthVertexShader = `\
-  precision highp float;
-  precision highp int;
-
-  void main() {
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-  }
-`;
-const depthFragmentShader = `\
-  uniform float cameraNear;
-  uniform float cameraFar;
-  uniform float isPerspective;
-
-  #define FLOAT_MAX  1.70141184e38
-  #define FLOAT_MIN  1.17549435e-38
-
-  lowp vec4 encode_float(highp float v) {
-    highp float av = abs(v);
-
-    //Handle special cases
-    if(av < FLOAT_MIN) {
-      return vec4(0.0, 0.0, 0.0, 0.0);
-    } else if(v > FLOAT_MAX) {
-      return vec4(127.0, 128.0, 0.0, 0.0) / 255.0;
-    } else if(v < -FLOAT_MAX) {
-      return vec4(255.0, 128.0, 0.0, 0.0) / 255.0;
-    }
-
-    highp vec4 c = vec4(0,0,0,0);
-
-    //Compute exponent and mantissa
-    highp float e = floor(log2(av));
-    highp float m = av * pow(2.0, -e) - 1.0;
-
-    //Unpack mantissa
-    c[1] = floor(128.0 * m);
-    m -= c[1] / 128.0;
-    c[2] = floor(32768.0 * m);
-    m -= c[2] / 32768.0;
-    c[3] = floor(8388608.0 * m);
-
-    //Unpack exponent
-    highp float ebias = e + 127.0;
-    c[0] = floor(ebias / 2.0);
-    ebias -= c[0] * 2.0;
-    c[1] += floor(ebias) * 128.0;
-
-    //Unpack sign bit
-    c[0] += 128.0 * step(0.0, -v);
-
-    //Scale back to range
-    return c / 255.0;
-  }
-
-  // note: the 0.1s here an there are voodoo related to precision
-  float decode_float(vec4 v) {
-    vec4 bits = v * 255.0;
-    float sign = mix(-1.0, 1.0, step(bits[3], 128.0));
-    float expo = floor(mod(bits[3] + 0.1, 128.0)) * 2.0 +
-                floor((bits[2] + 0.1) / 128.0) - 127.0;
-    float sig = bits[0] +
-                bits[1] * 256.0 +
-                floor(mod(bits[2] + 0.1, 128.0)) * 256.0 * 256.0;
-    return sign * (1.0 + sig / 8388607.0) * pow(2.0, expo);
-  }
-
-  float perspectiveDepthToViewZ( const in float invClipZ, const in float near, const in float far ) {
-    return ( near * far ) / ( ( far - near ) * invClipZ - far );
-  }
-  float viewZToPerspectiveDepth( const in float viewZ, const in float near, const in float far ) {
-    return ( ( near + viewZ ) * far ) / ( ( far - near ) * viewZ );
-  }
-  
-  float viewZToOrthographicDepth( const in float viewZ, const in float near, const in float far ) {
-    return ( viewZ + near ) / ( near - far );
-  }
-  float orthographicDepthToViewZ( const in float linearClipZ, const in float near, const in float far ) {
-    return linearClipZ * ( near - far ) - near;
-  }
-
-  void main() {
-    // get the view Z
-    // first, we need to reconstruct the depth value in this fragment
-    float depth = gl_FragCoord.z;
-    float viewZ;
-    if (isPerspective > 0.) {
-      viewZ = perspectiveDepthToViewZ(depth, cameraNear, cameraFar);
-    } else {
-      viewZ = orthographicDepthToViewZ(depth, cameraNear, cameraFar);
-    }
-    
-    // convert to orthographic depth
-    // float orthoZ = viewZToOrthographicDepth(viewZ, cameraNear, cameraFar);
-    // gl_FragColor = encode_float(orthoZ).abgr;
-
-    gl_FragColor = encode_float(viewZ).abgr;
-  }
-`;
 const getDepthFloatsFromPointCloud = pointCloudArrayBuffer => {
   const geometryPositions = new Float32Array(panelSize * panelSize * 3);
   pointCloudArrayBufferToPositionAttributeArray(pointCloudArrayBuffer, panelSize, panelSize, geometryPositions);
@@ -2928,7 +2412,7 @@ class PanelRenderer extends EventTarget {
     this.camera.updateProjectionMatrix();
 
     // floor net camera
-    const floorNetCamera = _setOrthographicCameraFromJson(localOrthographicCamera, floorNetCameraJson);
+    const floorNetCamera = setOrthographicCameraFromJson(localOrthographicCamera, floorNetCameraJson);
 
     // scene mesh
     const widthSegments = this.canvas.width - 1;
@@ -3757,7 +3241,7 @@ class PanelRenderer extends EventTarget {
     }
 
     // snapshot camera state
-    const editCameraJson = _getPerspectiveCameraJson(this.camera);
+    const editCameraJson = getPerspectiveCameraJson(this.camera);
     // console.log('edit camera json init', editCameraJson);
 
     // helpers
@@ -3839,7 +3323,7 @@ class PanelRenderer extends EventTarget {
     editCameraJson,
   }) {
     // extract edit camera
-    const editCamera = _setPerspectiveCameraFromJson(localCamera, editCameraJson).clone();
+    const editCamera = setPerspectiveCameraFromJson(localCamera, editCameraJson).clone();
 
     // extract image array buffers
     let maskImgArrayBuffer;
@@ -4056,7 +3540,7 @@ class PanelRenderer extends EventTarget {
     //   editCamera.fov = fov;
     //   editCamera.updateMatrixWorld();
       
-    //   editCameraJson = _getPerspectiveCameraJson(editCamera);
+    //   editCameraJson = getPerspectiveCameraJson(editCamera);
     // }
     // console.timeEnd('fov');
 
@@ -4381,7 +3865,7 @@ class PanelRenderer extends EventTarget {
 
     //
 
-    const editCamera = _setPerspectiveCameraFromJson(localCamera, editCameraJson).clone();
+    const editCamera = setPerspectiveCameraFromJson(localCamera, editCameraJson).clone();
 
     //
 
