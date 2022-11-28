@@ -272,9 +272,17 @@ const snapPointCloudToCamera = (pointCloudArrayBuffer, width, height, camera) =>
 
   const frustum = localFrustum.setFromProjectionMatrix(camera.projectionMatrix);
   const offset = camera.near;
-  for (const plane of frustum.planes) {
-    // plane.translate(localVector.set(0, 0, offset));
-  }
+  // for (const plane of frustum.planes) {
+  //   // plane.translate(localVector.set(0, 0, offset));
+  // }
+
+  // THREE.JS planes are in the following order:
+  // 0: left
+  // 1: right
+  // 2: top
+  // 3: bottom
+  // 4: near
+  // 5: far
 
   const scaleFactor = 1 / width;
   const dataView = new DataView(pointCloudArrayBuffer);
@@ -823,25 +831,6 @@ const _cutSkybox = geometry => {
 const _cutMask = (geometry, depthFloatImageData, distanceNearestPositions, editCamera) => {
   // copy over snapped positions
   const newPositions = geometry.attributes.position.array.slice();
-  // const _snapPointDelta = (index, ax, ay) => {
-  //   if (ax >= 0 && ax < panelSize && ay >= 0 && ay < panelSize) {
-  //     const index2 = ay * panelSize + ax;
-  //     if (depthFloatImageData[index2] !== 0) {
-  //       const ay2 = panelSize - 1 - ay;
-  //       const ax2 = ax;
-  //       const index3 = ay2 * panelSize + ax2;
-  //       // const index3 = index2;
-  //       localVector.fromArray(distanceNearestPositions, index3 * 3)
-  //         // .applyMatrix4(editCamera.matrixWorld)
-  //         .toArray(newPositions, index * 3);
-  //       return true;
-  //     } else {
-  //       return false;
-  //     }
-  //   } else {
-  //     return false;
-  //   }
-  // };
   const _snapPoint = index => {
     // flip y
     const x = index % panelSize;
@@ -853,20 +842,6 @@ const _cutMask = (geometry, depthFloatImageData, distanceNearestPositions, editC
     localVector.fromArray(distanceNearestPositions, srcIndex * 3)
       // .applyMatrix4(editCamera.matrixWorld)
       .toArray(newPositions, dstIndex * 3);
-
-    /* _snapPointDelta(index, x - 1, y) ||
-    _snapPointDelta(index, x + 1, y) ||
-    _snapPointDelta(index, x, y - 1) ||
-    _snapPointDelta(index, x, y + 1) ||
-    _snapPointDelta(index, x - 1, y - 1) ||
-    _snapPointDelta(index, x + 1, y - 1) ||
-    _snapPointDelta(index, x - 1, y + 1) ||
-    _snapPointDelta(index, x + 1, y + 1) ||
-    (() => {
-      console.warn('bad snap', x, y, index);
-      debugger;
-      throw new Error('bad snap');
-    })(); */
   };
   
   // copy over only the triangles that are not completely masked
@@ -2318,28 +2293,6 @@ class PanelRenderer extends EventTarget {
     const floorNetCameraJson = panel.getData('layer1/floorNetCameraJson');
     const predictedHeight = panel.getData('layer1/predictedHeight');
 
-    const originalCamera = camera.clone();
-    originalCamera.fov = Number(pointCloudHeaders['x-fov']);
-    originalCamera.updateProjectionMatrix();
-    const {width, height} = this.renderer.domElement;
-    pointCloudArrayBuffer = snapPointCloudToCamera(pointCloudArrayBuffer, width, height, originalCamera);
-
-    // {
-    //   const depthFloats32Array = getDepthFloatsFromPointCloud(pointCloudArrayBuffer);
-      
-    //   const depthPreviewReconstructedMesh = makeDepthCubesMesh(
-    //     depthFloats32Array,
-    //     this.renderer.domElement.width,
-    //     this.renderer.domElement.height,
-    //     this.camera,
-    //   );
-      
-    //   this.scene.add(depthPreviewReconstructedMesh);
-    // }
-
-    // globalThis.floorNetDepths = floorNetDepths;
-    // globalThis.floorNetCameraJson = floorNetCameraJson;
-
     // camera
     this.camera.fov = Number(pointCloudHeaders['x-fov']);
     this.camera.updateProjectionMatrix();
@@ -3387,11 +3340,16 @@ class PanelRenderer extends EventTarget {
       });
       pointCloudHeaders = pc.headers;
       pointCloudArrayBuffer = pc.arrayBuffer;
-      pointCloudArrayBuffer = snapPointCloudToCamera(pointCloudArrayBuffer, this.renderer.domElement.width, this.domRenderer.domElement.width, editCamera);
       // const pointCloudCanvas = drawPointCloudCanvas(pointCloudArrayBuffer);
       // this.element.appendChild(pointCloudCanvas);
     }
     console.timeEnd('pointCloud');
+
+    console.time('snapPointCloud');
+    {
+      pointCloudArrayBuffer = snapPointCloudToCamera(pointCloudArrayBuffer, this.renderer.domElement.width, this.domRenderer.domElement.width, editCamera);
+    }
+    console.timeEnd('snapPointCloud');
 
     console.time('extractDepths');
     let newDepthFloatImageData = getDepthFloatsFromPointCloud(pointCloudArrayBuffer);
@@ -4176,34 +4134,14 @@ async function compileVirtualScene(imageArrayBuffer, width, height, camera) {
   } = await getPointCloud(blob);
   console.timeEnd('pointCloud');
 
-  // {
-    // setFromProjectionMatrix( m ) {
-
-    //   const planes = this.planes;
-    //   const me = m.elements;
-    //   const me0 = me[ 0 ], me1 = me[ 1 ], me2 = me[ 2 ], me3 = me[ 3 ];
-    //   const me4 = me[ 4 ], me5 = me[ 5 ], me6 = me[ 6 ], me7 = me[ 7 ];
-    //   const me8 = me[ 8 ], me9 = me[ 9 ], me10 = me[ 10 ], me11 = me[ 11 ];
-    //   const me12 = me[ 12 ], me13 = me[ 13 ], me14 = me[ 14 ], me15 = me[ 15 ];
-  
-    //   planes[ 0 ].setComponents( me3 - me0, me7 - me4, me11 - me8, me15 - me12 ).normalize();
-    //   planes[ 1 ].setComponents( me3 + me0, me7 + me4, me11 + me8, me15 + me12 ).normalize();
-    //   planes[ 2 ].setComponents( me3 + me1, me7 + me5, me11 + me9, me15 + me13 ).normalize();
-    //   planes[ 3 ].setComponents( me3 - me1, me7 - me5, me11 - me9, me15 - me13 ).normalize();
-    //   planes[ 4 ].setComponents( me3 - me2, me7 - me6, me11 - me10, me15 - me14 ).normalize();
-    //   planes[ 5 ].setComponents( me3 + me2, me7 + me6, me11 + me10, me15 + me14 ).normalize();
-  
-    //   return this;
-  
-    // }
-  // }
-  // THREEJS planes are in the following order:
-  // 0: left
-  // 1: right
-  // 2: top
-  // 3: bottom
-  // 4: near
-  // 5: far
+  console.time('snapPointCloud');
+  {
+    const originalCamera = camera.clone();
+    originalCamera.fov = Number(pointCloudHeaders['x-fov']);
+    originalCamera.updateProjectionMatrix();
+    pointCloudArrayBuffer = snapPointCloudToCamera(pointCloudArrayBuffer, width, height, originalCamera);
+  }
+  console.timeEnd('snapPointCloud');
 
   // plane detection
   console.time('planeDetection');
