@@ -1026,6 +1026,7 @@ class Selector {
 
     this.lensEnabled = false;
     this.indicesEnabled = false;
+    this.eraserEnabled = false;
     this.pickerEnabled = false;
     this.pickerIndex = -1;
     this.mousedown = false;
@@ -1334,6 +1335,9 @@ class Selector {
     this.indicesEnabled = [
       'eraser',
     ].includes(tool);
+    this.eraserEnabled = [
+      'eraser',
+    ].includes(tool);
     this.pickerEnabled = [
       'segment',
     ].includes(tool);
@@ -1570,7 +1574,7 @@ class Selector {
     _updateSceneMeshes();
 
     const _updateEraser = () => {
-      if (this.mousedown) {
+      if (this.eraserEnabled && this.mousedown) {
         const lensUint8Data = localUint8ArrayPanelSize;
         this.renderer.readRenderTargetPixels(
           this.indicesRenderTarget,
