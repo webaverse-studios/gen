@@ -35,11 +35,11 @@ const ADDENDUM_SERIALIZERS = (() => {
   const _serializedTypedArray = (typedArray, uint8Array, index) => {
     uint8Array.set(new Uint8Array(typedArray.buffer, typedArray.byteOffset, typedArray.byteLength), index);
   };
-  _serializedTypedArray.getSize = typedArray => align4(typedArray.byteLength);
+  _serializedTypedArray.getSize = typedArray => typedArray.byteLength;
   const _serializeArrayBuffer = (arrayBuffer, uint8Array, index) => {
     uint8Array.set(new Uint8Array(arrayBuffer), index);
   };
-  _serializeArrayBuffer.getSize = arrayBuffer => align4(arrayBuffer.byteLength);
+  _serializeArrayBuffer.getSize = arrayBuffer => arrayBuffer.byteLength;
   return [
     null, // start at 1
     _serializedTypedArray, // Uint8Array
@@ -132,8 +132,7 @@ function zbencode(o) {
     const addendumType = addendumTypes[i];
     const Serializer = ADDENDUM_SERIALIZERS[addendumType];
     const addendumByteLength = Serializer.getSize(addendum);
-    totalSize += addendumByteLength;
-    // totalSize = align4(totalSize);
+    totalSize += align4(addendumByteLength);
   }
   
   const ab = new ArrayBuffer(totalSize);
@@ -171,7 +170,7 @@ function zbencode(o) {
       index += Uint32Array.BYTES_PER_ELEMENT;
 
       Serializer(addendum, uint8Array, index);
-      index += addendumByteLength;
+      index += align4(addendumByteLength);
     }
   }
   return uint8Array;
