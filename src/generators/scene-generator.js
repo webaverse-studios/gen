@@ -96,6 +96,8 @@ const localBox = new THREE.Box3();
 const localCamera = new THREE.PerspectiveCamera();
 const localOrthographicCamera = new THREE.OrthographicCamera();
 const localColor = new THREE.Color();
+const localFrustum = new THREE.Frustum();
+const localFrustum2 = new THREE.Frustum();
 const localFloat32Array4 = new Float32Array(4);
 const localFloat32ArraySelector = new Float32Array(selectorSize * selectorSize * 4);
 const localUint8ArrayPanelSize = new Uint8Array(((panelSize - 1) * 2) * (panelSize - 1) * 4);
@@ -261,6 +263,63 @@ const makeDepthCubesMesh = (depthFloats, width, height, camera) => {
   }
   depthCubesMesh.instanceMatrix.needsUpdate = true;
   return depthCubesMesh;
+};
+
+//
+
+const snapPointCloudToCamera = (pointCloudArrayBuffer, width, height, camera) => {
+  pointCloudArrayBuffer = pointCloudArrayBuffer.slice();
+
+  const frustum = localFrustum.setFromProjectionMatrix(camera.projectionMatrix);
+  const offset = camera.near;
+  for (const plane of frustum.planes) {
+    // plane.translate(localVector.set(0, 0, offset));
+  }
+
+  const scaleFactor = 1 / width;
+  const dataView = new DataView(pointCloudArrayBuffer);
+  for (let i = 0; i < pointCloudArrayBuffer.byteLength; i += pointcloudStride) {
+    let x = dataView.getFloat32(i + 0, true);
+    let y = dataView.getFloat32(i + 4, true);
+    let z = dataView.getFloat32(i + 8, true);
+
+    x *= scaleFactor;
+    y *= -scaleFactor;
+    z *= -scaleFactor;
+
+    const p = localVector.set(x, y, z);
+
+    p.z += offset;
+
+    // clamp the point to the camera frustum
+    let modified = false;
+    // for (let j = 0; j < frustum.planes.length; j++) { // ignore near and far planes?
+    for (let j = 0; j < 4; j++) {
+      const plane = frustum.planes[j];
+      const distance = plane.distanceToPoint(p);
+      if (distance < 0) {
+        // adjust outwards
+        const outerPlane = plane;
+        const outerDistance = outerPlane.distanceToPoint(p);
+        p.addScaledVector(outerPlane.normal, -outerDistance);
+        modified = true;
+      }
+    }
+
+    // if (modified) {
+      // p.z += offset;
+
+      p.x /= scaleFactor;
+      p.y /= -scaleFactor;
+      p.z /= -scaleFactor;
+
+      dataView.setFloat32(i + 0, p.x, true);
+      dataView.setFloat32(i + 4, p.y, true);
+      dataView.setFloat32(i + 8, p.z, true);
+    // }
+  }
+
+  return pointCloudArrayBuffer;
 };
 
 //
@@ -2250,7 +2309,7 @@ class PanelRenderer extends EventTarget {
     const segmentMask = panel.getData('layer1/segmentMask');
     // const labelImageData = panel.getData('layer1/labelImageData');
     const pointCloudHeaders = panel.getData('layer1/pointCloudHeaders');
-    const pointCloudArrayBuffer = panel.getData('layer1/pointCloud');
+    let pointCloudArrayBuffer = panel.getData('layer1/pointCloud');
     // const planeMatrices = panel.getData('layer1/planeMatrices');
     const planesJson = panel.getData('layer1/planesJson');
     const planesMask = panel.getData('layer1/planesMask');
@@ -2258,6 +2317,25 @@ class PanelRenderer extends EventTarget {
     const floorNetDepths = panel.getData('layer1/floorNetDepths');
     const floorNetCameraJson = panel.getData('layer1/floorNetCameraJson');
     const predictedHeight = panel.getData('layer1/predictedHeight');
+
+    const originalCamera = camera.clone();
+    originalCamera.fov = Number(pointCloudHeaders['x-fov']);
+    originalCamera.updateProjectionMatrix();
+    const {width, height} = this.renderer.domElement;
+    pointCloudArrayBuffer = snapPointCloudToCamera(pointCloudArrayBuffer, width, height, originalCamera);
+
+    // {
+    //   const depthFloats32Array = getDepthFloatsFromPointCloud(pointCloudArrayBuffer);
+      
+    //   const depthPreviewReconstructedMesh = makeDepthCubesMesh(
+    //     depthFloats32Array,
+    //     this.renderer.domElement.width,
+    //     this.renderer.domElement.height,
+    //     this.camera,
+    //   );
+      
+    //   this.scene.add(depthPreviewReconstructedMesh);
+    // }
 
     // globalThis.floorNetDepths = floorNetDepths;
     // globalThis.floorNetCameraJson = floorNetCameraJson;
@@ -3309,6 +3387,7 @@ class PanelRenderer extends EventTarget {
       });
       pointCloudHeaders = pc.headers;
       pointCloudArrayBuffer = pc.arrayBuffer;
+      pointCloudArrayBuffer = snapPointCloudToCamera(pointCloudArrayBuffer, this.renderer.domElement.width, this.domRenderer.domElement.width, editCamera);
       // const pointCloudCanvas = drawPointCloudCanvas(pointCloudArrayBuffer);
       // this.element.appendChild(pointCloudCanvas);
     }
@@ -3607,8 +3686,6 @@ class PanelRenderer extends EventTarget {
 
     console.time('depthPreviewReconstructed');
     {
-      // globalThis.depths = [];
-
       const depthPreviewReconstructedMesh = makeDepthCubesMesh(
         reconstructedDepthFloats,
         this.renderer.domElement.width,
@@ -3620,7 +3697,6 @@ class PanelRenderer extends EventTarget {
       for (let i = 0; i < reconstructedDepthFloats.length; i += depthRenderSkipRatio) {
         const d = depthFloatImageData[i];
         const color = localColor.setHex(d !== 0 ? 0x00FF00 : 0x0000FF);
-        // globalThis.depths.push([d, color.clone()]);
         colors[j*3 + 0] = color.r;
         colors[j*3 + 1] = color.g;
         colors[j*3 + 2] = color.b;
@@ -4038,7 +4114,7 @@ const _resizeFile = async file => {
 
 //
 
-async function compileVirtualScene(imageArrayBuffer, camera) {
+async function compileVirtualScene(imageArrayBuffer, width, height, camera) {
   // color
   const blob = new Blob([imageArrayBuffer], {
     type: 'image/png',
@@ -4094,11 +4170,40 @@ async function compileVirtualScene(imageArrayBuffer, camera) {
 
   // point cloud reconstruction
   console.time('pointCloud');
-  const {
+  let {
     headers: pointCloudHeaders,
     arrayBuffer: pointCloudArrayBuffer,
   } = await getPointCloud(blob);
   console.timeEnd('pointCloud');
+
+  // {
+    // setFromProjectionMatrix( m ) {
+
+    //   const planes = this.planes;
+    //   const me = m.elements;
+    //   const me0 = me[ 0 ], me1 = me[ 1 ], me2 = me[ 2 ], me3 = me[ 3 ];
+    //   const me4 = me[ 4 ], me5 = me[ 5 ], me6 = me[ 6 ], me7 = me[ 7 ];
+    //   const me8 = me[ 8 ], me9 = me[ 9 ], me10 = me[ 10 ], me11 = me[ 11 ];
+    //   const me12 = me[ 12 ], me13 = me[ 13 ], me14 = me[ 14 ], me15 = me[ 15 ];
+  
+    //   planes[ 0 ].setComponents( me3 - me0, me7 - me4, me11 - me8, me15 - me12 ).normalize();
+    //   planes[ 1 ].setComponents( me3 + me0, me7 + me4, me11 + me8, me15 + me12 ).normalize();
+    //   planes[ 2 ].setComponents( me3 + me1, me7 + me5, me11 + me9, me15 + me13 ).normalize();
+    //   planes[ 3 ].setComponents( me3 - me1, me7 - me5, me11 - me9, me15 - me13 ).normalize();
+    //   planes[ 4 ].setComponents( me3 - me2, me7 - me6, me11 - me10, me15 - me14 ).normalize();
+    //   planes[ 5 ].setComponents( me3 + me2, me7 + me6, me11 + me10, me15 + me14 ).normalize();
+  
+    //   return this;
+  
+    // }
+  // }
+  // THREEJS planes are in the following order:
+  // 0: left
+  // 1: right
+  // 2: top
+  // 3: bottom
+  // 4: near
+  // 5: far
 
   // plane detection
   console.time('planeDetection');
@@ -4276,7 +4381,12 @@ export class Panel extends EventTarget {
     await this.task(async ({signal}) => {
       const imageArrayBuffer = this.getData(mainImageKey);
       const camera = _makeDefaultCamera();
-      const compileResult = await compileVirtualScene(imageArrayBuffer, camera);
+      const compileResult = await compileVirtualScene(
+        imageArrayBuffer,
+        panelSize,
+        panelSize,
+        camera
+      );
       // console.log('got compile result', compileResult);
 
       for (const {name, type} of layer1Specs) {
