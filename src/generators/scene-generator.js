@@ -3347,7 +3347,7 @@ class PanelRenderer extends EventTarget {
 
     console.time('snapPointCloud');
     {
-      pointCloudArrayBuffer = snapPointCloudToCamera(pointCloudArrayBuffer, this.renderer.domElement.width, this.domRenderer.domElement.width, editCamera);
+      pointCloudArrayBuffer = snapPointCloudToCamera(pointCloudArrayBuffer, this.renderer.domElement.width, this.renderer.domElement.width, editCamera);
     }
     console.timeEnd('snapPointCloud');
 
