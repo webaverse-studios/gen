@@ -18,8 +18,6 @@ import {promptKey} from '../../generators/scene-generator.js';
 const Panel3DCanvas = ({
   panel,
 }) => {
-  const [renderer, setRenderer] = useState(null);
-
   const canvasRef = useRef();
 
   // track canvas
@@ -27,14 +25,13 @@ const Panel3DCanvas = ({
     const canvas = canvasRef.current;
     if (canvas && panel.getDimension() === 3) {
       const renderer = panel.createRenderer(canvas);
-      setRenderer(renderer);
 
       return () => {
         renderer.destroy();
       };
     }
   }, [panel, canvasRef.current]);
-  
+
   return (
     <canvas
       className={styles.canvas}
