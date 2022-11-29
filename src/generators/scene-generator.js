@@ -82,24 +82,19 @@ const colors = detectronColors;
 
 const localVector = new THREE.Vector3();
 const localVector2 = new THREE.Vector3();
-const localVector3 = new THREE.Vector3();
-// const localVectorA = new THREE.Vector3();
-// const localVectorA2 = new THREE.Vector3();
-// const localVectorB = new THREE.Vector3();
-// const localVectorB2 = new THREE.Vector3();
-// const localVectorC = new THREE.Vector3();
-// const localVectorC2 = new THREE.Vector3();
+const localVectorA = new THREE.Vector3();
+const localVectorB = new THREE.Vector3();
+const localVectorC = new THREE.Vector3();
+const localTriangle = new THREE.Triangle();
 const localQuaternion = new THREE.Quaternion();
-// const localQuaternion2 = new THREE.Quaternion();
 const localMatrix = new THREE.Matrix4();
 const localBox = new THREE.Box3();
 const localCamera = new THREE.PerspectiveCamera();
 const localOrthographicCamera = new THREE.OrthographicCamera();
 const localColor = new THREE.Color();
 const localFrustum = new THREE.Frustum();
-const localFrustum2 = new THREE.Frustum();
+
 const localFloat32Array4 = new Float32Array(4);
-const localFloat32ArraySelector = new Float32Array(selectorSize * selectorSize * 4);
 const localUint8ArrayPanelSize = new Uint8Array(((panelSize - 1) * 2) * (panelSize - 1) * 4);
 
 const upVector = new THREE.Vector3(0, 1, 0);
@@ -3077,6 +3072,13 @@ class PanelRenderer extends EventTarget {
             break;
             
           }
+          case 'c': {
+            const originalCamera = _makeDefaultCamera(); // XXX
+            originalCamera.fov = this.camera.fov;
+            originalCamera.updateProjectionMatrix();
+            this.clip(originalCamera);
+            break;
+          }
           /* case 'PageUp': {
             this.sceneMesh.material.uniforms.uColorEnabled.value = 1;
             this.sceneMesh.material.uniforms.uColorEnabled.needsUpdate = true;
@@ -3634,6 +3636,63 @@ class PanelRenderer extends EventTarget {
       segmentMask,
       editCameraJson,
     };
+  }
+  async clip(camera) {
+    const {geometry} = this.sceneMesh;
+
+    // iterate over all triangles
+    const triangleIdAttribute = geometry.attributes.triangleId;
+    for (let i = 0; i < triangleIdAttribute.count; i += 3) {
+      const triangleId = Math.floor(i / 3);
+      
+      const baseIndex = triangleId * 9;
+
+      const aVector = localVectorA.fromArray(geometry.attributes.position.array, baseIndex + 0)
+        .applyMatrix4(camera.projectionMatrix);
+      const bVector = localVectorB.fromArray(geometry.attributes.position.array, baseIndex + 3)
+        .applyMatrix4(camera.projectionMatrix);
+      const cVector = localVectorC.fromArray(geometry.attributes.position.array, baseIndex + 6)
+        .applyMatrix4(camera.projectionMatrix);
+
+      // const a = geometry.index.array[i + 0];
+      // const b = geometry.index.array[i + 1];
+      // const c = geometry.index.array[i + 2];
+
+      // const aVector = localVectorA.fromArray(geometry.attributes.position.array, a * 3);
+      // const bVector = localVectorB.fromArray(geometry.attributes.position.array, b * 3);
+      // const cVector = localVectorC.fromArray(geometry.attributes.position.array, c * 3);
+
+      const triangle = localTriangle.set(
+        aVector,
+        bVector,
+        cVector
+      );
+      const normal = triangle.getNormal(localVector);
+      // project normal onto xz plane
+      normal.y = 0;
+      normal.normalize();
+      if (Math.abs(normal.z) < 0.8) {
+        for (let j = 0; j < 9; j++) {
+          geometry.attributes.position.array[baseIndex + j] = 0;
+          geometry.attributes.position.needsUpdate = true;
+        }
+      }
+
+      // const minZ = Math.min(aVector.z, bVector.z, cVector.z);
+      // const maxZ = Math.max(aVector.z, bVector.z, cVector.z);
+      // const distance = maxZ - minZ;
+      // if (!globalThis.distances) {
+      //   globalThis.distances = [];
+      // }
+      // globalThis.distances.push(distance);
+      // const clipMaxDistance = 2;
+      // if (distance >= clipMaxDistance) {
+      //   for (let j = 0; j < 9; j++) {
+      //     geometry.attributes.position.array[baseIndex + j] = 0;
+      //     geometry.attributes.position.needsUpdate = true;
+      //   }
+      // }
+    }
   }
   createOutmeshLayer(layerEntries) {
     // if (!globalThis.outmeshing) {
