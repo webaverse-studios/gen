@@ -79,9 +79,9 @@ export function reconstructFloor({
 
     // globalThis.floorNetCamera = floorNetCamera;
 
-    const v = new THREE.Vector3(0, 0, -1)
-      .applyQuaternion(floorNetCamera.quaternion);
-    console.log('got v', v.toArray().join(','));
+    // const v = new THREE.Vector3(0, 0, -1)
+    //   .applyQuaternion(floorNetCamera.quaternion);
+    // console.log('got v', v.toArray().join(','));
 
     // mesh
     floorNetCameraJson = getOrthographicCameraJson(floorNetCamera);
