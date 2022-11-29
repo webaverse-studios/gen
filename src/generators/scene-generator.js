@@ -3349,15 +3349,25 @@ class PanelRenderer extends EventTarget {
     }
     console.timeEnd('pointCloud');
 
-    console.time('snapPointCloud');
-    {
-      pointCloudArrayBuffer = snapPointCloudToCamera(pointCloudArrayBuffer, this.renderer.domElement.width, this.renderer.domElement.width, editCamera);
-    }
-    console.timeEnd('snapPointCloud');
-
     console.time('extractDepths');
     let newDepthFloatImageData = getDepthFloatsFromPointCloud(pointCloudArrayBuffer);
     console.timeEnd('extractDepths');
+
+    // plane detection
+    console.time('planeDetection');
+    const {
+      planesJson,
+      planesMask,
+      portalJson,
+      portalMask,
+    } = await getSemanticPlanes(editedImg, newDepthFloatImageData, segmentMask);
+    console.timeEnd('planeDetection');
+
+    // console.time('snapPointCloud');
+    // {
+    //   pointCloudArrayBuffer = snapPointCloudToCamera(pointCloudArrayBuffer, this.renderer.domElement.width, this.renderer.domElement.width, editCamera);
+    // }
+    // console.timeEnd('snapPointCloud');
 
     /* // reproject fov from new to old
     console.time('reprojectFov');
@@ -3378,16 +3388,6 @@ class PanelRenderer extends EventTarget {
       );
     }
     console.timeEnd('reprojectFov'); */
-
-    // plane detection
-    console.time('planeDetection');
-    const {
-      planesJson,
-      planesMask,
-      portalJson,
-      portalMask,
-    } = await getSemanticPlanes(editedImg, newDepthFloatImageData, segmentMask);
-    console.timeEnd('planeDetection');
 
     // // set fov
     // console.time('fov');
@@ -4138,15 +4138,6 @@ async function compileVirtualScene(imageArrayBuffer, width, height, camera) {
   } = await getPointCloud(blob);
   console.timeEnd('pointCloud');
 
-  console.time('snapPointCloud');
-  {
-    const originalCamera = camera.clone();
-    originalCamera.fov = Number(pointCloudHeaders['x-fov']);
-    originalCamera.updateProjectionMatrix();
-    pointCloudArrayBuffer = snapPointCloudToCamera(pointCloudArrayBuffer, width, height, originalCamera);
-  }
-  console.timeEnd('snapPointCloud');
-
   // plane detection
   console.time('planeDetection');
   const depthFloats32Array = getDepthFloatsFromPointCloud(pointCloudArrayBuffer);
@@ -4157,6 +4148,16 @@ async function compileVirtualScene(imageArrayBuffer, width, height, camera) {
     portalMask,
   } = await getSemanticPlanes(img, depthFloats32Array, segmentMask);
   console.timeEnd('planeDetection');
+
+  // console.time('snapPointCloud');
+  // {
+  //   const originalCamera = camera.clone();
+  //   originalCamera.fov = Number(pointCloudHeaders['x-fov']);
+  //   originalCamera.updateProjectionMatrix();
+  //   console.log('got fov', originalCamera.fov);
+  //   pointCloudArrayBuffer = snapPointCloudToCamera(pointCloudArrayBuffer, width, height, originalCamera);
+  // }
+  // console.timeEnd('snapPointCloud');
 
   // XXX snapshot from below the floor plane
   // const firstFloorPlaneIndex = getFirstFloorPlaneIndex({
