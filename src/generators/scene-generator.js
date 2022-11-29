@@ -339,7 +339,8 @@ const getFirstFloorPlaneIndex = (/*segmentSpecs, */planeSpecs) => {
         distanceSquaredF,
       };
     });
-    labelSpecs.sort((a, b) => a.distanceSquaredF - b.distanceSquaredF);
+    // labelSpecs.sort((a, b) => a.distanceSquaredF - b.distanceSquaredF);
+    labelSpecs.sort((a, b) => b.numVertices - a.numVertices);
     const firstFloorPlaneIndex = labelSpecs[0].index;
     return firstFloorPlaneIndex;
   } else {
