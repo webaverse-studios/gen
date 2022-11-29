@@ -816,28 +816,28 @@ const blockEvent = e => {
   e.preventDefault();
   e.stopPropagation();
 };
-const _isPointInSkybox = (geometry, i) => geometry.attributes.position.array[i * 3 + 2] > -skyboxDistance;
-const _cutSkybox = geometry => {
-  // copy over only the triangles that are all on one side of the skybox bounds
-  const newIndices = new geometry.index.array.constructor(geometry.index.array.length);
-  let numIndices = 0;
-  for (let i = 0; i < geometry.index.count; i += 3) {
-    const a = geometry.index.array[i + 0];
-    const b = geometry.index.array[i + 1];
-    const c = geometry.index.array[i + 2];
-    const aInSkybox = _isPointInSkybox(geometry, a);
-    const bInSkybox = _isPointInSkybox(geometry, b);
-    const cInSkybox = _isPointInSkybox(geometry, c);
-    if (aInSkybox === bInSkybox && bInSkybox === cInSkybox) {
-      newIndices[numIndices + 0] = a;
-      newIndices[numIndices + 1] = b;
-      newIndices[numIndices + 2] = c;
-      numIndices += 3;
-    }
-  }
-  // set the new indices
-  geometry.setIndex(new THREE.BufferAttribute(newIndices.subarray(0, numIndices), 1));
-};
+// const _isPointInSkybox = (geometry, i) => geometry.attributes.position.array[i * 3 + 2] > -skyboxDistance;
+// const _cutSkybox = geometry => {
+//   // copy over only the triangles that are all on one side of the skybox bounds
+//   const newIndices = new geometry.index.array.constructor(geometry.index.array.length);
+//   let numIndices = 0;
+//   for (let i = 0; i < geometry.index.count; i += 3) {
+//     const a = geometry.index.array[i + 0];
+//     const b = geometry.index.array[i + 1];
+//     const c = geometry.index.array[i + 2];
+//     const aInSkybox = _isPointInSkybox(geometry, a);
+//     const bInSkybox = _isPointInSkybox(geometry, b);
+//     const cInSkybox = _isPointInSkybox(geometry, c);
+//     if (aInSkybox === bInSkybox && bInSkybox === cInSkybox) {
+//       newIndices[numIndices + 0] = a;
+//       newIndices[numIndices + 1] = b;
+//       newIndices[numIndices + 2] = c;
+//       numIndices += 3;
+//     }
+//   }
+//   // set the new indices
+//   geometry.setIndex(new THREE.BufferAttribute(newIndices.subarray(0, numIndices), 1));
+// };
 const _cutMask = (geometry, depthFloatImageData, distanceNearestPositions, editCamera) => {
   // copy over snapped positions
   const newPositions = geometry.attributes.position.array.slice();
@@ -882,7 +882,9 @@ const _cutMask = (geometry, depthFloatImageData, distanceNearestPositions, editC
   geometry.setAttribute('position', new THREE.BufferAttribute(newPositions, 3));
   geometry.setIndex(new THREE.BufferAttribute(newIndices.subarray(0, numIndices), 1));
 };
-const getSemanticPlanes = async (img, newDepthFloatImageData, segmentMask) => {
+const getSemanticPlanes = async (img, fov, newDepthFloatImageData, segmentMask) => {
+  const focalLength = fovToFocalLength(fov);
+
   let planesJson;
   let planesMask;
   let portalJson;
@@ -896,7 +898,13 @@ const getSemanticPlanes = async (img, newDepthFloatImageData, segmentMask) => {
       });
       
       const {width, height} = img;
-      const planesSpec = await getPlanesRgbd(width, height, newDepthFloatImageData2);
+      const planesSpec = await getPlanesRgbd(
+        width,
+        height,
+        focalLength,
+        newDepthFloatImageData2,
+        40000,
+      );
       // console.log('read planes spec', {planesSpec, newDepthFloatImageData2});
       planesJson = planesSpec.planesJson;
       planesMask = planesSpec.planesMask;
@@ -918,7 +926,13 @@ const getSemanticPlanes = async (img, newDepthFloatImageData, segmentMask) => {
       });
 
       const {width, height} = img;
-      const portalSpec = await getPlanesRgbd(width, height, newDepthFloatImageData2);
+      const portalSpec = await getPlanesRgbd(
+        width,
+        height,
+        focalLength,
+        newDepthFloatImageData2,
+        20000,
+      );
       // console.log('read portal spec', {portalSpec, newDepthFloatImageData2});
       portalJson = portalSpec.planesJson;
       portalMask = portalSpec.planesMask;
@@ -3370,7 +3384,7 @@ class PanelRenderer extends EventTarget {
       planesMask,
       portalJson,
       portalMask,
-    } = await getSemanticPlanes(editedImg, newDepthFloatImageData, segmentMask);
+    } = await getSemanticPlanes(editedImg, editCamera.fov, newDepthFloatImageData, segmentMask);
     console.timeEnd('planeDetection');
 
     // console.time('snapPointCloud');
@@ -3919,14 +3933,18 @@ class PanelRenderer extends EventTarget {
     throw new Error('failed to detect planes');
   }
 }; */
-const getPlanesRgbd = async (width, height, depthFloats32Array) => {
-  const header = Int32Array.from([width, height]);
+const getPlanesRgbd = async (width, height, focalLength, depthFloats32Array, minSupport = 30000) => {
+  const widthHeightHeader = Int32Array.from([width, height]);
+  const focalLengthHeader = Float32Array.from([focalLength]);
 
-  const requestBlob = new Blob([header, depthFloats32Array], {
+  const requestBlob = new Blob([
+    widthHeightHeader,
+    focalLengthHeader,
+    depthFloats32Array,
+  ], {
     type: 'application/octet-stream',
   });
 
-  const minSupport = 30000;
   const res = await fetch(`https://depth.webaverse.com/planeDetection?minSupport=${minSupport}`, {
     method: 'POST',
     body: requestBlob,
@@ -4150,13 +4168,14 @@ async function compileVirtualScene(imageArrayBuffer, width, height, camera) {
 
   // plane detection
   console.time('planeDetection');
+  const fov = Number(pointCloudHeaders['x-fov']);
   const depthFloats32Array = getDepthFloatsFromPointCloud(pointCloudArrayBuffer);
   const {
     planesJson,
     planesMask,
     portalJson,
     portalMask,
-  } = await getSemanticPlanes(img, depthFloats32Array, segmentMask);
+  } = await getSemanticPlanes(img, fov, depthFloats32Array, segmentMask);
   console.timeEnd('planeDetection');
 
   // console.time('snapPointCloud');
