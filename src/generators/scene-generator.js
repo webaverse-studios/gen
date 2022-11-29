@@ -902,7 +902,7 @@ const getSemanticPlanes = async (img, fov, newDepthFloatImageData, segmentMask) 
         height,
         focalLength,
         newDepthFloatImageData2,
-        40000,
+        20000,
       );
       // console.log('read planes spec', {planesSpec, newDepthFloatImageData2});
       planesJson = planesSpec.planesJson;
