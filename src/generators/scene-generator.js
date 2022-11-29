@@ -102,6 +102,9 @@ const localFloat32Array4 = new Float32Array(4);
 const localFloat32ArraySelector = new Float32Array(selectorSize * selectorSize * 4);
 const localUint8ArrayPanelSize = new Uint8Array(((panelSize - 1) * 2) * (panelSize - 1) * 4);
 
+const upVector = new THREE.Vector3(0, 1, 0);
+const backwardVector = new THREE.Vector3(0, 0, 1);
+
 const imageAiClient = new ImageAiClient();
 const abortError = new Error();
 abortError.isAbortError = true;
@@ -400,12 +403,12 @@ const normalToQuaternion = (() => {
   const localVector2 = new THREE.Vector3();
   const localMatrix = new THREE.Matrix4();
 
-  return (normal, quaternion) => {
+  return (normal, quaternion, up) => {
     return quaternion.setFromRotationMatrix(
       localMatrix.lookAt(
         localVector.set(0, 0, 0),
         normal,
-        localVector2.set(0, 0, 1)
+        up
       )
     );
   };
@@ -2077,7 +2080,7 @@ class Overlay {
         // arrow mesh
         const arrowMesh = makePlaneArrowMesh();
         arrowMesh.position.copy(center);
-        normalToQuaternion(normal, arrowMesh.quaternion);
+        normalToQuaternion(normal, arrowMesh.quaternion, backwardVector);
         arrowMesh.updateMatrixWorld();
         arrowMesh.frustumCulled = false;
         planeMesh.add(arrowMesh);
@@ -2119,10 +2122,10 @@ class Overlay {
         // arrow mesh
         const arrowMesh = makeArrowsMesh();
         arrowMesh.position.copy(center);
-        normalToQuaternion(normal, arrowMesh.quaternion)
-          .premultiply(localQuaternion.setFromAxisAngle(localVector3.set(0, 0, 1), Math.PI))
-          .premultiply(localQuaternion.setFromAxisAngle(localVector3.set(1, 0, 0), -Math.PI/2))
-          .premultiply(localQuaternion.setFromAxisAngle(localVector3.set(0, 0, 1), -Math.PI));
+        normalToQuaternion(normal, arrowMesh.quaternion, upVector)
+          // .premultiply(localQuaternion.setFromAxisAngle(localVector3.set(0, 0, 1), Math.PI))
+          // .premultiply(localQuaternion.setFromAxisAngle(localVector3.set(1, 0, 0), -Math.PI/2))
+          // .premultiply(localQuaternion.setFromAxisAngle(localVector3.set(0, 0, 1), -Math.PI));
         arrowMesh.updateMatrixWorld();
         arrowMesh.frustumCulled = false;
         portalMesh.add(arrowMesh);
@@ -3052,7 +3055,7 @@ class PanelRenderer extends EventTarget {
             const normal = localVector.fromArray(labelSpec.normal);
             // const center = localVector2.fromArray(labelSpec.center);
 
-            normalToQuaternion(normal, this.sceneMesh.quaternion)
+            normalToQuaternion(normal, this.sceneMesh.quaternion, backwardVector)
               .invert()
               // .premultiply(
               //   localQuaternion.setFromAxisAngle(localVector.set(0, 0, 1), Math.PI)
