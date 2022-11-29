@@ -802,6 +802,16 @@ function drawLabels(ctx, boundingBoxLayers) {
 
 //
 
+// convert focal length in millimeters to fov in degrees, in THREE.js:
+function focalLengthToFov(focalLength) {
+  return 2 * Math.atan(0.5 * 1000 / focalLength) * 180 / Math.PI;
+}
+function fovToFocalLength(fov) {
+  return 0.5 * 1000 / Math.tan(fov * Math.PI / 360);
+}
+
+//
+
 const blockEvent = e => {
   e.preventDefault();
   e.stopPropagation();
