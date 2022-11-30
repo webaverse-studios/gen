@@ -2106,10 +2106,10 @@ class Overlay {
     {
       const portalMesh = this.toolOverlayMeshes['portal'];
 
-      if (!portalSpecs.labels) {
-        console.warn('no portal labels', portalSpecs);
-        debugger;
-      }
+      // if (!portalSpecs.labels) {
+      //   console.warn('no portal labels', portalSpecs);
+      //   debugger;
+      // }
       for (const label of portalSpecs.labels) {
         // compute label planes
         const center = localVector.fromArray(label.center);
