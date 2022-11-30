@@ -4068,8 +4068,20 @@ const getPlanesRgbd = async (width, height, focalLength, depthFloats32Array, min
     throw new Error('failed to detect planes');
   }
 };
+const imageSegmentationClasses = [
+  'floor',
+  'wall',
+  'portal',
+  'seat',
+  'light',
+  'npc',
+].flatMap(categoryName => categories[categoryName]);
 const _getImageSegements = async imgBlob => {
-  const res = await fetch(`https://mask2former.webaverse.com/predict`, {
+  const u = new URL(`https://mask2former.webaverse.com/predict`);
+  u.searchParams.set('classes', imageSegmentationClasses.join(','));
+  u.searchParams.set('boosts', Array(imageSegmentationClasses).fill(1).join(','));
+  u.searchParams.set('threshold', 0.5);
+  const res = await fetch(u, {
     method: 'POST',
     body: imgBlob,
   });
@@ -4175,13 +4187,25 @@ async function compileVirtualScene(imageArrayBuffer, width, height, camera) {
   const img = await blob2img(blob);
   img.classList.add('img');
   // document.body.appendChild(img);
+
+  // {
+  //   const res = await fetch(`https://depth.webaverse.com/predictFov`, {
+  //     method: 'POST',
+  //     body: blob,
+  //   });
+  //   if (res.ok) {
+  //     const j = await res.json();
+  //     console.log('predict fov json', j);
+  //   } else {
+  //     console.warn('invalid response', res.status);
+  //   }
+  // }
   
   // image segmentation
   console.time('imageSegmentation');
   let segmentMask;
   {
     const imageSegmentationSpec = await _getImageSegements(blob);
-    // console.log('got image segmentation spec', imageSegmentationSpec);
     const {segmentsBlob, boundingBoxLayers} = imageSegmentationSpec;
 
     const segmentsImageBitmap = await createImageBitmap(segmentsBlob);
