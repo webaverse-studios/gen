@@ -3641,58 +3641,77 @@ class PanelRenderer extends EventTarget {
   async clip(camera) {
     const {geometry} = this.sceneMesh;
 
-    // iterate over all triangles
-    const triangleIdAttribute = geometry.attributes.triangleId;
-    for (let i = 0; i < triangleIdAttribute.count; i += 3) {
-      const triangleId = Math.floor(i / 3);
-      
-      const baseIndex = triangleId * 9;
+    const pointCloudArrayBuffer = this.panel.getData('layer1/pointCloud');
+    const depthFloats32Array = getDepthFloatsFromPointCloud(pointCloudArrayBuffer);
 
-      const aVector = localVectorA.fromArray(geometry.attributes.position.array, baseIndex + 0)
-        .applyMatrix4(camera.projectionMatrix);
-      const bVector = localVectorB.fromArray(geometry.attributes.position.array, baseIndex + 3)
-        .applyMatrix4(camera.projectionMatrix);
-      const cVector = localVectorC.fromArray(geometry.attributes.position.array, baseIndex + 6)
-        .applyMatrix4(camera.projectionMatrix);
+    const clipDistance = 0.1;
 
-      // const a = geometry.index.array[i + 0];
-      // const b = geometry.index.array[i + 1];
-      // const c = geometry.index.array[i + 2];
+    // for all points in left to right
+    const gridX = this.renderer.domElement.width - 1;
+    const gridX1 = gridX + 1;
+    const gridY = this.renderer.domElement.height - 1;
+    const gridY1 = gridY + 1;
+    for (let iy = 0; iy < gridY; iy++) {
+      for (let ix = 0; ix < gridX; ix++) {
+        const x = ix;
+        const y = iy;
+        // const y = gridY1 - 1 - iy;
+        const x2 = x + 1;
+        const y2 = y + 1;
+        // const y2 = gridY1 - 1 - (iy + 1);
 
-      // const aVector = localVectorA.fromArray(geometry.attributes.position.array, a * 3);
-      // const bVector = localVectorB.fromArray(geometry.attributes.position.array, b * 3);
-      // const cVector = localVectorC.fromArray(geometry.attributes.position.array, c * 3);
+        const aIndex = y * gridX1 + x;
+        const bIndex = y * gridX1 + x2;
+        const cIndex = y2 * gridX1 + x;
+        const dIndex = y2 * gridX1 + x2;
+        
+        const aDepthFloat = depthFloats32Array[aIndex];
+        const bDepthFloat = depthFloats32Array[bIndex];
+        const cDepthFloat = depthFloats32Array[cIndex];
+        const dDepthFloat = depthFloats32Array[dIndex];
 
-      const triangle = localTriangle.set(
-        aVector,
-        bVector,
-        cVector
-      );
-      const normal = triangle.getNormal(localVector);
-      // project normal onto xz plane
-      normal.y = 0;
-      normal.normalize();
-      if (Math.abs(normal.z) < 0.8) {
-        for (let j = 0; j < 9; j++) {
-          geometry.attributes.position.array[baseIndex + j] = 0;
+        const topDepth = (aDepthFloat + bDepthFloat) / 2;
+        const bottomDepth = (cDepthFloat + dDepthFloat) / 2;
+        const leftDepth = (aDepthFloat + cDepthFloat) / 2;
+        const rightDepth = (bDepthFloat + dDepthFloat) / 2;
+
+        const topDownDepthDelta = Math.abs(bottomDepth - topDepth);
+        const leftRightDepthDelta = Math.abs(rightDepth - leftDepth);
+        if (
+          topDownDepthDelta >= clipDistance ||
+          leftRightDepthDelta >= clipDistance
+        ) {
+          // for ( let iy = 0; iy < gridY; iy ++ ) {
+          //   for ( let ix = 0; ix < gridX; ix ++ ) {
+          // const a = ix + gridX1 * iy;
+          // const b = ix + gridX1 * ( iy + 1 );
+          // const c = ( ix + 1 ) + gridX1 * ( iy + 1 );
+          // const d = ( ix + 1 ) + gridX1 * iy;
+          // indices.push( a, b, d );
+          // indices.push( b, c, d );
+
+          const index1 = (ix + gridX * iy) * 6;
+          for (let k = 0; k < 9 * 2; k++) {
+            geometry.attributes.position.array[index1 * 3 + k] = 0;
+          }
+
+          // const indexIndex1 = (x + gridX * y);
+          // const indexIndex2 = (x + gridX * y) + 1;
+
+          // for (let j = 0; j < 9; j++) {
+          //   geometry.attributes.position.array[indexIndex1 * 9 + j] = 0;
+          //   geometry.attributes.position.array[indexIndex2 * 9 + j] = 0;
+
+          //   if (!globalThis.clippedIndices) {
+          //     globalThis.clippedIndices = [];
+          //   }
+          //   globalThis.clippedIndices.push(indexIndex1 * 9 + j);
+          //   globalThis.clippedIndices.push(indexIndex2 * 9 + j);
+          // }
+
           geometry.attributes.position.needsUpdate = true;
         }
       }
-
-      // const minZ = Math.min(aVector.z, bVector.z, cVector.z);
-      // const maxZ = Math.max(aVector.z, bVector.z, cVector.z);
-      // const distance = maxZ - minZ;
-      // if (!globalThis.distances) {
-      //   globalThis.distances = [];
-      // }
-      // globalThis.distances.push(distance);
-      // const clipMaxDistance = 2;
-      // if (distance >= clipMaxDistance) {
-      //   for (let j = 0; j < 9; j++) {
-      //     geometry.attributes.position.array[baseIndex + j] = 0;
-      //     geometry.attributes.position.needsUpdate = true;
-      //   }
-      // }
     }
   }
   createOutmeshLayer(layerEntries) {
