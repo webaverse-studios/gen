@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
+import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader.js';
 // import alea from '../utils/alea.js';
 import {Text} from 'troika-three-text';
 import {
@@ -63,6 +64,7 @@ import {
   arrowUpDimUrl,
   arrowsUpUrl,
 } from '../utils/light-arrow.js';
+import {makePromise} from '../../utils.js';
 
 // constants
 
@@ -100,6 +102,7 @@ const localUint8ArrayPanelSize = new Uint8Array(((panelSize - 1) * 2) * (panelSi
 const upVector = new THREE.Vector3(0, 1, 0);
 const backwardVector = new THREE.Vector3(0, 0, 1);
 
+const gltfLoader = new GLTFLoader();
 const imageAiClient = new ImageAiClient();
 const abortError = new Error();
 abortError.isAbortError = true;
@@ -2305,6 +2308,25 @@ class PanelRenderer extends EventTarget {
     // defaultCubeMesh.name = 'defaultCubeMesh';
     // defaultCubeMesh.frustumCulled = false;
     // // scene.add(defaultCubeMesh);
+
+    const avatar = new THREE.Object3D();
+    (async () => {
+      const modelUrl = './models/scillia.glb';
+      
+      const p = makePromise();
+      gltfLoader.load(modelUrl, gltf => {
+        p.resolve(gltf);
+      }, function onProgress(xhr) {
+        // console.log('progress', xhr.loaded / xhr.total);
+      }, p.reject);
+  
+      const model = await p;
+      avatar.add(model.scene);
+      avatar.updateMatrixWorld();
+    })();
+    // avatar.position.set(0, 0, 0);
+    scene.add(avatar);
+    this.avatar = avatar;
 
     // read the mesh from the panel
     const imgArrayBuffer = panel.getData(mainImageKey);
