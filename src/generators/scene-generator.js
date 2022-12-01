@@ -840,7 +840,7 @@ const blockEvent = e => {
 //   // set the new indices
 //   geometry.setIndex(new THREE.BufferAttribute(newIndices.subarray(0, numIndices), 1));
 // };
-const _cutMask = (geometry, depthFloatImageData, distanceNearestPositions, editCamera) => {
+const _mergeMask = (geometry, depthFloatImageData, distanceNearestPositions, editCamera) => {
   // copy over snapped positions
   const newPositions = geometry.attributes.position.array.slice();
   const _snapPoint = index => {
@@ -938,6 +938,10 @@ const getSemanticPlanes = async (img, fov, newDepthFloatImageData, segmentMask) 
       // console.log('read portal spec', {portalSpec, newDepthFloatImageData2});
       portalJson = portalSpec.planesJson;
       portalMask = portalSpec.planesMask;
+
+      // globalThis.portalJson = portalJson;
+      // globalThis.portalMask = portalMask;
+      // globalThis.newDepthFloatImageData2 = newDepthFloatImageData2;
 
       const portalCanvas = planesMask2Canvas(portalMask, {
         color: true,
@@ -2387,7 +2391,22 @@ class PanelRenderer extends EventTarget {
 
     //
 
-    const firstFloorPlaneIndex = getFirstFloorPlaneIndex(planeSpecs);
+    const firstFloorPlaneIndex = getFirstFloorPlaneIndex(planeSpecs); // XXX if there are no floor planes, we need to check for walls
+    if (firstFloorPlaneIndex === -1) {
+      console.warn('no floor plane found', new Error().stack);
+    } else {
+      const labelSpec = planeSpecs.labels[firstFloorPlaneIndex];
+      const normal = localVector.fromArray(labelSpec.normal);
+      const center = localVector2.fromArray(labelSpec.center);
+      
+      this.avatar.position.copy(center);
+      normalToQuaternion(normal, this.avatar.quaternion, backwardVector)
+        // .invert()
+        .multiply(localQuaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI/2))
+        .multiply(localQuaternion.setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI));
+      this.avatar.updateMatrixWorld();
+    }
+    
 
     //
 
@@ -3401,6 +3420,12 @@ class PanelRenderer extends EventTarget {
     }
     console.timeEnd('pointCloud');
 
+    // console.time('snapPointCloud');
+    // {
+    //   pointCloudArrayBuffer = snapPointCloudToCamera(pointCloudArrayBuffer, this.renderer.domElement.width, this.renderer.domElement.width, editCamera);
+    // }
+    // console.timeEnd('snapPointCloud');
+
     console.time('extractDepths');
     let newDepthFloatImageData = getDepthFloatsFromPointCloud(pointCloudArrayBuffer);
     console.timeEnd('extractDepths');
@@ -3414,12 +3439,6 @@ class PanelRenderer extends EventTarget {
       portalMask,
     } = await getSemanticPlanes(editedImg, editCamera.fov, newDepthFloatImageData, segmentMask);
     console.timeEnd('planeDetection');
-
-    // console.time('snapPointCloud');
-    // {
-    //   pointCloudArrayBuffer = snapPointCloudToCamera(pointCloudArrayBuffer, this.renderer.domElement.width, this.renderer.domElement.width, editCamera);
-    // }
-    // console.timeEnd('snapPointCloud');
 
     /* // reproject fov from new to old
     console.time('reprojectFov');
@@ -3856,7 +3875,7 @@ class PanelRenderer extends EventTarget {
         this.renderer.domElement.height,
         editCamera,
       );
-      _cutMask(geometry, depthFloatImageData, distanceNearestPositions, editCamera);
+      _mergeMask(geometry, depthFloatImageData, distanceNearestPositions, editCamera);
       /* if (!segmentMask) {
         console.warn('missing segment mask 2', segmentMask);
         debugger;
@@ -4242,6 +4261,22 @@ async function compileVirtualScene(imageArrayBuffer, width, height, camera) {
   //   }
   // }
   
+  // {
+  //   const res = await fetch(`https://depth.webaverse.com/depth`, {
+  //     method: 'POST',
+  //     body: blob,
+  //   });
+  //   if (res.ok) {
+  //     const arrayBuffer = await res.arrayBuffer();
+  //     console.log('got array buffer', arrayBuffer);
+  //     const float32Array = new Float32Array(arrayBuffer);
+  //     console.log('predict fov json', float32Array);
+  //   } else {
+  //     console.warn('invalid response', res.status);
+  //   }
+  // }
+  // debugger;
+
   // image segmentation
   console.time('imageSegmentation');
   let segmentMask;
