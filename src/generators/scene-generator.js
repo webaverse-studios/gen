@@ -2529,10 +2529,6 @@ class PanelRenderer extends EventTarget {
       floorNetPixelSize,
       floorNetCamera,
     );
-    // globalThis.floorNetCamera = floorNetCamera;
-    // globalThis.floorNetDepths = floorNetDepths;
-    // globalThis.floorHeightfield = floorHeightfield;
-
     const makeDepthCubesMesh2 = (depthFloats, width, height, camera) => {
       // render an instanced cubes mesh to show the depth
       const depthCubesGeometry = new THREE.BoxBufferGeometry(0.05, 0.05, 0.05);
@@ -2543,10 +2539,6 @@ class PanelRenderer extends EventTarget {
       const depthCubesMesh = new THREE.InstancedMesh(depthCubesGeometry, depthCubesMaterial, depthFloats.length);
       depthCubesMesh.name = 'depthCubesMesh';
       depthCubesMesh.frustumCulled = false;
-      // depthCubesMesh.xs = [];
-      // depthCubesMesh.ys = [];
-      // depthCubesMesh.zs = [];
-
       // set the matrices by projecting the depth from the perspective camera
       depthCubesMesh.count = 0;
       for (let i = 0; i < depthFloats.length; i++) {
@@ -2563,10 +2555,6 @@ class PanelRenderer extends EventTarget {
         const ay = depthFloats[i];
 
         if (ay !== 0) {
-          // depthCubesMesh.xs.push(ax);
-          // depthCubesMesh.zs.push(az);
-          // depthCubesMesh.ys.push(ay);
-
           localMatrix.makeTranslation(ax, ay, az);
           depthCubesMesh.setMatrixAt(i, localMatrix);
           depthCubesMesh.count++;
@@ -2578,7 +2566,6 @@ class PanelRenderer extends EventTarget {
     const dcm = makeDepthCubesMesh2(floorHeightfield, floorNetPixelSize, floorNetPixelSize, floorNetCamera);
     dcm.frustumCulled = false;
     this.scene.add(dcm);
-    // globalThis.dcm = dcm;
 
     /* // portal net mesh
     {
