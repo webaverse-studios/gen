@@ -230,6 +230,64 @@ export function depthFloat32ArrayToHeightfield(
 
 //
 
+export const clipGeometryByDepthFloats = (geometry, depthFloats32Array) => {
+  const clipDistance = 0.1;
+
+  // for all points in left to right
+  const gridX = this.renderer.domElement.width - 1;
+  const gridX1 = gridX + 1;
+  const gridY = this.renderer.domElement.height - 1;
+  // const gridY1 = gridY + 1;
+  for (let iy = 0; iy < gridY; iy++) {
+    for (let ix = 0; ix < gridX; ix++) {
+      const x = ix;
+      const y = iy;
+      const x2 = x + 1;
+      const y2 = y + 1;
+
+      const aIndex = y * gridX1 + x;
+      const bIndex = y * gridX1 + x2;
+      const cIndex = y2 * gridX1 + x;
+      const dIndex = y2 * gridX1 + x2;
+      
+      const aDepthFloat = depthFloats32Array[aIndex];
+      const bDepthFloat = depthFloats32Array[bIndex];
+      const cDepthFloat = depthFloats32Array[cIndex];
+      const dDepthFloat = depthFloats32Array[dIndex];
+
+      const topDepth = (aDepthFloat + bDepthFloat) / 2;
+      const bottomDepth = (cDepthFloat + dDepthFloat) / 2;
+      const leftDepth = (aDepthFloat + cDepthFloat) / 2;
+      const rightDepth = (bDepthFloat + dDepthFloat) / 2;
+
+      const topDownDepthDelta = Math.abs(bottomDepth - topDepth);
+      const leftRightDepthDelta = Math.abs(rightDepth - leftDepth);
+      if (
+        topDownDepthDelta >= clipDistance ||
+        leftRightDepthDelta >= clipDistance
+      ) {
+        // for ( let iy = 0; iy < gridY; iy ++ ) {
+        //   for ( let ix = 0; ix < gridX; ix ++ ) {
+        // const a = ix + gridX1 * iy;
+        // const b = ix + gridX1 * ( iy + 1 );
+        // const c = ( ix + 1 ) + gridX1 * ( iy + 1 );
+        // const d = ( ix + 1 ) + gridX1 * iy;
+        // indices.push( a, b, d );
+        // indices.push( b, c, d );
+
+        const index1 = (ix + gridX * iy) * 6;
+        for (let k = 0; k < 9 * 2; k++) {
+          geometry.attributes.position.array[index1 * 3 + k] = 0;
+        }
+
+        geometry.attributes.position.needsUpdate = true;
+      }
+    }
+  }
+};
+
+//
+
 function viewZToOrthographicDepth(viewZ, near, far) {
   return ( viewZ + near ) / ( near - far );
 }

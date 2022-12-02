@@ -8,6 +8,7 @@ import {
 import {
   pointCloudArrayBufferToGeometry,
   reinterpretFloatImageData,
+  clipGeometryByDepthFloats,
 } from '../clients/reconstruction-client.js';
 import {
   // depthVertexShader,
