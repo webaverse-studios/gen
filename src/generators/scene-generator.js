@@ -448,7 +448,7 @@ const getFirstFloorPlaneIndex = (/*segmentSpecs, */planeSpecs) => {
 
 const normalToQuaternion = (() => {
   const localVector = new THREE.Vector3();
-  const localVector2 = new THREE.Vector3();
+  // const localVector2 = new THREE.Vector3();
   const localMatrix = new THREE.Matrix4();
 
   return (normal, quaternion, up) => {
@@ -467,8 +467,8 @@ const normalToQuaternion = (() => {
 const depthFloats2Canvas = (depthFloats, width, height) => {
   const canvas = document.createElement('canvas');
   canvas.classList.add('reconstructionCanvas');
-  canvas.width = this.renderer.domElement.width;
-  canvas.height = this.renderer.domElement.height;
+  canvas.width = width;
+  canvas.height = height;
   const context = canvas.getContext('2d');
   const imageData = context.createImageData(canvas.width, canvas.height);
   const data = imageData.data;
@@ -479,7 +479,7 @@ const depthFloats2Canvas = (depthFloats, width, height) => {
     const px = x / canvas.width;
     const py = y / canvas.height;
 
-    const viewZ = reconstructedDepthFloats[i];
+    const viewZ = depthFloats[i];
     const worldPoint = setCameraViewPositionFromViewZ(px, py, viewZ, editCamera, localVector);
 
     const index = y * canvas.width + x;
