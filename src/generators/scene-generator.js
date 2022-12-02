@@ -2529,7 +2529,8 @@ class PanelRenderer extends EventTarget {
       floorNetPixelSize,
       floorNetCamera,
     );
-    const makeDepthCubesMesh2 = (depthFloats, width, height, camera) => {
+    
+    /* const makeDepthCubesMesh2 = (depthFloats, width, height, camera) => {
       // render an instanced cubes mesh to show the depth
       const depthCubesGeometry = new THREE.BoxBufferGeometry(0.05, 0.05, 0.05);
       const depthCubesMaterial = new THREE.MeshPhongMaterial({
@@ -2565,11 +2566,11 @@ class PanelRenderer extends EventTarget {
     };
     const dcm = makeDepthCubesMesh2(floorHeightfield, floorNetPixelSize, floorNetPixelSize, floorNetCamera);
     dcm.frustumCulled = false;
-    this.scene.add(dcm);
+    this.scene.add(dcm); */
 
-    /* // portal net mesh
+    // portal net mesh
     {
-      const boxGeometry = new THREE.BoxGeometry(1, 1, 1);
+      const boxGeometry = new THREE.BoxBufferGeometry(0.1, 0.1, 0.1);
 
       const geometries = [];
       for (let i = 0; i < portalSpecs.labels.length; i++) {
@@ -2578,17 +2579,22 @@ class PanelRenderer extends EventTarget {
         const center = localVector2.fromArray(labelSpec.center);
         
         // 1m in front
-        const portalCenter = localVector3.copy(center).add(localVector4.copy(normal).multiplyScalar(1));
+        const portalCenter = localVector3.copy(center)
+          .add(localVector4.copy(normal).multiplyScalar(-1));
 
         // snap to floor net resolution
-        portalCenter.x = Math.round(portalCenter / floorNetResolution) * floorNetResolution;
-        portalCenter.z = Math.round(portalCenter / floorNetResolution) * floorNetResolution;
+        portalCenter.x = Math.round(portalCenter.x / floorNetResolution) * floorNetResolution;
+        portalCenter.z = Math.round(portalCenter.z / floorNetResolution) * floorNetResolution;
+
+        // const g = boxGeometry.clone();
+        // g.applyMatrix4(localMatrix.makeTranslation(portalCenter.x, portalCenter.y, portalCenter.z));
+        // geometries.push(g);
 
         // get the corner base position of the floor net mesh
         const floorCornerBasePosition = localVector5.copy(this.floorNetMesh.position)
           .add(localVector6.set(-floorNetWorldSize / 2, 0, -floorNetWorldSize / 2));
 
-        // get the local coordinates of the portal center
+        // get the local pixel coordinates of the portal center
         const lx = (portalCenter.x - floorCornerBasePosition.x) / floorNetResolution;
         const lz = (portalCenter.z - floorCornerBasePosition.z) / floorNetResolution;
 
@@ -2597,12 +2603,17 @@ class PanelRenderer extends EventTarget {
           const height = _trilinearFilter(floorHeightfield, floorNetPixelSize, floorNetPixelSize, lx, lz);
           portalCenter.y = height;
 
+          // if (!globalThis.positions) {
+          //   globalThis.positions = [];
+          // }
+          // globalThis.positions.push(portalCenter.x, portalCenter.y, portalCenter.z);
+
           const g = boxGeometry.clone();
           g.applyMatrix4(localMatrix.makeTranslation(portalCenter.x, portalCenter.y, portalCenter.z));
           geometries.push(g);
         }
       }
-      const geometry = BufferGeometryUtils.mergeBufferGeometries(geometries);
+      const geometry = geometries.length > 0 ? BufferGeometryUtils.mergeBufferGeometries(geometries) : new THREE.BufferGeometry();
 
       function _trilinearFilter(floorHeightfield, width, height, x, z) {
         const x0 = Math.floor(x);
@@ -2643,12 +2654,18 @@ class PanelRenderer extends EventTarget {
         // side: THREE.DoubleSide,
       });
 
+      const hasGeometry = geometries.length > 0;
+
       const portalNetMesh = new THREE.Mesh(geometry, material);
       portalNetMesh.frustumCulled = false;
+      portalNetMesh.enabled = false;
       portalNetMesh.visible = false;
+      portalNetMesh.updateVisibility = () => {
+        portalNetMesh.visible = portalNetMesh.enabled && hasGeometry;
+      };
       this.scene.add(portalNetMesh);
       this.portalNetMesh = portalNetMesh;
-    } */
+    }
 
     // selector
     {
@@ -3183,7 +3200,10 @@ class PanelRenderer extends EventTarget {
 
     this.floorNetMesh.enabled = this.tool === 'plane';
     this.floorNetMesh.updateVisibility();
-    
+
+    this.portalMesh.enabled = this.tool === 'portal';
+    this.portalMesh.updateVisibility();
+
     this.selector.setTool(this.tool);
     this.overlay.setTool(this.tool);
   }
@@ -3407,6 +3427,7 @@ class PanelRenderer extends EventTarget {
     const auxMeshes = [
       this.avatar,
       this.floorNetMesh,
+      this.portalNetMesh,
       this.overlay.overlayScene,
       this.outmeshMesh,
       this.selector.lensOutputMesh,
