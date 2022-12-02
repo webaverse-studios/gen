@@ -2506,6 +2506,8 @@ class PanelRenderer extends EventTarget {
       // floorNetMesh.position.copy(floorNetCamera.position);
       // floorNetMesh.quaternion.copy(floorNetCamera.quaternion);
       // floorNetMesh.updateMatrixWorld();
+      floorNetMesh.enabled = false;
+      let hasGeometry = false;
       floorNetMesh.setGeometry = ({
         floorNetDepths,
         floorNetCamera,
@@ -2520,13 +2522,17 @@ class PanelRenderer extends EventTarget {
         geometry.computeVertexNormals();
         floorNetMesh.geometry = geometry;
 
-        floorNetMesh.visible = true;
-      }
+        hasGeometry = true;
+        floorNetMesh.updateVisibility();
+      };
+      floorNetMesh.updateVisibility = () => {
+        floorNetMesh.visible = floorNetMesh.enabled && hasGeometry;
+      };
       floorNetMesh.frustumCulled = false;
       floorNetMesh.visible = false;
       this.scene.add(floorNetMesh);
       this.floorNetMesh = floorNetMesh;
-    }
+    };
     this.floorNetMesh.setGeometry({
       floorNetDepths,
       floorNetCamera,
@@ -3062,6 +3068,9 @@ class PanelRenderer extends EventTarget {
       'plane',
       'portal',
     ].includes(this.tool);
+
+    this.floorNetMesh.enabled = this.tool === 'plane';
+    this.floorNetMesh.updateVisibility();
     
     this.selector.setTool(this.tool);
     this.overlay.setTool(this.tool);
