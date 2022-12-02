@@ -344,29 +344,38 @@ const getFirstFloorPlaneIndex = (/*segmentSpecs, */planeSpecs) => {
       };
     });
     // labelSpecs.sort((a, b) => a.distanceSquaredF - b.distanceSquaredF);
-    const _isUp = (a, n) => localVector.fromArray(a.normal).angleTo(upVector) < n;
+    const snapAngle = Math.PI / 16;
+    const _getSnappedUpAngle = a => Math.floor(localVector.fromArray(a.normal).angleTo(upVector) * snapAngle) / snapAngle;
+    const snappedAngleSets = [];
+    for (let angle = Math.PI / 16; angle < Math.PI / 2; angle *= 2) {      
+      const set = new Set();
+      snappedAngleSets.push(set);
+
+      const nextAngle = angle * 2;
+      for (const labelSpec of labelSpecs) {
+        const snappedAngle = _getSnappedUpAngle(labelSpec);
+        if (snappedAngle >= angle && snappedAngle < nextAngle) {
+          set.add(labelSpec.index);
+        }
+      }
+    }
+    // sort the sets by size
+    snappedAngleSets.sort((a, b) => b.size - a.size);
     labelSpecs.sort((a, b) => {
-      // XXX sort into angle range sets and choose from the first non-empty set
-      const aUp = _isUp(a, Math.PI/16);
-      const bUp = _isUp(b, Math.PI/16);
-      const diff = +bUp - +aUp;
+      const aSnappedAngleSetIndex = snappedAngleSets.findIndex(set => set.has(a.index));
+      const bSnappedAngleSetIndex = snappedAngleSets.findIndex(set => set.has(b.index));
+
+      const aValid = aSnappedAngleSetIndex !== -1;
+      const bValid = bSnappedAngleSetIndex !== -1;
+      const diff = +bValid - +aValid;
       if (diff !== 0) {
         return diff;
       } else {
-        const aUp = _isUp(a, Math.PI/8);
-        const bUp = _isUp(b, Math.PI/8);
-        const diff = +bUp - +aUp;
+        const diff = aSnappedAngleSetIndex - bSnappedAngleSetIndex;
         if (diff !== 0) {
           return diff;
         } else {
-          const aUp = _isUp(a, Math.PI/4);
-          const bUp = _isUp(b, Math.PI/4);
-          const diff = +bUp - +aUp;
-          if (diff !== 0) {
-            return diff;
-          } else {
-            return b.numVertices - a.numVertices;
-          }
+          return b.numVertices - a.numVertices;
         }
       }
     });
