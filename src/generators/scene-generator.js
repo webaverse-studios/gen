@@ -356,8 +356,6 @@ const getFirstFloorPlaneIndex = (/*segmentSpecs, */planeSpecs) => {
       v.x = 0;
       v.normalize();
       const zAngle = Math.atan2(v.y, v.z);
-      // const angle = Math.floor(localVector.fromArray(a.normal).angleTo(forwardVector) * snapAngle) / snapAngle;
-      // return angle;
       return zAngle;
     }
     const snappedAngleSets = [];
@@ -466,6 +464,72 @@ const normalToQuaternion = (() => {
 
 //
 
+const depthFloats2Canvas = (depthFloats, width, height) => {
+  const canvas = document.createElement('canvas');
+  canvas.classList.add('reconstructionCanvas');
+  canvas.width = this.renderer.domElement.width;
+  canvas.height = this.renderer.domElement.height;
+  const context = canvas.getContext('2d');
+  const imageData = context.createImageData(canvas.width, canvas.height);
+  const data = imageData.data;
+  for (let i = 0; i < depthFloatImageData.length; i++) {
+    const x = (i % canvas.width);
+    const y = Math.floor(i / canvas.width);
+
+    const px = x / canvas.width;
+    const py = y / canvas.height;
+
+    const viewZ = reconstructedDepthFloats[i];
+    const worldPoint = setCameraViewPositionFromViewZ(px, py, viewZ, editCamera, localVector);
+
+    const index = y * canvas.width + x;
+    data[index*4 + 0] = -worldPoint.z / 30 * 255;
+    data[index*4 + 1] = 0;
+    data[index*4 + 2] = 0;
+    data[index*4 + 3] = 255;
+  }
+  context.putImageData(imageData, 0, 0);
+  return canvas;
+};
+
+//
+
+const distanceFloats2Canvas = (distanceFloatImageData, width, height) => {
+  const canvas = document.createElement('canvas');
+  canvas.classList.add('outlineCanvas');
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext('2d');
+  const imageData = context.createImageData(canvas.width, canvas.height);
+  const data = imageData.data;
+  for (let i = 0; i < distanceFloatImageData.length; i += 4) {
+    const r = distanceFloatImageData[i];
+    const g = distanceFloatImageData[i+1];
+    const b = distanceFloatImageData[i+2];
+    const a = distanceFloatImageData[i+3];
+
+    const j = i / 4;
+    const x = j % canvas.width;
+    const y = Math.floor(j / canvas.width);
+
+    const expectedPoint = new THREE.Vector2(x, y);
+    const realPoint = new THREE.Vector2(r, g);
+    const d = realPoint.distanceTo(expectedPoint);
+    const f = Math.max(1 - d / 512, 0);
+
+    // flip y
+    const index = (canvas.height - y - 1) * canvas.width + x;
+    data[index*4 + 0] = r / canvas.width * 255 * f;
+    data[index*4 + 1] = g / canvas.width * 255 * f;
+    data[index*4 + 2] = b / canvas.width * 255 * f;
+    data[index*4 + 3] = 255;
+  }
+  context.putImageData(imageData, 0, 0);
+  return canvas;
+};
+
+//
+
 const segmentsImg2Canvas = (imageBitmap, {
   color = false,
 } = {})  => {  
@@ -477,10 +541,6 @@ const segmentsImg2Canvas = (imageBitmap, {
   ctx.drawImage(imageBitmap, 0, 0);
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
   const {data} = imageData;
-  // if (!data) {
-  //   console.warn('missing data', data);
-  //   debugger;
-  // }
   for (let i = 0; i < data.length; i += 4) {
     const r = data[i + 0];
     const segmentIndex = r;
@@ -3751,80 +3811,32 @@ class PanelRenderer extends EventTarget {
       maskIndex,
     });
     {
-      // output to canvas
-      const canvas = document.createElement('canvas');
-      canvas.classList.add('outlineCanvas');
-      canvas.width = this.renderer.domElement.width;
-      canvas.height = this.renderer.domElement.height;
-      const context = canvas.getContext('2d');
-      const imageData = context.createImageData(canvas.width, canvas.height);
-      const data = imageData.data;
-      for (let i = 0; i < distanceFloatImageData.length; i += 4) {
-        const r = distanceFloatImageData[i];
-        const g = distanceFloatImageData[i+1];
-        const b = distanceFloatImageData[i+2];
-        const a = distanceFloatImageData[i+3];
-
-        const j = i / 4;
-        const x = j % canvas.width;
-        const y = Math.floor(j / canvas.width);
-
-        const expectedPoint = new THREE.Vector2(x, y);
-        const realPoint = new THREE.Vector2(r, g);
-        const d = realPoint.distanceTo(expectedPoint);
-        const f = Math.max(1 - d / 512, 0);
-
-        // flip y
-        const index = (canvas.height - y - 1) * canvas.width + x;
-        data[index*4 + 0] = r / canvas.width * 255 * f;
-        data[index*4 + 1] = g / canvas.width * 255 * f;
-        data[index*4 + 2] = b / canvas.width * 255 * f;
-        data[index*4 + 3] = 255;
-      }
-      context.putImageData(imageData, 0, 0);
-      document.body.appendChild(canvas);
+      const distanceFloatsCanvas = distanceFloats2Canvas(
+        distanceFloatImageData,
+        this.renderer.domElement.width,
+        this.renderer.domElement.height,
+      );
+      document.body.appendChild(distanceFloatsCanvas);
     }
     console.timeEnd('outline');
 
     // depth reconstruction
-    console.time('reconstructZ');
-    let reconstructedDepthFloats;
+    console.time('depthReconstruction');
+    const reconstructedDepthFloats = renderDepthReconstruction(
+      this.renderer,
+      distanceFloatImageData,
+      depthFloatImageData,
+      newDepthFloatImageData
+    );
     {
-      reconstructedDepthFloats = renderDepthReconstruction(
-        this.renderer,
-        distanceFloatImageData,
-        depthFloatImageData,
-        newDepthFloatImageData
+      const reconstructionCanvas = depthFloats2Canvas(
+        reconstructedDepthFloats,
+        this.renderer.domElement.width,
+        this.renderer.domElement.height
       );
-
-      // draw to canvas
-      const canvas = document.createElement('canvas');
-      canvas.classList.add('reconstructionCanvas');
-      canvas.width = this.renderer.domElement.width;
-      canvas.height = this.renderer.domElement.height;
-      const context = canvas.getContext('2d');
-      const imageData = context.createImageData(canvas.width, canvas.height);
-      const data = imageData.data;
-      for (let i = 0; i < depthFloatImageData.length; i++) {
-        const x = (i % canvas.width);
-        const y = Math.floor(i / canvas.width);
-
-        const px = x / canvas.width;
-        const py = y / canvas.height;
-
-        const viewZ = reconstructedDepthFloats[i];
-        const worldPoint = setCameraViewPositionFromViewZ(px, py, viewZ, editCamera, localVector);
-
-        const index = y * canvas.width + x;
-        data[index*4 + 0] = -worldPoint.z / 30 * 255;
-        data[index*4 + 1] = 0;
-        data[index*4 + 2] = 0;
-        data[index*4 + 3] = 255;
-      }
-      context.putImageData(imageData, 0, 0);
-      document.body.appendChild(canvas);
+      document.body.appendChild(reconstructionCanvas);
     }
-    console.timeEnd('reconstructZ');
+    console.timeEnd('depthReconstruction');
 
     console.time('floorReconstruction');
     const oldFloorNetDepthRenderGeometry = pointCloudArrayBufferToGeometry(
