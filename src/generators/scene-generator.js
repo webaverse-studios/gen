@@ -3138,6 +3138,10 @@ class PanelRenderer extends EventTarget {
             this.camera.matrixWorld.copy(defaultCameraMatrix);
             this.camera.matrix.copy(this.camera.matrixWorld)
               .decompose(this.camera.position, this.camera.quaternion, this.camera.scale);
+            // set the orbitControls target in front of us
+            this.controls.target.copy(this.camera.position)
+              .add(this.camera.getWorldDirection(localVector).multiplyScalar(3));
+            this.controls.update();
             break;
             
           }
