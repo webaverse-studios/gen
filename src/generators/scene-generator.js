@@ -464,7 +464,7 @@ const normalToQuaternion = (() => {
 
 //
 
-const depthFloats2Canvas = (depthFloats, width, height) => {
+const depthFloats2Canvas = (depthFloats, width, height, camera) => {
   const canvas = document.createElement('canvas');
   canvas.classList.add('reconstructionCanvas');
   canvas.width = width;
@@ -480,7 +480,7 @@ const depthFloats2Canvas = (depthFloats, width, height) => {
     const py = y / canvas.height;
 
     const viewZ = depthFloats[i];
-    const worldPoint = setCameraViewPositionFromViewZ(px, py, viewZ, editCamera, localVector);
+    const worldPoint = setCameraViewPositionFromViewZ(px, py, viewZ, camera, localVector);
 
     const index = y * canvas.width + x;
     data[index*4 + 0] = -worldPoint.z / 30 * 255;
@@ -951,7 +951,7 @@ const blockEvent = e => {
 //   // set the new indices
 //   geometry.setIndex(new THREE.BufferAttribute(newIndices.subarray(0, numIndices), 1));
 // };
-const _mergeMask = (geometry, depthFloatImageData, distanceNearestPositions, editCamera) => {
+const _mergeMask = (geometry, depthFloatImageData, distanceNearestPositions) => {
   // copy over snapped positions
   const newPositions = geometry.attributes.position.array.slice();
   const _snapPoint = index => {
@@ -963,7 +963,6 @@ const _mergeMask = (geometry, depthFloatImageData, distanceNearestPositions, edi
     const dstIndex = index;
 
     localVector.fromArray(distanceNearestPositions, srcIndex * 3)
-      // .applyMatrix4(editCamera.matrixWorld)
       .toArray(newPositions, dstIndex * 3);
   };
   
@@ -3832,7 +3831,8 @@ class PanelRenderer extends EventTarget {
       const reconstructionCanvas = depthFloats2Canvas(
         reconstructedDepthFloats,
         this.renderer.domElement.width,
-        this.renderer.domElement.height
+        this.renderer.domElement.height,
+        editCamera,
       );
       document.body.appendChild(reconstructionCanvas);
     }
@@ -4017,7 +4017,7 @@ class PanelRenderer extends EventTarget {
         this.renderer.domElement.height,
         editCamera,
       );
-      _mergeMask(geometry, depthFloatImageData, distanceNearestPositions, editCamera);
+      _mergeMask(geometry, depthFloatImageData, distanceNearestPositions);
       /* if (!segmentMask) {
         console.warn('missing segment mask 2', segmentMask);
         debugger;
