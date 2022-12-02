@@ -3284,6 +3284,7 @@ class PanelRenderer extends EventTarget {
 
     // helpers
     const auxMeshes = [
+      this.avatar,
       this.floorNetMesh,
       this.overlay.overlayScene,
       this.outmeshMesh,
