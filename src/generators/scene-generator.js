@@ -336,14 +336,41 @@ const snapPointCloudToCamera = (pointCloudArrayBuffer, width, height, camera) =>
 const getFirstFloorPlaneIndex = (/*segmentSpecs, */planeSpecs) => {
   if (planeSpecs.labels.length > 0) {
     const labelSpecs = planeSpecs.labels.map((label, index) => {
-      const {distanceSquaredF} = label;
+      const {normal, distanceSquaredF} = label;
       return {
         index,
+        normal,
         distanceSquaredF,
       };
     });
     // labelSpecs.sort((a, b) => a.distanceSquaredF - b.distanceSquaredF);
-    labelSpecs.sort((a, b) => b.numVertices - a.numVertices);
+    const _isUp = (a, n) => localVector.fromArray(a.normal).angleTo(upVector) < n;
+    labelSpecs.sort((a, b) => {
+      // XXX sort into angle range sets and choose from the first non-empty set
+      const aUp = _isUp(a, Math.PI/16);
+      const bUp = _isUp(b, Math.PI/16);
+      const diff = +bUp - +aUp;
+      if (diff !== 0) {
+        return diff;
+      } else {
+        const aUp = _isUp(a, Math.PI/8);
+        const bUp = _isUp(b, Math.PI/8);
+        const diff = +bUp - +aUp;
+        if (diff !== 0) {
+          return diff;
+        } else {
+          const aUp = _isUp(a, Math.PI/4);
+          const bUp = _isUp(b, Math.PI/4);
+          const diff = +bUp - +aUp;
+          if (diff !== 0) {
+            return diff;
+          } else {
+            return b.numVertices - a.numVertices;
+          }
+        }
+      }
+    });
+    // labelSpecs.sort((a, b) => b.numPixels - a.numPixels);
     const firstFloorPlaneIndex = labelSpecs[0].index;
     return firstFloorPlaneIndex;
   } else {
