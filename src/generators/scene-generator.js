@@ -472,7 +472,7 @@ const depthFloats2Canvas = (depthFloats, width, height) => {
   const context = canvas.getContext('2d');
   const imageData = context.createImageData(canvas.width, canvas.height);
   const data = imageData.data;
-  for (let i = 0; i < depthFloatImageData.length; i++) {
+  for (let i = 0; i < depthFloats.length; i++) {
     const x = (i % canvas.width);
     const y = Math.floor(i / canvas.width);
 
