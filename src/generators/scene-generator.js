@@ -2005,7 +2005,7 @@ class Overlay {
             } else if (uRenderMode == 2) {
               gl_FragColor = vec4(vPlaneColor, 0.7);
             } else if (uRenderMode == 3) {
-              gl_FragColor = vec4(vPortalColor, 0.7);
+              gl_FragColor = vec4(vPortalColor, 0.5);
             } else {
               // gl_FragColor = vec4(1., 0., 0., 1.);
               discard;
