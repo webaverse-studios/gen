@@ -230,7 +230,9 @@ export function depthFloat32ArrayToHeightfield(
 
 //
 
-export const clipGeometryZ = (geometry, width, height, depthFloats32Array) => {
+export function getGeometryClipZMask(geometry, width, height, depthFloats32Array) {
+  const clipZMask = new Uint8Array(geometry.attributes.position.array.length / 3).fill(255);
+
   const clipDistance = 0.1;
 
   // for all points in left to right
@@ -276,15 +278,34 @@ export const clipGeometryZ = (geometry, width, height, depthFloats32Array) => {
         // indices.push( b, c, d );
 
         const index1 = (ix + gridX * iy) * 6;
-        for (let k = 0; k < 9 * 2; k++) {
-          geometry.attributes.position.array[index1 * 3 + k] = 0;
+        // for (let k = 0; k < 9 * 2; k++) {
+        //   geometry.attributes.position.array[index1 * 3 + k] = 0;
+        // }
+        for (let k = 0; k < 6; k++) {
+          clipZMask[index1 + k] = 0;
         }
-
-        geometry.attributes.position.needsUpdate = true;
       }
     }
   }
-};
+
+  return clipZMask;
+}
+export function clipGeometryZ(geometry, width, height, depthFloats32Array) {
+  const clipZMask = getGeometryClipZMask(geometry, width, height, depthFloats32Array);
+  // if (clipZMask.length !== geometry.attributes.position.array.length) {
+  //   console.warn('wrong length', clipZMask, geometry.attributes.position.array);
+  //   debugger;
+  // }
+  for (let i = 0; i < clipZMask.length; i++) {
+    if (clipZMask[i] === 0) {
+      const baseIndex = i * 3;
+      geometry.attributes.position.array[baseIndex] = 0;
+      geometry.attributes.position.array[baseIndex + 1] = 0;
+      geometry.attributes.position.array[baseIndex + 2] = 0;
+    }
+  }
+  geometry.attributes.position.needsUpdate = true;
+}
 
 //
 

@@ -109,7 +109,7 @@ export function reconstructFloor({
       const {geometry, width, height, depthFloat32Array} = renderSpec;
       const g = geometry.clone();
 
-      // clipGeometryZ(g, width, height, depthFloat32Array);
+      clipGeometryZ(g, width, height, depthFloat32Array);
       // globalThis.g = g;
       // globalThis.depthFloat32Array = depthFloat32Array;
 
