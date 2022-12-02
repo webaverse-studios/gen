@@ -110,7 +110,7 @@ export function reconstructFloor({
         }
       `),
       side: THREE.BackSide,
-      blending: THREE.NoBlending,
+      // blending: THREE.NoBlending,
     });
     for (const renderSpec of renderSpecs) {
       const {geometry, width, height, depthFloat32Array} = renderSpec;
