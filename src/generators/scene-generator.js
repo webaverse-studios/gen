@@ -34,20 +34,20 @@ import {ImageAiClient} from '../clients/image-client.js';
 import {
   pointcloudStride,
   getPointCloud,
-  drawPointCloudCanvas,
+  // drawPointCloudCanvas,
   pointCloudArrayBufferToPositionAttributeArray,
   pointCloudArrayBufferToGeometry,
-  depthFloat32ArrayToPositionAttributeArray,
+  // depthFloat32ArrayToPositionAttributeArray,
   setCameraViewPositionFromViewZ,
-  reprojectCameraFovArray,
-  applySkybox,
-  pointCloudArrayBufferToColorAttributeArray,
-  skyboxDistance,
+  // reprojectCameraFovArray,
+  // applySkybox,
+  // pointCloudArrayBufferToColorAttributeArray,
+  // skyboxDistance,
   depthFloat32ArrayToGeometry,
   depthFloat32ArrayToOrthographicGeometry,
   reinterpretFloatImageData,
   depthFloat32ArrayToHeightfield,
-  clipGeometryByDepthFloats,
+  clipGeometryZ,
 } from '../clients/reconstruction-client.js';
 
 import {blob2img, img2ImageData} from '../utils/convert-utils.js';
@@ -90,10 +90,10 @@ const localVector3 = new THREE.Vector3();
 const localVector4 = new THREE.Vector3();
 const localVector5 = new THREE.Vector3();
 const localVector6 = new THREE.Vector3();
-const localVectorA = new THREE.Vector3();
-const localVectorB = new THREE.Vector3();
-const localVectorC = new THREE.Vector3();
-const localTriangle = new THREE.Triangle();
+// const localVectorA = new THREE.Vector3();
+// const localVectorB = new THREE.Vector3();
+// const localVectorC = new THREE.Vector3();
+// const localTriangle = new THREE.Triangle();
 const localQuaternion = new THREE.Quaternion();
 const localMatrix = new THREE.Matrix4();
 const localBox = new THREE.Box3();
@@ -3843,16 +3843,20 @@ class PanelRenderer extends EventTarget {
       floorNetDepths,
       floorNetCameraJson,
     } = passes.reconstructFloor({
-      // pointCloudArrayBuffers: [
-      //   oldPointCloudArrayBuffer,
-      //   pointCloudArrayBuffer,
-      // ],
-      geometries: [
-        oldFloorNetDepthRenderGeometry,
-        newFloorNetDepthRenderGeometry,
+      renderSpecs: [
+        {
+          geometry: oldFloorNetDepthRenderGeometry,
+          depthFloat32Array: oldPointCloudArrayBuffer,
+          width: this.renderer.domElement.width,
+          height: this.renderer.domElement.height,
+        },
+        {
+          geometry: newFloorNetDepthRenderGeometry,
+          depthFloat32Array: reconstructedDepthFloats,
+          width: this.renderer.domElement.width,
+          height: this.renderer.domElement.height,
+        },
       ],
-      width: editedImg.width,
-      height: editedImg.height,
     });
     globalThis.oldFloorNetDepthRenderGeometry = oldFloorNetDepthRenderGeometry;
     globalThis.newFloorNetDepthRenderGeometry = newFloorNetDepthRenderGeometry;
@@ -3885,7 +3889,8 @@ class PanelRenderer extends EventTarget {
     const {geometry} = this.sceneMesh;
     const pointCloudArrayBuffer = this.panel.getData('layer1/pointCloud');
     const depthFloats32Array = getDepthFloatsFromPointCloud(pointCloudArrayBuffer);
-    clipGeometryByDepthFloats(geometry, depthFloats32Array);
+    const {width, height} = this.renderer.domElement;
+    clipGeometryZ(geometry, width, height, depthFloats32Array);
   }
   createOutmeshLayer(layerEntries) {
     const _getLayerEntry = key => layerEntries.find(layerEntry => layerEntry.key.endsWith('/' + key))?.value;
@@ -4365,7 +4370,7 @@ const _resizeFile = async file => {
 
 //
 
-async function compileVirtualScene(imageArrayBuffer, width, height, camera) {
+async function compileVirtualScene(imageArrayBuffer, width, height/*, camera */) {
   // color
   const blob = new Blob([imageArrayBuffer], {
     type: 'image/png',
@@ -4484,20 +4489,24 @@ async function compileVirtualScene(imageArrayBuffer, width, height, camera) {
   // const firstFloorPlane = planesJson[firstFloorPlaneIndex];
   
   console.time('floorReconstruction');
-  const floorNetDepthRenderGeometry = pointCloudArrayBufferToGeometry(pointCloudArrayBuffer, img.width, img.height);
-  const {
-    floorNetDepths,
-    floorNetCameraJson,
-  } = passes.reconstructFloor({
-    // pointCloudArrayBuffers: [
-    //   pointCloudArrayBuffer,
-    // ],
-    geometries: [
-      floorNetDepthRenderGeometry,
-    ],
-    // width: img.width,
-    // height: img.height,
-  });
+  let floorNetDepths;
+  let floorNetCameraJson;
+  {
+    const floorNetDepthRenderGeometry = pointCloudArrayBufferToGeometry(pointCloudArrayBuffer, width, height)
+      .toNonIndexed(); // required for proper indexing
+    const floorSpec = passes.reconstructFloor({
+      renderSpecs: [
+        {
+          geometry: floorNetDepthRenderGeometry,
+          depthFloat32Array: depthFloats32Array,
+          width,
+          height,
+        },
+      ],
+    });
+    floorNetDepths = floorSpec.floorNetDepths;
+    floorNetCameraJson = floorSpec.floorNetCameraJson;
+  }
   console.timeEnd('floorReconstruction');
 
   // query the height
@@ -4646,7 +4655,7 @@ export class Panel extends EventTarget {
         imageArrayBuffer,
         panelSize,
         panelSize,
-        camera
+        // camera
       );
       // console.log('got compile result', compileResult);
 

@@ -8,7 +8,7 @@ import {
 import {
   pointCloudArrayBufferToGeometry,
   reinterpretFloatImageData,
-  clipGeometryByDepthFloats,
+  clipGeometryZ,
 } from '../clients/reconstruction-client.js';
 import {
   // depthVertexShader,
@@ -23,16 +23,13 @@ import {
 
 //
 
-const localVector = new THREE.Vector3();
+// const localVector = new THREE.Vector3();
 const localQuaternion = new THREE.Quaternion();
 
 //
 
 export function reconstructFloor({
-  // pointCloudArrayBuffers,
-  // width,
-  // height,
-  geometries,
+  renderSpecs,
 }) {
   let floorNetDepths;
   let floorNetCameraJson;
@@ -71,18 +68,11 @@ export function reconstructFloor({
       floorNetWorldDepth
     );
     floorNetCamera.position.set(0, -floorNetWorldDepth/2, 0);
-    // floorNetCamera.position.set(0, -30, 0);
     floorNetCamera.quaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI/2)
       .multiply(
         localQuaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI)
       );
     floorNetCamera.updateMatrixWorld();
-
-    // globalThis.floorNetCamera = floorNetCamera;
-
-    // const v = new THREE.Vector3(0, 0, -1)
-    //   .applyQuaternion(floorNetCamera.quaternion);
-    // console.log('got v', v.toArray().join(','));
 
     // mesh
     floorNetCameraJson = getOrthographicCameraJson(floorNetCamera);
@@ -114,30 +104,26 @@ export function reconstructFloor({
       fragmentShader: depthFragmentShader,
       side: THREE.DoubleSide,
     });
-    console.log('render geometries', geometries);
-    for (const geometry of geometries) {
-      // _cutMask(geometry, depthFloatImageData, distanceNearestPositions, editCamera);
-      geometry.computeVertexNormals();
+    // console.log('render geometries', geometries);
+    for (const renderSpec of renderSpecs) {
+      const {geometry, width, height, depthFloat32Array} = renderSpec;
+      const g = geometry.clone();
 
-      const floorNetDepthRenderMesh = new THREE.Mesh(geometry, floorNetDepthRenderMaterial);
-      // floorNetDepthRenderMesh.onBeforeRender = () => {
-      //   console.log('floorNetDepthRenderMesh render', floorNetDepthRenderMesh);
-      // };
+      // clipGeometryZ(g, width, height, depthFloat32Array);
+      // globalThis.g = g;
+      // globalThis.depthFloat32Array = depthFloat32Array;
+
+      const floorNetDepthRenderMesh = new THREE.Mesh(g, floorNetDepthRenderMaterial);
       floorNetDepthRenderMesh.frustumCulled = false;
       floorNetScene.add(floorNetDepthRenderMesh);
-
-      // globalThis.floorNetDepthFloat32Array = depthFloats32Array;
-      // globalThis.floorNetDepthRenderMesh = floorNetDepthRenderMesh;
     }
     
     // render
     // render to the canvas, for debugging
-    // renderer.clear();
-    renderer.render(floorNetScene, floorNetCamera); // XXX
+    renderer.render(floorNetScene, floorNetCamera);
     
     // real render to render target
     renderer.setRenderTarget(floorRenderTarget);
-    // renderer.clear();
     renderer.render(floorNetScene, floorNetCamera);
     renderer.setRenderTarget(null);
 
@@ -147,7 +133,6 @@ export function reconstructFloor({
       width: floorNetPixelSize,
       height: floorNetPixelSize,
     };
-    // console.log('pre read 1');
     renderer.readRenderTargetPixels(
       floorRenderTarget,
       0,
@@ -156,15 +141,17 @@ export function reconstructFloor({
       floorNetPixelSize,
       imageData.data
     );
-    // console.log('post read 1', imageData);
     floorNetDepths = reinterpretFloatImageData(imageData);
-    const filteredFloorNetDepths = floorNetDepths.filter(n => n !== 0);
-    if (filteredFloorNetDepths.length > 0) {
-      console.log('floor net depths found:', filteredFloorNetDepths.length);
-    } else {
-      console.warn('no floor net depths found', floorNetDepths);
-      debugger;
-    }
+
+    // const filteredFloorNetDepths = floorNetDepths.filter(n => n !== 0);
+    // if (filteredFloorNetDepths.length > 0) {
+    //   console.log('floor net depths found:', filteredFloorNetDepths.length);
+    // } else {
+    //   console.warn('no floor net depths found', floorNetDepths);
+    //   debugger;
+    // }
+
+    // XXX 
   }
 
   return {

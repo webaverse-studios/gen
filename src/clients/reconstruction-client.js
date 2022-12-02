@@ -230,13 +230,13 @@ export function depthFloat32ArrayToHeightfield(
 
 //
 
-export const clipGeometryByDepthFloats = (geometry, depthFloats32Array) => {
+export const clipGeometryZ = (geometry, width, height, depthFloats32Array) => {
   const clipDistance = 0.1;
 
   // for all points in left to right
-  const gridX = this.renderer.domElement.width - 1;
+  const gridX = width - 1;
   const gridX1 = gridX + 1;
-  const gridY = this.renderer.domElement.height - 1;
+  const gridY = height - 1;
   // const gridY1 = gridY + 1;
   for (let iy = 0; iy < gridY; iy++) {
     for (let ix = 0; ix < gridX; ix++) {
