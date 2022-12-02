@@ -2171,10 +2171,7 @@ class Overlay {
         // arrow mesh
         const arrowMesh = makeArrowsMesh();
         arrowMesh.position.copy(center);
-        normalToQuaternion(normal, arrowMesh.quaternion, upVector)
-          // .premultiply(localQuaternion.setFromAxisAngle(localVector3.set(0, 0, 1), Math.PI))
-          // .premultiply(localQuaternion.setFromAxisAngle(localVector3.set(1, 0, 0), -Math.PI/2))
-          // .premultiply(localQuaternion.setFromAxisAngle(localVector3.set(0, 0, 1), -Math.PI));
+        normalToQuaternion(normal, arrowMesh.quaternion, upVector);
         arrowMesh.updateMatrixWorld();
         arrowMesh.frustumCulled = false;
         portalMesh.add(arrowMesh);
@@ -2315,7 +2312,6 @@ class PanelRenderer extends EventTarget {
     });
 
     const scene = new THREE.Scene();
-    // scene.background = new THREE.Color(0x0000FF);
     scene.autoUpdate = false;
     this.scene = scene;
     
@@ -2324,12 +2320,8 @@ class PanelRenderer extends EventTarget {
 
     // orbit controls
     const controls = new OrbitControls(this.camera, canvas);
-    // controls.enableDamping = true;
-    // controls.dampingFactor = 0.05;
-    // controls.screenSpacePanning = false;
     controls.minDistance = 1;
     controls.maxDistance = 100;
-    // controls.maxPolarAngle = Math.PI / 2;
     controls.target.set(0, 0, -3);
     this.controls = controls;
 
@@ -2348,16 +2340,6 @@ class PanelRenderer extends EventTarget {
     scene.add(directionalLight);
 
     this.sceneMesh = null;
-
-    // const defaultCubeMesh = new THREE.Mesh(
-    //   new THREE.BoxBufferGeometry(1, 1, 1),
-    //   new THREE.MeshPhongMaterial({
-    //     color: 0x00ff00,
-    //   }),
-    // );
-    // defaultCubeMesh.name = 'defaultCubeMesh';
-    // defaultCubeMesh.frustumCulled = false;
-    // // scene.add(defaultCubeMesh);
 
     const avatar = new THREE.Object3D();
     (async () => {
