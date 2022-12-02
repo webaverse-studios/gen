@@ -344,23 +344,32 @@ const getFirstFloorPlaneIndex = (/*segmentSpecs, */planeSpecs) => {
       };
     });
     // labelSpecs.sort((a, b) => a.distanceSquaredF - b.distanceSquaredF);
-    const snapAngle = Math.PI / 16;
-    const _getSnappedUpAngle = a => Math.floor(localVector.fromArray(a.normal).angleTo(upVector) * snapAngle) / snapAngle;
+    const snapAngle = Math.PI / 8;
+    // const _getSnappedUpAngle = a => Math.floor(localVector.fromArray(a.normal).angleTo(upVector) * snapAngle) / snapAngle;
+    const _getForwardAngle = a => {
+      const v = localVector.fromArray(a.normal);
+      v.x = 0;
+      v.normalize();
+      const zAngle = Math.atan2(v.y, v.z);
+      // const angle = Math.floor(localVector.fromArray(a.normal).angleTo(forwardVector) * snapAngle) / snapAngle;
+      // return angle;
+      return zAngle;
+    }
     const snappedAngleSets = [];
-    for (let angle = Math.PI / 16; angle < Math.PI / 2; angle *= 2) {      
+    for (let angle = -Math.PI / 2; angle <= Math.PI / 2; angle += snapAngle) {
       const set = new Set();
       snappedAngleSets.push(set);
 
-      const nextAngle = angle * 2;
       for (const labelSpec of labelSpecs) {
-        const snappedAngle = _getSnappedUpAngle(labelSpec);
-        if (snappedAngle >= angle && snappedAngle < nextAngle) {
+        const planeAngle = _getForwardAngle(labelSpec);
+        if (planeAngle >= angle - snapAngle/2 && planeAngle <= angle + snapAngle/2) {
           set.add(labelSpec.index);
         }
       }
     }
     // sort the sets by size
-    snappedAngleSets.sort((a, b) => b.size - a.size);
+    const _reduceSetToNumPixels = set => Array.from(set).reduce((sum, e) => sum + e.numPixels, 0);
+    snappedAngleSets.sort((a, b) => _reduceSetToNumPixels(b) - _reduceSetToNumPixels(a));
     labelSpecs.sort((a, b) => {
       const aSnappedAngleSetIndex = snappedAngleSets.findIndex(set => set.has(a.index));
       const bSnappedAngleSetIndex = snappedAngleSets.findIndex(set => set.has(b.index));
@@ -376,10 +385,11 @@ const getFirstFloorPlaneIndex = (/*segmentSpecs, */planeSpecs) => {
           return diff;
         } else {
           return b.numVertices - a.numVertices;
+          // return a.distanceSquaredF - b.distanceSquaredF;
+          // return b.numPixels - a.numPixels;
         }
       }
     });
-    // labelSpecs.sort((a, b) => b.numPixels - a.numPixels);
     const firstFloorPlaneIndex = labelSpecs[0].index;
     return firstFloorPlaneIndex;
   } else {
