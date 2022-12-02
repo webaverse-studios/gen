@@ -3201,8 +3201,8 @@ class PanelRenderer extends EventTarget {
     this.floorNetMesh.enabled = this.tool === 'plane';
     this.floorNetMesh.updateVisibility();
 
-    this.portalMesh.enabled = this.tool === 'portal';
-    this.portalMesh.updateVisibility();
+    this.portalNetMesh.enabled = this.tool === 'portal';
+    this.portalNetMesh.updateVisibility();
 
     this.selector.setTool(this.tool);
     this.overlay.setTool(this.tool);
