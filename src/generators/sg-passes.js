@@ -9,9 +9,10 @@ import {
   pointCloudArrayBufferToGeometry,
   reinterpretFloatImageData,
   clipGeometryZ,
+  getGeometryClipZMask,
 } from '../clients/reconstruction-client.js';
 import {
-  // depthVertexShader,
+  depthVertexShader,
   depthFragmentShader,
 } from '../utils/sg-shaders.js';
 import {
@@ -91,27 +92,33 @@ export function reconstructFloor({
           needsUpdate: true,
         },
       },
-      vertexShader: `\
-        precision highp float;
-        precision highp int;
-      
-        void main() {
-          vec3 p = position;
-          // p.x *= -1.; // we are looking from the bottom, so flip x
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+      vertexShader: depthVertexShader.replace('// HEADER', `\
+        // HEADER
+        attribute float maskZ;
+        varying float vMaskZ;
+      `).replace('// POST', `\
+        // POST
+        vMaskZ = maskZ;
+      `),
+      fragmentShader: depthFragmentShader.replace('// HEADER', `\
+        // HEADER
+        varying float vMaskZ;
+      `).replace('// POST', `\
+        // POST
+        if (vMaskZ < 0.5) {
+          gl_FragColor = vec4(0., 0., 0., 0.);
         }
-      `,
-      fragmentShader: depthFragmentShader,
-      side: THREE.DoubleSide,
+      `),
+      side: THREE.BackSide,
+      blending: THREE.NoBlending,
     });
-    // console.log('render geometries', geometries);
     for (const renderSpec of renderSpecs) {
       const {geometry, width, height, depthFloat32Array} = renderSpec;
       const g = geometry.clone();
 
-      clipGeometryZ(g, width, height, depthFloat32Array);
-      // globalThis.g = g;
-      // globalThis.depthFloat32Array = depthFloat32Array;
+      const maskZUint8Array = getGeometryClipZMask(g, width, height, depthFloat32Array);
+      g.setAttribute('maskZ', new THREE.BufferAttribute(maskZUint8Array, 1));
+      globalThis.maskZUint8Array = maskZUint8Array;
 
       const floorNetDepthRenderMesh = new THREE.Mesh(g, floorNetDepthRenderMaterial);
       floorNetDepthRenderMesh.frustumCulled = false;

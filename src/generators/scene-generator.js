@@ -4509,6 +4509,8 @@ async function compileVirtualScene(imageArrayBuffer, width, height/*, camera */)
   }
   console.timeEnd('floorReconstruction');
 
+
+  
   // query the height
   const predictedHeight = await _getPredictedHeight(blob);
   // console.log('got predicted height', predictedHeight);
