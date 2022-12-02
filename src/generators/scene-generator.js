@@ -932,7 +932,7 @@ const getSemanticPlanes = async (img, fov, newDepthFloatImageData, segmentMask) 
         height,
         focalLength,
         newDepthFloatImageData2,
-        20000,
+        10000,
       );
       // console.log('read planes spec', {planesSpec, newDepthFloatImageData2});
       planesJson = planesSpec.planesJson;
@@ -960,7 +960,7 @@ const getSemanticPlanes = async (img, fov, newDepthFloatImageData, segmentMask) 
         height,
         focalLength,
         newDepthFloatImageData2,
-        20000,
+        5000,
       );
       // console.log('read portal spec', {portalSpec, newDepthFloatImageData2});
       portalJson = portalSpec.planesJson;
