@@ -3295,9 +3295,11 @@ class PanelRenderer extends EventTarget {
             break;
           }
           case 'f': {
+            // set the camera to match the scene origin
             this.camera.matrixWorld.copy(defaultCameraMatrix);
             this.camera.matrix.copy(this.camera.matrixWorld)
               .decompose(this.camera.position, this.camera.quaternion, this.camera.scale);
+            
             // set the orbitControls target in front of us
             this.controls.target.copy(this.camera.position)
               .add(this.camera.getWorldDirection(localVector).multiplyScalar(3));
@@ -3306,10 +3308,16 @@ class PanelRenderer extends EventTarget {
             
           }
           case 'c': {
-            const originalCamera = _makeDefaultCamera(); // XXX
-            originalCamera.fov = this.camera.fov;
-            originalCamera.updateProjectionMatrix();
-            this.clip(originalCamera);
+            // compute the clipping camera
+            // const originalCamera = _makeDefaultCamera(); // XXX
+            // originalCamera.matrixWorld.copy(defaultCameraMatrix);
+            // originalCamera.matrix.copy(originalCamera.matrixWorld)
+            //   .decompose(originalCamera.position, originalCamera.quaternion, originalCamera.scale);
+            // originalCamera.fov = this.camera.fov;
+            // originalCamera.updateProjectionMatrix();
+
+            // clip deeply stretched triangles
+            this.clip();
             break;
           }
           /* case 'PageUp': {
@@ -3872,7 +3880,7 @@ class PanelRenderer extends EventTarget {
       editCameraJson,
     };
   }
-  async clip(camera) {
+  async clip() {
     const {geometry} = this.sceneMesh;
 
     const pointCloudArrayBuffer = this.panel.getData('layer1/pointCloud');
@@ -3889,10 +3897,8 @@ class PanelRenderer extends EventTarget {
       for (let ix = 0; ix < gridX; ix++) {
         const x = ix;
         const y = iy;
-        // const y = gridY1 - 1 - iy;
         const x2 = x + 1;
         const y2 = y + 1;
-        // const y2 = gridY1 - 1 - (iy + 1);
 
         const aIndex = y * gridX1 + x;
         const bIndex = y * gridX1 + x2;
@@ -3929,32 +3935,12 @@ class PanelRenderer extends EventTarget {
             geometry.attributes.position.array[index1 * 3 + k] = 0;
           }
 
-          // const indexIndex1 = (x + gridX * y);
-          // const indexIndex2 = (x + gridX * y) + 1;
-
-          // for (let j = 0; j < 9; j++) {
-          //   geometry.attributes.position.array[indexIndex1 * 9 + j] = 0;
-          //   geometry.attributes.position.array[indexIndex2 * 9 + j] = 0;
-
-          //   if (!globalThis.clippedIndices) {
-          //     globalThis.clippedIndices = [];
-          //   }
-          //   globalThis.clippedIndices.push(indexIndex1 * 9 + j);
-          //   globalThis.clippedIndices.push(indexIndex2 * 9 + j);
-          // }
-
           geometry.attributes.position.needsUpdate = true;
         }
       }
     }
   }
   createOutmeshLayer(layerEntries) {
-    // if (!globalThis.outmeshing) {
-    //   globalThis.outmeshing = 1;
-    // } else {
-    //   console.warn('already outmeshing: ' + globalThis.outmeshing);
-    //   debugger;
-    // }
     const _getLayerEntry = key => layerEntries.find(layerEntry => layerEntry.key.endsWith('/' + key))?.value;
     const maskImg = _getLayerEntry('maskImg');
     const editedImg = _getLayerEntry('editedImg');
