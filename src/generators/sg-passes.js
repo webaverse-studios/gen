@@ -150,15 +150,8 @@ export function reconstructFloor({
     );
     floorNetDepths = reinterpretFloatImageData(imageData);
 
-    // const filteredFloorNetDepths = floorNetDepths.filter(n => n !== 0);
-    // if (filteredFloorNetDepths.length > 0) {
-    //   console.log('floor net depths found:', filteredFloorNetDepths.length);
-    // } else {
-    //   console.warn('no floor net depths found', floorNetDepths);
-    //   debugger;
-    // }
-
-    // XXX 
+    const floorBaseDepths = new Float32Array(floorNetPixelSize * floorNetPixelSize)
+      .fill(floorNetCamera.far / 2);
   }
 
   return {

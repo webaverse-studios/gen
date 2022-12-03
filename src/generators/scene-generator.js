@@ -929,28 +929,6 @@ const blockEvent = e => {
   e.preventDefault();
   e.stopPropagation();
 };
-// const _isPointInSkybox = (geometry, i) => geometry.attributes.position.array[i * 3 + 2] > -skyboxDistance;
-// const _cutSkybox = geometry => {
-//   // copy over only the triangles that are all on one side of the skybox bounds
-//   const newIndices = new geometry.index.array.constructor(geometry.index.array.length);
-//   let numIndices = 0;
-//   for (let i = 0; i < geometry.index.count; i += 3) {
-//     const a = geometry.index.array[i + 0];
-//     const b = geometry.index.array[i + 1];
-//     const c = geometry.index.array[i + 2];
-//     const aInSkybox = _isPointInSkybox(geometry, a);
-//     const bInSkybox = _isPointInSkybox(geometry, b);
-//     const cInSkybox = _isPointInSkybox(geometry, c);
-//     if (aInSkybox === bInSkybox && bInSkybox === cInSkybox) {
-//       newIndices[numIndices + 0] = a;
-//       newIndices[numIndices + 1] = b;
-//       newIndices[numIndices + 2] = c;
-//       numIndices += 3;
-//     }
-//   }
-//   // set the new indices
-//   geometry.setIndex(new THREE.BufferAttribute(newIndices.subarray(0, numIndices), 1));
-// };
 const _mergeMask = (geometry, depthFloatImageData, distanceNearestPositions) => {
   // copy over snapped positions
   const newPositions = geometry.attributes.position.array.slice();
@@ -3735,79 +3713,118 @@ class PanelRenderer extends EventTarget {
     // }
     // console.timeEnd('fov');
 
-    // render depth
-    console.time('renderDepth');
-    let depthFloatImageData;
-    {
-      const depthMaterial = new THREE.ShaderMaterial({
-        uniforms: {
-          cameraNear: {
-            value: editCamera.near,
-            needsUpdate: true,
+    const mergeOperator = ({
+      newDepthFloatImageData,
+      oldDepthFloatImageData = null,
+      width,
+      height,
+      camera,
+    }) => {
+      // render depth
+      console.time('renderDepth');
+      if (!oldDepthFloatImageData) {
+        const depthMaterial = new THREE.ShaderMaterial({
+          uniforms: {
+            cameraNear: {
+              value: camera.near,
+              needsUpdate: true,
+            },
+            cameraFar: {
+              value: camera.far,
+              needsUpdate: true,
+            },
+            isPerspective: {
+              value: 1,
+              needsUpdate: true,
+            },
           },
-          cameraFar: {
-            value: editCamera.far,
-            needsUpdate: true,
-          },
-          isPerspective: {
-            value: 1,
-            needsUpdate: true,
-          },
-        },
-        vertexShader: depthVertexShader,
-        fragmentShader: depthFragmentShader,
-      });
-      const depthMesh = this.sceneMesh.clone();
-      depthMesh.name = 'depthMesh';
-      depthMesh.material = depthMaterial;
-      depthMesh.frustumCulled = false;
-      const depthScene = new THREE.Scene();
-      depthScene.autoUpdate = false;
-      depthScene.add(depthMesh);
+          vertexShader: depthVertexShader,
+          fragmentShader: depthFragmentShader,
+        });
+        const depthMesh = this.sceneMesh.clone();
+        depthMesh.name = 'depthMesh';
+        depthMesh.material = depthMaterial;
+        depthMesh.frustumCulled = false;
+        const depthScene = new THREE.Scene();
+        depthScene.autoUpdate = false;
+        depthScene.add(depthMesh);
 
-      const depthRenderTarget = new THREE.WebGLRenderTarget(
-        this.renderer.domElement.width,
-        this.renderer.domElement.height,
-        {
-          type: THREE.UnsignedByteType,
-          format: THREE.RGBAFormat,
-        }
-      );
+        const depthRenderTarget = new THREE.WebGLRenderTarget(
+          width,
+          height,
+          {
+            type: THREE.UnsignedByteType,
+            format: THREE.RGBAFormat,
+          }
+        );
 
-      const _renderOverrideMaterial = (renderTarget) => {
-        this.renderer.setRenderTarget(renderTarget);
-        // this.scene.overrideMaterial = overrideMaterial;
+        const _renderOverrideMaterial = (renderTarget) => {
+          this.renderer.setRenderTarget(renderTarget);
+          // this.scene.overrideMaterial = overrideMaterial;
 
-        this.renderer.clear();
-        this.renderer.render(depthScene, editCamera);
-        
-        // this.scene.overrideMaterial = null;
-        
-        const imageData = {
-          data: new Uint8Array(renderTarget.width * renderTarget.height * 4),
-          width: renderTarget.width,
-          height: renderTarget.height,
+          this.renderer.clear();
+          this.renderer.render(depthScene, camera);
+          
+          // this.scene.overrideMaterial = null;
+          
+          const imageData = {
+            data: new Uint8Array(renderTarget.width * renderTarget.height * 4),
+            width: renderTarget.width,
+            height: renderTarget.height,
+          };
+          this.renderer.readRenderTargetPixels(renderTarget, 0, 0, renderTarget.width, renderTarget.height, imageData.data);
+          this.renderer.setRenderTarget(null);
+          return imageData;
         };
-        this.renderer.readRenderTargetPixels(renderTarget, 0, 0, renderTarget.width, renderTarget.height, imageData.data);
-        this.renderer.setRenderTarget(null);
-        return imageData;
-      };
-      depthFloatImageData = reinterpretFloatImageData(_renderOverrideMaterial(depthRenderTarget)); // viewZ
-    }
-    console.timeEnd('renderDepth');
+        oldDepthFloatImageData = reinterpretFloatImageData(_renderOverrideMaterial(depthRenderTarget)); // viewZ
+      }
+      console.timeEnd('renderDepth');
 
-    // render outline
-    console.time('outline');
+      // render outline
+      console.time('outline');
+      const {
+        distanceFloatImageData,
+        distanceNearestPositions,
+      } = renderJfa({
+        renderer: this.renderer,
+        meshes: [
+          this.sceneMesh,
+        ],
+        camera,
+        maskIndex,
+      });
+      console.timeEnd('outline');
+
+      console.time('depthReconstruction');
+      const reconstructedDepthFloats = renderDepthReconstruction(
+        this.renderer,
+        distanceFloatImageData,
+        oldDepthFloatImageData,
+        newDepthFloatImageData
+      );
+      console.timeEnd('depthReconstruction');
+
+      return {
+        oldDepthFloatImageData,
+        newDepthFloatImageData,
+        distanceFloatImageData,
+        distanceNearestPositions,
+        reconstructedDepthFloats,
+      };
+    };
+
+    // depth reconstruction
     const {
+      oldDepthFloatImageData: depthFloatImageData,
       distanceFloatImageData,
       distanceNearestPositions,
-    } = renderJfa({
-      renderer: this.renderer,
-      meshes: [
-        this.sceneMesh,
-      ],
+      reconstructedDepthFloats,
+    } = mergeOperator({
+      newDepthFloatImageData,
+      oldDepthFloatImageData: null,
+      width: this.renderer.domElement.width,
+      height: this.renderer.domElement.height,
       camera: editCamera,
-      maskIndex,
     });
     {
       const distanceFloatsCanvas = distanceFloats2Canvas(
@@ -3816,18 +3833,7 @@ class PanelRenderer extends EventTarget {
         this.renderer.domElement.height,
       );
       document.body.appendChild(distanceFloatsCanvas);
-    }
-    console.timeEnd('outline');
 
-    // depth reconstruction
-    console.time('depthReconstruction');
-    const reconstructedDepthFloats = renderDepthReconstruction(
-      this.renderer,
-      distanceFloatImageData,
-      depthFloatImageData,
-      newDepthFloatImageData
-    );
-    {
       const reconstructionCanvas = depthFloats2Canvas(
         reconstructedDepthFloats,
         this.renderer.domElement.width,
@@ -3836,7 +3842,6 @@ class PanelRenderer extends EventTarget {
       );
       document.body.appendChild(reconstructionCanvas);
     }
-    console.timeEnd('depthReconstruction');
 
     console.time('floorReconstruction');
     const oldFloorNetDepthRenderGeometry = pointCloudArrayBufferToGeometry(
