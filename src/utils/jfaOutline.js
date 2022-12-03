@@ -417,7 +417,11 @@ const _pushMeshes = (scene, meshes) => {
     for (let i = 0; i < meshes.length; i++) {
       const mesh = meshes[i];
       const originalParent = originalParents[i];
-      originalParent.add(mesh);
+      if (originalParent) {
+        originalParent.add(mesh);
+      } else {
+        scene.remove(mesh);
+      }
     }
   };
 };
