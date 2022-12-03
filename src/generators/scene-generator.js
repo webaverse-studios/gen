@@ -2530,7 +2530,7 @@ class PanelRenderer extends EventTarget {
         color: 0xFF0000,
         transparent: true,
         opacity: 0.7,
-        side: THREE.DoubleSide,
+        side: THREE.BackSide,
       });
 
       const floorNetMesh = new THREE.Mesh(geometry, material);
