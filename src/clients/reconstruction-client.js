@@ -15,6 +15,11 @@ import {
 import {
   panelSize,
 } from '../constants/sg-constants.js';
+import {
+  maskIndex2Canvas,
+  distanceFloats2Canvas,
+  depthFloats2Canvas,
+} from '../generators/sg-debug.js';
 
 //
 
@@ -518,6 +523,31 @@ export const mergeOperator = ({
     newDepthFloatImageData
   );
   console.timeEnd('depthReconstruction');
+
+  // debug canvases
+  {
+    const maskIndexCanvas = maskIndex2Canvas(
+      maskIndex,
+      renderer.domElement.width,
+      renderer.domElement.height,
+    );
+    document.body.appendChild(maskIndexCanvas);
+
+    const distanceFloatsCanvas = distanceFloats2Canvas(
+      distanceFloatImageData,
+      renderer.domElement.width,
+      renderer.domElement.height,
+    );
+    document.body.appendChild(distanceFloatsCanvas);
+
+    const reconstructionCanvas = depthFloats2Canvas(
+      reconstructedDepthFloats,
+      renderer.domElement.width,
+      renderer.domElement.height,
+      camera,
+    );
+    document.body.appendChild(reconstructionCanvas);
+  }
 
   return {
     oldDepthFloatImageData,

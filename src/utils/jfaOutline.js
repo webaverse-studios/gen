@@ -246,6 +246,7 @@ const reconstructionPass = fullScreenPass_1.fullScreenPass(`
 uniform sampler2D distanceTex;
 uniform sampler2D oldNewDepthTexture;
 uniform sampler2D feedbackDepthTexture;
+uniform int range;
 
 void main() {
   vec2 pixelUv = gl_FragCoord.xy;
@@ -270,8 +271,6 @@ void main() {
     float totalDelta = 0.;
 
     {
-      int range = 32;
-
       for (int x = -range; x <= range; x++) {
         for (int y = -range; y <= range; y++) {
           vec2 offset = vec2(float(x), float(y));
@@ -320,9 +319,8 @@ void main() {
     distanceTex: { value: null },
     iResolution: { value: null },
     oldNewDepthTexture: { value: null },
-    minDistance: { value: 1.0 },
-    maxDistance: { value: 2.0 },
     feedbackDepthTexture: { value: null },
+    range: { value: 1 },
 });
 
 //
@@ -376,6 +374,7 @@ export function renderDepthReconstruction(
       iResolution,
       oldNewDepthTexture,
       feedbackDepthTexture: readTarget.texture,
+      range: 32,
     });
     renderer.setRenderTarget(null);
 

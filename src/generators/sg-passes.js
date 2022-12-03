@@ -23,6 +23,9 @@ import {
   floorNetPixelSize,
 } from '../constants/sg-constants.js';
 import {makeRenderer} from '../utils/three-utils.js';
+import {
+  maskIndex2Canvas,
+} from './sg-debug.js';
 
 //
 
@@ -184,10 +187,6 @@ export function reconstructFloor({
       reconstructedDepthFloats,
     } = mergeResult;
     console.log('merge operator 2', mergeResult);
-
-    // globalThis.oldDepthFloatImageData = depthFloatImageData;
-    // globalThis.newDepthFloatImageData = floorPlaneDepths;
-    // globalThis.reconstructedDepthFloats = reconstructedDepthFloats;
 
     floorNetDepths = depthFloatImageData;
     // floorNetDepths = reconstructedDepthFloats;

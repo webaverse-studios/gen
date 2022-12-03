@@ -218,3 +218,5 @@ export const detectronColors = [
   const hex = c.getHex();
   return hex;
 });
+
+export const colors = detectronColors;
