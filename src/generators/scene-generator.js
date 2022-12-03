@@ -3696,16 +3696,16 @@ class PanelRenderer extends EventTarget {
       meshes: [
         this.sceneMesh,
       ],
-      // renderSpecs: [
-      //   this.sceneMesh,
-      // ].map(sceneMesh => {
-      //   const {indexedGeometry} = sceneMesh;
-      //   return {
-      //     geometry: indexedGeometry,
-      //     width: this.renderer.domElement.width,
-      //     height: this.renderer.domElement.height,
-      //   };
-      // }),
+      renderSpecs: [
+        this.sceneMesh,
+      ].map(sceneMesh => {
+        const {indexedGeometry} = sceneMesh;
+        return {
+          geometry: indexedGeometry,
+          width: this.renderer.domElement.width,
+          height: this.renderer.domElement.height,
+        };
+      }),
     });
     {
       const maskIndexCanvas = maskIndex2Canvas(
@@ -4283,7 +4283,29 @@ const mergeOperator = ({
   height,
   camera,
   meshes,
+  renderSpecs,
 }) => {
+  // clipZ
+  renderSpecs = renderSpecs.map(renderSpec => {
+    let {geometry, width, height, clipZ} = renderSpec;
+    if (clipZ) {
+      // geometry = geometry.clone();
+      const depthFloats32Array = getDepthFloatsFromIndexedGeometry(geometry);
+      geometry = geometry.toNonIndexed();
+      const clipZMask = getGeometryClipZMask(geometry, width, height, depthFloats32Array);
+      geometry.setAttribute('maskZ', new THREE.BufferAttribute(clipZMask, 1));
+    } else {
+      geometry = geometry.toNonIndexed();
+    }
+    decorateGeometryTriangleIds(geometry);
+    return {
+      geometry,
+      width,
+      height,
+      clipZ,
+    };
+  });
+
   // canvas
   const canvas = document.createElement('canvas');
   canvas.width = width;
@@ -4293,35 +4315,46 @@ const mergeOperator = ({
   // renderer
   const renderer = makeRenderer(canvas);
 
+  const depthMaterial = new THREE.ShaderMaterial({
+    uniforms: {
+      cameraNear: {
+        value: camera.near,
+        needsUpdate: true,
+      },
+      cameraFar: {
+        value: camera.far,
+        needsUpdate: true,
+      },
+      isPerspective: {
+        value: 1,
+        needsUpdate: true,
+      },
+    },
+    vertexShader: depthVertexShader,
+    fragmentShader: depthFragmentShader,
+  });
+
+  // meshes
+  const meshes2 = renderSpecs.map(renderSpec => {
+    const {geometry} = renderSpec;
+    const material = depthMaterial;
+    const depthMesh = new THREE.Mesh(geometry, material);
+    depthMesh.name = 'depthMesh';
+    depthMesh.frustumCulled = false;
+    return depthMesh;
+  });
+
   // XXX the problem is the depth oldDepthFloatImageData needs to be renderered, rather than extracted from the geometry due to camer angle
   // XXX maybe we can just pass the camera with the renderSpec
   // render depth
   console.time('renderDepth');
   let oldDepthFloatImageData;
   {
-    const depthMaterial = new THREE.ShaderMaterial({
-      uniforms: {
-        cameraNear: {
-          value: camera.near,
-          needsUpdate: true,
-        },
-        cameraFar: {
-          value: camera.far,
-          needsUpdate: true,
-        },
-        isPerspective: {
-          value: 1,
-          needsUpdate: true,
-        },
-      },
-      vertexShader: depthVertexShader,
-      fragmentShader: depthFragmentShader,
-    });
-
     const depthScene = new THREE.Scene();
     depthScene.autoUpdate = false;
-    for (const mesh of meshes) {
-      const depthMesh = mesh.clone();
+    for (const mesh of meshes2) {
+      const {geometry} = mesh;
+      const depthMesh = new THREE.Mesh(geometry, depthMaterial);
       depthMesh.name = 'depthMesh';
       depthMesh.material = depthMaterial;
       depthMesh.frustumCulled = false;
@@ -4359,7 +4392,7 @@ const mergeOperator = ({
   // render mask index
   const maskIndex = renderMaskIndex({
     renderer,
-    meshes,
+    meshes: meshes2,
     camera,
   });
 
@@ -4370,7 +4403,7 @@ const mergeOperator = ({
     distanceNearestPositions,
   } = renderJfa({
     renderer,
-    meshes,
+    meshes: meshes2,
     camera,
     maskIndex,
   });
