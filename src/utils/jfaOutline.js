@@ -262,7 +262,10 @@ void main() {
   float localOldDepth = localRgba.r;
   float localNewDepth = localRgba.g;
 
-  if (d < 0.000001) { // if this is an initial pixel, just write the old depth
+  feedbackRgba.a = 1.;
+
+  const float eps = 0.000001;
+  if (d < eps) { // if this is an initial pixel, just write the old depth
     feedbackRgba.r = localOldDepth;
   } else { // else if this is a feedback pixel, derive new depth
     // resample around the nearest distance
@@ -276,7 +279,7 @@ void main() {
           vec2 offset = vec2(float(x), float(y));
 
           vec2 pixelUv2 = pixelUv + offset;
-          if (pixelUv2.x >= 0. && pixelUv2.x < iResolution.x && pixelUv2.y >= 0. && pixelUv2.y < iResolution.y) {
+          // if (pixelUv2.x >= 0. && pixelUv2.x < iResolution.x && pixelUv2.y >= 0. && pixelUv2.y < iResolution.y) {
             // vec2 pixelUv3 = min(max(pixelUv2, vec2(0.)), iResolution - 1.);
             // vec2 uv2 = pixelUv3 / iResolution;
             vec2 uv2 = pixelUv2 / iResolution;
@@ -294,20 +297,25 @@ void main() {
             vec4 remoteRgba = texture2D(oldNewDepthTexture, remoteUv);
             float remoteOldDepth = remoteRgba.r;
             float remoteNewDepth = remoteRgba.g;
+            float remoteOldExists = remoteRgba.b;
+            float remoteNewExists = remoteRgba.a;
 
-            // compute the predicted depth:
-            float delta = remoteOldDepth - remoteNewDepth;
+            // if (remoteOldExists >= 0.5 && abs(remoteOldDepth) > eps) {
+            if (abs(remoteOldDepth) > eps) {
+              // compute the predicted depth:
+              float delta = remoteOldDepth - remoteNewDepth;
 
-            float weight = mix(1., 0., length(offset) / float(range));
+              float weight = mix(1., 0., length(offset) / float(range));
 
-            sumDelta += delta * weight;
-            totalDelta += 1.;
-          }
+              sumDelta += delta * weight;
+              totalDelta += weight;
+            }
+          // }
         }
       }
-      // if (totalDelta != 0.) {
+      if (totalDelta != 0.) {
         sumDelta /= totalDelta;
-      // }
+      }
     }
 
     feedbackRgba.r = localNewDepth + sumDelta;
@@ -341,6 +349,7 @@ export function makeFloatRenderTargetSwapChain(width, height) {
 
 export function renderDepthReconstruction(
   renderer,
+  maskIndex,
   distanceFloatImageData,
   oldDepthFloats,
   newDepthFloats
@@ -357,6 +366,8 @@ export function renderDepthReconstruction(
   for (let i = 0; i < oldDepthFloats.length; i++) {
     oldNewDepthTextureData[i * 4] = oldDepthFloats[i];
     oldNewDepthTextureData[i * 4 + 1] = newDepthFloats[i];
+    oldNewDepthTextureData[i * 4 + 2] = maskIndex[i] !== -1 ? 1 : 0;
+    oldNewDepthTextureData[i * 4 + 3] = 1;
   }
   const oldNewDepthTexture = new three_1.DataTexture(oldNewDepthTextureData, iResolution.x, iResolution.y, three_1.RGBAFormat, three_1.FloatType);
   oldNewDepthTexture.minFilter = three_1.NearestFilter;
@@ -364,18 +375,30 @@ export function renderDepthReconstruction(
   oldNewDepthTexture.flipY = true;
   oldNewDepthTexture.needsUpdate = true;
 
+  globalThis.oldNewDepthTexture = oldNewDepthTexture;
+
   const _render = () => {
     const readTarget = targets[0];
     const writeTarget = targets[1];
 
+    const _render2 = () => {
+      reconstructionPass(renderer, {
+        distanceTex,
+        iResolution,
+        oldNewDepthTexture,
+        feedbackDepthTexture: readTarget.texture,
+        range: 4,
+      });
+    };
+
+    // render to canvas
+    renderer.setRenderTarget(null);
+    renderer.clear();
+    _render2();
+
+    // render to render target
     renderer.setRenderTarget(writeTarget);
-    reconstructionPass(renderer, {
-      distanceTex,
-      iResolution,
-      oldNewDepthTexture,
-      feedbackDepthTexture: readTarget.texture,
-      range: 32,
-    });
+    _render2();
     renderer.setRenderTarget(null);
 
     // swap targets
@@ -478,6 +501,7 @@ export function renderMaskIndex({
     // fIndex -= g * 256.0;
     // float b = fIndex;
     maskIndex = new Int32Array(renderer.domElement.width * renderer.domElement.height);
+    maskIndex.fill(-1);
     for (let y = 0; y < renderer.domElement.height; y++) {
       for (let x = 0; x < renderer.domElement.width; x++) {
         const i = y * renderer.domElement.width + x;

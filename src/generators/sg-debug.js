@@ -14,7 +14,7 @@ const localColor = new THREE.Color();
 
 //
 
-export const depthFloats2Canvas = (depthFloats, width, height, camera) => {
+export const depthFloats2Canvas = (depthFloats, width, height, camera, scale = 30) => {
   const canvas = document.createElement('canvas');
   canvas.classList.add('reconstructionCanvas');
   canvas.width = width;
@@ -33,11 +33,11 @@ export const depthFloats2Canvas = (depthFloats, width, height, camera) => {
     const worldPoint = setCameraViewPositionFromViewZ(px, py, viewZ, camera, localVector);
 
     const index = y * canvas.width + x;
-    data[index*4 + 0] = -worldPoint.z / 30 * 255;
+    data[index*4 + 0] = -worldPoint.z / scale * 255;
     data[index*4 + 1] = 0;
     data[index*4 + 2] = 0;
     data[index*4 + 3] = 255;
-  }65
+  }
   context.putImageData(imageData, 0, 0);
   return canvas;
 };
@@ -65,7 +65,7 @@ export const distanceFloats2Canvas = (distanceFloatImageData, width, height) => 
     const expectedPoint = new THREE.Vector2(x, y);
     const realPoint = new THREE.Vector2(r, g);
     const d = realPoint.distanceTo(expectedPoint);
-    const f = Math.max(1 - d / 512, 0);
+    const f = Math.max(1 - d / canvas.width, 0);
 
     // flip y
     const index = (canvas.height - y - 1) * canvas.width + x;

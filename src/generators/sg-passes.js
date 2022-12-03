@@ -40,6 +40,7 @@ const localQuaternion = new THREE.Quaternion();
 
 export function reconstructFloor({
   renderSpecs,
+  floorPlane,
 }) {
   // camera
   const floorNetCamera = new THREE.OrthographicCamera(
@@ -58,6 +59,22 @@ export function reconstructFloor({
   floorNetCamera.updateMatrixWorld();
 
   const floorNetCameraJson = getOrthographicCameraJson(floorNetCamera);
+
+
+
+
+
+
+
+  // XXX actually use the passed-in floorPlane to bound the floor
+  console.log('got floor plane', floorPlane.clone());
+
+
+
+
+
+
+
 
   let floorNetDepths;
   {
@@ -159,10 +176,17 @@ export function reconstructFloor({
 
 
 
+    // const mergeResult = mergePlaneOperator({
+    //   newDepthFloatImageData: floorPlaneDepths,
+    //   width: floorNetPixelSize,
+    //   height: floorNetPixelSize,
+    //   camera: floorNetCamera,
+    //   renderSpecs,
+    // });
 
     // merge depths
     const floorPlaneDepths = new Float32Array(floorNetPixelSize * floorNetPixelSize)
-      .fill(floorNetCamera.far / 2);
+      .fill(-floorNetCamera.far / 2);
 
     console.log('merge operator 1', {
       newDepthFloatImageData: floorPlaneDepths,

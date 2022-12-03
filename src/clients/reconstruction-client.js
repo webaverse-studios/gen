@@ -479,8 +479,8 @@ export const mergeOperator = ({
     // read back image data
     const imageData = {
       data: new Uint8Array(depthRenderTarget.width * depthRenderTarget.height * 4),
-      width: depthRenderTarget.width,
-      height: depthRenderTarget.height,
+      width,
+      height,
     };
     renderer.readRenderTargetPixels(depthRenderTarget, 0, 0, depthRenderTarget.width, depthRenderTarget.height, imageData.data);
 
@@ -518,33 +518,39 @@ export const mergeOperator = ({
   console.time('depthReconstruction');
   const reconstructedDepthFloats = renderDepthReconstruction(
     renderer,
+    maskIndex,
     distanceFloatImageData,
     oldDepthFloatImageData,
     newDepthFloatImageData
   );
+  globalThis.distanceFloatImageData = distanceFloatImageData;
+  globalThis.oldDepthFloatImageData = oldDepthFloatImageData;
+  globalThis.newDepthFloatImageData = newDepthFloatImageData;
+  globalThis.reconstructedDepthFloats = reconstructedDepthFloats;
   console.timeEnd('depthReconstruction');
 
   // debug canvases
   {
     const maskIndexCanvas = maskIndex2Canvas(
       maskIndex,
-      renderer.domElement.width,
-      renderer.domElement.height,
+      width,
+      height,
     );
     document.body.appendChild(maskIndexCanvas);
 
     const distanceFloatsCanvas = distanceFloats2Canvas(
       distanceFloatImageData,
-      renderer.domElement.width,
-      renderer.domElement.height,
+      width,
+      height,
     );
     document.body.appendChild(distanceFloatsCanvas);
 
     const reconstructionCanvas = depthFloats2Canvas(
       reconstructedDepthFloats,
-      renderer.domElement.width,
-      renderer.domElement.height,
+      width,
+      height,
       camera,
+      camera.far,
     );
     document.body.appendChild(reconstructionCanvas);
   }

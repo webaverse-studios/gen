@@ -165,6 +165,26 @@ export const layer1Specs = [
     type: 'json',
   },
   {
+    name: 'segmentSpecs',
+    type: 'json',
+  },
+  {
+    name: 'planeSpecs',
+    type: 'json',
+  },
+  {
+    name: 'portalSpecs',
+    type: 'json',
+  },
+  {
+    name: 'firstFloorPlaneIndex',
+    type: 'json',
+  },
+  {
+    name: 'floorPlaneJson',
+    type: 'json',
+  },
+  {
     name: 'floorNetDepths',
     type: 'arrayBuffer',
   },
@@ -479,13 +499,35 @@ const normalToQuaternion = (() => {
   return (normal, quaternion, up) => {
     return quaternion.setFromRotationMatrix(
       localMatrix.lookAt(
-        localVector.set(0, 0, 0),
         normal,
+        localVector.set(0, 0, 0),
         up
       )
     );
   };
 })();
+
+//
+
+const getSemanticSpecs = ({
+  geometry,
+  segmentMask,
+  planesMask,
+  planesJson,
+  portalJson,
+  width,
+  height,
+}) => {
+  const segmentSpecs = getMaskSpecsByConnectivity(geometry, segmentMask, width, height);
+  let planeSpecs = getMaskSpecsByValue(geometry, planesMask, width, height);
+  planeSpecs = zipPlanesSegmentsJson(planeSpecs, planesJson);
+  const portalSpecs = getMaskSpecsByMatch(portalJson, segmentMask, categoryClassIndices.portal, width, height);
+  return {
+    segmentSpecs,
+    planeSpecs,
+    portalSpecs,
+  };
+};
 
 //
 
@@ -912,7 +954,7 @@ const planeArrowGeometry = (() => {
     bevelEnabled: false,
   });
   geometry.translate(0, 1, 0);
-  geometry.rotateX(Math.PI / 2);
+  geometry.rotateX(-Math.PI / 2);
   const s = 0.1;
   geometry.scale(s, s, s);
 
@@ -2254,6 +2296,10 @@ class PanelRenderer extends EventTarget {
     const planesJson = panel.getData('layer1/planesJson');
     const planesMask = panel.getData('layer1/planesMask');
     const portalJson = panel.getData('layer1/portalJson');
+    const segmentSpecs = panel.getData('layer1/segmentSpecs');
+    const planeSpecs = panel.getData('layer1/planeSpecs');
+    const portalSpecs = panel.getData('layer1/portalSpecs');
+    const firstFloorPlaneIndex = panel.getData('layer1/firstFloorPlaneIndex');
     const floorNetDepths = panel.getData('layer1/floorNetDepths');
     const floorNetCameraJson = panel.getData('layer1/floorNetCameraJson');
     const predictedHeight = panel.getData('layer1/predictedHeight');
@@ -2266,39 +2312,23 @@ class PanelRenderer extends EventTarget {
     const floorNetCamera = setOrthographicCameraFromJson(localOrthographicCamera, floorNetCameraJson).clone();
 
     // scene mesh
-    // const widthSegments = this.canvas.width - 1;
-    // const heightSegments = this.canvas.height - 1;
-    // let geometry = new THREE.PlaneGeometry(1, 1, widthSegments, heightSegments);
     let geometry = pointCloudArrayBufferToGeometry(
       pointCloudArrayBuffer,
       this.canvas.width,
       this.canvas.height,
     );
-    // geometry.setAttribute('color', new THREE.BufferAttribute(new Uint8Array(pointCloudArrayBuffer.byteLength / pointcloudStride * 3), 3, true));
-    // pointCloudArrayBufferToColorAttributeArray(labelImageData, geometry.attributes.color.array);
-    // _cutSkybox(geometry);
-    // applySkybox(geometry.attributes.position.array);
-    const segmentSpecs = getMaskSpecsByConnectivity(geometry, segmentMask, this.canvas.width, this.canvas.height);
-    let planeSpecs = getMaskSpecsByValue(geometry, planesMask, this.canvas.width, this.canvas.height);
-    planeSpecs = zipPlanesSegmentsJson(planeSpecs, planesJson);
-    const portalSpecs = getMaskSpecsByMatch(portalJson, segmentMask, categoryClassIndices.portal, this.canvas.width, this.canvas.height);
     geometry.setAttribute('segment', new THREE.BufferAttribute(segmentSpecs.array, 1));
     geometry.setAttribute('segmentColor', new THREE.BufferAttribute(segmentSpecs.colorArray, 3));
     geometry.setAttribute('plane', new THREE.BufferAttribute(planeSpecs.array, 1));
     geometry.setAttribute('planeColor', new THREE.BufferAttribute(planeSpecs.colorArray, 3));
     // geometry.setAttribute('portal', new THREE.BufferAttribute(portalSpecs.array, 1));
     geometry.setAttribute('portalColor', new THREE.BufferAttribute(portalSpecs.colorArray, 3));
-    // globalThis.segmentMask = segmentMask;
-    // globalThis.portalClasses = categoryClassIndices.portal;
-    // globalThis.portalIndices = categories.portal;
-    // globalThis.portalSpecs = portalSpecs;
     const indexedGeometry = geometry;
     geometry = geometry.toNonIndexed();
     decorateGeometryTriangleIds(geometry);
 
     //
 
-    const firstFloorPlaneIndex = getFirstFloorPlaneIndex(planeSpecs); // XXX if there are no floor planes, we need to check for walls
     if (firstFloorPlaneIndex === -1) {
       console.warn('no floor plane found', new Error().stack);
     } else {
@@ -2310,10 +2340,9 @@ class PanelRenderer extends EventTarget {
       normalToQuaternion(normal, this.avatar.quaternion, backwardVector)
         // .invert()
         .multiply(localQuaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI/2))
-        .multiply(localQuaternion.setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI));
+        // .multiply(localQuaternion.setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI));
       this.avatar.updateMatrixWorld();
     }
-    
 
     //
 
@@ -3160,8 +3189,8 @@ class PanelRenderer extends EventTarget {
               //       localQuaternion2.setFromAxisAngle(localVector.set(1, 0, 0), -Math.PI/2)
               //     )
               // );
-              .premultiply(localQuaternion.setFromAxisAngle(localVector.set(1, 0, 0), -Math.PI/2))
-              .premultiply(localQuaternion.setFromAxisAngle(localVector.set(0, 1, 0), Math.PI))
+              .premultiply(localQuaternion.setFromAxisAngle(localVector.set(1, 0, 0), Math.PI/2))
+              // .premultiply(localQuaternion.setFromAxisAngle(localVector.set(0, 1, 0), Math.PI));
             this.sceneMesh.updateMatrixWorld();
 
             defaultCameraMatrix.copy(this.sceneMesh.matrixWorld);
@@ -3376,9 +3405,11 @@ class PanelRenderer extends EventTarget {
     editCameraJson,
   }) {
     const oldPointCloudArrayBuffer = this.panel.getData('layer1/pointCloud');
+    const floorPlaneJson = this.panel.getData('layer1/floorPlaneJson');
 
-    // extract cameras
+    // reify objects
     const editCamera = setPerspectiveCameraFromJson(localCamera, editCameraJson).clone();
+    const floorPlane = new THREE.Plane(localVector.fromArray(floorPlaneJson.normal), floorPlaneJson.constant)
 
     // extract image array buffers
     let maskImgArrayBuffer;
@@ -3522,13 +3553,14 @@ class PanelRenderer extends EventTarget {
       width: this.renderer.domElement.width,
       height: this.renderer.domElement.height,
       camera: editCamera,
-      // meshes: [
-      //   this.sceneMesh,
-      // ],
       renderSpecs: [
         this.sceneMesh,
       ].map(sceneMesh => {
         const {indexedGeometry} = sceneMesh;
+        // if (!indexedGeometry) {
+        //   console.warn('no indexed geometry', sceneMesh);
+        //   debugger;
+        // }
         return {
           geometry: indexedGeometry,
           width: this.renderer.domElement.width,
@@ -3572,6 +3604,8 @@ class PanelRenderer extends EventTarget {
       this.renderer.domElement.height,
       editCamera,
     );
+    globalThis.oldFloorNetDepthRenderGeometry = oldFloorNetDepthRenderGeometry;
+    globalThis.newFloorNetDepthRenderGeometry = newFloorNetDepthRenderGeometry;
     const {
       floorNetDepths,
       floorNetCameraJson,
@@ -3590,9 +3624,8 @@ class PanelRenderer extends EventTarget {
           clipZ: true,
         },
       ],
+      floorPlane,
     });
-    globalThis.oldFloorNetDepthRenderGeometry = oldFloorNetDepthRenderGeometry;
-    globalThis.newFloorNetDepthRenderGeometry = newFloorNetDepthRenderGeometry;
     console.timeEnd('floorReconstruction');
 
     // return result
@@ -3742,13 +3775,23 @@ class PanelRenderer extends EventTarget {
         editCamera,
       );
       _mergeMask(geometry, depthFloatImageData, distanceNearestPositions);
-      /* if (!segmentMask) {
-        console.warn('missing segment mask 2', segmentMask);
-        debugger;
-      } */
-      const segmentSpecs = getMaskSpecsByConnectivity(geometry, segmentMask, this.canvas.width, this.canvas.height);
-      let planeSpecs = getMaskSpecsByValue(geometry, planesMask, this.canvas.width, this.canvas.height);
-      planeSpecs = zipPlanesSegmentsJson(planeSpecs, planesJson);
+      // const segmentSpecs = getMaskSpecsByConnectivity(geometry, segmentMask, this.canvas.width, this.canvas.height);
+      // let planeSpecs = getMaskSpecsByValue(geometry, planesMask, this.canvas.width, this.canvas.height);
+      // planeSpecs = zipPlanesSegmentsJson(planeSpecs, planesJson);
+      const semanticSpecs = getSemanticSpecs({
+        geometry,
+        segmentMask,
+        planesMask,
+        planesJson,
+        portalJson,
+        width: this.canvas.width,
+        height: this.canvas.height,
+      });
+      const {
+        segmentSpecs,
+        planeSpecs,
+        portalSpecs,
+      } = semanticSpecs;
       // geometry.setAttribute('segment', new THREE.BufferAttribute(segmentSpecs.array, 1));
       // geometry.setAttribute('segmentColor', new THREE.BufferAttribute(segmentSpecs.colorArray, 3));
       // geometry.setAttribute('plane', new THREE.BufferAttribute(planeSpecs.array, 1));
@@ -4217,12 +4260,42 @@ async function compileVirtualScene(imageArrayBuffer, width, height/*, camera */)
   // }
   // console.timeEnd('snapPointCloud');
 
-  // XXX snapshot from below the floor plane
-  // const firstFloorPlaneIndex = getFirstFloorPlaneIndex({
-  //   labels: planesJson,
-  // });
-  // const firstFloorPlane = planesJson[firstFloorPlaneIndex];
-  
+  const geometry = pointCloudArrayBufferToGeometry(pointCloudArrayBuffer, img.width, img.height);
+  const semanticSpecs = getSemanticSpecs({
+    geometry,
+    segmentMask,
+    planesMask,
+    planesJson,
+    portalJson,
+    width: img.width,
+    height: img.height,
+  });
+  const {
+    segmentSpecs,
+    planeSpecs,
+    portalSpecs,
+  } = semanticSpecs;
+
+  const floorPlane = new THREE.Plane()
+    .setFromNormalAndCoplanarPoint(
+      localVector.set(0, 1, 0),
+      localVector2.set(0, 0, 0)
+    );
+  const firstFloorPlaneIndex = getFirstFloorPlaneIndex(planeSpecs);
+  globalThis.labels = planeSpecs.labels;
+  if (firstFloorPlaneIndex !== -1) {
+    const labelSpec = planeSpecs.labels[firstFloorPlaneIndex];
+    const {normal, center} = labelSpec;
+    floorPlane.setFromNormalAndCoplanarPoint(
+      localVector.fromArray(normal),
+      localVector2.fromArray(center)
+    );
+  }
+  const floorPlaneJson = {
+    normal: floorPlane.normal.toArray(),
+    constant: floorPlane.constant,
+  };
+
   console.time('floorReconstruction');
   let floorNetDepths;
   let floorNetCameraJson;
@@ -4237,13 +4310,12 @@ async function compileVirtualScene(imageArrayBuffer, width, height/*, camera */)
           clipZ: true,
         },
       ],
+      floorPlane,
     });
     floorNetDepths = floorSpec.floorNetDepths;
     floorNetCameraJson = floorSpec.floorNetCameraJson;
   }
   console.timeEnd('floorReconstruction');
-
-
   
   // query the height
   const predictedHeight = await _getPredictedHeight(blob);
@@ -4252,14 +4324,16 @@ async function compileVirtualScene(imageArrayBuffer, width, height/*, camera */)
   // return result
   return {
     segmentMask,
-    // labelImageData,
     pointCloudHeaders,
     pointCloud: pointCloudArrayBuffer,
-    // boundingBoxLayers,
-    // planeMatrices,
     planesJson,
     planesMask,
     portalJson,
+    segmentSpecs,
+    planeSpecs,
+    portalSpecs,
+    firstFloorPlaneIndex,
+    floorPlaneJson,
     floorNetDepths,
     floorNetCameraJson,
     predictedHeight,
@@ -4386,14 +4460,11 @@ export class Panel extends EventTarget {
   async compile() {
     await this.task(async ({signal}) => {
       const imageArrayBuffer = this.getData(mainImageKey);
-      const camera = _makeDefaultCamera();
       const compileResult = await compileVirtualScene(
         imageArrayBuffer,
         panelSize,
         panelSize,
-        // camera
       );
-      // console.log('got compile result', compileResult);
 
       for (const {name, type} of layer1Specs) {
         this.setData('layer1/' + name, compileResult[name], type);
