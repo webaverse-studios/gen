@@ -3693,9 +3693,9 @@ class PanelRenderer extends EventTarget {
       width: this.renderer.domElement.width,
       height: this.renderer.domElement.height,
       camera: editCamera,
-      meshes: [
-        this.sceneMesh,
-      ],
+      // meshes: [
+      //   this.sceneMesh,
+      // ],
       renderSpecs: [
         this.sceneMesh,
       ].map(sceneMesh => {
@@ -4282,7 +4282,7 @@ const mergeOperator = ({
   width,
   height,
   camera,
-  meshes,
+  // meshes,
   renderSpecs,
 }) => {
   // clipZ
@@ -4335,7 +4335,7 @@ const mergeOperator = ({
   });
 
   // meshes
-  const meshes2 = renderSpecs.map(renderSpec => {
+  const meshes = renderSpecs.map(renderSpec => {
     const {geometry} = renderSpec;
     const material = depthMaterial;
     const depthMesh = new THREE.Mesh(geometry, material);
@@ -4352,7 +4352,7 @@ const mergeOperator = ({
   {
     const depthScene = new THREE.Scene();
     depthScene.autoUpdate = false;
-    for (const mesh of meshes2) {
+    for (const mesh of meshes) {
       const {geometry} = mesh;
       const depthMesh = new THREE.Mesh(geometry, depthMaterial);
       depthMesh.name = 'depthMesh';
@@ -4392,7 +4392,7 @@ const mergeOperator = ({
   // render mask index
   const maskIndex = renderMaskIndex({
     renderer,
-    meshes: meshes2,
+    meshes,
     camera,
   });
 
@@ -4403,7 +4403,7 @@ const mergeOperator = ({
     distanceNearestPositions,
   } = renderJfa({
     renderer,
-    meshes: meshes2,
+    meshes,
     camera,
     maskIndex,
   });
