@@ -1,5 +1,20 @@
 import * as THREE from 'three';
 import materialColors from '../constants/material-colors.js';
+import {
+  renderMaskIndex,
+  renderJfa,
+  renderDepthReconstruction,
+} from '../utils/jfaOutline.js';
+import {
+  makeRenderer,
+} from '../utils/three-utils.js';
+import {
+  depthVertexShader,
+  depthFragmentShader,
+} from '../utils/sg-shaders.js';
+import {
+  panelSize,
+} from '../constants/sg-constants.js';
 
 //
 
@@ -230,6 +245,22 @@ export function depthFloat32ArrayToHeightfield(
 
 //
 
+export const getGepthFloatsFromGeometryPositions = geometryPositions => {
+  const newDepthFloatImageData = new Float32Array(geometryPositions.length / 3);
+  for (let i = 0; i < newDepthFloatImageData.length; i++) {
+    newDepthFloatImageData[i] = geometryPositions[i * 3 + 2];
+  }
+  return newDepthFloatImageData;
+};
+export const getDepthFloatsFromPointCloud = pointCloudArrayBuffer => {
+  const geometryPositions = new Float32Array(panelSize * panelSize * 3);
+  pointCloudArrayBufferToPositionAttributeArray(pointCloudArrayBuffer, panelSize, panelSize, geometryPositions);
+  return getGepthFloatsFromGeometryPositions(geometryPositions);
+};
+export const getDepthFloatsFromIndexedGeometry = geometry => getGepthFloatsFromGeometryPositions(geometry.attributes.position.array);
+
+//
+
 export function getGeometryClipZMask(geometry, width, height, depthFloats32Array) {
   const clipZMask = new Uint8Array(geometry.attributes.position.array.length / 3).fill(255);
 
@@ -290,12 +321,7 @@ export function getGeometryClipZMask(geometry, width, height, depthFloats32Array
 
   return clipZMask;
 }
-export function clipGeometryZ(geometry, width, height, depthFloats32Array) {
-  const clipZMask = getGeometryClipZMask(geometry, width, height, depthFloats32Array);
-  // if (clipZMask.length !== geometry.attributes.position.array.length) {
-  //   console.warn('wrong length', clipZMask, geometry.attributes.position.array);
-  //   debugger;
-  // }
+export function applyGeometryClipZMask(geometry, clipZMask) {
   for (let i = 0; i < clipZMask.length; i++) {
     if (clipZMask[i] === 0) {
       const baseIndex = i * 3;
@@ -306,6 +332,189 @@ export function clipGeometryZ(geometry, width, height, depthFloats32Array) {
   }
   geometry.attributes.position.needsUpdate = true;
 }
+export function clipGeometryZ(geometry, width, height, depthFloats32Array) {
+  const clipZMask = getGeometryClipZMask(geometry, width, height, depthFloats32Array);
+  // if (clipZMask.length !== geometry.attributes.position.array.length) {
+  //   console.warn('wrong length', clipZMask, geometry.attributes.position.array);
+  //   debugger;
+  // }
+  applyGeometryClipZMask(geometry, clipZMask);
+}
+
+//
+
+export const mergeOperator = ({
+  newDepthFloatImageData,
+  width,
+  height,
+  camera,
+  renderSpecs,
+}) => {
+  // clipZ
+  renderSpecs = renderSpecs.map(renderSpec => {
+    let {geometry, width, height, clipZ} = renderSpec;
+    if (clipZ) {
+      // geometry = geometry.clone();
+      const depthFloats32Array = getDepthFloatsFromIndexedGeometry(geometry);
+      geometry = geometry.toNonIndexed();
+      const clipZMask = getGeometryClipZMask(geometry, width, height, depthFloats32Array);
+      geometry.setAttribute('maskZ', new THREE.BufferAttribute(clipZMask, 1));
+    } else {
+      geometry = geometry.toNonIndexed();
+    }
+    return {
+      geometry,
+      clipZ,
+    };
+  });
+
+  // canvas
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  canvas.classList.add('mergeCanvas');
+  document.body.appendChild(canvas);
+
+  // renderer
+  const renderer = makeRenderer(canvas);
+
+  // render depth
+  console.time('renderDepth');
+  let oldDepthFloatImageData;
+  const meshes = [];
+  {
+    const depthScene = new THREE.Scene();
+    depthScene.autoUpdate = false;
+    for (const renderSpec of renderSpecs) {
+      const {geometry, clipZ} = renderSpec;
+      
+      let vertexShader = depthVertexShader;
+      let fragmentShader = depthFragmentShader;
+      let side = THREE.FrontSide;
+      if (clipZ) {
+        vertexShader = vertexShader.replace('// HEADER', `\
+          // HEADER
+          attribute float maskZ;
+          varying float vMaskZ;
+        `).replace('// POST', `\
+          // POST
+          vMaskZ = maskZ;
+        `);
+        fragmentShader = fragmentShader.replace('// HEADER', `\
+          // HEADER
+          varying float vMaskZ;
+        `).replace('// POST', `\
+          // POST
+          if (vMaskZ < 0.5) {
+            gl_FragColor = vec4(0., 0., 0., 0.);
+          }
+        `);
+        side = THREE.BackSide;
+      }
+      const material = new THREE.ShaderMaterial({
+        uniforms: {
+          cameraNear: {
+            value: camera.near,
+            needsUpdate: true,
+          },
+          cameraFar: {
+            value: camera.far,
+            needsUpdate: true,
+          },
+          isPerspective: {
+            value: +camera.isPerspectiveCamera,
+            needsUpdate: true,
+          },
+        },
+        vertexShader,
+        fragmentShader,
+        side,
+      });
+      
+      const depthMesh = new THREE.Mesh(geometry, material);
+      depthMesh.name = 'depthMesh';
+      depthMesh.frustumCulled = false;
+      depthScene.add(depthMesh);
+      meshes.push(depthMesh);
+    }
+
+    // render target
+    const depthRenderTarget = new THREE.WebGLRenderTarget(
+      width,
+      height,
+      {
+        type: THREE.UnsignedByteType,
+        format: THREE.RGBAFormat,
+      }
+    );
+
+    // render
+    // render to the canvas, for debugging
+    renderer.render(depthScene, camera);
+
+    // real render to the render target
+    renderer.setRenderTarget(depthRenderTarget);
+    // renderer.clear();
+    renderer.render(depthScene, camera);
+    renderer.setRenderTarget(null);
+    
+    // read back image data
+    const imageData = {
+      data: new Uint8Array(depthRenderTarget.width * depthRenderTarget.height * 4),
+      width: depthRenderTarget.width,
+      height: depthRenderTarget.height,
+    };
+    renderer.readRenderTargetPixels(depthRenderTarget, 0, 0, depthRenderTarget.width, depthRenderTarget.height, imageData.data);
+
+    // latch rendered depth data
+    oldDepthFloatImageData = reinterpretFloatImageData(imageData); // viewZ
+  }
+  console.timeEnd('renderDepth');
+
+  // render mask index
+  console.log('render mask index', {
+    renderer,
+    renderSpecs,
+    meshes,
+    camera,
+  });
+  const maskIndex = renderMaskIndex({
+    renderer,
+    meshes,
+    camera,
+  });
+
+  // render outline
+  console.time('outline');
+  const {
+    distanceFloatImageData,
+    distanceNearestPositions,
+  } = renderJfa({
+    renderer,
+    meshes,
+    camera,
+    maskIndex,
+  });
+  console.timeEnd('outline');
+
+  console.time('depthReconstruction');
+  const reconstructedDepthFloats = renderDepthReconstruction(
+    renderer,
+    distanceFloatImageData,
+    oldDepthFloatImageData,
+    newDepthFloatImageData
+  );
+  console.timeEnd('depthReconstruction');
+
+  return {
+    oldDepthFloatImageData,
+    newDepthFloatImageData,
+    maskIndex,
+    distanceFloatImageData,
+    distanceNearestPositions,
+    reconstructedDepthFloats,
+  };
+};
 
 //
 
