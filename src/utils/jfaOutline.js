@@ -515,10 +515,10 @@ export function renderJfa({
   camera,
   maskIndex,
 }) {
-  if (meshes.length !== 1) { // supporting more would require per-mesh indexing
-    console.warn('renderJfa currently only supports one mesh');
-    debugger;
-  }
+  // if (meshes.length !== 1) { // supporting more would require per-mesh indexing
+  //   console.warn('renderJfa currently only supports one mesh');
+  //   debugger;
+  // }
 
   const iResolution = new three_1.Vector2(renderer.domElement.width, renderer.domElement.height);
   
@@ -541,10 +541,10 @@ export function renderJfa({
 
   // accumulate distance nearest positions
   const distanceNearestPositions = new Float32Array(distanceRenderTarget.width * distanceRenderTarget.height * 3);
-  if (distanceNearestPositions.length / 3 * 4 !== distanceFloatImageData.length) {
-    console.warn('distance positions length mismatch', distanceNearestPositions.length, distanceFloatImageData.length);
-    debugger;
-  }
+  // if (distanceNearestPositions.length / 3 * 4 !== distanceFloatImageData.length) {
+  //   console.warn('distance positions length mismatch', distanceNearestPositions.length, distanceFloatImageData.length);
+  //   debugger;
+  // }
   for (let i = 0; i < distanceFloatImageData.length; i += 4) {
     const r = distanceFloatImageData[i];
     const g = distanceFloatImageData[i+1];
@@ -552,8 +552,8 @@ export function renderJfa({
     // const a = distanceFloatImageData[i+3];
 
     const j = i / 4;
-    const x = j % distanceRenderTarget.width;
-    const y = Math.floor(j / distanceRenderTarget.width);
+    // const x = j % distanceRenderTarget.width;
+    // const y = Math.floor(j / distanceRenderTarget.width);
 
     let ax = Math.floor(r);
     let ay = Math.floor(g);
