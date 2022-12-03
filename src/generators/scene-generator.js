@@ -2540,7 +2540,6 @@ class PanelRenderer extends EventTarget {
         floorNetDepths,
         floorNetCamera,
       }) => {
-        // console.log('floorNetMesh set geometry', floorNetDepths, floorNetCamera);
         const geometry = depthFloat32ArrayToOrthographicGeometry(
           floorNetDepths,
           floorNetPixelSize,
