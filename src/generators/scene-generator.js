@@ -2436,11 +2436,9 @@ const mergeOperator = ({
 
   // render mask index
   const maskIndex = renderMaskIndex({
-    renderer: this.renderer,
-    meshes: [
-      this.sceneMesh,
-    ],
-    camera: editCamera,
+    renderer,
+    meshes,
+    camera,
   });
 
   // render outline
@@ -3717,17 +3715,6 @@ class PanelRenderer extends EventTarget {
       document.body.appendChild(editedImg);
     }
 
-    console.time('maskIndex');
-    {
-      const maskIndexCanvas = maskIndex2Canvas(
-        maskIndex,
-        this.renderer.domElement.width,
-        this.renderer.domElement.height,
-      );
-      document.body.appendChild(maskIndexCanvas);
-    }
-    console.timeEnd('maskIndex');
-
     // image segmentation
     console.time('imageSegmentation');
     let segmentMask;
@@ -3845,8 +3832,8 @@ class PanelRenderer extends EventTarget {
 
     // depth reconstruction
     const {
-      maskIndex,
       oldDepthFloatImageData: depthFloatImageData,
+      maskIndex,
       distanceFloatImageData,
       distanceNearestPositions,
       reconstructedDepthFloats,
@@ -3860,6 +3847,13 @@ class PanelRenderer extends EventTarget {
       ],
     });
     {
+      const maskIndexCanvas = maskIndex2Canvas(
+        maskIndex,
+        this.renderer.domElement.width,
+        this.renderer.domElement.height,
+      );
+      document.body.appendChild(maskIndexCanvas);
+
       const distanceFloatsCanvas = distanceFloats2Canvas(
         distanceFloatImageData,
         this.renderer.domElement.width,
