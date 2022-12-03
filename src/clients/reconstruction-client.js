@@ -372,8 +372,11 @@ export const mergeOperator = ({
     } else {
       geometry = geometry.toNonIndexed();
     }
+    decorateGeometryTriangleIds(geometry);
     return {
       geometry,
+      width,
+      height,
       clipZ,
     };
   });
