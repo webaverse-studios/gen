@@ -49,6 +49,7 @@ import {
   getDepthFloatsFromPointCloud,
   getDepthFloatsFromIndexedGeometry,
   clipGeometryZ,
+  decorateGeometryTriangleIds,
   // mergeOperator,
 } from '../clients/reconstruction-client.js';
 import {
@@ -2463,12 +2464,7 @@ class PanelRenderer extends EventTarget {
     // globalThis.portalSpecs = portalSpecs;
     const indexedGeometry = geometry;
     geometry = geometry.toNonIndexed();
-    // add extra triangeId attribute
-    const triangleIdAttribute = new THREE.BufferAttribute(new Float32Array(geometry.attributes.position.count), 1);
-    for (let i = 0; i < triangleIdAttribute.count; i++) {
-      triangleIdAttribute.array[i] = Math.floor(i / 3);
-    }
-    geometry.setAttribute('triangleId', triangleIdAttribute);
+    decorateGeometryTriangleIds(geometry);
 
     //
 
