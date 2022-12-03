@@ -11,6 +11,9 @@ import {
   clipGeometryZ,
   getGeometryClipZMask,
   mergeOperator,
+  clipRenderSpecs,
+  getRenderSpecsMeshes,
+  getRenderSpecsMeshesDepth,
 } from '../clients/reconstruction-client.js';
 import {
   depthVertexShader,
@@ -68,15 +71,15 @@ export function reconstructFloor({
 
   // XXX actually use the passed-in floorPlane to bound the floor
   console.log('got floor plane', floorPlane.clone());
+  renderSpecs = clipRenderSpecs(renderSpecs);
+  const width = floorNetPixelSize;
+  const height = floorNetPixelSize;
+  const meshes = getRenderSpecsMeshes(renderSpecs, floorNetCamera);
+  const floorNetDepths = getRenderSpecsMeshesDepth(meshes, width, height, floorNetCamera);
 
 
 
 
-
-
-
-
-  let floorNetDepths;
   {
     /* // canvas
     const canvas = document.createElement('canvas');
@@ -184,7 +187,7 @@ export function reconstructFloor({
     //   renderSpecs,
     // });
 
-    // merge depths
+    /* // merge depths
     const floorPlaneDepths = new Float32Array(floorNetPixelSize * floorNetPixelSize)
       .fill(-floorNetCamera.far / 2);
 
@@ -213,7 +216,7 @@ export function reconstructFloor({
     console.log('merge operator 2', mergeResult);
 
     floorNetDepths = depthFloatImageData;
-    // floorNetDepths = reconstructedDepthFloats;
+    // floorNetDepths = reconstructedDepthFloats; */
   }
 
   return {

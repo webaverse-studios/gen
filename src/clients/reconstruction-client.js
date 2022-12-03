@@ -358,6 +358,130 @@ export function decorateGeometryTriangleIds(geometry) {
 
 //
 
+// add clipping attributes to geometry, for detecting clipped regions in a shader
+export const clipRenderSpecs = renderSpecs => renderSpecs.map(renderSpec => {
+  let {geometry, width, height, clipZ} = renderSpec;
+  if (clipZ) {
+    // geometry = geometry.clone();
+    const depthFloats32Array = getDepthFloatsFromIndexedGeometry(geometry);
+    geometry = geometry.toNonIndexed();
+    const clipZMask = getGeometryClipZMask(geometry, width, height, depthFloats32Array);
+    geometry.setAttribute('maskZ', new THREE.BufferAttribute(clipZMask, 1));
+  } else {
+    geometry = geometry.toNonIndexed();
+  }
+  decorateGeometryTriangleIds(geometry);
+  return {
+    geometry,
+    width,
+    height,
+    clipZ,
+  };
+});
+export const getRenderSpecsMeshes = (renderSpecs, camera) => {
+  const meshes = [];
+
+  for (const renderSpec of renderSpecs) {
+    const {geometry, clipZ} = renderSpec;
+    
+    let vertexShader = depthVertexShader;
+    let fragmentShader = depthFragmentShader;
+    let side = THREE.FrontSide;
+    if (clipZ) {
+      vertexShader = vertexShader.replace('// HEADER', `\
+        // HEADER
+        attribute float maskZ;
+        varying float vMaskZ;
+      `).replace('// POST', `\
+        // POST
+        vMaskZ = maskZ;
+      `);
+      fragmentShader = fragmentShader.replace('// HEADER', `\
+        // HEADER
+        varying float vMaskZ;
+      `).replace('// POST', `\
+        // POST
+        if (vMaskZ < 0.5) {
+          gl_FragColor = vec4(0., 0., 0., 0.);
+        }
+      `);
+      side = THREE.BackSide;
+    }
+    const material = new THREE.ShaderMaterial({
+      uniforms: {
+        cameraNear: {
+          value: camera.near,
+          needsUpdate: true,
+        },
+        cameraFar: {
+          value: camera.far,
+          needsUpdate: true,
+        },
+        isPerspective: {
+          value: +camera.isPerspectiveCamera,
+          needsUpdate: true,
+        },
+      },
+      vertexShader,
+      fragmentShader,
+      side,
+    });
+    
+    const depthMesh = new THREE.Mesh(geometry, material);
+    depthMesh.name = 'depthMesh';
+    depthMesh.frustumCulled = false;
+    meshes.push(depthMesh);
+  }
+
+  return meshes;
+};
+export const getRenderSpecsMeshesDepth = (meshes, width, height, camera) => {
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const renderer = makeRenderer(canvas);
+
+  let oldDepthFloatImageData;
+
+  const depthScene = new THREE.Scene();
+  depthScene.autoUpdate = false;
+  for (const depthMesh of meshes) {
+    depthScene.add(depthMesh);
+  }
+
+  // render target
+  const depthRenderTarget = new THREE.WebGLRenderTarget(
+    width,
+    height,
+    {
+      type: THREE.UnsignedByteType,
+      format: THREE.RGBAFormat,
+    }
+  );
+
+  // render
+  // render to the canvas, for debugging
+  renderer.render(depthScene, camera);
+
+  // real render to the render target
+  renderer.setRenderTarget(depthRenderTarget);
+  // renderer.clear();
+  renderer.render(depthScene, camera);
+  renderer.setRenderTarget(null);
+  
+  // read back image data
+  const imageData = {
+    data: new Uint8Array(depthRenderTarget.width * depthRenderTarget.height * 4),
+    width,
+    height,
+  };
+  renderer.readRenderTargetPixels(depthRenderTarget, 0, 0, depthRenderTarget.width, depthRenderTarget.height, imageData.data);
+
+  // latch rendered depth data
+  oldDepthFloatImageData = reinterpretFloatImageData(imageData); // viewZ
+
+  return oldDepthFloatImageData;
+};
 export const mergeOperator = ({
   newDepthFloatImageData,
   width,
@@ -366,25 +490,7 @@ export const mergeOperator = ({
   renderSpecs,
 }) => {
   // clipZ
-  renderSpecs = renderSpecs.map(renderSpec => {
-    let {geometry, width, height, clipZ} = renderSpec;
-    if (clipZ) {
-      // geometry = geometry.clone();
-      const depthFloats32Array = getDepthFloatsFromIndexedGeometry(geometry);
-      geometry = geometry.toNonIndexed();
-      const clipZMask = getGeometryClipZMask(geometry, width, height, depthFloats32Array);
-      geometry.setAttribute('maskZ', new THREE.BufferAttribute(clipZMask, 1));
-    } else {
-      geometry = geometry.toNonIndexed();
-    }
-    decorateGeometryTriangleIds(geometry);
-    return {
-      geometry,
-      width,
-      height,
-      clipZ,
-    };
-  });
+  renderSpecs = clipRenderSpecs(renderSpecs);
 
   // canvas
   const canvas = document.createElement('canvas');
@@ -398,95 +504,8 @@ export const mergeOperator = ({
 
   // render depth
   console.time('renderDepth');
-  let oldDepthFloatImageData;
-  const meshes = [];
-  {
-    const depthScene = new THREE.Scene();
-    depthScene.autoUpdate = false;
-    for (const renderSpec of renderSpecs) {
-      const {geometry, clipZ} = renderSpec;
-      
-      let vertexShader = depthVertexShader;
-      let fragmentShader = depthFragmentShader;
-      let side = THREE.FrontSide;
-      if (clipZ) {
-        vertexShader = vertexShader.replace('// HEADER', `\
-          // HEADER
-          attribute float maskZ;
-          varying float vMaskZ;
-        `).replace('// POST', `\
-          // POST
-          vMaskZ = maskZ;
-        `);
-        fragmentShader = fragmentShader.replace('// HEADER', `\
-          // HEADER
-          varying float vMaskZ;
-        `).replace('// POST', `\
-          // POST
-          if (vMaskZ < 0.5) {
-            gl_FragColor = vec4(0., 0., 0., 0.);
-          }
-        `);
-        side = THREE.BackSide;
-      }
-      const material = new THREE.ShaderMaterial({
-        uniforms: {
-          cameraNear: {
-            value: camera.near,
-            needsUpdate: true,
-          },
-          cameraFar: {
-            value: camera.far,
-            needsUpdate: true,
-          },
-          isPerspective: {
-            value: +camera.isPerspectiveCamera,
-            needsUpdate: true,
-          },
-        },
-        vertexShader,
-        fragmentShader,
-        side,
-      });
-      
-      const depthMesh = new THREE.Mesh(geometry, material);
-      depthMesh.name = 'depthMesh';
-      depthMesh.frustumCulled = false;
-      depthScene.add(depthMesh);
-      meshes.push(depthMesh);
-    }
-
-    // render target
-    const depthRenderTarget = new THREE.WebGLRenderTarget(
-      width,
-      height,
-      {
-        type: THREE.UnsignedByteType,
-        format: THREE.RGBAFormat,
-      }
-    );
-
-    // render
-    // render to the canvas, for debugging
-    renderer.render(depthScene, camera);
-
-    // real render to the render target
-    renderer.setRenderTarget(depthRenderTarget);
-    // renderer.clear();
-    renderer.render(depthScene, camera);
-    renderer.setRenderTarget(null);
-    
-    // read back image data
-    const imageData = {
-      data: new Uint8Array(depthRenderTarget.width * depthRenderTarget.height * 4),
-      width,
-      height,
-    };
-    renderer.readRenderTargetPixels(depthRenderTarget, 0, 0, depthRenderTarget.width, depthRenderTarget.height, imageData.data);
-
-    // latch rendered depth data
-    oldDepthFloatImageData = reinterpretFloatImageData(imageData); // viewZ
-  }
+  const meshes = getRenderSpecsMeshes(renderSpecs, camera);
+  const oldDepthFloatImageData = getRenderSpecsMeshesDepth(meshes, width, height, camera);
   console.timeEnd('renderDepth');
 
   // render mask index
