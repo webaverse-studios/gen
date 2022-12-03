@@ -530,6 +530,29 @@ const distanceFloats2Canvas = (distanceFloatImageData, width, height) => {
 
 //
 
+const maskIndex2Canvas = (maskIndex, width, height) => {
+  // draw maskIndex to canvas
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  canvas.classList.add('maskIndexCanvas');
+  const ctx = canvas.getContext('2d');
+  const imageData = ctx.createImageData(width, height);
+  const data = imageData.data;
+  for (let i = 0; i < maskIndex.length; i++) {
+    const j = i * 4;
+    const index = maskIndex[i];
+    data[j + 0] = ((index & 0xFF0000) >> 16);
+    data[j + 1] = ((index & 0x00FF00) >> 8);
+    data[j + 2] = (index & 0x0000FF);
+    data[j + 3] = 255;
+  }
+  ctx.putImageData(imageData, 0, 0);
+  return canvas;
+};
+
+//
+
 const segmentsImg2Canvas = (imageBitmap, {
   color = false,
 } = {})  => {  
@@ -2321,6 +2344,139 @@ class SceneMaterial extends THREE.ShaderMaterial {
 
 //
 
+const makeRenderer = canvas => {
+  const renderer = new THREE.WebGLRenderer({
+    canvas,
+    alpha: true,
+    antialias: true,
+    preserveDrawingBuffer: true,
+  });
+  renderer.setClearColor(0x000000, 0);
+  return renderer;
+};
+
+//
+
+const mergeOperator = ({
+  newDepthFloatImageData,
+  width,
+  height,
+  camera,
+  meshes,
+}) => {
+  // canvas
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  canvas.classList.add('mergeCanvas');
+
+  // renderer
+  const renderer = makeRenderer(canvas);
+
+  // render depth
+  console.time('renderDepth');
+  let oldDepthFloatImageData;
+  {
+    const depthMaterial = new THREE.ShaderMaterial({
+      uniforms: {
+        cameraNear: {
+          value: camera.near,
+          needsUpdate: true,
+        },
+        cameraFar: {
+          value: camera.far,
+          needsUpdate: true,
+        },
+        isPerspective: {
+          value: 1,
+          needsUpdate: true,
+        },
+      },
+      vertexShader: depthVertexShader,
+      fragmentShader: depthFragmentShader,
+    });
+
+    const depthScene = new THREE.Scene();
+    depthScene.autoUpdate = false;
+    for (const mesh of meshes) {
+      const depthMesh = mesh.clone();
+      depthMesh.name = 'depthMesh';
+      depthMesh.material = depthMaterial;
+      depthMesh.frustumCulled = false;
+      depthScene.add(depthMesh);
+    }
+
+    const depthRenderTarget = new THREE.WebGLRenderTarget(
+      width,
+      height,
+      {
+        type: THREE.UnsignedByteType,
+        format: THREE.RGBAFormat,
+      }
+    );
+
+    const _renderOverrideMaterial = (renderTarget) => {
+      renderer.setRenderTarget(renderTarget);
+
+      renderer.clear();
+      renderer.render(depthScene, camera);
+      
+      const imageData = {
+        data: new Uint8Array(renderTarget.width * renderTarget.height * 4),
+        width: renderTarget.width,
+        height: renderTarget.height,
+      };
+      renderer.readRenderTargetPixels(renderTarget, 0, 0, renderTarget.width, renderTarget.height, imageData.data);
+      renderer.setRenderTarget(null);
+      return imageData;
+    };
+    oldDepthFloatImageData = reinterpretFloatImageData(_renderOverrideMaterial(depthRenderTarget)); // viewZ
+  }
+  console.timeEnd('renderDepth');
+
+  // render mask index
+  const maskIndex = renderMaskIndex({
+    renderer: this.renderer,
+    meshes: [
+      this.sceneMesh,
+    ],
+    camera: editCamera,
+  });
+
+  // render outline
+  console.time('outline');
+  const {
+    distanceFloatImageData,
+    distanceNearestPositions,
+  } = renderJfa({
+    renderer,
+    meshes,
+    camera,
+    maskIndex,
+  });
+  console.timeEnd('outline');
+
+  console.time('depthReconstruction');
+  const reconstructedDepthFloats = renderDepthReconstruction(
+    renderer,
+    distanceFloatImageData,
+    oldDepthFloatImageData,
+    newDepthFloatImageData
+  );
+  console.timeEnd('depthReconstruction');
+
+  return {
+    oldDepthFloatImageData,
+    newDepthFloatImageData,
+    maskIndex,
+    distanceFloatImageData,
+    distanceNearestPositions,
+    reconstructedDepthFloats,
+  };
+};
+
+//
+
 class PanelRenderer extends EventTarget {
   constructor(canvas, panel, {
     debug = false,
@@ -2340,14 +2496,7 @@ class PanelRenderer extends EventTarget {
     canvas.classList.add('canvas');
 
     // renderer
-    const renderer = new THREE.WebGLRenderer({
-      canvas,
-      alpha: true,
-      antialias: true,
-      preserveDrawingBuffer: true,
-    });
-    // renderer.outputEncoding = THREE.sRGBEncoding;
-    renderer.setClearColor(0x000000, 0);
+    const renderer = makeRenderer(canvas);
     this.renderer = renderer;
     this.addEventListener('destroy', e => {
       this.renderer.dispose();
@@ -3569,32 +3718,13 @@ class PanelRenderer extends EventTarget {
     }
 
     console.time('maskIndex');
-    const maskIndex = renderMaskIndex({
-      renderer: this.renderer,
-      meshes: [
-        this.sceneMesh,
-      ],
-      camera: editCamera,
-    });
     {
-      // draw maskIndex to canvas
-      const canvas = document.createElement('canvas');
-      canvas.width = this.renderer.domElement.width;
-      canvas.height = this.renderer.domElement.height;
-      canvas.classList.add('maskIndexCanvas');
-      const ctx = canvas.getContext('2d');
-      const imageData = ctx.createImageData(this.renderer.domElement.width, this.renderer.domElement.height);
-      const data = imageData.data;
-      for (let i = 0; i < maskIndex.length; i++) {
-        const j = i * 4;
-        const index = maskIndex[i];
-        data[j + 0] = ((index & 0xFF0000) >> 16);
-        data[j + 1] = ((index & 0x00FF00) >> 8);
-        data[j + 2] = (index & 0x0000FF);
-        data[j + 3] = 255;
-      }
-      ctx.putImageData(imageData, 0, 0);
-      document.body.appendChild(canvas);
+      const maskIndexCanvas = maskIndex2Canvas(
+        maskIndex,
+        this.renderer.domElement.width,
+        this.renderer.domElement.height,
+      );
+      document.body.appendChild(maskIndexCanvas);
     }
     console.timeEnd('maskIndex');
 
@@ -3713,118 +3843,21 @@ class PanelRenderer extends EventTarget {
     // }
     // console.timeEnd('fov');
 
-    const mergeOperator = ({
-      newDepthFloatImageData,
-      oldDepthFloatImageData = null,
-      width,
-      height,
-      camera,
-    }) => {
-      // render depth
-      console.time('renderDepth');
-      if (!oldDepthFloatImageData) {
-        const depthMaterial = new THREE.ShaderMaterial({
-          uniforms: {
-            cameraNear: {
-              value: camera.near,
-              needsUpdate: true,
-            },
-            cameraFar: {
-              value: camera.far,
-              needsUpdate: true,
-            },
-            isPerspective: {
-              value: 1,
-              needsUpdate: true,
-            },
-          },
-          vertexShader: depthVertexShader,
-          fragmentShader: depthFragmentShader,
-        });
-        const depthMesh = this.sceneMesh.clone();
-        depthMesh.name = 'depthMesh';
-        depthMesh.material = depthMaterial;
-        depthMesh.frustumCulled = false;
-        const depthScene = new THREE.Scene();
-        depthScene.autoUpdate = false;
-        depthScene.add(depthMesh);
-
-        const depthRenderTarget = new THREE.WebGLRenderTarget(
-          width,
-          height,
-          {
-            type: THREE.UnsignedByteType,
-            format: THREE.RGBAFormat,
-          }
-        );
-
-        const _renderOverrideMaterial = (renderTarget) => {
-          this.renderer.setRenderTarget(renderTarget);
-          // this.scene.overrideMaterial = overrideMaterial;
-
-          this.renderer.clear();
-          this.renderer.render(depthScene, camera);
-          
-          // this.scene.overrideMaterial = null;
-          
-          const imageData = {
-            data: new Uint8Array(renderTarget.width * renderTarget.height * 4),
-            width: renderTarget.width,
-            height: renderTarget.height,
-          };
-          this.renderer.readRenderTargetPixels(renderTarget, 0, 0, renderTarget.width, renderTarget.height, imageData.data);
-          this.renderer.setRenderTarget(null);
-          return imageData;
-        };
-        oldDepthFloatImageData = reinterpretFloatImageData(_renderOverrideMaterial(depthRenderTarget)); // viewZ
-      }
-      console.timeEnd('renderDepth');
-
-      // render outline
-      console.time('outline');
-      const {
-        distanceFloatImageData,
-        distanceNearestPositions,
-      } = renderJfa({
-        renderer: this.renderer,
-        meshes: [
-          this.sceneMesh,
-        ],
-        camera,
-        maskIndex,
-      });
-      console.timeEnd('outline');
-
-      console.time('depthReconstruction');
-      const reconstructedDepthFloats = renderDepthReconstruction(
-        this.renderer,
-        distanceFloatImageData,
-        oldDepthFloatImageData,
-        newDepthFloatImageData
-      );
-      console.timeEnd('depthReconstruction');
-
-      return {
-        oldDepthFloatImageData,
-        newDepthFloatImageData,
-        distanceFloatImageData,
-        distanceNearestPositions,
-        reconstructedDepthFloats,
-      };
-    };
-
     // depth reconstruction
     const {
+      maskIndex,
       oldDepthFloatImageData: depthFloatImageData,
       distanceFloatImageData,
       distanceNearestPositions,
       reconstructedDepthFloats,
     } = mergeOperator({
       newDepthFloatImageData,
-      oldDepthFloatImageData: null,
       width: this.renderer.domElement.width,
       height: this.renderer.domElement.height,
       camera: editCamera,
+      meshes: [
+        this.sceneMesh,
+      ],
     });
     {
       const distanceFloatsCanvas = distanceFloats2Canvas(
