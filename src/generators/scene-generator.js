@@ -909,19 +909,6 @@ const zipPlanesSegmentsJson = (planeSpecs, planesJson) => {
 
 //
 
-const getDepthFloatsFromPointCloud = pointCloudArrayBuffer => {
-  const geometryPositions = new Float32Array(panelSize * panelSize * 3);
-  pointCloudArrayBufferToPositionAttributeArray(pointCloudArrayBuffer, panelSize, panelSize, geometryPositions);
-
-  const newDepthFloatImageData = new Float32Array(geometryPositions.length / 3);
-  for (let i = 0; i < newDepthFloatImageData.length; i++) {
-    newDepthFloatImageData[i] = geometryPositions[i * 3 + 2];
-  }
-  return newDepthFloatImageData;
-};
-
-//
-
 function drawLabels(ctx, boundingBoxLayers) {
   for (let i = 0; i < boundingBoxLayers.length; i++) {
     const layer = boundingBoxLayers[i];
@@ -2352,137 +2339,6 @@ class SceneMaterial extends THREE.ShaderMaterial {
 
 //
 
-const makeRenderer = canvas => {
-  const renderer = new THREE.WebGLRenderer({
-    canvas,
-    alpha: true,
-    antialias: true,
-    preserveDrawingBuffer: true,
-  });
-  renderer.setClearColor(0x000000, 0);
-  return renderer;
-};
-
-//
-
-const mergeOperator = ({
-  newDepthFloatImageData,
-  width,
-  height,
-  camera,
-  meshes,
-}) => {
-  // canvas
-  const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
-  canvas.classList.add('mergeCanvas');
-
-  // renderer
-  const renderer = makeRenderer(canvas);
-
-  // render depth
-  console.time('renderDepth');
-  let oldDepthFloatImageData;
-  {
-    const depthMaterial = new THREE.ShaderMaterial({
-      uniforms: {
-        cameraNear: {
-          value: camera.near,
-          needsUpdate: true,
-        },
-        cameraFar: {
-          value: camera.far,
-          needsUpdate: true,
-        },
-        isPerspective: {
-          value: 1,
-          needsUpdate: true,
-        },
-      },
-      vertexShader: depthVertexShader,
-      fragmentShader: depthFragmentShader,
-    });
-
-    const depthScene = new THREE.Scene();
-    depthScene.autoUpdate = false;
-    for (const mesh of meshes) {
-      const depthMesh = mesh.clone();
-      depthMesh.name = 'depthMesh';
-      depthMesh.material = depthMaterial;
-      depthMesh.frustumCulled = false;
-      depthScene.add(depthMesh);
-    }
-
-    const depthRenderTarget = new THREE.WebGLRenderTarget(
-      width,
-      height,
-      {
-        type: THREE.UnsignedByteType,
-        format: THREE.RGBAFormat,
-      }
-    );
-
-    const _renderOverrideMaterial = (renderTarget) => {
-      renderer.setRenderTarget(renderTarget);
-
-      renderer.clear();
-      renderer.render(depthScene, camera);
-      
-      const imageData = {
-        data: new Uint8Array(renderTarget.width * renderTarget.height * 4),
-        width: renderTarget.width,
-        height: renderTarget.height,
-      };
-      renderer.readRenderTargetPixels(renderTarget, 0, 0, renderTarget.width, renderTarget.height, imageData.data);
-      renderer.setRenderTarget(null);
-      return imageData;
-    };
-    oldDepthFloatImageData = reinterpretFloatImageData(_renderOverrideMaterial(depthRenderTarget)); // viewZ
-  }
-  console.timeEnd('renderDepth');
-
-  // render mask index
-  const maskIndex = renderMaskIndex({
-    renderer,
-    meshes,
-    camera,
-  });
-
-  // render outline
-  console.time('outline');
-  const {
-    distanceFloatImageData,
-    distanceNearestPositions,
-  } = renderJfa({
-    renderer,
-    meshes,
-    camera,
-    maskIndex,
-  });
-  console.timeEnd('outline');
-
-  console.time('depthReconstruction');
-  const reconstructedDepthFloats = renderDepthReconstruction(
-    renderer,
-    distanceFloatImageData,
-    oldDepthFloatImageData,
-    newDepthFloatImageData
-  );
-  console.timeEnd('depthReconstruction');
-
-  return {
-    oldDepthFloatImageData,
-    newDepthFloatImageData,
-    maskIndex,
-    distanceFloatImageData,
-    distanceNearestPositions,
-    reconstructedDepthFloats,
-  };
-};
-
-//
-
 class PanelRenderer extends EventTarget {
   constructor(canvas, panel, {
     debug = false,
@@ -3500,15 +3356,6 @@ class PanelRenderer extends EventTarget {
             
           }
           case 'c': {
-            // compute the clipping camera
-            // const originalCamera = _makeDefaultCamera(); // XXX
-            // originalCamera.matrixWorld.copy(defaultCameraMatrix);
-            // originalCamera.matrix.copy(originalCamera.matrixWorld)
-            //   .decompose(originalCamera.position, originalCamera.quaternion, originalCamera.scale);
-            // originalCamera.fov = this.camera.fov;
-            // originalCamera.updateProjectionMatrix();
-
-            // clip deeply stretched triangles
             this.clip();
             break;
           }
@@ -3853,6 +3700,16 @@ class PanelRenderer extends EventTarget {
       meshes: [
         this.sceneMesh,
       ],
+      // renderSpecs: [
+      //   this.sceneMesh,
+      // ].map(sceneMesh => {
+      //   const {indexedGeometry} = sceneMesh;
+      //   return {
+      //     geometry: indexedGeometry,
+      //     width: this.renderer.domElement.width,
+      //     height: this.renderer.domElement.height,
+      //   };
+      // }),
     });
     {
       const maskIndexCanvas = maskIndex2Canvas(
@@ -3897,15 +3754,15 @@ class PanelRenderer extends EventTarget {
       renderSpecs: [
         {
           geometry: oldFloorNetDepthRenderGeometry,
-          depthFloat32Array: oldPointCloudArrayBuffer,
           width: this.renderer.domElement.width,
           height: this.renderer.domElement.height,
+          clipZ: true,
         },
         {
           geometry: newFloorNetDepthRenderGeometry,
-          depthFloat32Array: reconstructedDepthFloats,
           width: this.renderer.domElement.width,
           height: this.renderer.domElement.height,
+          clipZ: true,
         },
       ],
     });
@@ -3936,10 +3793,12 @@ class PanelRenderer extends EventTarget {
       editCameraJson,
     };
   }
-  async clip() {
-    const {geometry} = this.sceneMesh;
-    const pointCloudArrayBuffer = this.panel.getData('layer1/pointCloud');
-    const depthFloats32Array = getDepthFloatsFromPointCloud(pointCloudArrayBuffer);
+  clip() {
+    // const {geometry} = this.sceneMesh;
+    // const pointCloudArrayBuffer = this.panel.getData('layer1/pointCloud');
+    // const depthFloats32Array = getDepthFloatsFromPointCloud(pointCloudArrayBuffer);
+    const {geometry, indexedGeometry} = this.sceneMesh;
+    const depthFloats32Array = getDepthFloatsFromIndexedGeometry(indexedGeometry);
     const {width, height} = this.renderer.domElement;
     clipGeometryZ(geometry, width, height, depthFloats32Array);
   }
@@ -4421,6 +4280,125 @@ const _resizeFile = async file => {
 
 //
 
+// XXX get rid of this duplicate merge operator
+const mergeOperator = ({
+  newDepthFloatImageData,
+  width,
+  height,
+  camera,
+  meshes,
+}) => {
+  // canvas
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  canvas.classList.add('mergeCanvas');
+
+  // renderer
+  const renderer = makeRenderer(canvas);
+
+  // XXX the problem is the depth oldDepthFloatImageData needs to be renderered, rather than extracted from the geometry due to camer angle
+  // XXX maybe we can just pass the camera with the renderSpec
+  // render depth
+  console.time('renderDepth');
+  let oldDepthFloatImageData;
+  {
+    const depthMaterial = new THREE.ShaderMaterial({
+      uniforms: {
+        cameraNear: {
+          value: camera.near,
+          needsUpdate: true,
+        },
+        cameraFar: {
+          value: camera.far,
+          needsUpdate: true,
+        },
+        isPerspective: {
+          value: 1,
+          needsUpdate: true,
+        },
+      },
+      vertexShader: depthVertexShader,
+      fragmentShader: depthFragmentShader,
+    });
+
+    const depthScene = new THREE.Scene();
+    depthScene.autoUpdate = false;
+    for (const mesh of meshes) {
+      const depthMesh = mesh.clone();
+      depthMesh.name = 'depthMesh';
+      depthMesh.material = depthMaterial;
+      depthMesh.frustumCulled = false;
+      depthScene.add(depthMesh);
+    }
+
+    const depthRenderTarget = new THREE.WebGLRenderTarget(
+      width,
+      height,
+      {
+        type: THREE.UnsignedByteType,
+        format: THREE.RGBAFormat,
+      }
+    );
+
+    const _renderOverrideMaterial = (renderTarget) => {
+      renderer.setRenderTarget(renderTarget);
+
+      renderer.clear();
+      renderer.render(depthScene, camera);
+      
+      const imageData = {
+        data: new Uint8Array(renderTarget.width * renderTarget.height * 4),
+        width: renderTarget.width,
+        height: renderTarget.height,
+      };
+      renderer.readRenderTargetPixels(renderTarget, 0, 0, renderTarget.width, renderTarget.height, imageData.data);
+      renderer.setRenderTarget(null);
+      return imageData;
+    };
+    oldDepthFloatImageData = reinterpretFloatImageData(_renderOverrideMaterial(depthRenderTarget)); // viewZ
+  }
+  console.timeEnd('renderDepth');
+
+  // render mask index
+  const maskIndex = renderMaskIndex({
+    renderer,
+    meshes,
+    camera,
+  });
+
+  // render outline
+  console.time('outline');
+  const {
+    distanceFloatImageData,
+    distanceNearestPositions,
+  } = renderJfa({
+    renderer,
+    meshes,
+    camera,
+    maskIndex,
+  });
+  console.timeEnd('outline');
+
+  console.time('depthReconstruction');
+  const reconstructedDepthFloats = renderDepthReconstruction(
+    renderer,
+    distanceFloatImageData,
+    oldDepthFloatImageData,
+    newDepthFloatImageData
+  );
+  console.timeEnd('depthReconstruction');
+
+  return {
+    oldDepthFloatImageData,
+    newDepthFloatImageData,
+    maskIndex,
+    distanceFloatImageData,
+    distanceNearestPositions,
+    reconstructedDepthFloats,
+  };
+};
+
 async function compileVirtualScene(imageArrayBuffer, width, height/*, camera */) {
   // color
   const blob = new Blob([imageArrayBuffer], {
@@ -4543,15 +4521,14 @@ async function compileVirtualScene(imageArrayBuffer, width, height/*, camera */)
   let floorNetDepths;
   let floorNetCameraJson;
   {
-    const floorNetDepthRenderGeometry = pointCloudArrayBufferToGeometry(pointCloudArrayBuffer, width, height)
-      .toNonIndexed(); // required for proper indexing
+    const floorNetDepthRenderGeometry = pointCloudArrayBufferToGeometry(pointCloudArrayBuffer, width, height);
     const floorSpec = passes.reconstructFloor({
       renderSpecs: [
         {
           geometry: floorNetDepthRenderGeometry,
-          depthFloat32Array: depthFloats32Array,
           width,
           height,
+          clipZ: true,
         },
       ],
     });

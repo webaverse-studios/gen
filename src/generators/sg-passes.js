@@ -10,6 +10,7 @@ import {
   reinterpretFloatImageData,
   clipGeometryZ,
   getGeometryClipZMask,
+  mergeOperator,
 } from '../clients/reconstruction-client.js';
 import {
   depthVertexShader,
@@ -21,33 +22,51 @@ import {
   floorNetResolution,
   floorNetPixelSize,
 } from '../constants/sg-constants.js';
+import {makeRenderer} from '../utils/three-utils.js';
 
 //
 
 // const localVector = new THREE.Vector3();
 const localQuaternion = new THREE.Quaternion();
 
+/* const fakeMaterial = new THREE.MeshBasicMaterial({
+  color: 0xff0000,
+}); */
+
 //
 
 export function reconstructFloor({
   renderSpecs,
 }) {
+  // camera
+  const floorNetCamera = new THREE.OrthographicCamera(
+    -floorNetWorldSize / 2,
+    floorNetWorldSize / 2,
+    floorNetWorldSize / 2,
+    -floorNetWorldSize / 2,
+    0,
+    floorNetWorldDepth
+  );
+  floorNetCamera.position.set(0, -floorNetWorldDepth/2, 0);
+  floorNetCamera.quaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI/2)
+    .multiply(
+      localQuaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI)
+    );
+  floorNetCamera.updateMatrixWorld();
+
+  const floorNetCameraJson = getOrthographicCameraJson(floorNetCamera);
+
   let floorNetDepths;
-  let floorNetCameraJson;
   {
-    // renderer
+    /* // canvas
     const canvas = document.createElement('canvas');
     canvas.width = floorNetPixelSize;
     canvas.height = floorNetPixelSize;
     canvas.classList.add('floorReconstructionCanvas');
     document.body.appendChild(canvas);
 
-    const renderer = new THREE.WebGLRenderer({
-      canvas,
-      alpha: true,
-      preserveDrawingBuffer: true,
-    });
-    renderer.setClearColor(0x000000, 0);
+    // renderer
+    const renderer = makeRenderer(canvas);
 
     // render target
     const floorRenderTarget = new THREE.WebGLRenderTarget(floorNetPixelSize, floorNetPixelSize, {
@@ -59,24 +78,7 @@ export function reconstructFloor({
     const floorNetScene = new THREE.Scene();
     floorNetScene.autoUpdate = false;
 
-    // camera
-    const floorNetCamera = new THREE.OrthographicCamera(
-      -floorNetWorldSize / 2,
-      floorNetWorldSize / 2,
-      floorNetWorldSize / 2,
-      -floorNetWorldSize / 2,
-      0,
-      floorNetWorldDepth
-    );
-    floorNetCamera.position.set(0, -floorNetWorldDepth/2, 0);
-    floorNetCamera.quaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI/2)
-      .multiply(
-        localQuaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI)
-      );
-    floorNetCamera.updateMatrixWorld();
-
     // mesh
-    floorNetCameraJson = getOrthographicCameraJson(floorNetCamera);
     const floorNetDepthRenderMaterial = new THREE.ShaderMaterial({
       uniforms: {
         cameraNear: {
@@ -110,17 +112,10 @@ export function reconstructFloor({
         }
       `),
       side: THREE.BackSide,
-      // blending: THREE.NoBlending,
     });
     for (const renderSpec of renderSpecs) {
-      const {geometry, width, height, depthFloat32Array} = renderSpec;
-      const g = geometry.clone();
-
-      const maskZUint8Array = getGeometryClipZMask(g, width, height, depthFloat32Array);
-      g.setAttribute('maskZ', new THREE.BufferAttribute(maskZUint8Array, 1));
-      globalThis.maskZUint8Array = maskZUint8Array;
-
-      const floorNetDepthRenderMesh = new THREE.Mesh(g, floorNetDepthRenderMaterial);
+      const {geometry} = renderSpec;
+      const floorNetDepthRenderMesh = new THREE.Mesh(geometry, floorNetDepthRenderMaterial);
       floorNetDepthRenderMesh.frustumCulled = false;
       floorNetScene.add(floorNetDepthRenderMesh);
     }
@@ -129,7 +124,7 @@ export function reconstructFloor({
     // render to the canvas, for debugging
     renderer.render(floorNetScene, floorNetCamera);
     
-    // real render to render target
+    // real render to the render target
     renderer.setRenderTarget(floorRenderTarget);
     renderer.render(floorNetScene, floorNetCamera);
     renderer.setRenderTarget(null);
@@ -148,10 +143,54 @@ export function reconstructFloor({
       floorNetPixelSize,
       imageData.data
     );
-    floorNetDepths = reinterpretFloatImageData(imageData);
+    floorNetDepths = reinterpretFloatImageData(imageData); */
 
-    const floorBaseDepths = new Float32Array(floorNetPixelSize * floorNetPixelSize)
+
+
+
+
+
+
+
+
+
+
+
+
+    // merge depths
+    const floorPlaneDepths = new Float32Array(floorNetPixelSize * floorNetPixelSize)
       .fill(floorNetCamera.far / 2);
+
+    console.log('merge operator 1', {
+      newDepthFloatImageData: floorPlaneDepths,
+      width: floorNetPixelSize,
+      height: floorNetPixelSize,
+      camera: floorNetCamera,
+      renderSpecs,
+    });
+
+    const mergeResult = mergeOperator({
+      newDepthFloatImageData: floorPlaneDepths,
+      width: floorNetPixelSize,
+      height: floorNetPixelSize,
+      camera: floorNetCamera,
+      renderSpecs,
+    });
+    const {
+      oldDepthFloatImageData: depthFloatImageData,
+      maskIndex,
+      distanceFloatImageData,
+      distanceNearestPositions,
+      reconstructedDepthFloats,
+    } = mergeResult;
+    console.log('merge operator 2', mergeResult);
+
+    // globalThis.oldDepthFloatImageData = depthFloatImageData;
+    // globalThis.newDepthFloatImageData = floorPlaneDepths;
+    // globalThis.reconstructedDepthFloats = reconstructedDepthFloats;
+
+    floorNetDepths = depthFloatImageData;
+    // floorNetDepths = reconstructedDepthFloats;
   }
 
   return {
