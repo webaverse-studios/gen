@@ -2,8 +2,12 @@ export const depthVertexShader = `\
   precision highp float;
   precision highp int;
 
+  // HEADER
+
   void main() {
+    // PRE
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    // POST
   }
 `;
 export const depthFragmentShader = `\
@@ -78,7 +82,11 @@ export const depthFragmentShader = `\
     return linearClipZ * ( near - far ) - near;
   }
 
+  // HEADER
+
   void main() {
+    // PRE
+
     // get the view Z
     // first, we need to reconstruct the depth value in this fragment
     float depth = gl_FragCoord.z;
@@ -94,5 +102,7 @@ export const depthFragmentShader = `\
     // gl_FragColor = encode_float(orthoZ).abgr;
 
     gl_FragColor = encode_float(viewZ).abgr;
+
+    // POST
   }
 `;
