@@ -343,6 +343,16 @@ export function clipGeometryZ(geometry, width, height, depthFloats32Array) {
 
 //
 
+export function decorateGeometryTriangleIds(geometry) {
+  const triangleIdAttribute = new THREE.BufferAttribute(new Float32Array(geometry.attributes.position.count), 1);
+  for (let i = 0; i < triangleIdAttribute.count; i++) {
+    triangleIdAttribute.array[i] = Math.floor(i / 3);
+  }
+  geometry.setAttribute('triangleId', triangleIdAttribute);
+}
+
+//
+
 export const mergeOperator = ({
   newDepthFloatImageData,
   width,
