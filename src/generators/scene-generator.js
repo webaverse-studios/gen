@@ -3,11 +3,6 @@ import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader.js';
 // import alea from '../utils/alea.js';
 import {Text} from 'troika-three-text';
-import {
-  renderMaskIndex,
-  renderJfa,
-  renderDepthReconstruction,
-} from '../utils/jfaOutline.js';
 import * as passes from './sg-passes.js';
 import {
   setPerspectiveCameraFromJson,
@@ -16,10 +11,7 @@ import {
   getOrthographicCameraJson,
 } from '../utils/camera-utils.js';
 import {
-  depthVertexShader,
-  depthFragmentShader,
-} from '../utils/sg-shaders.js';
-import {
+  panelSize,
   floorNetWorldSize,
   floorNetWorldDepth,
   floorNetResolution,
@@ -28,6 +20,13 @@ import {
 import {
   LensMaterial,
 } from './sg-materials.js';
+import {
+  depthVertexShader,
+  depthFragmentShader,
+} from '../utils/sg-shaders.js';
+import {
+  makeRenderer,
+} from '../utils/three-utils.js';
 
 import {ImageAiClient} from '../clients/image-client.js';
 // import {getLabel} from '../clients/perception-client.js';
@@ -47,8 +46,18 @@ import {
   depthFloat32ArrayToOrthographicGeometry,
   reinterpretFloatImageData,
   depthFloat32ArrayToHeightfield,
+  getDepthFloatsFromPointCloud,
+  getDepthFloatsFromIndexedGeometry,
   clipGeometryZ,
+  // mergeOperator,
 } from '../clients/reconstruction-client.js';
+import {
+  renderMaskIndex,
+  renderJfa,
+  renderDepthReconstruction,
+} from '../utils/jfaOutline.js';
+
+//
 
 import {blob2img, img2ImageData} from '../utils/convert-utils.js';
 import {makeId} from '../utils/id-utils.js';
@@ -70,7 +79,6 @@ import {makePromise} from '../../utils.js';
 
 // constants
 
-export const panelSize = 1024;
 export const selectorSize = 8 + 1;
 export const tools = [
   'camera',
