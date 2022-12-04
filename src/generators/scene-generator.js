@@ -2352,6 +2352,7 @@ class PanelRenderer extends EventTarget {
     this.sceneMesh = null;
 
     const avatar = new THREE.Object3D();
+    avatar.visible = false;
     (async () => {
       const modelUrl = './models/scillia.glb';
       
@@ -2364,7 +2365,6 @@ class PanelRenderer extends EventTarget {
   
       const model = await p;
       avatar.add(model.scene);
-      avatar.visible = false;
       avatar.updateMatrixWorld();
     })();
     // avatar.position.set(0, 0, 0);
@@ -2372,6 +2372,7 @@ class PanelRenderer extends EventTarget {
     this.avatar = avatar;
 
     const avatars = new THREE.Object3D();
+    avatars.visible = false;
     (async () => {
       const u = './models/Avatar_Bases/Drophunter Class/DropHunter_Master_v1_Guilty.vrm';
       const p = makePromise();
@@ -2384,7 +2385,6 @@ class PanelRenderer extends EventTarget {
       const vrm = await p;
       const model = vrm.scene;
       avatars.add(model);
-      avatars.visible = false;
       avatars.updateMatrixWorld();
     })();
     scene.add(avatars);
