@@ -2488,10 +2488,6 @@ class PanelRenderer extends EventTarget {
         portalCenter.x = Math.round(portalCenter.x / floorNetResolution) * floorNetResolution;
         portalCenter.z = Math.round(portalCenter.z / floorNetResolution) * floorNetResolution;
 
-        // const g = boxGeometry.clone();
-        // g.applyMatrix4(localMatrix.makeTranslation(portalCenter.x, portalCenter.y, portalCenter.z));
-        // geometries.push(g);
-
         // get the corner base position of the floor net mesh
         const floorCornerBasePosition = localVector5.copy(this.floorNetMesh.position)
           .add(localVector6.set(-floorNetWorldSize / 2, 0, -floorNetWorldSize / 2));
@@ -2504,11 +2500,6 @@ class PanelRenderer extends EventTarget {
         if (lx >= 0 && lx < floorNetPixelSize && lz >= 0 && lz < floorNetPixelSize) { // if we are in range of the floor net
           const height = _trilinearFilter(floorHeightfield, floorNetPixelSize, floorNetPixelSize, lx, lz);
           portalCenter.y = height;
-
-          // if (!globalThis.positions) {
-          //   globalThis.positions = [];
-          // }
-          // globalThis.positions.push(portalCenter.x, portalCenter.y, portalCenter.z);
 
           const g = boxGeometry.clone();
           g.applyMatrix4(localMatrix.makeTranslation(portalCenter.x, portalCenter.y, portalCenter.z));
@@ -2550,10 +2541,7 @@ class PanelRenderer extends EventTarget {
             gl_FragColor.rg += vUv * 0.2;
           }
         `,
-        // color: 0xFF0000,
         transparent: true,
-        // opacity: 0.7,
-        // side: THREE.DoubleSide,
       });
 
       const hasGeometry = geometries.length > 0;

@@ -67,7 +67,6 @@ export function reconstructFloor({
 
   const floorNetDepthsOriginal = getRenderSpecsMeshesDepth(meshes, width, height, floorNetCamera);
   globalThis.floorNetDepthsOriginal = floorNetDepthsOriginal;
-  // globalThis.hits = [];
   const floorNetDepths = new Float32Array(floorNetDepthsOriginal.length);
   globalThis.floorNetDepths = floorNetDepths;
   const offset = 0.1;
@@ -82,10 +81,6 @@ export function reconstructFloor({
       let total = 0;
       for (let dy = -range; dy <= range; dy++) {
         for (let dx = -range; dx <= range; dx++) {
-          // if (dx === 0 && dy === 0) {
-          //   continue;
-          // }
-
           const _planeHit = () => {
             localRay.origin.copy(floorNetCamera.position);
             localRay.origin.x = (x / width - 0.5) * floorNetWorldSize;
