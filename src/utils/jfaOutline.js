@@ -3,6 +3,9 @@ import * as fullScreenPass_1 from './fullscreenPass.js';
 import {
   LensFullscreenMaterial,
 } from '../generators/sg-materials.js';
+import {
+  pushMeshes,
+} from './three-utils.js';
 
 const localVectorA = new three_1.Vector3();
 // const localColor = new three_1.Color();
@@ -430,27 +433,6 @@ export function renderDepthReconstruction(
 
 //
 
-const _pushMeshes = (scene, meshes) => {
-  const originalParents = meshes.map(mesh => {
-    const {parent} = mesh;
-    scene.add(mesh);
-    return parent;
-  });
-  return () => {
-    for (let i = 0; i < meshes.length; i++) {
-      const mesh = meshes[i];
-      const originalParent = originalParents[i];
-      if (originalParent) {
-        originalParent.add(mesh);
-      } else {
-        scene.remove(mesh);
-      }
-    }
-  };
-};
-
-//
-
 export function renderMaskIndex({
   renderer,
   meshes,
@@ -477,7 +459,7 @@ export function renderMaskIndex({
 
   {
     // push meshes
-    const _popMeshes = _pushMeshes(lensFullscreenScene, meshes);
+    const popMeshes = pushMeshes(lensFullscreenScene, meshes);
 
     // push old state
     const oldRenderTarget = renderer.getRenderTarget();
@@ -525,7 +507,7 @@ export function renderMaskIndex({
     // renderer.setClearColor(oldClearColor, oldClearAlpha);
 
     // pop meshes
-    _popMeshes();
+    popMeshes();
   }
 
   return maskIndex;
@@ -550,7 +532,7 @@ export function renderJfa({
   tempScene.autoUpdate = false;
 
   // note: stealing the meshes for a moment
-  const _popMeshes = _pushMeshes(tempScene, meshes);
+  const popMeshes = pushMeshes(tempScene, meshes);
 
   // We need two render targets to ping-pong in between.  
   const jfaOutline = new JFAOutline(iResolution);
@@ -638,7 +620,7 @@ export function renderJfa({
     distanceNearestPositions[j * 3 + 2] = nearestPoint.z;
   }
 
-  _popMeshes();
+  popMeshes();
 
   return {
     distanceFloatImageData,

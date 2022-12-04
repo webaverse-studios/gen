@@ -1,7 +1,5 @@
 import * as THREE from 'three';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
-import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader.js';
-import {DRACOLoader} from 'three/examples/jsm/loaders/DRACOLoader.js';
 import alea from '../utils/alea.js';
 import {Text} from 'troika-three-text';
 import * as passes from './sg-passes.js';
@@ -27,6 +25,9 @@ import {
 } from '../utils/sg-shaders.js';
 import {
   makeRenderer,
+  makeGltfLoader,
+  makeDefaultCamera,
+  makeFloorNetCamera,
 } from '../utils/three-utils.js';
 
 import {ImageAiClient} from '../clients/image-client.js';
@@ -67,6 +68,7 @@ import {blob2img, img2ImageData} from '../utils/convert-utils.js';
 import {makeId} from '../utils/id-utils.js';
 import {classes, categories, categoryClassIndices} from '../../constants/classes.js';
 import {colors, rainbowColors, detectronColors} from '../constants/detectron-colors.js';
+import {mobUrls} from '../constants/urls.js';
 import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 // import {labelClasses} from '../constants/prompts.js';
 import {
@@ -116,13 +118,7 @@ const localUint8ArrayPanelSize = new Uint8Array(((panelSize - 1) * 2) * (panelSi
 const upVector = new THREE.Vector3(0, 1, 0);
 const backwardVector = new THREE.Vector3(0, 0, 1);
 
-const gltfLoader = (() => {
-  const gltfLoader = new GLTFLoader();
-  const dracoLoader = new DRACOLoader();
-  dracoLoader.setDecoderPath('/three/draco/');
-  gltfLoader.setDRACOLoader(dracoLoader);
-  return gltfLoader;
-})();
+const gltfLoader = makeGltfLoader();
 
 const imageAiClient = new ImageAiClient();
 const abortError = new Error();
@@ -276,24 +272,6 @@ export const layer2Specs = [
 //
 
 const defaultCameraMatrix = new THREE.Matrix4();
-const _makeDefaultCamera = () => new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
-const _makeFloorNetCamera = () => {
-  const floorNetCamera = new THREE.OrthographicCamera(
-    -floorNetWorldSize / 2,
-    floorNetWorldSize / 2,
-    floorNetWorldSize / 2,
-    -floorNetWorldSize / 2,
-    0,
-    floorNetWorldDepth
-  );
-  floorNetCamera.position.set(0, -floorNetWorldDepth/2, 0);
-  floorNetCamera.quaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI/2)
-    .multiply(
-      localQuaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI)
-    );
-  floorNetCamera.updateMatrixWorld();
-  return floorNetCamera;
-};
 
 //
 
@@ -2312,7 +2290,7 @@ class PanelRenderer extends EventTarget {
     scene.autoUpdate = false;
     this.scene = scene;
     
-    const camera = _makeDefaultCamera();
+    const camera = makeDefaultCamera();
     this.camera = camera;
 
     // orbit controls
@@ -2383,15 +2361,6 @@ class PanelRenderer extends EventTarget {
     const mobs = new THREE.Object3D();
     mobs.visible = false;
     (async () => {
-      const mobUrls = [
-        'silkworm.glb',
-        'silkworm-biter.glb',
-        'silkworm-bloater.glb',
-        // 'silkworm-queen.glb',
-        'silkworm-runner.glb',
-        'silkworm-slasher.glb',
-      ].map(name => `./models/Mob_Bases/${name}`);
-      
       const promises = mobUrls.map(async modelUrl => {
         const p = makePromise();
         gltfLoader.load(modelUrl, gltf => {
@@ -3739,7 +3708,7 @@ class PanelRenderer extends EventTarget {
     );
     // globalThis.oldFloorNetDepthRenderGeometry = oldFloorNetDepthRenderGeometry;
     // globalThis.newFloorNetDepthRenderGeometry = newFloorNetDepthRenderGeometry;
-    const floorNetCamera = _makeFloorNetCamera();
+    const floorNetCamera = makeFloorNetCamera();
     const floorNetDepths = passes.reconstructFloor({
       renderSpecs: [
         {
@@ -4431,7 +4400,7 @@ async function compileVirtualScene(imageArrayBuffer, width, height/*, camera */)
   console.timeEnd('floorPlane');
 
   console.time('floorReconstruction');
-  const floorNetCamera = _makeFloorNetCamera();
+  const floorNetCamera = makeFloorNetCamera();
   let floorNetDepths;
   let floorNetCameraJson;
   {
