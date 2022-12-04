@@ -60,15 +60,6 @@ export function reconstructFloor({
 
   const floorNetCameraJson = getOrthographicCameraJson(floorNetCamera);
 
-  const floorPlane2 = floorPlane.clone();
-  // floorPlane2.normal.negate();
-
-
-
-
-
-  // XXX actually use the passed-in floorPlane to bound the floor
-  console.log('got floor plane', floorPlane.clone());
   renderSpecs = clipRenderSpecs(renderSpecs);
   const width = floorNetPixelSize;
   const height = floorNetPixelSize;
@@ -101,11 +92,8 @@ export function reconstructFloor({
             localRay.origin.z = (y / height - 0.5) * floorNetWorldSize;
             localRay.direction.set(0, 0, -1)
               .applyQuaternion(floorNetCamera.quaternion);
-            const point = localRay.intersectPlane(floorPlane2, localVector);
+            const point = localRay.intersectPlane(floorPlane, localVector);
             sum += -(point.y - floorNetCamera.position.y) * weight;
-            // if (hits.length < 1024) {
-            //   hits.push(value);
-            // }
           };
 
           const x = i % width + dx;
@@ -133,149 +121,6 @@ export function reconstructFloor({
     }
     floorNetDepths[i] = value;
   }
-
-
-
-
-  {
-    /* // canvas
-    const canvas = document.createElement('canvas');
-    canvas.width = floorNetPixelSize;
-    canvas.height = floorNetPixelSize;
-    canvas.classList.add('floorReconstructionCanvas');
-    document.body.appendChild(canvas);
-
-    // renderer
-    const renderer = makeRenderer(canvas);
-
-    // render target
-    const floorRenderTarget = new THREE.WebGLRenderTarget(floorNetPixelSize, floorNetPixelSize, {
-      type: THREE.UnsignedByteType,
-      format: THREE.RGBAFormat,
-    });
-
-    // scene
-    const floorNetScene = new THREE.Scene();
-    floorNetScene.autoUpdate = false;
-
-    // mesh
-    const floorNetDepthRenderMaterial = new THREE.ShaderMaterial({
-      uniforms: {
-        cameraNear: {
-          value: floorNetCamera.near,
-          needsUpdate: true,
-        },
-        cameraFar: {
-          value: floorNetCamera.far,
-          needsUpdate: true,
-        },
-        isPerspective: {
-          value: 0,
-          needsUpdate: true,
-        },
-      },
-      vertexShader: depthVertexShader.replace('// HEADER', `\
-        // HEADER
-        attribute float maskZ;
-        varying float vMaskZ;
-      `).replace('// POST', `\
-        // POST
-        vMaskZ = maskZ;
-      `),
-      fragmentShader: depthFragmentShader.replace('// HEADER', `\
-        // HEADER
-        varying float vMaskZ;
-      `).replace('// POST', `\
-        // POST
-        if (vMaskZ < 0.5) {
-          gl_FragColor = vec4(0., 0., 0., 0.);
-        }
-      `),
-      side: THREE.BackSide,
-    });
-    for (const renderSpec of renderSpecs) {
-      const {geometry} = renderSpec;
-      const floorNetDepthRenderMesh = new THREE.Mesh(geometry, floorNetDepthRenderMaterial);
-      floorNetDepthRenderMesh.frustumCulled = false;
-      floorNetScene.add(floorNetDepthRenderMesh);
-    }
-    
-    // render
-    // render to the canvas, for debugging
-    renderer.render(floorNetScene, floorNetCamera);
-    
-    // real render to the render target
-    renderer.setRenderTarget(floorRenderTarget);
-    renderer.render(floorNetScene, floorNetCamera);
-    renderer.setRenderTarget(null);
-
-    // read back the depth
-    const imageData = {
-      data: new Uint8Array(floorNetPixelSize * floorNetPixelSize * 4),
-      width: floorNetPixelSize,
-      height: floorNetPixelSize,
-    };
-    renderer.readRenderTargetPixels(
-      floorRenderTarget,
-      0,
-      0,
-      floorNetPixelSize,
-      floorNetPixelSize,
-      imageData.data
-    );
-    floorNetDepths = reinterpretFloatImageData(imageData); */
-
-
-
-
-
-
-
-
-
-
-
-
-    // const mergeResult = mergePlaneOperator({
-    //   newDepthFloatImageData: floorPlaneDepths,
-    //   width: floorNetPixelSize,
-    //   height: floorNetPixelSize,
-    //   camera: floorNetCamera,
-    //   renderSpecs,
-    // });
-
-    /* // merge depths
-    const floorPlaneDepths = new Float32Array(floorNetPixelSize * floorNetPixelSize)
-      .fill(-floorNetCamera.far / 2);
-
-    console.log('merge operator 1', {
-      newDepthFloatImageData: floorPlaneDepths,
-      width: floorNetPixelSize,
-      height: floorNetPixelSize,
-      camera: floorNetCamera,
-      renderSpecs,
-    });
-
-    const mergeResult = mergeOperator({
-      newDepthFloatImageData: floorPlaneDepths,
-      width: floorNetPixelSize,
-      height: floorNetPixelSize,
-      camera: floorNetCamera,
-      renderSpecs,
-    });
-    const {
-      oldDepthFloatImageData: depthFloatImageData,
-      maskIndex,
-      distanceFloatImageData,
-      distanceNearestPositions,
-      reconstructedDepthFloats,
-    } = mergeResult;
-    console.log('merge operator 2', mergeResult);
-
-    floorNetDepths = depthFloatImageData;
-    // floorNetDepths = reconstructedDepthFloats; */
-  }
-
   return {
     floorNetDepths,
     floorNetCameraJson,
