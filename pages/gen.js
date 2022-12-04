@@ -2,19 +2,12 @@ import {useState} from 'react';
 import classnames from 'classnames';
 
 import SceneGeneratorComponent from '../src/components/generators/SceneGeneratorComponent.jsx';
+import AvatarGeneratorComponent from '../src/components/generators/AvatarGeneratorComponent.jsx';
+import MobGeneratorComponent from '../src/components/generators/MobGeneratorComponent.jsx';
 import CharacterGeneratorComponent from '../src/components/generators/CharacterGeneratorComponent.jsx';
 import ItemGeneratorComponent from '../src/components/generators/ItemGeneratorComponent.jsx';
 
 import styles from '../styles/Gen.module.css';
-
-//
-
-/* const vqaQueries = [
-  `is this birds eye view?`,
-  `is the viewer looking up at the sky?`,
-  `is the viewer looking up at the ceiling?`,
-  `how many feet tall is the viewer?`,
-]; */
 
 //
 
@@ -34,6 +27,14 @@ const Gen = () => {
         )} onClick={_setTab('sceneGenerator')}>Scene</div>
         <div className={classnames(
           styles.tab,
+          tab === 'avatarGenerator' ? styles.selected : '',
+        )} onClick={_setTab('avatarGenerator')}>Avatar</div>
+        <div className={classnames(
+          styles.tab,
+          tab === 'mobGenerator' ? styles.selected : '',
+        )} onClick={_setTab('mobGenerator')}>Mob</div>
+        <div className={classnames(
+          styles.tab,
           tab === 'characterGenerator' ? styles.selected : '',
         )} onClick={_setTab('characterGenerator')}>Character</div>
         <div className={classnames(
@@ -46,11 +47,15 @@ const Gen = () => {
           switch (tab) {
             case 'sceneGenerator': {
               return <SceneGeneratorComponent />
-              break;
+            }
+            case 'avatarGenerator': {
+              return <AvatarGeneratorComponent />
+            }
+            case 'mobGenerator': {
+              return <MobGeneratorComponent />
             }
             case 'characterGenerator': {
               return <CharacterGeneratorComponent />
-              break;
             }
             case 'itemGenerator': {
               return <ItemGeneratorComponent />
