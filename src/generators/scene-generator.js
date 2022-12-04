@@ -2364,11 +2364,31 @@ class PanelRenderer extends EventTarget {
   
       const model = await p;
       avatar.add(model.scene);
+      avatar.visible = false;
       avatar.updateMatrixWorld();
     })();
     // avatar.position.set(0, 0, 0);
     scene.add(avatar);
     this.avatar = avatar;
+
+    const avatars = new THREE.Object3D();
+    (async () => {
+      const u = './models/Avatar_Bases/Drophunter Class/DropHunter_Master_v1_Guilty.vrm';
+      const p = makePromise();
+      gltfLoader.load(u, vrm => {
+        p.resolve(vrm);
+      }, function onProgress(xhr) {
+        // console.log('progress', xhr.loaded / xhr.total);
+      }, p.reject);
+
+      const vrm = await p;
+      const model = vrm.scene;
+      avatars.add(model);
+      avatars.visible = false;
+      avatars.updateMatrixWorld();
+    })();
+    scene.add(avatars);
+    this.avatars = avatars;
 
     // read the mesh from the panel
     const imgArrayBuffer = panel.getData(mainImageKey);
@@ -2414,9 +2434,8 @@ class PanelRenderer extends EventTarget {
 
     //
 
-    if (firstFloorPlaneIndex === -1) {
-      console.warn('no floor plane found', new Error().stack);
-    } else {
+    // place avatar
+    if (firstFloorPlaneIndex !== -1) {
       const labelSpec = planeSpecs.labels[firstFloorPlaneIndex];
       const normal = localVector.fromArray(labelSpec.normal);
       const center = localVector2.fromArray(labelSpec.center);
@@ -2427,6 +2446,56 @@ class PanelRenderer extends EventTarget {
         .multiply(localQuaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI/2))
         // .multiply(localQuaternion.setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI));
       this.avatar.updateMatrixWorld();
+      this.avatar.visible = true;
+    }
+    // place avatars
+    if (portalLocations.length > 0) {
+      // position
+      const rng = alea('avatars');
+      const portalLocation = portalLocations.splice(Math.floor(rng() * portalLocations.length), 1)[0];
+      this.avatars.position.fromArray(portalLocation);
+
+      // quaternion
+      const lookCandidateLocations = (firstFloorPlaneIndex !== -1 ? [
+        this.avatar.position,
+      ] : [])
+        .concat(portalLocations.map(portalLocation => {
+          return new THREE.Vector3().fromArray(portalLocation);
+        }));
+      if (lookCandidateLocations.length > 0) {
+        const lookCandidateLocation = lookCandidateLocations[Math.floor(rng() * lookCandidateLocations.length)];
+        // match up vector to first plane
+        const up = localVector3.set(0, 1, 0);
+        if (firstFloorPlaneIndex !== -1) {
+          const labelSpec = planeSpecs.labels[firstFloorPlaneIndex];
+          const normal = localVector4.fromArray(labelSpec.normal);
+          normalToQuaternion(normal, localQuaternion, backwardVector)
+            // .multiply(
+            //   localQuaternion2.setFromAxisAngle(localVector5, -Math.PI / 2)
+            // );
+            .multiply(localQuaternion2.setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI/2))
+          up.applyQuaternion(localQuaternion);
+          // console.log('looking', normal.toArray(), up.toArray());
+        }
+        // console.log('look at', [
+        //   this.avatars.position,
+        //   lookCandidateLocation,
+        //   up,
+        // ]);
+        this.avatars.quaternion.setFromRotationMatrix(
+          localMatrix.lookAt(
+            this.avatars.position,
+            lookCandidateLocation,
+            up
+          )
+        );
+      } else {
+        this.avatars.quaternion.copy(this.avatar.quaternion);
+      }
+
+      // update
+      this.avatars.updateMatrixWorld();
+      this.avatars.visible = true;
     }
 
     //
@@ -3313,6 +3382,7 @@ class PanelRenderer extends EventTarget {
     // helpers
     const auxMeshes = [
       this.avatar,
+      this.avatars,
       this.floorNetMesh,
       this.portalNetMesh,
       this.overlay.overlayScene,
