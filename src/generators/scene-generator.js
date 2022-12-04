@@ -269,6 +269,23 @@ export const layer2Specs = [
 
 const defaultCameraMatrix = new THREE.Matrix4();
 const _makeDefaultCamera = () => new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
+const _makeFloorNetCamera = () => {
+  const floorNetCamera = new THREE.OrthographicCamera(
+    -floorNetWorldSize / 2,
+    floorNetWorldSize / 2,
+    floorNetWorldSize / 2,
+    -floorNetWorldSize / 2,
+    0,
+    floorNetWorldDepth
+  );
+  floorNetCamera.position.set(0, -floorNetWorldDepth/2, 0);
+  floorNetCamera.quaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI/2)
+    .multiply(
+      localQuaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI)
+    );
+  floorNetCamera.updateMatrixWorld();
+  return floorNetCamera;
+};
 
 //
 
