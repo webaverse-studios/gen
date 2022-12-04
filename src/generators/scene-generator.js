@@ -807,15 +807,7 @@ const zipPlanesSegmentsJson = (planeSpecs, planesJson) => {
 
   for (let i = 0; i < planeSpecs.labels.length; i++) {
     const label = planeSpecs.labels[i];
-    // if (!planeSpec) {
-    //   console.warn('missing planeSpec 1', {planeSpecs, planesJson});
-    //   debugger;
-    // }
     const planeJson = planesJson[i];
-    // if (!planeJson) {
-    //   console.warn('missing planeSpec 2', {planeSpecs, planesJson});
-    //   debugger;
-    // }
     for (const k in planeJson) {
       label[k] = planeJson[k];
     }
@@ -833,40 +825,27 @@ const getPortalLocations = (() => {
   const localVector5 = new THREE.Vector3();
   const localVector6 = new THREE.Vector3();
   
-  return (portalSpecs, floorHeightfield, floorPlaneLabelSpec) => {
+  return (portalSpecs, depthFloats, floorPlaneLabelSpec) => {
     const portalLocations = [];
     for (let i = 0; i < portalSpecs.labels.length; i++) {
       const labelSpec = portalSpecs.labels[i];
       const normal = localVector.fromArray(labelSpec.normal);
       const center = localVector2.fromArray(labelSpec.center);
       
-      // 1m in front
+      // portal center in world space, 1m in front of the center
       const portalCenter = localVector3.copy(center)
         .add(localVector4.copy(normal).multiplyScalar(-1));
-
-      // snap to floor net resolution
-      portalCenter.x = Math.round(portalCenter.x / floorNetResolution) * floorNetResolution;
-      portalCenter.z = Math.round(portalCenter.z / floorNetResolution) * floorNetResolution;
-
-      // get the corner base position of the floor net mesh
-      const floorCornerBasePosition = (floorPlaneLabelSpec ?
-        localVector5.fromArray(floorPlaneLabelSpec.center)
-      :
-        localVector5.setScalar(0)
-      )
+      
+      // compute the sample coordinates:
+      const floorCornerBasePosition = localVector5.set(0, 0, 0)
         .add(localVector6.set(-floorNetWorldSize / 2, 0, -floorNetWorldSize / 2));
-
-      // get the local pixel coordinates of the portal center
-      const lx = (portalCenter.x - floorCornerBasePosition.x) / floorNetResolution;
-      const lz = (portalCenter.z - floorCornerBasePosition.z) / floorNetResolution;
-
-      // raycast down from the portal to find the floor
-      if (lx >= 0 && lx < floorNetPixelSize && lz >= 0 && lz < floorNetPixelSize) { // if we are in range of the floor net
-        const height = trilinearFilter(floorHeightfield, floorNetPixelSize, floorNetPixelSize, lx, lz);
-        portalCenter.y = height;
-
-        portalLocations.push(portalCenter.toArray());
-      }
+      const px = (portalCenter.x - floorCornerBasePosition.x) / floorNetWorldSize;
+      const pz = (portalCenter.z - floorCornerBasePosition.z) / floorNetWorldSize;
+      const x = Math.floor(px * floorNetPixelSize);
+      const z = Math.floor(pz * floorNetPixelSize);
+      const index = z * floorNetPixelSize + x;
+      portalCenter.y = depthFloats[index];
+      portalLocations.push(portalCenter.toArray());
     }
     return portalLocations;
   };
@@ -2550,6 +2529,51 @@ class PanelRenderer extends EventTarget {
       this.mobs.updateMatrixWorld();
       this.mobs.visible = true;
     }
+
+    /* const floorHeightfield = depthFloat32ArrayToHeightfield(
+      floorNetDepths,
+      floorNetPixelSize,
+      floorNetPixelSize,
+      floorNetCamera,
+    );
+    const makeFloorCubesMesh = (depthFloats, width, height, camera) => {
+      // render an instanced cubes mesh to show the depth
+      const depthCubesGeometry = new THREE.BoxBufferGeometry(0.05, 0.05, 0.05);
+      const depthCubesMaterial = new THREE.MeshPhongMaterial({
+        color: 0x00FFFF,
+        // vertexColors: true,
+      });
+      const depthCubesMesh = new THREE.InstancedMesh(depthCubesGeometry, depthCubesMaterial, depthFloats.length);
+      depthCubesMesh.name = 'depthCubesMesh';
+      depthCubesMesh.frustumCulled = false;
+      // set the matrices by projecting the depth from the perspective camera
+      depthCubesMesh.count = 0;
+      for (let i = 0; i < depthFloats.length; i++) {
+        const x = (i % width) / width;
+        const y = Math.floor(i / width) / height;
+
+        // get the corner base position of the floor net mesh
+        // const floorCornerBasePosition = localVector5.copy(this.floorNetMesh.position)
+        const floorCornerBasePosition = localVector5.set(0, 0, 0)
+          .add(localVector6.set(-floorNetWorldSize / 2, 0, -floorNetWorldSize / 2));
+
+        // get the local coordinates of the portal center
+        const ax = floorCornerBasePosition.x + x * floorNetWorldSize;
+        const az = floorCornerBasePosition.z + y * floorNetWorldSize;
+        const ay = depthFloats[i];
+
+        if (ay !== 0) {
+          localMatrix.makeTranslation(ax, ay, az);
+          depthCubesMesh.setMatrixAt(i, localMatrix);
+          depthCubesMesh.count++;
+        }
+      }
+      depthCubesMesh.instanceMatrix.needsUpdate = true;
+      return depthCubesMesh;
+    };
+    const fcm = makeFloorCubesMesh(floorHeightfield, floorNetPixelSize, floorNetPixelSize, floorNetCamera);
+    fcm.frustumCulled = false;
+    this.scene.add(fcm); */
 
     //
 
@@ -4473,7 +4497,7 @@ async function compileVirtualScene(imageArrayBuffer, width, height/*, camera */)
   this.scene.add(dcm); */
   const floorPlaneLabelSpec = firstFloorPlaneIndex !== -1 ? planeSpecs.labels[firstFloorPlaneIndex] : null;
   const portalLocations = getPortalLocations(portalSpecs, floorHeightfield, floorPlaneLabelSpec);
-  
+
   // query the height
   const predictedHeight = await _getPredictedHeight(blob);
   // console.log('got predicted height', predictedHeight);

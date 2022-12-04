@@ -33,7 +33,7 @@ import {
 //
 
 const localVector = new THREE.Vector3();
-const localQuaternion = new THREE.Quaternion();
+// const localQuaternion = new THREE.Quaternion();
 const localRay = new THREE.Ray();
 
 //
@@ -43,10 +43,6 @@ export function reconstructFloor({
   camera,
   floorPlane,
 }) {
-  if (!camera) {
-    console.warn('no camera', camera);
-    debugger;
-  }
   renderSpecs = clipRenderSpecs(renderSpecs);
   const width = floorNetPixelSize;
   const height = floorNetPixelSize;
