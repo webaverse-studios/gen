@@ -50,11 +50,11 @@ export function reconstructFloor({
 
   const floorNetDepthsOriginal = getRenderSpecsMeshesDepth(meshes, width, height, camera);
   const floorNetDepths = new Float32Array(floorNetDepthsOriginal.length);
-  const offset = 0.1;
+  const offset = 0.1 / 2;
   for (let i = 0; i < floorNetDepthsOriginal.length; i++) {
     let value = floorNetDepthsOriginal[i];
     if (value !== 0) {
-      value = value - offset;
+      value = value + offset;
     } else {
       // sample around the pixel to see if there's a nearby depth
       const range = 3;
