@@ -3660,12 +3660,10 @@ class PanelRenderer extends EventTarget {
       this.renderer.domElement.height,
       editCamera,
     );
-    globalThis.oldFloorNetDepthRenderGeometry = oldFloorNetDepthRenderGeometry;
-    globalThis.newFloorNetDepthRenderGeometry = newFloorNetDepthRenderGeometry;
-    const {
-      floorNetDepths,
-      floorNetCameraJson,
-    } = passes.reconstructFloor({
+    // globalThis.oldFloorNetDepthRenderGeometry = oldFloorNetDepthRenderGeometry;
+    // globalThis.newFloorNetDepthRenderGeometry = newFloorNetDepthRenderGeometry;
+    const floorNetCamera = _makeFloorNetCamera();
+    const floorNetDepths = passes.reconstructFloor({
       renderSpecs: [
         {
           geometry: oldFloorNetDepthRenderGeometry,
@@ -3680,8 +3678,10 @@ class PanelRenderer extends EventTarget {
           clipZ: true,
         },
       ],
+      camera: floorNetCamera,
       floorPlane,
     });
+    const floorNetCameraJson = getOrthographicCameraJson(floorNetCamera);
     console.timeEnd('floorReconstruction');
 
     // return result
@@ -4332,13 +4332,13 @@ async function compileVirtualScene(imageArrayBuffer, width, height/*, camera */)
     portalSpecs,
   } = semanticSpecs;
 
+  console.time('floorPlane');
   const floorPlane = new THREE.Plane()
     .setFromNormalAndCoplanarPoint(
       localVector.set(0, 1, 0),
       localVector2.set(0, 0, 0)
     );
   const firstFloorPlaneIndex = getFirstFloorPlaneIndex(planeSpecs);
-  globalThis.labels = planeSpecs.labels;
   if (firstFloorPlaneIndex !== -1) {
     const labelSpec = planeSpecs.labels[firstFloorPlaneIndex];
     const {normal, center} = labelSpec;
@@ -4351,13 +4351,15 @@ async function compileVirtualScene(imageArrayBuffer, width, height/*, camera */)
     normal: floorPlane.normal.toArray(),
     constant: floorPlane.constant,
   };
+  console.timeEnd('floorPlane');
 
   console.time('floorReconstruction');
+  const floorNetCamera = _makeFloorNetCamera();
   let floorNetDepths;
   let floorNetCameraJson;
   {
     const floorNetDepthRenderGeometry = pointCloudArrayBufferToGeometry(pointCloudArrayBuffer, width, height);
-    const floorSpec = passes.reconstructFloor({
+    floorNetDepths = passes.reconstructFloor({
       renderSpecs: [
         {
           geometry: floorNetDepthRenderGeometry,
@@ -4366,12 +4368,58 @@ async function compileVirtualScene(imageArrayBuffer, width, height/*, camera */)
           clipZ: true,
         },
       ],
+      camera: floorNetCamera,
       floorPlane,
     });
-    floorNetDepths = floorSpec.floorNetDepths;
-    floorNetCameraJson = floorSpec.floorNetCameraJson;
+    floorNetCameraJson = getOrthographicCameraJson(floorNetCamera);
   }
   console.timeEnd('floorReconstruction');
+
+  const floorHeightfield = depthFloat32ArrayToHeightfield(
+    floorNetDepths,
+    floorNetPixelSize,
+    floorNetPixelSize,
+    floorNetCamera,
+  );
+  /* const makeDepthCubesMesh2 = (depthFloats, width, height, camera) => {
+    // render an instanced cubes mesh to show the depth
+    const depthCubesGeometry = new THREE.BoxBufferGeometry(0.05, 0.05, 0.05);
+    const depthCubesMaterial = new THREE.MeshPhongMaterial({
+      color: 0x00FFFF,
+      // vertexColors: true,
+    });
+    const depthCubesMesh = new THREE.InstancedMesh(depthCubesGeometry, depthCubesMaterial, depthFloats.length);
+    depthCubesMesh.name = 'depthCubesMesh';
+    depthCubesMesh.frustumCulled = false;
+    // set the matrices by projecting the depth from the perspective camera
+    depthCubesMesh.count = 0;
+    for (let i = 0; i < depthFloats.length; i++) {
+      const x = (i % width) / width;
+      const y = Math.floor(i / width) / height;
+
+      // get the corner base position of the floor net mesh
+      const floorCornerBasePosition = localVector5.copy(this.floorNetMesh.position)
+        .add(localVector6.set(-floorNetWorldSize / 2, 0, -floorNetWorldSize / 2));
+
+      // get the local coordinates of the portal center
+      const ax = floorCornerBasePosition.x + x * floorNetWorldSize;
+      const az = floorCornerBasePosition.z + y * floorNetWorldSize;
+      const ay = depthFloats[i];
+
+      if (ay !== 0) {
+        localMatrix.makeTranslation(ax, ay, az);
+        depthCubesMesh.setMatrixAt(i, localMatrix);
+        depthCubesMesh.count++;
+      }
+    }
+    depthCubesMesh.instanceMatrix.needsUpdate = true;
+    return depthCubesMesh;
+  };
+  const dcm = makeDepthCubesMesh2(floorHeightfield, floorNetPixelSize, floorNetPixelSize, floorNetCamera);
+  dcm.frustumCulled = false;
+  this.scene.add(dcm); */
+  const floorPlaneLabelSpec = firstFloorPlaneIndex !== -1 ? planeSpecs.labels[firstFloorPlaneIndex] : null;
+  const portalLocations = getPortalLocations(portalSpecs, floorHeightfield, floorPlaneLabelSpec);
   
   // query the height
   const predictedHeight = await _getPredictedHeight(blob);

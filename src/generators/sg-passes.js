@@ -40,35 +40,20 @@ const localRay = new THREE.Ray();
 
 export function reconstructFloor({
   renderSpecs,
+  camera,
   floorPlane,
 }) {
-  // camera
-  const floorNetCamera = new THREE.OrthographicCamera(
-    -floorNetWorldSize / 2,
-    floorNetWorldSize / 2,
-    floorNetWorldSize / 2,
-    -floorNetWorldSize / 2,
-    0,
-    floorNetWorldDepth
-  );
-  floorNetCamera.position.set(0, -floorNetWorldDepth/2, 0);
-  floorNetCamera.quaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI/2)
-    .multiply(
-      localQuaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI)
-    );
-  floorNetCamera.updateMatrixWorld();
-
-  const floorNetCameraJson = getOrthographicCameraJson(floorNetCamera);
-
+  if (!camera) {
+    console.warn('no camera', camera);
+    debugger;
+  }
   renderSpecs = clipRenderSpecs(renderSpecs);
   const width = floorNetPixelSize;
   const height = floorNetPixelSize;
-  const meshes = getRenderSpecsMeshes(renderSpecs, floorNetCamera);
+  const meshes = getRenderSpecsMeshes(renderSpecs, camera);
 
-  const floorNetDepthsOriginal = getRenderSpecsMeshesDepth(meshes, width, height, floorNetCamera);
-  globalThis.floorNetDepthsOriginal = floorNetDepthsOriginal;
+  const floorNetDepthsOriginal = getRenderSpecsMeshesDepth(meshes, width, height, camera);
   const floorNetDepths = new Float32Array(floorNetDepthsOriginal.length);
-  globalThis.floorNetDepths = floorNetDepths;
   const offset = 0.1;
   for (let i = 0; i < floorNetDepthsOriginal.length; i++) {
     let value = floorNetDepthsOriginal[i];
@@ -82,13 +67,13 @@ export function reconstructFloor({
       for (let dy = -range; dy <= range; dy++) {
         for (let dx = -range; dx <= range; dx++) {
           const _planeHit = () => {
-            localRay.origin.copy(floorNetCamera.position);
+            localRay.origin.copy(camera.position);
             localRay.origin.x = (x / width - 0.5) * floorNetWorldSize;
             localRay.origin.z = (y / height - 0.5) * floorNetWorldSize;
             localRay.direction.set(0, 0, -1)
-              .applyQuaternion(floorNetCamera.quaternion);
+              .applyQuaternion(camera.quaternion);
             const point = localRay.intersectPlane(floorPlane, localVector);
-            sum += -(point.y - floorNetCamera.position.y) * weight;
+            sum += -(point.y - camera.position.y) * weight;
           };
 
           const x = i % width + dx;
@@ -116,8 +101,5 @@ export function reconstructFloor({
     }
     floorNetDepths[i] = value;
   }
-  return {
-    floorNetDepths,
-    floorNetCameraJson,
-  };
+  return floorNetDepths;
 }
