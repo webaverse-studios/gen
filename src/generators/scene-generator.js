@@ -2359,6 +2359,7 @@ class PanelRenderer extends EventTarget {
 
     this.sceneMesh = null;
 
+    // avatar
     const avatar = new THREE.Object3D();
     avatar.visible = false;
     (async () => {
@@ -2373,12 +2374,12 @@ class PanelRenderer extends EventTarget {
   
       const model = await p;
       avatar.add(model.scene);
-      avatar.updateMatrixWorld();
+      model.scene.updateMatrixWorld();
     })();
-    // avatar.position.set(0, 0, 0);
     scene.add(avatar);
     this.avatar = avatar;
 
+    // avatars
     const avatars = new THREE.Object3D();
     avatars.visible = false;
     (async () => {
@@ -2392,11 +2393,42 @@ class PanelRenderer extends EventTarget {
 
       const vrm = await p;
       const model = vrm.scene;
+      model.scale.setScalar(0.8);
       avatars.add(model);
-      avatars.updateMatrixWorld();
+      model.updateMatrixWorld();
     })();
     scene.add(avatars);
     this.avatars = avatars;
+
+    // mobs
+    const mobs = new THREE.Object3D();
+    mobs.visible = false;
+    (async () => {
+      const mobUrls = [
+        'silkworm.glb',
+        'silkworm-biter.glb',
+        'silkworm-bloater.glb',
+        // 'silkworm-queen.glb',
+        'silkworm-runner.glb',
+        'silkworm-slasher.glb',
+      ].map(name => `./models/Mob_Bases/${name}`);
+      
+      const promises = mobUrls.map(async modelUrl => {
+        const p = makePromise();
+        gltfLoader.load(modelUrl, gltf => {
+          p.resolve(gltf);
+        }, function onProgress(xhr) {
+          // console.log('progress', xhr.loaded / xhr.total);
+        }, p.reject);
+  
+        const model = await p;
+        mobs.add(model.scene);
+        model.scene.updateMatrixWorld();
+      });
+      await Promise.all(promises);
+    })();
+    scene.add(mobs);
+    this.mobs = mobs;
 
     // read the mesh from the panel
     const imgArrayBuffer = panel.getData(mainImageKey);
@@ -2457,53 +2489,66 @@ class PanelRenderer extends EventTarget {
       this.avatar.visible = true;
     }
     // place avatars
-    if (portalLocations.length > 0) {
-      // position
-      const rng = alea('avatars');
-      const portalLocation = portalLocations.splice(Math.floor(rng() * portalLocations.length), 1)[0];
-      this.avatars.position.fromArray(portalLocation);
+    const rng = alea('avatars');
+    const candidatePortalLocations = portalLocations.slice();
+    const _getCandidateTransform = () => {
+      let position;
+      let quaternion;
+      if (candidatePortalLocations.length > 0) {
+        // position
+        const portalLocation = candidatePortalLocations.splice(Math.floor(rng() * candidatePortalLocations.length), 1)[0];
+        position = localVector.fromArray(portalLocation);
 
-      // quaternion
-      const lookCandidateLocations = (firstFloorPlaneIndex !== -1 ? [
-        this.avatar.position,
-      ] : [])
-        .concat(portalLocations.map(portalLocation => {
-          return new THREE.Vector3().fromArray(portalLocation);
-        }));
-      if (lookCandidateLocations.length > 0) {
-        const lookCandidateLocation = lookCandidateLocations[Math.floor(rng() * lookCandidateLocations.length)];
-        // match up vector to first plane
-        const up = localVector3.set(0, 1, 0);
-        if (firstFloorPlaneIndex !== -1) {
-          const labelSpec = planeSpecs.labels[firstFloorPlaneIndex];
-          const normal = localVector4.fromArray(labelSpec.normal);
-          normalToQuaternion(normal, localQuaternion, backwardVector)
-            // .multiply(
-            //   localQuaternion2.setFromAxisAngle(localVector5, -Math.PI / 2)
-            // );
-            .multiply(localQuaternion2.setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI/2))
-          up.applyQuaternion(localQuaternion);
-          // console.log('looking', normal.toArray(), up.toArray());
+        // quaternion
+        const lookCandidateLocations = (firstFloorPlaneIndex !== -1 ? [
+          this.avatar.position,
+        ] : [])
+          .concat(candidatePortalLocations.map(portalLocation => {
+            return new THREE.Vector3().fromArray(portalLocation);
+          }));
+        if (lookCandidateLocations.length > 0) {
+          const lookCandidateLocation = lookCandidateLocations[Math.floor(rng() * lookCandidateLocations.length)];
+          // match up vector to first plane
+          const up = localVector2.set(0, 1, 0);
+          if (firstFloorPlaneIndex !== -1) {
+            const labelSpec = planeSpecs.labels[firstFloorPlaneIndex];
+            const normal = localVector3.fromArray(labelSpec.normal);
+            normalToQuaternion(normal, localQuaternion, backwardVector)
+              .multiply(localQuaternion2.setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI/2))
+            up.applyQuaternion(localQuaternion);
+          }
+          quaternion = localQuaternion.setFromRotationMatrix(
+            localMatrix.lookAt(
+              position,
+              lookCandidateLocation,
+              up
+            )
+          );
+        } else {
+          quaternion = localQuaternion.identity();
         }
-        // console.log('look at', [
-        //   this.avatars.position,
-        //   lookCandidateLocation,
-        //   up,
-        // ]);
-        this.avatars.quaternion.setFromRotationMatrix(
-          localMatrix.lookAt(
-            this.avatars.position,
-            lookCandidateLocation,
-            up
-          )
-        );
+        return {
+          position,
+          quaternion,
+        };
       } else {
-        this.avatars.quaternion.copy(this.avatar.quaternion);
+        return null;
       }
-
-      // update
+    };
+    const avatarsTransform = _getCandidateTransform();
+    if (avatarsTransform) {
+      this.avatars.position.copy(avatarsTransform.position);
+      this.avatars.quaternion.copy(avatarsTransform.quaternion);
       this.avatars.updateMatrixWorld();
       this.avatars.visible = true;
+    }
+    // place mobs
+    const mobsTransform = _getCandidateTransform();
+    if (mobsTransform) {
+      this.mobs.position.copy(mobsTransform.position);
+      this.mobs.quaternion.copy(mobsTransform.quaternion);
+      this.mobs.updateMatrixWorld();
+      this.mobs.visible = true;
     }
 
     //
