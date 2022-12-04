@@ -193,6 +193,10 @@ export const layer1Specs = [
     name: 'predictedHeight',
     type: 'json',
   },
+  {
+    name: 'portalLocations',
+    type: 'json',
+  },
 ];
 export const layer2Specs = [
   {
@@ -776,6 +780,55 @@ const zipPlanesSegmentsJson = (planeSpecs, planesJson) => {
   }
   return planeSpecs;
 };
+
+//
+
+const getPortalLocations = (() => {
+  const localVector = new THREE.Vector3();
+  const localVector2 = new THREE.Vector3();
+  const localVector3 = new THREE.Vector3();
+  const localVector4 = new THREE.Vector3();
+  const localVector5 = new THREE.Vector3();
+  const localVector6 = new THREE.Vector3();
+  
+  return (portalSpecs, floorHeightfield, floorPlaneLabelSpec) => {
+    const portalLocations = [];
+    for (let i = 0; i < portalSpecs.labels.length; i++) {
+      const labelSpec = portalSpecs.labels[i];
+      const normal = localVector.fromArray(labelSpec.normal);
+      const center = localVector2.fromArray(labelSpec.center);
+      
+      // 1m in front
+      const portalCenter = localVector3.copy(center)
+        .add(localVector4.copy(normal).multiplyScalar(-1));
+
+      // snap to floor net resolution
+      portalCenter.x = Math.round(portalCenter.x / floorNetResolution) * floorNetResolution;
+      portalCenter.z = Math.round(portalCenter.z / floorNetResolution) * floorNetResolution;
+
+      // get the corner base position of the floor net mesh
+      const floorCornerBasePosition = (floorPlaneLabelSpec ?
+        localVector5.fromArray(floorPlaneLabelSpec.center)
+      :
+        localVector5.setScalar(0)
+      )
+        .add(localVector6.set(-floorNetWorldSize / 2, 0, -floorNetWorldSize / 2));
+
+      // get the local pixel coordinates of the portal center
+      const lx = (portalCenter.x - floorCornerBasePosition.x) / floorNetResolution;
+      const lz = (portalCenter.z - floorCornerBasePosition.z) / floorNetResolution;
+
+      // raycast down from the portal to find the floor
+      if (lx >= 0 && lx < floorNetPixelSize && lz >= 0 && lz < floorNetPixelSize) { // if we are in range of the floor net
+        const height = trilinearFilter(floorHeightfield, floorNetPixelSize, floorNetPixelSize, lx, lz);
+        portalCenter.y = height;
+
+        portalLocations.push(portalCenter.toArray());
+      }
+    }
+    return portalLocations;
+  };
+})();
 
 //
 
@@ -2300,6 +2353,7 @@ class PanelRenderer extends EventTarget {
     const floorNetDepths = panel.getData('layer1/floorNetDepths');
     const floorNetCameraJson = panel.getData('layer1/floorNetCameraJson');
     const predictedHeight = panel.getData('layer1/predictedHeight');
+    const portalLocations = panel.getData('layer1/portalLocations');
 
     // camera
     this.camera.fov = Number(pointCloudHeaders['x-fov']);
@@ -4321,6 +4375,7 @@ async function compileVirtualScene(imageArrayBuffer, width, height/*, camera */)
     floorPlaneJson,
     floorNetDepths,
     floorNetCameraJson,
+    portalLocations,
     predictedHeight,
   };
 }
