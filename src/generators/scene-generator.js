@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader.js';
+import {DRACOLoader} from 'three/examples/jsm/loaders/DRACOLoader.js';
 import alea from '../utils/alea.js';
 import {Text} from 'troika-three-text';
 import * as passes from './sg-passes.js';
@@ -115,7 +116,14 @@ const localUint8ArrayPanelSize = new Uint8Array(((panelSize - 1) * 2) * (panelSi
 const upVector = new THREE.Vector3(0, 1, 0);
 const backwardVector = new THREE.Vector3(0, 0, 1);
 
-const gltfLoader = new GLTFLoader();
+const gltfLoader = (() => {
+  const gltfLoader = new GLTFLoader();
+  const dracoLoader = new DRACOLoader();
+  dracoLoader.setDecoderPath('/three/draco/');
+  gltfLoader.setDRACOLoader(dracoLoader);
+  return gltfLoader;
+})();
+
 const imageAiClient = new ImageAiClient();
 const abortError = new Error();
 abortError.isAbortError = true;
