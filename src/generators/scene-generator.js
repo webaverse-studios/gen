@@ -2509,104 +2509,17 @@ class PanelRenderer extends EventTarget {
       floorNetCamera,
     });
 
-    // compute the floor heightfield
-    const floorHeightfield = depthFloat32ArrayToHeightfield(
-      floorNetDepths,
-      floorNetPixelSize,
-      floorNetPixelSize,
-      floorNetCamera,
-    );
-    
-    /* const makeDepthCubesMesh2 = (depthFloats, width, height, camera) => {
-      // render an instanced cubes mesh to show the depth
-      const depthCubesGeometry = new THREE.BoxBufferGeometry(0.05, 0.05, 0.05);
-      const depthCubesMaterial = new THREE.MeshPhongMaterial({
-        color: 0x00FFFF,
-        // vertexColors: true,
-      });
-      const depthCubesMesh = new THREE.InstancedMesh(depthCubesGeometry, depthCubesMaterial, depthFloats.length);
-      depthCubesMesh.name = 'depthCubesMesh';
-      depthCubesMesh.frustumCulled = false;
-      // set the matrices by projecting the depth from the perspective camera
-      depthCubesMesh.count = 0;
-      for (let i = 0; i < depthFloats.length; i++) {
-        const x = (i % width) / width;
-        const y = Math.floor(i / width) / height;
-
-        // get the corner base position of the floor net mesh
-        const floorCornerBasePosition = localVector5.copy(this.floorNetMesh.position)
-          .add(localVector6.set(-floorNetWorldSize / 2, 0, -floorNetWorldSize / 2));
-
-        // get the local coordinates of the portal center
-        const ax = floorCornerBasePosition.x + x * floorNetWorldSize;
-        const az = floorCornerBasePosition.z + y * floorNetWorldSize;
-        const ay = depthFloats[i];
-
-        if (ay !== 0) {
-          localMatrix.makeTranslation(ax, ay, az);
-          depthCubesMesh.setMatrixAt(i, localMatrix);
-          depthCubesMesh.count++;
-        }
-      }
-      depthCubesMesh.instanceMatrix.needsUpdate = true;
-      return depthCubesMesh;
-    };
-    const dcm = makeDepthCubesMesh2(floorHeightfield, floorNetPixelSize, floorNetPixelSize, floorNetCamera);
-    dcm.frustumCulled = false;
-    this.scene.add(dcm); */
-
     // portal net mesh
     {
       const boxGeometry = new THREE.BoxBufferGeometry(0.1, 0.1, 0.1);
+      const geometries = portalLocations.map(portalLocation => {
+        portalLocation = localVector.fromArray(portalLocation);
 
-      const geometries = [];
-      for (let i = 0; i < portalSpecs.labels.length; i++) {
-        const labelSpec = portalSpecs.labels[i];
-        const normal = localVector.fromArray(labelSpec.normal);
-        const center = localVector2.fromArray(labelSpec.center);
-        
-        // 1m in front
-        const portalCenter = localVector3.copy(center)
-          .add(localVector4.copy(normal).multiplyScalar(-1));
-
-        // snap to floor net resolution
-        portalCenter.x = Math.round(portalCenter.x / floorNetResolution) * floorNetResolution;
-        portalCenter.z = Math.round(portalCenter.z / floorNetResolution) * floorNetResolution;
-
-        // get the corner base position of the floor net mesh
-        const floorCornerBasePosition = localVector5.copy(this.floorNetMesh.position)
-          .add(localVector6.set(-floorNetWorldSize / 2, 0, -floorNetWorldSize / 2));
-
-        // get the local pixel coordinates of the portal center
-        const lx = (portalCenter.x - floorCornerBasePosition.x) / floorNetResolution;
-        const lz = (portalCenter.z - floorCornerBasePosition.z) / floorNetResolution;
-
-        // raycast down from the portal to find the floor
-        if (lx >= 0 && lx < floorNetPixelSize && lz >= 0 && lz < floorNetPixelSize) { // if we are in range of the floor net
-          const height = _trilinearFilter(floorHeightfield, floorNetPixelSize, floorNetPixelSize, lx, lz);
-          portalCenter.y = height;
-
-          const g = boxGeometry.clone();
-          g.applyMatrix4(localMatrix.makeTranslation(portalCenter.x, portalCenter.y, portalCenter.z));
-          geometries.push(g);
-        }
-      }
+        const g = boxGeometry.clone();
+        g.applyMatrix4(localMatrix.makeTranslation(portalLocation.x, portalLocation.y, portalLocation.z));
+        return g;
+      });
       const geometry = geometries.length > 0 ? BufferGeometryUtils.mergeBufferGeometries(geometries) : new THREE.BufferGeometry();
-
-      function _trilinearFilter(floorHeightfield, width, height, x, z) {
-        const x0 = Math.floor(x);
-        const x1 = x0 + 1;
-        const z0 = Math.floor(z);
-        const z1 = z0 + 1;
-        const y00 = floorHeightfield[z0 * width + x0];
-        const y01 = floorHeightfield[z0 * width + x1];
-        const y10 = floorHeightfield[z1 * width + x0];
-        const y11 = floorHeightfield[z1 * width + x1];
-        const y0 = y00 + (y01 - y00) * (x - x0);
-        const y1 = y10 + (y11 - y10) * (x - x0);
-        const y = y0 + (y1 - y0) * (z - z0);
-        return y;
-      }
 
       const material = new THREE.ShaderMaterial({
         vertexShader: `\
