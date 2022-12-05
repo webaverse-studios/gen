@@ -8,6 +8,17 @@ export const makePromise = () => {
     promise.reject = reject;
     return promise;
 };
+export const loadImage = u => {
+    const p = makePromise();
+    const img = new Image();
+    img.crossOrigin = 'Anonymous';
+    img.onload = () => {
+      p.resolve(img);
+    };
+    img.onerror = p.reject;
+    img.src = u;
+    return p;
+};
 export const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 export const capitalizeAllWords = (s) => {
     let words = s.split(/\s+/);
