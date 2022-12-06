@@ -129,3 +129,9 @@ export const getGalleryArray = async (content) => {
 export function mod(v, n) {
     return ((v % n) + n) % n;
 }
+
+export const modUv = (uv) => {
+    uv.x = mod(uv.x, 1);
+    uv.y = mod(uv.y, 1);
+    return uv;
+};
