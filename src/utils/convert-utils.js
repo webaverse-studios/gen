@@ -20,6 +20,15 @@ export function blob2img(blob) {
   return promise;
 }
 
+export function img2canvas(img) {
+  const canvas = document.createElement('canvas');
+  canvas.width = img.width;
+  canvas.height = img.height;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(img, 0, 0);
+  return canvas;
+}
+
 export function canvas2blob(canvas) {
   return new Promise((accept, reject) => {
     canvas.toBlob(accept, 'image/png');
