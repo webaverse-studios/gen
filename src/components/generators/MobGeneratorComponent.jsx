@@ -430,7 +430,7 @@ const generateMob = async (canvas, prompt) => {
       // render opaque
       renderer2.setClearColor(backgroundColor, 1);
       // const alpha2 = 1;
-      backgroundMaterial.uniforms.uAlpha.value = 1;
+      backgroundMaterial.uniforms.uAlpha.value = 0.5;
       backgroundMaterial.uniforms.uAlpha.needsUpdate = true;
       overrideMaterial.uniforms.uAlpha.value = 0.5;
       overrideMaterial.uniforms.uAlpha.needsUpdate = true;
