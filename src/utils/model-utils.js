@@ -194,10 +194,6 @@ export const preprocessMeshForTextureEdit = async mesh => {
           value: material.map,
           needsUpdate: true,
         },
-        iResolution: {
-          value: new THREE.Vector2(image.width, image.height),
-          needsUpdate: true,
-        },
         uAlpha: {
           value: 1,
           needsUpdate: true,
