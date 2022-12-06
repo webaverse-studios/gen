@@ -35,12 +35,17 @@ import styles from '../../../styles/MobGenerator.module.css';
 import {
   blob2img,
   canvas2blob,
+  image2DataUrl,
   img2canvas,
 } from '../../utils/convert-utils.js';
+import {
+  optimizeAvatarModel,
+} from '../../utils/avatar-optimizer.js';
 
 //
 
 const avatarUrl = `/models/Avatar_Bases/Drophunter Class/DropHunter_Master_v1_Guilty.vrm`;
+const size = 1024;
 
 //
 
@@ -70,7 +75,7 @@ const generateMob = async (canvas, prompt) => {
   controls.target.copy(camera.position)
     .addScaledVector(camera.getWorldDirection(new THREE.Vector3()), targetDistance);
 
-  const mobs = new THREE.Object3D();
+  const avatars = new THREE.Object3D();
   (async () => {
     const gltfLoader = makeGltfLoader();
     const p = makePromise();
@@ -82,18 +87,25 @@ const generateMob = async (canvas, prompt) => {
 
     let model = await p;
     model = model.scene;
-    mobs.add(model);
-    model.updateMatrixWorld();
 
     // recompile the model
-    const meshes = [];
-    const materials = [];
-    model.traverse(o => {
-      if (o.isMesh) {
-        meshes.push(o);
-        materials.push(o.material);
-      }
-    });
+    const getMeshSpecs = model => {
+      const meshes = [];
+      const materials = [];
+      model.traverse(o => {
+        if (o.isMesh) {
+          meshes.push(o);
+          materials.push(o.material);
+        }
+      });
+      return {
+        meshes,
+        materials,
+      };
+    };
+    let meshSpecs = getMeshSpecs(model);
+    let meshes = meshSpecs.meshes;
+    let materials = meshSpecs.materials;
 
     // sort meshes into invisible categories
     const categorySpecs = [
@@ -162,6 +174,7 @@ const generateMob = async (canvas, prompt) => {
       categorySelections[name] = mesh;
     }
 
+    // enable base meshes
     for (const mesh of categories.body.meshes) {
       mesh.visible = true;
     }
@@ -169,10 +182,75 @@ const generateMob = async (canvas, prompt) => {
       mesh.visible = true;
     }
 
+    // remove invisible meshes
+    for (const mesh of meshes) {
+      if (!mesh.visible) {
+        mesh.parent.remove(mesh);
+      }
+    }
+
+    // XXX: hack because this mesh does not have an identity transform
+    model.updateMatrixWorld();
+    const beltMesh = categories.accessories.meshes.find(mesh => mesh.name === 'accessories_HipBelt');
+    beltMesh.matrix.decompose(beltMesh.position, beltMesh.quaternion, beltMesh.scale);
+    beltMesh.geometry.applyMatrix4(beltMesh.matrix);
+    beltMesh.matrix.identity()
+      .decompose(beltMesh.position, beltMesh.quaternion, beltMesh.scale);
+    beltMesh.updateMatrixWorld();
+
+    // optimize the resulting model
+    model = await optimizeAvatarModel(model);
+    
+    // // add the model to the scene
+    avatars.add(model);
+    model.updateMatrixWorld();
+
+    // latch the new mesh specs
+    meshSpecs = getMeshSpecs(model);
+    meshes = meshSpecs.meshes;
+    materials = meshSpecs.materials;
+
+    // XXX rerender the textures with AI
+    for (let i = 0; i < materials.length; i++) {
+      // const material = materials[i];
+      // console.log('got material', material);
+      // const {map} = material;
+      // const {image} = map;
+      // image.style.cssText = `\
+      //   position: relative;
+      //   width: 1024px;
+      //   height: 1024px;
+      // `;
+      // document.body.appendChild(image);
+
+      // // resize to size
+      // const canvas = document.createElement('canvas');
+      // canvas.width = size;
+      // canvas.height = size;
+      // const ctx = canvas.getContext('2d');
+      // ctx.drawImage(image, 0, 0, size, size);
+      
+      // const blob = await canvas2blob(canvas);
+      const opaqueImgDataUrl = await image2DataUrl(canvas);
+
+      // const editImg = await img2img({
+      //   prompt,
+      //   width: image.width,
+      //   height: image.height,
+      //   imageDataUrl: opaqueImgDataUrl,
+      //   // imageDataUrl: maskImgDataUrl,
+      //   maskImageDataUrl: maskImgDataUrl,
+      // });
+  
+      // generateTextureMaps
+    }
+
+    globalThis.model = model;
     globalThis.meshes = meshes;
-    globalThis.categories = categories;
+    globalThis.materials = materials;
+    // globalThis.categories = categories;
   })();
-  scene.add(mobs);
+  scene.add(avatars);
 
   // start render loop
   const _render = () => {
@@ -182,15 +260,13 @@ const generateMob = async (canvas, prompt) => {
   _render();
 };
 
-const defaultPrompt = 'diffuse texture, Unreal Engine anime video game, JRPG character VRoid Hub Pixiv';
+const defaultPrompt = 'diffuse texture, Unreal Engine anime video game, JRPG character VRChat VRoid Hub Pixiv';
 const AvatarGeneratorComponent = () => {
   const [prompt, setPrompt] = useState(defaultPrompt);
   const [generated, setGenerated] = useState(false);
   const [imageAiModel, setImageAiModel] = useState('sd');
   const canvasRef = useRef();
   
-  const size = 1024;
-
   const generateClick = async prompt => {
     const canvas = canvasRef.current;
     if (canvas && !generated) {
