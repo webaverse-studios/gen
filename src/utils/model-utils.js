@@ -15,6 +15,35 @@ import {
 import {
   generateTextureMaps,
 } from '../clients/material-map-client.js';
+import {
+  img2img,
+} from '../clients/sd-image-client.js';
+
+//
+
+const defaultTextureSize = 1024;
+
+//
+
+// resize the image to be contained within the w, h. keep the aspect ratio.
+const resizeImageToFit = (img, w, h) => {
+  let newWidth = w;
+  let newHeight = h;
+  const imgRatio = img.width / img.height;
+  const canvasRatio = w / h;
+  if (imgRatio < canvasRatio) {
+    newWidth = img.width * (h / img.height);
+  } else {
+    newHeight = img.height * (w / img.width);
+  }
+  
+  const canvas = document.createElement('canvas');
+  canvas.width = newWidth;
+  canvas.height = newHeight;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(img, 0, 0, newWidth, newHeight);
+  return canvas;
+};
 
 //
 
@@ -65,7 +94,9 @@ function makeNoiseCanvas(w, h) {
 
 //
 
-export const preprocessMeshForTextureEdit = async mesh => {
+export const preprocessMeshForTextureEdit = async (mesh, options) => {
+  const textureSize = options.textureSize ?? defaultTextureSize;
+  
   // const meshes = [];
   // model.traverse(o => {
   //   if (o.isMesh) {
@@ -83,7 +114,13 @@ export const preprocessMeshForTextureEdit = async mesh => {
     // const mesh = meshes[i];
     const {material} = mesh;
     const {map} = material;
-    const {image} = map;
+    let {image} = map;
+
+    // image.classList.add('oldImage');
+    // document.body.appendChild(image);
+    // image = resizeImageToFit(image, textureSize, textureSize);
+    // image.classList.add('newImage');
+    // document.body.appendChild(image);
 
     const canvas = document.createElement('canvas');
     canvas.width = image.width;
@@ -288,7 +325,12 @@ export const preprocessMeshForTextureEdit = async mesh => {
     renderer2.render(scene2, camera2);
     // latch mask
     // const maskImgCanvas = img2canvas(renderer.domElement);
-    const maskImgDataUrlPromise = image2DataUrl(renderer2.domElement, 'mask');
+    const maskCanvas = resizeImageToFit(
+      renderer2.domElement,
+      textureSize,
+      textureSize
+    );
+    const maskImgDataUrlPromise = image2DataUrl(maskCanvas, 'mask');
 
     // render opaque
     renderer2.setClearColor(backgroundColor, 1);
@@ -302,7 +344,12 @@ export const preprocessMeshForTextureEdit = async mesh => {
     renderer2.render(scene2, camera2);
     // latch opaque
     // const opaqueImgCanvas = img2canvas(renderer.domElement);
-    const opaqueImgDataUrlPromise = image2DataUrl(renderer2.domElement, 'opaque');
+    const opaqueCanvas = resizeImageToFit(
+      renderer2.domElement,
+      textureSize,
+      textureSize
+    );
+    const opaqueImgDataUrlPromise = image2DataUrl(opaqueCanvas, 'opaque');
 
     // pop meshes
     popMeshes();
@@ -316,8 +363,8 @@ export const preprocessMeshForTextureEdit = async mesh => {
     ]);
 
     return {
-      width: image.width,
-      height: image.height,
+      width: textureSize,
+      height: textureSize,
       opaqueImgDataUrl,
       maskImgDataUrl,
     };
