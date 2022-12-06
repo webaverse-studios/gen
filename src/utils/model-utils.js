@@ -266,6 +266,7 @@ export const preprocessMeshForTextureEdit = async mesh => {
       depthTest: false,
       depthWrite: false,
       // blending: THREE.NoBlending,
+      side: THREE.DoubleSide,
     });
     scene2.overrideMaterial = overrideMaterial;
 
