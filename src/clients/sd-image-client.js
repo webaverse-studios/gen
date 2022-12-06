@@ -117,6 +117,7 @@ export const img2img = async ({
   falloffExponent = 1, // default 1
   randomness = 0, // default 0
 } = {}) => {
+  
   console.log('img2img', {
     prompt,
     negativePrompt,
@@ -124,7 +125,12 @@ export const img2img = async ({
     height,
     imageDataUrl,
     maskImageDataUrl,
+    maskBlur,
+    maskTransparency,
+    falloffExponent,
+    randomness,
   });
+
   /*
  : { label: string; confidences?: Array<{ label: string; confidence: number }>, // represents output label and optional set of confidences per label of the Label component
  : string, // represents text string of 'Prompt' Textbox component
@@ -201,8 +207,6 @@ export const img2img = async ({
  : boolean, // represents checked status of 'Include Separate Images' Checkbox component
  : boolean, // represents checked status of 'Keep -1 for seeds' Checkbox
 */
-  console.log('send urls', {imageDataUrl, maskImageDataUrl});
-
   const pixelsToExpand = 128;
   const res = await fetch(`${baseUrl}run/img2img`, {
     method: "POST",
@@ -300,9 +304,9 @@ export const img2img = async ({
   })})
   const r = await res.json();
   const data = r.data;
+  console.log('got data', data);
   const j = data[0][0];
   const {name} = j;
-  console.log('got data', {data, j, name});
   const img = await loadImage(`${baseUrl}file=${name}`);
   // img.style.cssText = `\
   //   position: absolute;
@@ -313,4 +317,3 @@ export const img2img = async ({
   // return j;
   return img;
 };
-globalThis.img2img = img2img;
