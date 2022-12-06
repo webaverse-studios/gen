@@ -18,6 +18,9 @@ import {
 import {
   img2img,
 } from '../clients/sd-image-client.js';
+import {
+  colors,
+} from '../constants/detectron-colors.js';
 
 //
 
