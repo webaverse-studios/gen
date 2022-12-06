@@ -116,30 +116,37 @@ const generateAvatar = async (canvas, prompt) => {
       {
         prefix: 'hair_',
         name: 'hair',
+        className: 'hair',
       },
       {
         prefix: 'foot_',
         name: 'foot',
+        className: 'clothing',
       },
       {
         prefix: 'accessories_',
         name: 'accessories',
+        className: 'clothing',
       },
       {
         prefix: 'chest_',
         name: 'chest',
+        className: 'clothing',
       },
       {
         prefix: 'legs_',
         name: 'legs',
+        className: 'clothing',
       },
       {
         prefix: 'head_',
         name: 'head',
+        className: 'body',
       },
       {
         prefix: 'body_',
         name: 'body',
+        className: 'body',
       },
     ];
     const categories = {};
@@ -155,6 +162,7 @@ const generateAvatar = async (canvas, prompt) => {
           };
           categories[categorySpec.name] = entry;
         }
+        mesh.className = categorySpec.className;
         entry.meshes.push(mesh);
       } else {
         console.warn('failed to match mesh to category', name);
