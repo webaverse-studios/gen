@@ -30,8 +30,6 @@ import {
 import {
   colors,
 } from '../../constants/detectron-colors.js';
-
-import styles from '../../../styles/MobGenerator.module.css';
 import {
   blob2img,
   canvas2blob,
@@ -41,6 +39,12 @@ import {
 import {
   optimizeAvatarModel,
 } from '../../utils/avatar-optimizer.js';
+import {
+  preprocessMeshForTextureEdit,
+  editMeshTextures,
+} from '../../utils/model-utils.js';
+
+import styles from '../../../styles/MobGenerator.module.css';
 
 //
 
