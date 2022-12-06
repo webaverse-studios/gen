@@ -114,7 +114,7 @@ export const img2img = async ({
   maskImageDataUrl = '',
   maskBlur = 4, // default 4
   maskTransparency = 0,
-  falloffExponent = 1, // default 1
+  falloffExponent = 0, // default 1
   randomness = 0, // default 0
 } = {}) => {
   console.log('img2img', {
