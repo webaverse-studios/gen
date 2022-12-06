@@ -1,8 +1,6 @@
 import * as THREE from 'three';
 import {MaxRectsPacker} from 'maxrects-packer';
-import {getRenderer} from './renderer.js';
-import {modUv} from './util.js';
-import exporters from './exporters.js';
+import {modUv} from '../../utils.js';
 
 const defaultTextureSize = 4096;
 const startAtlasSize = 512;
@@ -47,6 +45,15 @@ class MorphAttributeLayout extends AttributeLayout {
   }
 }
 
+const getRenderer = (() => {
+  let renderer = null;
+  return () => {
+    if (!renderer) {
+      renderer = new THREE.WebGLRenderer();
+    }
+    return renderer;
+  };
+})();
 const getObjectKeyDefault = (type, object, material) => {
   const renderer = getRenderer();
   return [
@@ -669,25 +676,25 @@ export const optimizeAvatarModel = async (model, options = {}) => {
 
   // XXX this should anti-index flattened index ranges for the multi-materials case
 
-  // return object;
+  return scene;
 
-  const glbData = await new Promise((accept, reject) => {
-    const {gltfExporter} = exporters;
-    gltfExporter.parse(
-      scene,
-      function onCompleted(arrayBuffer) {
-        accept(arrayBuffer);
-      }, function onError(error) {
-        reject(error);
-      },
-      {
-        binary: true,
-        // onlyVisible: false,
-        // forceIndices: true,
-        // truncateDrawRange: false,
-        includeCustomExtensions: true,
-      },
-    );
-  });
-  return glbData;
+  // const glbData = await new Promise((accept, reject) => {
+  //   const {gltfExporter} = exporters;
+  //   gltfExporter.parse(
+  //     scene,
+  //     function onCompleted(arrayBuffer) {
+  //       accept(arrayBuffer);
+  //     }, function onError(error) {
+  //       reject(error);
+  //     },
+  //     {
+  //       binary: true,
+  //       // onlyVisible: false,
+  //       // forceIndices: true,
+  //       // truncateDrawRange: false,
+  //       includeCustomExtensions: true,
+  //     },
+  //   );
+  // });
+  // return glbData;
 };
