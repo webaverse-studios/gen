@@ -2,6 +2,8 @@ import {
   loadImage,
 } from '../../utils.js';
 
+const baseUrl = `https://stable-diffusion.webaverse.com/`;
+
 export const txt2img = async ({
   prompt = 'test',
   negativePrompt = '',
@@ -45,7 +47,7 @@ export const txt2img = async ({
  : boolean, // represents checked status of 'Include Separate Images' Checkbox component
  : boolean, // represents checked status of 'Keep -1 for seeds' Checkbox
 */
-  const res = await fetch("https://stable-diffusion.webaverse.com/run/txt2img", {
+  const res = await fetch(`${baseUrl}run/txt2img`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -91,12 +93,12 @@ export const txt2img = async ({
   const data = r.data;
   const j = data[0][0];
   const {name} = j;
-  const img = await loadImage('/file=' + name);
-  img.style.cssText = `\
-    position: absolute;
-    top: 0;
-    left: 0;
-  `;
+  const img = await loadImage(`${baseUrl}file=${name}`);
+  // img.style.cssText = `\
+  //   position: absolute;
+  //   top: 0;
+  //   left: 0;
+  // `;
   document.body.appendChild(img);
   return j;
 };
@@ -110,7 +112,19 @@ export const img2img = async ({
   height = 512,
   imageDataUrl = '',
   maskImageDataUrl = '',
+  maskBlur = 4, // default 4
+  maskTransparency = 0,
+  falloffExponent = 1, // default 1
+  randomness = 0, // default 0
 } = {}) => {
+  console.log('img2img', {
+    prompt,
+    negativePrompt,
+    width,
+    height,
+    imageDataUrl,
+    maskImageDataUrl,
+  });
   /*
  : { label: string; confidences?: Array<{ label: string; confidence: number }>, // represents output label and optional set of confidences per label of the Label component
  : string, // represents text string of 'Prompt' Textbox component
@@ -190,9 +204,7 @@ export const img2img = async ({
   console.log('send urls', {imageDataUrl, maskImageDataUrl});
 
   const pixelsToExpand = 128;
-  const maskBlur = 0;
-  const maskTransparency = 0; // 0 default
-  const res = await fetch("https://stable-diffusion.webaverse.com/run/img2img", {
+  const res = await fetch(`${baseUrl}run/img2img`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -212,7 +224,7 @@ export const img2img = async ({
           "Euler a", // sampling method
           maskBlur, // mask blur
           maskTransparency, // mask transparency
-          "fill", // masked content {"fill", "original", "latent noise", "latent nothing"}
+          "original", // masked content {"fill", "original", "latent noise", "latent nothing"}
           false, // restore faces
           false, // tiling
           1, // batch count
@@ -243,7 +255,7 @@ export const img2img = async ({
           50, // decode steps
           true, // override `Denoising strength` to 1?
           1, // decode CFG scale
-          0, // randomness
+          randomness, // randomness
           false, // sigma adjustment for finding noise for image
           4, // loops
           1, // denoising strength change factor
@@ -256,7 +268,7 @@ export const img2img = async ({
             "up",
             "down"
           ],
-          1, // fall-off exponent (lower=higher detail)
+          falloffExponent, // fall-off exponent (lower=higher detail)
           0.05, // color variation
           pixelsToExpand, // pixels to expand
           maskBlur, // mask blur
@@ -291,13 +303,14 @@ export const img2img = async ({
   const j = data[0][0];
   const {name} = j;
   console.log('got data', {data, j, name});
-  const img = await loadImage('/file=' + name);
-  img.style.cssText = `\
-    position: absolute;
-    top: 0;
-    left: 0;
-  `;
+  const img = await loadImage(`${baseUrl}file=${name}`);
+  // img.style.cssText = `\
+  //   position: absolute;
+  //   top: 0;
+  //   left: 0;
+  // `;
   document.body.appendChild(img);
-  return j;
+  // return j;
+  return img;
 };
 globalThis.img2img = img2img;
