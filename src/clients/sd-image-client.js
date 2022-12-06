@@ -117,19 +117,18 @@ export const img2img = async ({
   falloffExponent = 1, // default 1
   randomness = 0, // default 0
 } = {}) => {
-  
-  console.log('img2img', {
-    prompt,
-    negativePrompt,
-    width,
-    height,
-    imageDataUrl,
-    maskImageDataUrl,
-    maskBlur,
-    maskTransparency,
-    falloffExponent,
-    randomness,
-  });
+  // console.log('img2img', {
+  //   prompt,
+  //   negativePrompt,
+  //   width,
+  //   height,
+  //   imageDataUrl,
+  //   maskImageDataUrl,
+  //   maskBlur,
+  //   maskTransparency,
+  //   falloffExponent,
+  //   randomness,
+  // });
 
   /*
  : { label: string; confidences?: Array<{ label: string; confidence: number }>, // represents output label and optional set of confidences per label of the Label component
