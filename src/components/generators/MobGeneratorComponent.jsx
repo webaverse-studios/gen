@@ -555,7 +555,7 @@ const generateMob = async (canvas, prompt) => {
   _render();
 };
 
-const defaultPrompt = 'diffuse texture, Unreal Engine anime video game, JRPG monster creature';
+const defaultPrompt = 'diffuse texture, Unreal Engine anime video game, JRPG epic colorful monster creature';
 const MobGeneratorComponent = () => {
   const [prompt, setPrompt] = useState(defaultPrompt);
   const [generated, setGenerated] = useState(false);
