@@ -53,7 +53,7 @@ const size = 1024;
 
 //
 
-const generateMob = async (canvas, prompt) => {
+const generateAvatar = async (canvas, prompt) => {
   const renderer = makeRenderer(canvas);
 
   const scene = new THREE.Scene();
@@ -275,7 +275,7 @@ const AvatarGeneratorComponent = () => {
     const canvas = canvasRef.current;
     if (canvas && !generated) {
       setGenerated(true);
-      await generateMob(canvas, prompt);
+      await generateAvatar(canvas, prompt);
     }
   };
 
