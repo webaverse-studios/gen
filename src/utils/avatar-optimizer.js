@@ -175,10 +175,11 @@ export const mergeGeometryTextureAtlas = (mergeable, textureSize) => {
 
   // generate atlas layouts
   const _packAtlases = () => {
-    const _attemptPack = (textureSizes, atlasSize) => {
+    const _attemptPack = (textureSizes, atlasSize, textureScale) => {
       const maxRectsPacker = new MaxRectsPacker(atlasSize, atlasSize, 1);
       const rects = textureSizes.map((textureSize, index) => {
-        const {x: width, y: height} = textureSize;
+        const width = textureSize.x * textureScale;
+        const height = textureSize.y * textureScale;
         return {
           width,
           height,
@@ -207,9 +208,35 @@ export const mergeGeometryTextureAtlas = (mergeable, textureSize) => {
     if (hasTextures) {
       let atlas;
       let atlasSize = startAtlasSize;
-      while (!(atlas = _attemptPack(textureSizes, atlasSize))) {
+      let textureScale = 1;
+      while (!(atlas = _attemptPack(textureSizes, atlasSize, textureScale))) {
         atlasSize *= 2;
       }
+
+      // use binary search to find the max working texture scale
+      // between 1 and 2, starting in the middle at 1.5
+      let min = 1;
+      let max = 2;
+      for (;;) {
+        if ((max - min) < 1/32) {
+          break;
+        } else {
+          const middle = (min + max) / 2;
+          const textureScale = middle;
+          const newAtlas = _attemptPack(textureSizes, atlasSize, textureScale);
+          if (newAtlas) {
+            atlas = newAtlas;
+            min = middle;
+          } else {
+            max = middle;
+          }
+        }
+      }
+      console.log('ended with texture scale', {min, max});
+      if (!atlas) {
+        throw new Error('could not pack textures');
+      }
+
       return atlas;
     } else {
       return null;
