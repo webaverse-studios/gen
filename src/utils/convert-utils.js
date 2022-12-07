@@ -70,3 +70,21 @@ export function img2ImageData(img) {
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
   return imageData;
 }
+
+export const resizeImage = (image, width, height) => {
+  // if necessary, resize the image via contain mode
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  if (image.width !== width || image.height !== height) {
+    const sx = Math.max(0, (image.width - image.height) / 2);
+    const sy = Math.max(0, (image.height - image.width) / 2);
+    const sw = Math.min(image.width, image.height);
+    const sh = Math.min(image.width, image.height);
+    ctx.drawImage(image, sx, sy, sw, sh, 0, 0, width, height);
+  } else {
+    ctx.drawImage(image, 0, 0, width, height);
+  }
+  return canvas;
+};
