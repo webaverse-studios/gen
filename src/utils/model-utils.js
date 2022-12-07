@@ -101,6 +101,10 @@ export const preprocessMeshForTextureEdit = async (mesh, options = {}) => {
   const textureSize = options.textureSize ?? defaultTextureSize;
   const flipY = options.flipY ?? false;
   const hueShift = options.hueShift ?? 0;
+  const maskBgAlpha = options.maskBgAlpha ?? 0;
+  const maskFgAlpha = options.maskFgAlpha ?? 0.07;
+  const opaqueBgAlpha = options.opaqueBgAlpha ?? 0.5;
+  const opaqueFgAlpha = options.opaqueBgAlpha ?? 0.5;
   
   const meshes = [mesh];
   // for (let i = 0; i < meshes.length; i++) {
@@ -317,9 +321,9 @@ export const preprocessMeshForTextureEdit = async (mesh, options = {}) => {
     // const backgroundColor = 0x000000; // XXX in the future, we could get this from the corners of the image
     // const backgroundColor = 0xFFFFFF; // XXX in the future, we could get this from the corners of the image
     renderer2.setClearColor(backgroundColor, 0);
-    backgroundMaterial.uniforms.uAlpha.value = 0;
+    backgroundMaterial.uniforms.uAlpha.value = maskBgAlpha;
     backgroundMaterial.uniforms.uAlpha.needsUpdate = true;
-    overrideMaterial.uniforms.uAlpha.value = 0.03;
+    overrideMaterial.uniforms.uAlpha.value = maskFgAlpha;
     overrideMaterial.uniforms.uAlpha.needsUpdate = true;
     // renderer2.clear();
     renderer2.render(backgroundScene, camera2);
@@ -336,9 +340,9 @@ export const preprocessMeshForTextureEdit = async (mesh, options = {}) => {
     // render opaque
     renderer2.setClearColor(backgroundColor, 1);
     // const alpha2 = 1;
-    backgroundMaterial.uniforms.uAlpha.value = 0.5;
+    backgroundMaterial.uniforms.uAlpha.value = opaqueBgAlpha;
     backgroundMaterial.uniforms.uAlpha.needsUpdate = true;
-    overrideMaterial.uniforms.uAlpha.value = 0.5;
+    overrideMaterial.uniforms.uAlpha.value = opaqueFgAlpha;
     overrideMaterial.uniforms.uAlpha.needsUpdate = true;
     // renderer2.clear();
     renderer2.render(backgroundScene, camera2);
