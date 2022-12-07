@@ -78,7 +78,9 @@ const generateMob = async (canvas, prompt) => {
   const mobs = new THREE.Object3D();
   (async () => {
     const gltfLoader = makeGltfLoader();
-    const rng = alea('lol8');
+    const seed = 'lol' + Math.random();
+    globalThis.seed = seed;
+    const rng = alea(seed);
     const mobUrl = mobUrls[Math.floor(rng() * mobUrls.length)];
     
     const p = makePromise();
