@@ -130,6 +130,7 @@ export const StoryboardRendererComponent = ({
   useEffect(() => {
     if (panel) {
       const onupdate = e => {
+        console.log('panel layer add/remove', _getEmpty());
         setEmpty(_getEmpty());
       };
       panel.addEventListener('update', onupdate);
@@ -155,13 +156,14 @@ export const StoryboardRendererComponent = ({
                 panel={panel}
               />
             } else {
-              if (layer) {
-                return <StoryboardLayerComponent
-                  storyboard={storyboard}  
-                  panel={panel}
-                  layer={layer}
-                />
-              } else {
+              // if (layer) {
+              //   return <StoryboardLayerComponent
+              //     storyboard={storyboard}  
+              //     panel={panel}
+              //     layer={layer}
+              //   />
+              // } else {
+                console.log('got dimension', dimension);
                 if (dimension === 2) {
                   return <Storyboard2DRendererComponent
                     storyboard={storyboard}  
@@ -175,7 +177,7 @@ export const StoryboardRendererComponent = ({
                 } else {
                   throw new Error('invalid dimension: ' + dimension);
                 }
-              }
+              // }
             }
           } else {
             return <StoryboardPlaceholderComponent
