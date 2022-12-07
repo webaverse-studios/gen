@@ -2,14 +2,14 @@ import {useState, useEffect, useRef} from 'react';
 import * as THREE from 'three';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 import alea from '../../utils/alea.js';
-// import {
-//   txt2img,
-//   img2img,
-// } from '../../clients/image-client.js';
 import {
   txt2img,
   img2img,
-} from '../../clients/sd-image-client.js';
+} from '../../clients/image-client.js';
+// import {
+//   txt2img,
+//   img2img,
+// } from '../../clients/sd-image-client.js';
 import {
   generateTextureMaps,
 } from '../../clients/material-map-client.js';
@@ -84,6 +84,10 @@ const generateAvatar = async (canvas, prompt, negativePrompt) => {
   controls.target.z = 0;
   controls.update();
 
+  const seed = 'lol' + Math.random();
+  globalThis.seed = seed;
+  const rng = alea(seed);
+
   const avatars = new THREE.Object3D();
   (async () => {
     const gltfLoader = makeGltfLoader();
@@ -110,43 +114,59 @@ const generateAvatar = async (canvas, prompt, negativePrompt) => {
     let meshes = getMeshes(model);
 
     // sort meshes into invisible categories
+    // metadata = [alpha, shiftHSV]
+    const hairShift = rng() * Math.PI * 2;
+    const clothingShift = rng() * Math.PI * 2;
+    const hairMetadata = [1, hairShift, 0.5, 0.5];
+    const chestMetadata = [0, clothingShift, 0, 0.3];
+    const clothingMetadata = [1, clothingShift, 0, 0.3];
+    const headMetadata = [1, 0, 0, 0];
+    const bodyMetadata = [1, 0, 0, 0];
     const categorySpecs = [
       {
         prefix: 'hair_',
         name: 'hair',
         className: 'hair',
+        metadata: hairMetadata,
       },
       {
         prefix: 'foot_',
         name: 'foot',
         className: 'clothing',
+        metadata: clothingMetadata,
       },
       {
         prefix: 'accessories_',
         name: 'accessories',
         className: 'clothing',
+        metadata: clothingMetadata,
       },
       {
         prefix: 'chest_',
         name: 'chest',
         className: 'clothing',
+        metadata: chestMetadata,
       },
       {
         prefix: 'legs_',
         name: 'legs',
         className: 'clothing',
+        metadata: clothingMetadata,
       },
       {
         prefix: 'head_',
         name: 'head',
         className: 'body',
+        metadata: headMetadata,
       },
       {
         prefix: 'body_',
         name: 'body',
         className: 'body',
+        metadata: bodyMetadata,
       },
     ];
+
     const categories = {};
     for (const mesh of meshes) {
       const {name} = mesh;
@@ -160,8 +180,8 @@ const generateAvatar = async (canvas, prompt, negativePrompt) => {
           };
           categories[categorySpec.name] = entry;
         }
-        // mesh.className = categorySpec.className;
         mesh.className = 'avatar';
+        mesh.metadata = categorySpec.metadata;
         entry.meshes.push(mesh);
       } else {
         console.warn('failed to match mesh to category', name);
@@ -175,9 +195,6 @@ const generateAvatar = async (canvas, prompt, negativePrompt) => {
     }
 
     // select and show a random mesh from each category
-    const seed = 'lol' + Math.random();
-    globalThis.seed = seed;
-    const rng = alea(seed);
     const categorySelections = {};
     for (const categorySpec of categorySpecs) {
       const {name} = categorySpec;
@@ -213,12 +230,22 @@ const generateAvatar = async (canvas, prompt, negativePrompt) => {
 
     // optimize the resulting model
     model = await optimizeAvatarModel(model);
-    
+    globalThis.optimizedModel = model;
+
     // // add the model to the scene
     avatars.add(model);
     model.updateMatrixWorld();
 
+    meshes = getMeshes(model);
+    if (meshes.length !== 1) {
+      console.warn('unexpected number of meshes', meshes.length);
+      debugger;
+    }
     {
+      const mesh = meshes[0];
+      globalThis.mesh = mesh;
+      const {material} = mesh;
+
       const canvas = document.createElement('canvas');
       canvas.classList.add('frontCanvas');
       canvas.width = size;
@@ -229,9 +256,182 @@ const generateAvatar = async (canvas, prompt, negativePrompt) => {
       document.body.appendChild(canvas);
 
       const renderer2 = makeRenderer(canvas);
+      renderer2.autoClear = false;
 
+      const candidateColors = colors.slice();
+
+      const backgroundColor = 0xFFFFFF;
+      // const backgroundColor = 0x000000;
+      // const backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+      // const backgroundColor = candidateColors.splice(Math.floor(Math.random() * candidateColors.length), 1)[0];
+      const bgColor = new THREE.Color(backgroundColor);
+
+      const backgroundColor2 = 0xFFFFFF;
+      // const backgroundColor2 = 0x000000;
+      // const backgroundColor2 = colors[Math.floor(Math.random() * colors.length)];
+      // const backgroundColor2 = candidateColors.splice(Math.floor(Math.random() * candidateColors.length), 1)[0];
+      // const backgroundColor2 = backgroundColor;
+      const bgColor2 = new THREE.Color(backgroundColor2);
+
+      // background scene
+      const backgroundScene = new THREE.Scene();
+      backgroundScene.autoUpdate = false;
+
+      // background mesh
+      // fullscreen geometry
+      const backgroundGeometry = new THREE.PlaneBufferGeometry(2, 2);
+      const backgroundMaterial = new THREE.ShaderMaterial({
+        uniforms: {
+          uAlpha: {
+            value: 1,
+            needsUpdate: true,
+          },
+          uColor: {
+            value: bgColor,
+            needsUpdate: true,
+          },
+          uColor2: {
+            value: bgColor2,
+            needsUpdate: true,
+          },
+        },
+        vertexShader: `\
+          varying vec2 vUv;
+
+          void main() {
+            vUv = uv;
+            gl_Position = vec4(position.xy, 0., 1.0);
+          }
+        `,
+        fragmentShader: `\
+          uniform vec3 uColor;
+          uniform vec3 uColor2;
+          uniform float uAlpha;
+          varying vec2 vUv;
+
+          void main() {
+            // gl_FragColor = color;
+            // gl_FragColor.b += 0.1;
+            // gl_FragColor.a = 1.;
+
+            // gl_FragColor = vec4(color.rgb, uAlpha);
+
+            // gl_FragColor = vec4(uColor * (0.5 + vUv.y * 0.5), uAlpha);
+            gl_FragColor = vec4(mix(uColor, uColor2, vUv.y), uAlpha);
+            // gl_FragColor = vec4(vUv, 0., uAlpha);
+
+            // if (uAlpha == 1.) {
+            //   gl_FragColor = vec4(color.rgb, uAlpha);
+            // } else {
+            //   // gl_FragColor = vec4(uColor * (0.7 + vUv.y * 0.3), uAlpha);
+            // }
+          }
+        `,
+        depthTest: false,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+        blending: THREE.NoBlending,
+        // transparent: true,
+      });
+      const backgroundMesh = new THREE.Mesh(backgroundGeometry, backgroundMaterial);
+      backgroundMesh.frustumCulled = false;
+      backgroundScene.add(backgroundMesh);
+
+      // foreground scene
       const scene2 = new THREE.Scene();
       scene2.autoUpdate = false;
+      
+      const overrideMaterial = new THREE.ShaderMaterial({
+        uniforms: {
+          uAlpha: {
+            value: -1,
+            needsUpdate: true,
+          },
+          uMap: {
+            value: material.map,
+            needsUpdate: true,
+          },
+          // uFlipY: {
+          //   value: +flipY,
+          //   needsUpdate: true,
+          // },
+        },
+        vertexShader: `\
+          attribute vec4 metadata;
+          varying vec2 vUv;
+          varying vec2 vUv2;
+          flat varying vec4 vMetadata;
+  
+          void main() {
+            vUv = uv;
+            vMetadata = metadata;
+            
+            // gl_Position = vec4(position, 1.0);
+
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+            
+            vec3 p = gl_Position.xyz / gl_Position.w;
+            vUv2 = p.xy * 0.5 + 0.5;
+
+            // vec2 duv = (uv - 0.5) * 2.;
+            // gl_Position = vec4(duv.x, duv.y, 0., 1.0);
+          }
+        `,
+        fragmentShader: `\
+          uniform sampler2D uMap;
+          uniform float uAlpha;
+          varying vec2 vUv;
+          varying vec2 vUv2;
+          flat varying vec4 vMetadata;
+  
+          // convert rgb to hsv in glsl
+          vec3 rgb2hsv(vec3 c) {
+            vec4 K = vec4(0., -1./3., 2./3., -1.);
+            vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));
+            vec4 q = mix(vec4(p.xyw, c.r), vec4(c.r, p.yzx), step(p.x, c.r));
+  
+            float d = q.x - min(q.w, q.y);
+            float e = 1.0e-10;
+            return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
+          }
+  
+          // convert hsv to rgb in glsl
+          vec3 hsv2rgb(vec3 c) {
+            vec4 K = vec4(1., 2./3., 1./3., 3.);
+            vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+            return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+          }
+  
+          void main() {
+            float alpha = vMetadata.x;
+            float hueShift = vMetadata.y;
+            float saturationShift = vMetadata.z;
+            float valueShift = vMetadata.w;
+
+            vec4 color = texture2D(uMap, vUv);
+  
+            vec3 hsv = rgb2hsv(color.rgb);
+            hsv.x += hueShift;
+            hsv.y += saturationShift;
+            hsv.z += valueShift;
+            color.rgb = hsv2rgb(hsv);
+  
+            bool realAlpha = uAlpha < 0.;
+            float a = realAlpha ? alpha : uAlpha;
+            // if (vUv2.x < 0.25 || vUv2.x > 0.75) {
+            //   a = 1.;
+            // }
+            gl_FragColor = vec4(color.rgb, a);
+            // gl_FragColor = vec4(color.rgb, alpha);
+          }
+        `,
+        // depthTest: false,
+        // depthWrite: false,
+        blending: THREE.NoBlending,
+        // side: THREE.DoubleSide,
+        // transparent: true,
+      });
+      scene2.overrideMaterial = overrideMaterial;
 
       const camera2 = new THREE.OrthographicCamera(
         -1, // left
@@ -245,61 +445,46 @@ const generateAvatar = async (canvas, prompt, negativePrompt) => {
       camera2.quaternion.copy(camera.quaternion);
       camera2.updateMatrixWorld();
 
-      const popMeshes = pushMeshes(scene2, [
-        model,
-      ]);
-
-      renderer2.render(scene2, camera2);
-
-      popMeshes();
-
-      // post process
+      // prepare latch canvases
       const processingCanvas = document.createElement('canvas');
       processingCanvas.width = size;
       processingCanvas.height = size;
       const processingContext = processingCanvas.getContext('2d');
       processingContext.drawImage(renderer2.domElement, 0, 0);
-      const opaqueImageData = processingContext.getImageData(0, 0, size, size);
+
+      const popMeshes = pushMeshes(scene2, [
+        model,
+      ]);
+
+      // render mask
+      backgroundMaterial.uniforms.uAlpha.value = 0.1;
+      backgroundMaterial.uniforms.uAlpha.needsUpdate = true;
+      overrideMaterial.uniforms.uAlpha.value = -1;
+      overrideMaterial.uniforms.uAlpha.needsUpdate = true;
+      renderer2.clear();
+      renderer2.render(backgroundScene, camera2);
+      renderer2.render(scene2, camera2);
+      processingContext.drawImage(renderer2.domElement, 0, 0);
       const maskImageData = processingContext.getImageData(0, 0, size, size);
 
-      const candidateColors = colors.slice();
+      // render opaque
+      backgroundMaterial.uniforms.uAlpha.value = 1;
+      backgroundMaterial.uniforms.uAlpha.needsUpdate = true;
+      overrideMaterial.uniforms.uAlpha.value = 1;
+      overrideMaterial.uniforms.uAlpha.needsUpdate = true;
+      renderer2.clear();
+      renderer2.render(backgroundScene, camera2);
+      renderer2.render(scene2, camera2);
+      processingContext.drawImage(renderer2.domElement, 0, 0);
+      const opaqueImageData = processingContext.getImageData(0, 0, size, size);
 
-      // const backgroundColor = 0xFFFFFF;
-      const backgroundColor = 0x000000;
-      // const backgroundColor = colors[Math.floor(Math.random() * colors.length)];
-      // const backgroundColor = candidateColors.splice(Math.floor(Math.random() * candidateColors.length), 1)[0];
-      const bgColor = new THREE.Color(backgroundColor);
-
-      // const backgroundColor2 = 0xFFFFFF;
-      const backgroundColor2 = 0x000000;
-      // const backgroundColor2 = colors[Math.floor(Math.random() * colors.length)];
-      // const backgroundColor2 = candidateColors.splice(Math.floor(Math.random() * candidateColors.length), 1)[0];
-      // const backgroundColor2 = backgroundColor;
-      const bgColor2 = new THREE.Color(backgroundColor2);
-
-      const maskBgAlpha = 0;
-      const maskFgAlpha = 0.07;
-      const opaqueBgAlpha = 0.5;
-      const opaqueFgAlpha = 0.5;
-
-      for (let i = 0; i < opaqueImageData.data.length; i += 4) {
-        if (opaqueImageData.data[i + 3] < 255) { // transparent, background
-          // localColor.setHex(0xFFFFFF).toArray(opaqueImageData.data, i);
-          opaqueImageData.data[i + 0] = bgColor.r * 255;
-          opaqueImageData.data[i + 1] = bgColor.g * 255;
-          opaqueImageData.data[i + 2] = bgColor.b * 255;
-          opaqueImageData.data[i + 3] = opaqueBgAlpha * 255;
-          maskImageData.data[i + 3] = maskBgAlpha * 255;
-        } else { // opaque, foreground
-          opaqueImageData.data[i + 3] = opaqueFgAlpha * 255;
-          maskImageData.data[i + 3] = maskFgAlpha * 255;
-        }
-      }
+      popMeshes();
 
       // draw the canvases for debugging
       const opaqueCanvas = document.createElement('canvas');
       opaqueCanvas.width = size;
       opaqueCanvas.height = size;
+      opaqueCanvas.classList.add('opaqueCanvas');
       opaqueCanvas.style.cssText = `\
         background: red;
       `;
@@ -310,6 +495,7 @@ const generateAvatar = async (canvas, prompt, negativePrompt) => {
       const maskCanvas = document.createElement('canvas');
       maskCanvas.width = size;
       maskCanvas.height = size;
+      maskCanvas.classList.add('maskCanvas');
       maskCanvas.style.cssText = `\
         background: red;
       `;
@@ -317,22 +503,30 @@ const generateAvatar = async (canvas, prompt, negativePrompt) => {
       const maskContext = maskCanvas.getContext('2d');
       maskContext.putImageData(maskImageData, 0, 0);
 
-      const [
-        opaqueImgDataUrl,
-        maskImgDataUrl,
-      ] = await Promise.all([
-        image2DataUrl(opaqueCanvas),
-        image2DataUrl(maskCanvas),
-      ]);
+      // const [
+      //   opaqueImgDataUrl,
+      //   maskImgDataUrl,
+      // ] = await Promise.all([
+      //   image2DataUrl(opaqueCanvas),
+      //   image2DataUrl(maskCanvas),
+      // ]);
 
+      const blob = await canvas2blob(opaqueCanvas);
+      const maskBlob = await canvas2blob(maskCanvas);
+
+      // const editImg = await img2img({
+      //   prompt,
+      //   negativePrompt,
+      //   width: size,
+      //   height: size,
+      //   imageDataUrl: opaqueImgDataUrl,
+      //   // imageDataUrl: maskImgDataUrl,
+      //   maskImageDataUrl: maskImgDataUrl,
+      // });
       const editImg = await img2img({
         prompt,
-        negativePrompt,
-        width: size,
-        height: size,
-        imageDataUrl: opaqueImgDataUrl,
-        // imageDataUrl: maskImgDataUrl,
-        maskImageDataUrl: maskImgDataUrl,
+        blob,
+        maskBlob,
       });
       console.log('edit image', editImg);
       document.body.appendChild(editImg);
@@ -405,8 +599,9 @@ const generateAvatar = async (canvas, prompt, negativePrompt) => {
   _render();
 };
 
-const defaultPrompt = 'anime style, girl character, 3d model orthographic view, cute pink dress';
-const negativePrompt = 'side, back';
+const defaultPrompt = 'anime style, girl character, 3d model vrchat avatar orthographic front view, dress';
+// const negativePrompt = 'side, back';
+const negativePrompt = '';
 const AvatarGeneratorComponent = () => {
   const [prompt, setPrompt] = useState(defaultPrompt);
   const [generated, setGenerated] = useState(false);
