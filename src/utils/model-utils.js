@@ -97,21 +97,11 @@ function makeNoiseCanvas(w, h) {
 
 //
 
-export const preprocessMeshForTextureEdit = async (mesh, options) => {
+export const preprocessMeshForTextureEdit = async (mesh, options = {}) => {
   const textureSize = options.textureSize ?? defaultTextureSize;
+  const flipY = options.flipY ?? false;
+  const hueShift = options.hueShift ?? 0;
   
-  // const meshes = [];
-  // model.traverse(o => {
-  //   if (o.isMesh) {
-  //     meshes.push(o);
-  //   }
-  // });
-
-  // if (meshes.length !== 1) {
-  //   console.warn('only a single mesh is supported for texture editing');
-  //   debugger;
-  // }
-
   const meshes = [mesh];
   // for (let i = 0; i < meshes.length; i++) {
     // const mesh = meshes[i];
@@ -119,10 +109,6 @@ export const preprocessMeshForTextureEdit = async (mesh, options) => {
     const {map} = material;
     let {image} = map;
 
-    // image.classList.add('oldImage');
-    // document.body.appendChild(image);
-    // image = resizeImageToFit(image, textureSize, textureSize);
-    // image.classList.add('newImage');
     // document.body.appendChild(image);
 
     const canvas = document.createElement('canvas');
@@ -136,15 +122,19 @@ export const preprocessMeshForTextureEdit = async (mesh, options) => {
     renderer2.autoClear = false;
 
     // constants
+    const candidateColors = colors.slice();
+
     // const backgroundColor = 0xFFFFFF;
     const backgroundColor = 0x000000;
     // const backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+    // const backgroundColor = candidateColors.splice(Math.floor(Math.random() * candidateColors.length), 1)[0];
     const uColor = new THREE.Color(backgroundColor);
 
     // const backgroundColor2 = 0xFFFFFF;
-    // const backgroundColor2 = 0x000000;
+    const backgroundColor2 = 0x000000;
     // const backgroundColor2 = colors[Math.floor(Math.random() * colors.length)];
-    const backgroundColor2 = backgroundColor;
+    // const backgroundColor2 = candidateColors.splice(Math.floor(Math.random() * candidateColors.length), 1)[0];
+    // const backgroundColor2 = backgroundColor;
     const uColor2 = new THREE.Color(backgroundColor2);
 
     // background scene
@@ -247,17 +237,25 @@ export const preprocessMeshForTextureEdit = async (mesh, options) => {
           needsUpdate: true,
         },
         uHueShift: {
-          value: Math.random() * 2 * Math.PI,
+          value: hueShift,
           needsUpdate: true,
         },
+        // uFlipY: {
+        //   value: +flipY,
+        //   needsUpdate: true,
+        // },
       },
       vertexShader: `\
+        uniform float uFlipY;
         varying vec2 vUv;
 
         void main() {
           vUv = uv;
           // gl_Position = vec4(position, 1.0);
           vec2 duv = (uv - 0.5) * 2.;
+          // if (uFlipY > 0.) {
+          //   duv.y *= -1.;
+          // }
           gl_Position = vec4(duv.x, duv.y, 0., 1.0);
         }
       `,
@@ -292,8 +290,8 @@ export const preprocessMeshForTextureEdit = async (mesh, options) => {
 
           vec3 hsv = rgb2hsv(color.rgb);
           hsv.x += uHueShift;
-          // hsv.y += 0.25;
-          // hsv.z += 0.1;
+          // // hsv.y += 0.25;
+          // // hsv.z += 0.1;
           color.rgb = hsv2rgb(hsv);
 
           // gl_FragColor = color;
@@ -382,6 +380,7 @@ export const editMeshTextures = async (mesh, {
   height,
   opaqueImgDataUrl,
   maskImgDataUrl,
+  flipY = true,
 }) => {
   const editImg = await img2img({
     prompt,
@@ -391,13 +390,23 @@ export const editMeshTextures = async (mesh, {
     // imageDataUrl: maskImgDataUrl,
     maskImageDataUrl: maskImgDataUrl,
   });
-  console.log('edit image', editImg);
+  // console.log('edit image', editImg);
+
+  {
+    document.body.appendChild(editImg);
+  }
 
   const {
     normalImage,
     roughnessImage,
     displacementImage,
   } = await generateTextureMaps(editImg);
+
+  {
+    document.body.appendChild(normalImage);
+    document.body.appendChild(roughnessImage);
+    document.body.appendChild(displacementImage);
+  }
 
   const geometry2 = mesh.geometry;
 
@@ -409,8 +418,8 @@ export const editMeshTextures = async (mesh, {
   // material2.name = 'ai-textured-' + material.name;
 
   material2.map = new THREE.Texture(editImg);
-  material2.map.flipY = true;
-  // material2.map.encoding = THREE.sRGBEncoding;
+  material2.map.flipY = flipY;
+  material2.map.encoding = THREE.sRGBEncoding;
   material2.map.needsUpdate = true;
 
   // material2.map = new THREE.DataTexture(
@@ -422,24 +431,24 @@ export const editMeshTextures = async (mesh, {
   // );
   // material2.map.needsUpdate = true;
 
-  material2.normalMap = new THREE.Texture(normalImage);
-  // material2.normalMap.flipY = true;
-  // material2.normalMap.encoding = THREE.sRGBEncoding;
-  // material2.normalMapType = THREE.ObjectSpaceNormalMap;
-  material2.normalMap.needsUpdate = true;
+  // material2.normalMap = new THREE.Texture(normalImage);
+  // // material2.normalMap.flipY = true;
+  // // material2.normalMap.encoding = THREE.sRGBEncoding;
+  // // material2.normalMapType = THREE.ObjectSpaceNormalMap;
+  // material2.normalMap.needsUpdate = true;
 
-  material2.roughnessMap = new THREE.Texture(roughnessImage);
-  // material2.roughnessMap.flipY = true;
-  // material2.roughnessMap.encoding = THREE.sRGBEncoding;
-  material2.roughnessMap.needsUpdate = true;
-  material2.roughness = 1;
+  // material2.roughnessMap = new THREE.Texture(roughnessImage);
+  // // material2.roughnessMap.flipY = true;
+  // // material2.roughnessMap.encoding = THREE.sRGBEncoding;
+  // material2.roughnessMap.needsUpdate = true;
+  // material2.roughness = 1;
 
-  material2.bumpMap = new THREE.Texture(displacementImage);
-  material2.bumpMap.flipY = true;
-  // material2.metalnessMap.encoding = THREE.sRGBEncoding;
-  material2.bumpMap.needsUpdate = true;
-  // material2.metalness = 0;
-  // material2.metalnessMap = null;
+  // material2.bumpMap = new THREE.Texture(displacementImage);
+  // // material2.bumpMap.flipY = true;
+  // // material2.metalnessMap.encoding = THREE.sRGBEncoding;
+  // material2.bumpMap.needsUpdate = true;
+  // // material2.metalness = 0;
+  // // material2.metalnessMap = null;
 
   // material2.emissiveMap = null;
 
