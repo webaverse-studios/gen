@@ -695,6 +695,7 @@ export const optimizeAvatarModel = async (model, options = {}) => {
     bone.position.copy(localVector);
     bone.quaternion.copy(localQuaternion);
     bone.scale.copy(localVector2);
+    bone.matrix.copy(bone.matrixWorld);
 
     scene.add(bone);
 
