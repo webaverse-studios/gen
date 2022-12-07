@@ -103,9 +103,6 @@ const generateMob = async (canvas, prompt) => {
       }
     });
 
-    // globalThis.model = model;
-    // globalThis.meshes = meshes;
-
     if (meshes.length !== 1) {
       console.warn('meshes.length !== 1', meshes.length);
       debugger;
@@ -117,7 +114,9 @@ const generateMob = async (canvas, prompt) => {
       height,
       maskImgDataUrl,
       opaqueImgDataUrl,
-    } = await preprocessMeshForTextureEdit(mesh);
+    } = await preprocessMeshForTextureEdit(mesh, {
+      hueShift: rng() * Math.PI * 2,
+    });
     
     console.log('ok 1', {
       width,
