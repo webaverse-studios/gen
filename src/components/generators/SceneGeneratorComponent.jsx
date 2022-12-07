@@ -1,19 +1,15 @@
 // import * as THREE from 'three';
 import {useState, useEffect} from 'react';
-import {Storyboard} from '../../generators/scene-generator.js';
+// import {
+//   ZineStoryboard,
+// } from '../../generators/scene-generator.js';
 import {StoryboardComponent} from './StoryboardComponent.jsx';
 import {StoryboardRendererComponent} from './StoryboardRendererComponent.jsx';
+import {
+  Storyboard,
+} from '../../generators/sg-storyboard.js';
 
 import styles from '../../../styles/SceneGenerator.module.css';
-
-//
-
-/* const vqaQueries = [
-  `is this birds eye view?`,
-  `is the viewer looking up at the sky?`,
-  `is the viewer looking up at the ceiling?`,
-  `how many feet tall is the viewer?`,
-]; */
 
 //
 
@@ -65,14 +61,12 @@ const SceneGeneratorComponent = () => {
   const onPanelSelect = panel => {
     setPanel(panel);
   };
-  const onPanelsLoad = newPanelDatas => {
-    const oldPanels = panels;
-    for (const panel of oldPanels) {
-      storyboard.removePanel(panel);
-    }
-    const newPanels = newPanelDatas.map(panelData => storyboard.addPanel(panelData));
-    if (newPanels.length > 0) {
-      setPanel(newPanels[0]);
+  const onPanelsLoad = uint8Array => {
+    storyboard.clear();
+    storyboard.load(uint8Array);
+
+    if (storyboard.panels.length > 0) {
+      setPanel(storyboard.panels[0]);
     }
   };
 

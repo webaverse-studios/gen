@@ -6,6 +6,9 @@ import {ArrayBufferRenderer} from '../renderers/ArrayBufferRenderer.jsx';
 import {zbencode, zbdecode} from '../../utils/encoding.mjs';
 import {downloadFile} from '../../utils/http-utils.js';
 import styles from '../../../styles/Storyboard.module.css';
+import {
+  zineMagicBytes,
+} from '../../zine/zine-format.js';
 
 //
 
@@ -150,15 +153,13 @@ export const StoryboardComponent = ({
           e.preventDefault();
           e.stopPropagation();
 
-          const panelDatas = panels.map(panel => panel.getDatas());
-          const arrayBuffer = zbencode(panelDatas);
+          const uint8Array = storyboard.export();
           const blob = new Blob([
-            'WVSB',
-            arrayBuffer,
+            uint8Array,
           ], {
             type: 'application/octet-stream',
           });
-          downloadFile(blob, 'storyboard.wvs');
+          downloadFile(blob, 'storyboard.zine');
         }}>
           <img src='/images/download.svg' className={styles.img} />
         </button>
@@ -169,13 +170,12 @@ export const StoryboardComponent = ({
             if (file) {
               (async () => {
                 const arrayBuffer = await file.arrayBuffer();
-                // check that the first bytes are 'WVSB'
+                // check magic bytes
                 const firstBytes = new Uint8Array(arrayBuffer, 0, 4);
                 const firstBytesString = textDecoder.decode(firstBytes);
                 if (firstBytesString === 'WVSB') {
                   const uint8Array = new Uint8Array(arrayBuffer, 4);
-                  const panelDatas = zbdecode(uint8Array);
-                  onPanelsLoad(panelDatas);
+                  onPanelsLoad(uint8Array);
                 } else {
                   console.warn('got invalid file', file);
                 }

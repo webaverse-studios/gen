@@ -29,6 +29,11 @@ import {
   makeDefaultCamera,
   makeFloorNetCamera,
 } from '../utils/three-utils.js';
+import {
+  ZineStoryboard,
+  ZinePanel,
+  ZineData,
+} from '../zine/zine-format.js';
 
 import {ImageAiClient} from '../clients/image-client.js';
 // import {getLabel} from '../clients/perception-client.js';
@@ -62,15 +67,16 @@ import {
   maskIndex2Canvas,
 } from './sg-debug.js';
 
-//
-
-import {blob2img, img2ImageData} from '../utils/convert-utils.js';
+import {
+  blob2img,
+  img2ImageData,
+  resizeImage,
+} from '../utils/convert-utils.js';
 import {makeId} from '../utils/id-utils.js';
 import {classes, categories, categoryClassIndices} from '../../constants/classes.js';
 import {colors, rainbowColors, detectronColors} from '../constants/detectron-colors.js';
 import {mobUrls} from '../constants/urls.js';
 import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-// import {labelClasses} from '../constants/prompts.js';
 import {
   frameSize,
   canvasSize,
@@ -82,6 +88,12 @@ import {
   arrowsUpUrl,
 } from '../utils/light-arrow.js';
 import {makePromise} from '../../utils.js';
+
+//
+
+export {
+  ZineStoryboard,
+};
 
 // constants
 
@@ -123,151 +135,6 @@ const gltfLoader = makeGltfLoader();
 const imageAiClient = new ImageAiClient();
 const abortError = new Error();
 abortError.isAbortError = true;
-
-// data format spec
-
-export const mainImageKey = 'layer0/image';
-export const promptKey = 'layer0/prompt';
-export const layer1Specs = [
-  {
-    name: 'segmentMask',
-    type: 'arrayBuffer',
-  },
-  // {
-  //   name: 'labelImageData',
-  //   type: 'arrayBuffer',
-  // },
-  {
-    name: 'pointCloudHeaders',
-    type: 'json',
-  },
-  {
-    name: 'pointCloud',
-    type: 'arrayBuffer',
-  },
-  // {
-  //   name: 'boundingBoxLayers',
-  //   type: 'json',
-  // },
-  // {
-  //   name: 'planeMatrices',
-  //   type: 'json',
-  // },
-  {
-    name: 'planesJson',
-    type: 'json',
-  },
-  {
-    name: 'planesMask',
-    type: 'arrayBuffer',
-  },
-  {
-    name: 'portalJson',
-    type: 'json',
-  },
-  {
-    name: 'segmentSpecs',
-    type: 'json',
-  },
-  {
-    name: 'planeSpecs',
-    type: 'json',
-  },
-  {
-    name: 'portalSpecs',
-    type: 'json',
-  },
-  {
-    name: 'firstFloorPlaneIndex',
-    type: 'json',
-  },
-  {
-    name: 'floorPlaneJson',
-    type: 'json',
-  },
-  {
-    name: 'floorNetDepths',
-    type: 'arrayBuffer',
-  },
-  {
-    name: 'floorNetCameraJson',
-    type: 'json',
-  },
-  {
-    name: 'predictedHeight',
-    type: 'json',
-  },
-  {
-    name: 'portalLocations',
-    type: 'json',
-  },
-];
-export const layer2Specs = [
-  {
-    name: 'maskImg',
-    type: 'imageFile',
-  },
-  {
-    name: 'editedImg',
-    type: 'imageFile',
-  },
-  {
-    name: 'pointCloudHeaders',
-    type: 'json',
-  },
-  {
-    name: 'pointCloud',
-    type: 'arrayBuffer',
-  },
-  {
-    name: 'depthFloatImageData',
-    type: 'arrayBuffer',
-  },
-  {
-    name: 'distanceFloatImageData',
-    type: 'arrayBuffer',
-  },
-  {
-    name: 'distanceNearestPositions',
-    type: 'arrayBuffer',
-  },
-  {
-    name: 'newDepthFloatImageData',
-    type: 'arrayBuffer',
-  },
-  {
-    name: 'reconstructedDepthFloats',
-    type: 'arrayBuffer',
-  },
-  {
-    name: 'planesJson',
-    type: 'json',
-  },
-  {
-    name: 'planesMask',
-    type: 'arrayBuffer',
-  },
-  {
-    name: 'portalJson',
-    type: 'json',
-  },
-  {
-    name: 'floorNetDepths',
-    type: 'arrayBuffer',
-  },
-  {
-    name: 'floorNetCameraJson',
-    type: 'json',
-  },
-  {
-    name: 'segmentMask',
-    type: 'arrayBuffer',
-  },
-  {
-    name: 'editCameraJson',
-    type: 'json',
-  },
-];
 
 //
 
@@ -2379,23 +2246,23 @@ class PanelRenderer extends EventTarget {
     this.mobs = mobs;
 
     // read the mesh from the panel
-    const imgArrayBuffer = panel.getData(mainImageKey);
-    const segmentMask = panel.getData('layer1/segmentMask');
-    // const labelImageData = panel.getData('layer1/labelImageData');
-    const pointCloudHeaders = panel.getData('layer1/pointCloudHeaders');
-    let pointCloudArrayBuffer = panel.getData('layer1/pointCloud');
-    // const planeMatrices = panel.getData('layer1/planeMatrices');
-    const planesJson = panel.getData('layer1/planesJson');
-    const planesMask = panel.getData('layer1/planesMask');
-    const portalJson = panel.getData('layer1/portalJson');
-    const segmentSpecs = panel.getData('layer1/segmentSpecs');
-    const planeSpecs = panel.getData('layer1/planeSpecs');
-    const portalSpecs = panel.getData('layer1/portalSpecs');
-    const firstFloorPlaneIndex = panel.getData('layer1/firstFloorPlaneIndex');
-    const floorNetDepths = panel.getData('layer1/floorNetDepths');
-    const floorNetCameraJson = panel.getData('layer1/floorNetCameraJson');
-    const predictedHeight = panel.getData('layer1/predictedHeight');
-    const portalLocations = panel.getData('layer1/portalLocations');
+    const imgArrayBuffer = panel.zd.getData(mainImageKey);
+    const segmentMask = panel.zd.getData('layer1/segmentMask');
+    // const labelImageData = panel.zd.getData('layer1/labelImageData');
+    const pointCloudHeaders = panel.zd.getData('layer1/pointCloudHeaders');
+    let pointCloudArrayBuffer = panel.zd.getData('layer1/pointCloud');
+    // const planeMatrices = panel.zd.getData('layer1/planeMatrices');
+    const planesJson = panel.zd.getData('layer1/planesJson');
+    const planesMask = panel.zd.getData('layer1/planesMask');
+    const portalJson = panel.zd.getData('layer1/portalJson');
+    const segmentSpecs = panel.zd.getData('layer1/segmentSpecs');
+    const planeSpecs = panel.zd.getData('layer1/planeSpecs');
+    const portalSpecs = panel.zd.getData('layer1/portalSpecs');
+    const firstFloorPlaneIndex = panel.zd.getData('layer1/firstFloorPlaneIndex');
+    const floorNetDepths = panel.zd.getData('layer1/floorNetDepths');
+    const floorNetCameraJson = panel.zd.getData('layer1/floorNetCameraJson');
+    const predictedHeight = panel.zd.getData('layer1/predictedHeight');
+    const portalLocations = panel.zd.getData('layer1/portalLocations');
 
     // camera
     this.camera.fov = Number(pointCloudHeaders['x-fov']);
@@ -3266,7 +3133,7 @@ class PanelRenderer extends EventTarget {
 
                   for (const {name, type} of layer2Specs) {
                     const value = outmeshImageResult[name] ?? outmeshMeshResult[name];
-                    this.panel.setData('layer2/' + name, value, type);
+                    this.panel.zd.setData('layer2/' + name, value, type);
                   }
                 } finally {
                   this.outmeshMesh.setState('finished');
@@ -3360,7 +3227,7 @@ class PanelRenderer extends EventTarget {
     const update = e => {
       this.updateOutmeshLayers();
     };
-    this.panel.addEventListener('update', update);
+    this.panel.zd.addEventListener('update', update);
 
     this.addEventListener('destroy', e => {
       document.removeEventListener('keydown', keydown);
@@ -3371,7 +3238,7 @@ class PanelRenderer extends EventTarget {
       canvas.removeEventListener('click', blockEvent);
       canvas.removeEventListener('wheel', blockEvent);
 
-      this.panel.removeEventListener('update', update);
+      this.panel.zd.removeEventListener('update', update);
     });
   }
   render() {
@@ -3416,7 +3283,7 @@ class PanelRenderer extends EventTarget {
     _startLoop();
   }
   async renderOutmeshImage() {
-    const prompt = this.panel.getData(promptKey);
+    const prompt = this.panel.zd.getData(promptKey);
     if (!prompt) {
       throw new Error('no prompt, so cannot outmesh');
     }
@@ -3506,8 +3373,8 @@ class PanelRenderer extends EventTarget {
     maskBlob,
     editCameraJson,
   }) {
-    const oldPointCloudArrayBuffer = this.panel.getData('layer1/pointCloud');
-    const floorPlaneJson = this.panel.getData('layer1/floorPlaneJson');
+    const oldPointCloudArrayBuffer = this.panel.zd.getData('layer1/pointCloud');
+    const floorPlaneJson = this.panel.zd.getData('layer1/floorPlaneJson');
 
     // reify objects
     const editCamera = setPerspectiveCameraFromJson(localCamera, editCameraJson).clone();
@@ -3755,7 +3622,7 @@ class PanelRenderer extends EventTarget {
   }
   clip() {
     // const {geometry} = this.sceneMesh;
-    // const pointCloudArrayBuffer = this.panel.getData('layer1/pointCloud');
+    // const pointCloudArrayBuffer = this.panel.zd.getData('layer1/pointCloud');
     // const depthFloats32Array = getDepthFloatsFromPointCloud(pointCloudArrayBuffer);
     const {geometry, indexedGeometry} = this.sceneMesh;
     const depthFloats32Array = getDepthFloatsFromIndexedGeometry(indexedGeometry);
@@ -4012,9 +3879,7 @@ class PanelRenderer extends EventTarget {
     return layerScene;
   }
   updateOutmeshLayers() {
-    const layers = this.panel.getDataLayersMatchingSpec(layer2Specs);
-
-    // console.log('update outmesh layers', layers.length, this.layerScenes.length);
+    const layers = this.panel.zd.getDataLayersMatchingSpec(layer2Specs);
 
     const _addNewLayers = () => {
       const startLayer = 2;
@@ -4169,83 +4034,6 @@ const _getImageSegements = async imgBlob => {
   } else {
     throw new Error('failed to detect image segments');
   }
-};
-
-//
-
-const _getPredictedHeight = async blob => {
-  const fd = new FormData();
-  fd.append('question', 'in feet, how high up is this?');
-  fd.append('file', blob);
-  fd.append('task', 'vqa');
-  const res = await fetch(`https://blip.webaverse.com/upload`, {
-    method: 'post',
-    body: fd,
-  });
-  const j = await res.json();
-  const {Answer} = j;
-  const f = parseFloat(Answer);
-  if (!isNaN(f)) {
-    return f;
-  } else {
-    return null;
-  }
-};
-const _getImageCaption = async blob => {
-  const fd = new FormData();
-  fd.append('file', blob);
-  fd.append('task', 'image_captioning');
-  const res = await fetch(`https://blip.webaverse.com/upload`, {
-    method: 'post',
-    body: fd,
-  });
-  const j = await res.json();
-  const {Caption} = j;
-  return Caption;
-};
-
-//
-
-const _resizeFile = async file => {
-  // read the image
-  const image = await new Promise((accept, reject) => {
-    const img = new Image();
-    img.onload = () => {
-      accept(img);
-      cleanup();
-    };
-    img.onerror = err => {
-      reject(err);
-      cleanup();
-    };
-    img.crossOrigin = 'Anonymous';
-    const u = URL.createObjectURL(file);
-    img.src = u;
-    const cleanup = () => {
-      URL.revokeObjectURL(u);
-    };
-  });
-
-  // if necessary, resize the image via contain mode
-  if (image.width !== 1024 || image.height !== 1024) {
-    const canvas = document.createElement('canvas');
-    canvas.width = 1024;
-    canvas.height = 1024;
-    const ctx = canvas.getContext('2d');
-    // ctx.fillStyle = 'white';
-    // ctx.fillRect(0, 0, 1024, 1024);
-    const sx = Math.max(0, (image.width - image.height) / 2);
-    const sy = Math.max(0, (image.height - image.width) / 2);
-    const sw = Math.min(image.width, image.height);
-    const sh = Math.min(image.width, image.height);
-    ctx.drawImage(image, sx, sy, sw, sh, 0, 0, 1024, 1024);
-    file = await new Promise((accept, reject) => {
-      canvas.toBlob(blob => {
-        accept(blob);
-      });
-    });
-  }
-  return file;
 };
 
 //
@@ -4489,237 +4277,4 @@ async function compileVirtualScene(imageArrayBuffer, width, height/*, camera */)
     portalLocations,
     predictedHeight,
   };
-}
-
-//
-
-export class Panel extends EventTarget {
-  constructor(data = []) {
-    super();
-
-    this.id = makeId();
-    this.#data = data;
-
-    this.runningTasks = [];
-    this.abortController = new AbortController();
-  }
-  #data;
-
-  getDatas() {
-    return this.#data;
-  }
-  getDataSpec(key) {
-    return this.#data.find(item => item.key === key);
-  }
-  getData(key) {
-    const item = this.getDataSpec(key);
-    return item?.value;
-  }
-  setData(key, value, type) {
-    let item = this.getDataSpec(key);
-    if (!item) {
-      item = {
-        key,
-        type,
-        value,
-      };
-      this.#data.push(item);
-    } else {
-      item.value = value;
-    }
-    this.dispatchEvent(new MessageEvent('update', {
-      data: {
-        key,
-      },
-    }));
-  }
-  deleteData(key) {
-    const index = this.#data.findIndex(item => item.key === key);
-    if (index !== -1) {
-      this.#data.splice(index, 1);
-    }
-    this.dispatchEvent(new MessageEvent('update', {
-      data: {
-        key,
-      },
-    }));
-  }
-  hasData(key) {
-    return this.#data.some(item => item.key === key);
-  }
-  hasDataMatch(regex) {
-    return this.#data.some(item => regex.test(item.key));
-  }
-  getDataLayersMatchingSpec(layersSpecs) {
-    return this.getDataLayersMatchingSpecs([layersSpecs]);
-  }
-  getDataLayersMatchingSpecs(layersSpecsArray) {
-    const maxLayers = 10;
-    const layers = [];
-    for (let i = 0; i < maxLayers; i++) {
-      const layerDatas = this.getDatas().filter(({key}) => {
-        return key.startsWith('layer' + i + '/');
-      });
-      if (layersSpecsArray.some(layersSpecs =>
-        layersSpecs.every(spec => {
-          return layerDatas.some(({key}) => key.endsWith('/' + spec.name));
-        })
-      )) {
-        layers[i] = layerDatas;
-      }
-    }
-    return layers;
-  }
-
-  isBusy() {
-    return this.runningTasks.length > 0;
-  }
-  isEmpty() {
-    return !this.hasData(mainImageKey);
-  }
-  getBusyMessage() {
-    if (this.runningTasks.length > 0) {
-      return this.runningTasks[0].message;
-    } else {
-      return '';
-    }
-  }
-  getDimension() {
-    return this.hasDataMatch(/^layer1/) ? 3 : 2;
-  }
-
-  async setFile(file, prompt) {
-    file = await _resizeFile(file, panelSize, panelSize);
-    (async () => {
-      const arrayBuffer = await file.arrayBuffer();
-      this.setData(mainImageKey, arrayBuffer, 'imageFile');
-    })();
-    (async () => {
-      if (!prompt) {
-        prompt = await _getImageCaption(file);
-      }
-      this.setData(promptKey, prompt, 'text');
-    })();
-  }
-  async setFromPrompt(prompt) {
-    await this.task(async ({signal}) => {
-      const blob = await imageAiClient.createImageBlob(prompt, {signal});
-      await this.setFile(blob, prompt);
-    }, 'generating image');
-  }
-
-  async compile() {
-    await this.task(async ({signal}) => {
-      const imageArrayBuffer = this.getData(mainImageKey);
-      const compileResult = await compileVirtualScene(
-        imageArrayBuffer,
-        panelSize,
-        panelSize,
-      );
-
-      for (const {name, type} of layer1Specs) {
-        this.setData('layer1/' + name, compileResult[name], type);
-      }
-    }, 'compiling');
-  }
-
-  createRenderer(canvas, opts) {
-    return new PanelRenderer(canvas, this, opts);
-  }
-
-  async task(fn, message) {
-    const {signal} = this.abortController;
-
-    const task = {
-      message,
-    };
-    this.runningTasks.push(task);
-
-    this.dispatchEvent(new MessageEvent('busyupdate', {
-      data: {
-        busy: this.isBusy(),
-        message: this.getBusyMessage(),
-      },
-    }));
-
-    try {
-      await fn({
-        signal,
-      });
-    } finally {
-      const index = this.runningTasks.indexOf(task);
-      this.runningTasks.splice(index, 1);
-      
-      this.dispatchEvent(new MessageEvent('busyupdate', {
-        data: {
-          busy: this.isBusy(),
-          message: this.getBusyMessage(),
-        },
-      }));
-    }
-  }
-  cancel() {
-    this.abortController.abort(abortError);
-  }
-  destroy() {
-    this.cancel();
-  }
-}
-
-//
-
-export class Storyboard extends EventTarget {
-  constructor() {
-    super();
-
-    this.panels = [];
-  }
-  #addPanelInternal(panel) {
-    this.panels.push(panel);
-    this.dispatchEvent(new MessageEvent('paneladd', {
-      data: {
-        panel,
-      },
-    }));
-  }
-  #removePanelInternal(panel) {
-    const i = this.panels.indexOf(panel);
-    if (i !== -1) {
-      this.panels.splice(i, 1);
-      panel.destroy();
-
-      this.dispatchEvent(new MessageEvent('panelremove', {
-        data: {
-          panel,
-        },
-      }));
-    } else {
-      throw new Error('panel not found');
-    }
-  }
-  addPanel(data) {
-    const panel = new Panel(data);
-    this.#addPanelInternal(panel);
-    return panel;
-  }
-  addPanelFromPrompt(prompt) {
-    const panel = new Panel();
-    panel.task(async ({signal}) => {
-      const blob = await imageAiClient.createImageBlob(prompt, {signal});
-      await panel.setFile(blob, prompt);
-    }, 'generating image');
-    this.#addPanelInternal(panel);
-    return panel;
-  }
-  addPanelFromFile(file) {
-    const panel = new Panel();
-    panel.task(async ({signal}) => {
-      await panel.setFile(file);
-    }, 'adding image');
-    this.#addPanelInternal(panel);
-    return panel;
-  }
-  removePanel(panel) {
-    this.#removePanelInternal(panel);
-  }
 }
