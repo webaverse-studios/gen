@@ -23,37 +23,18 @@ const Panel3DCanvas = ({
   panel,
 }) => {
   const canvasRef = useRef();
-  const [dimension, setDimension] = useState(panel.getDimension());
-
-  useEffect(() => {
-    const onupdate = e => {
-      setDimension(panel.getDimension());
-    };
-    panel.addEventListener('layeradd', onupdate);
-    panel.addEventListener('layerremove', onupdate);
-    panel.addEventListener('layerupdate', onupdate);
-
-    setDimension(panel.getDimension());
-
-    return () => {
-      panel.removeEventListener('layeradd', onupdate);
-      panel.removeEventListener('layerremove', onupdate);
-      panel.removeEventListener('layerupdate', onupdate);
-    };
-  }, [panel]);
   
   useEffect(() => {
     const canvas = canvasRef.current;
-    const dimension = panel.getDimension();
+    const dimension = panel ? panel.getDimension() : 2;
     if (canvas && dimension === 3) {
-      // console.log('render canvas', canvas);
       const renderer = new PanelRenderer(canvas, panel);
 
       return () => {
         renderer.destroy();
       };
     }
-  }, [panel, canvasRef.current, dimension]);
+  }, [panel, canvasRef.current]);
 
   return (
     <canvas
