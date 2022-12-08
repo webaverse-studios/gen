@@ -156,7 +156,11 @@ export const StoryboardComponent = ({
           e.stopPropagation();
 
           const uint8Array = storyboard.export();
+          // const firstBytes = uint8Array.slice(0, 4);
+          // const firstBytesString = textDecoder.decode(firstBytes);
+          // console.log('export decoded', {firstBytesString});
           const blob = new Blob([
+            zineMagicBytes,
             uint8Array,
           ], {
             type: 'application/octet-stream',
@@ -179,7 +183,7 @@ export const StoryboardComponent = ({
                   const uint8Array = new Uint8Array(arrayBuffer, 4);
                   onPanelsLoad(uint8Array);
                 } else {
-                  console.warn('got invalid file', file);
+                  console.warn('got invalid file', {file, firstBytesString});
                 }
               })();
             }
@@ -187,17 +191,19 @@ export const StoryboardComponent = ({
           }} />
         </button>
       </div>
-      {panels.map((p, i) => (
-        <StoryboardPanel
-          storyboard={storyboard}
-          panel={p}
-          selected={p === panel}
-          onClick={e => {
-            onPanelSelect(p);
-          }}
-          key={p.zp.id}
-        />
-      ))}
+      {panels.map((p, i) => {
+        return (
+          <StoryboardPanel
+            storyboard={storyboard}
+            panel={p}
+            selected={p === panel}
+            onClick={e => {
+              onPanelSelect(p);
+            }}
+            key={p.zp.id}
+          />
+        );
+      })}
       <StoryboardPanelPlaceholder
         onClick={e => {
           const panel = storyboard.addPanel();
