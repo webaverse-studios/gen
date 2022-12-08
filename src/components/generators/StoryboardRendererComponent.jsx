@@ -44,7 +44,6 @@ const StoryboardLayerComponent = ({
 
 //
 
-
 const StoryboardPlaceholderComponent = ({
   storyboard,
   onPanelSelect,
