@@ -2864,54 +2864,63 @@ export class PanelRenderer extends EventTarget {
     }
     
     // place avatars
-    const _getCandidateTransforms = (n = 1) => {
-      const rng = alea('avatars');
-      const candidatePortalLocations = portalLocations.slice();
+    const _getCandidateTransforms = (() => {
+      const localVector = new THREE.Vector3();
+      const localVector2 = new THREE.Vector3();
+      const localVector3 = new THREE.Vector3();
+      const localQuaternion = new THREE.Quaternion();
+      const localQuaternion2 = new THREE.Quaternion();
+      const localMatrix = new THREE.Matrix4();
+      
+      return (n = 1) => {
+        const rng = alea('avatars');
+        const candidatePortalLocations = portalLocations.slice();
 
-      const result = Array(n);
-      for (let i = 0; i < n && candidatePortalLocations.length > 0; i++) {
-        let position;
-        let quaternion;
+        const result = Array(n);
+        for (let i = 0; i < n && candidatePortalLocations.length > 0; i++) {
+          let position;
+          let quaternion;
 
-        // position
-        const portalLocation = candidatePortalLocations.splice(Math.floor(rng() * candidatePortalLocations.length), 1)[0];
-        position = new THREE.Vector3().fromArray(portalLocation);
+          // position
+          const portalLocation = candidatePortalLocations.splice(Math.floor(rng() * candidatePortalLocations.length), 1)[0];
+          position = new THREE.Vector3().fromArray(portalLocation);
 
-        // quaternion
-        const lookCandidateLocations = (firstFloorPlaneIndex !== -1 ? [
-          this.avatar.position,
-        ] : [])
-          .concat(candidatePortalLocations.map(portalLocation => {
-            return new THREE.Vector3().fromArray(portalLocation);
-          }));
-        if (lookCandidateLocations.length > 0) {
-          const lookCandidateLocation = lookCandidateLocations[Math.floor(rng() * lookCandidateLocations.length)];
-          // match up vector to first plane
-          const up = localVector2.set(0, 1, 0);
-          if (firstFloorPlaneIndex !== -1) {
-            const labelSpec = planeSpecs.labels[firstFloorPlaneIndex];
-            const normal = localVector3.fromArray(labelSpec.normal);
-            normalToQuaternion(normal, localQuaternion, backwardVector)
-              .multiply(localQuaternion2.setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI/2))
-            up.applyQuaternion(localQuaternion);
+          // quaternion
+          const lookCandidateLocations = (firstFloorPlaneIndex !== -1 ? [
+            this.avatar.position,
+          ] : [])
+            .concat(candidatePortalLocations.map(portalLocation => {
+              return new THREE.Vector3().fromArray(portalLocation);
+            }));
+          if (lookCandidateLocations.length > 0) {
+            const lookCandidateLocation = lookCandidateLocations[Math.floor(rng() * lookCandidateLocations.length)];
+            // match up vector to first plane
+            const up = localVector2.set(0, 1, 0);
+            if (firstFloorPlaneIndex !== -1) {
+              const labelSpec = planeSpecs.labels[firstFloorPlaneIndex];
+              const normal = localVector3.fromArray(labelSpec.normal);
+              normalToQuaternion(normal, localQuaternion, backwardVector)
+                .multiply(localQuaternion2.setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI/2))
+              up.applyQuaternion(localQuaternion);
+            }
+            quaternion = new THREE.Quaternion().setFromRotationMatrix(
+              localMatrix.lookAt(
+                position,
+                lookCandidateLocation,
+                up
+              )
+            );
+          } else {
+            quaternion = new THREE.Quaternion();
           }
-          quaternion = new THREE.Quaternion().setFromRotationMatrix(
-            localMatrix.lookAt(
-              position,
-              lookCandidateLocation,
-              up
-            )
-          );
-        } else {
-          quaternion = new THREE.Quaternion();
+          result[i] = {
+            position,
+            quaternion,
+          };
         }
-        result[i] = {
-          position,
-          quaternion,
-        };
-      }
-      return result;
-    };
+        return result;
+      };
+    })();
     // place avatars and mobs
     const [
       avatarsTransform,
