@@ -265,7 +265,7 @@ const snapPointCloudToCamera = (pointCloudArrayBuffer, width, height, camera) =>
 
 //
 
-const getFirstFloorPlaneIndex = (/*segmentSpecs, */planeSpecs) => {
+const getFirstFloorPlaneIndex = (planeSpecs) => {
   if (planeSpecs.labels.length > 0) {
     const labelSpecs = planeSpecs.labels.map((label, index) => {
       const {normal, distanceSquaredF} = label;
@@ -2680,19 +2680,6 @@ export class PanelRenderer extends EventTarget {
   } = {}) {
     super();
 
-    /* // debugging
-    {
-      const layer0 = panel.getLayer(0);
-      console.log('cons PanelRenderer', {
-        panel,
-        layer0,
-        canvas,
-      });
-      if (!layer0) {
-        debugger;
-      }
-    } */
-
     this.canvas = canvas;
     this.panel = panel;
     this.debug = debug;
@@ -2833,29 +2820,62 @@ export class PanelRenderer extends EventTarget {
     const floorNetCamera = setOrthographicCameraFromJson(localOrthographicCamera, floorNetCameraJson).clone();
 
     // place avatar
-    if (firstFloorPlaneIndex !== -1) {
-      const labelSpec = planeSpecs.labels[firstFloorPlaneIndex];
-      const normal = localVector.fromArray(labelSpec.normal);
-      const center = localVector2.fromArray(labelSpec.center);
-      
-      this.avatar.position.copy(center);
-      normalToQuaternion(normal, this.avatar.quaternion, backwardVector)
-        // .invert()
-        .multiply(localQuaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI/2))
-        // .multiply(localQuaternion.setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI));
+    const _getFloorTransform = (() => {
+      const localVector = new THREE.Vector3();
+      const localVector2 = new THREE.Vector3();
+      const localQuaternion = new THREE.Quaternion();
+      const localQuaternion2 = new THREE.Quaternion();
+
+      return ({
+        planeSpecs,
+        firstFloorPlaneIndex,
+      }) => {
+        if (firstFloorPlaneIndex !== -1) {
+          const labelSpec = planeSpecs.labels[firstFloorPlaneIndex];
+          const normal = localVector.fromArray(labelSpec.normal);
+          const center = localVector2.fromArray(labelSpec.center);
+          
+          const position = center.clone();
+          const quaternion = localQuaternion;
+          normalToQuaternion(normal, quaternion, backwardVector)
+            .multiply(localQuaternion2.setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI/2));
+  
+          return {
+            position,
+            quaternion,
+          };
+        } else {
+          return {
+            position,
+            quaternion,
+          };
+        }
+      };
+    })();
+    const floorTransform = _getFloorTransform({
+      planeSpecs,
+      firstFloorPlaneIndex,
+    });
+    if (floorTransform) {
+      this.avatar.position.copy(floorTransform.position);
+      this.avatar.quaternion.copy(floorTransform.quaternion);
       this.avatar.updateMatrixWorld();
       this.avatar.visible = true;
     }
+    
     // place avatars
-    const rng = alea('avatars');
-    const candidatePortalLocations = portalLocations.slice();
-    const _getCandidateTransform = () => {
-      let position;
-      let quaternion;
-      if (candidatePortalLocations.length > 0) {
+    const _getCandidateTransforms = (n = 1) => {
+      const rng = alea('avatars');
+      const candidatePortalLocations = portalLocations.slice();
+
+      const result = Array(n);
+      for (let i = 0; i < n && candidatePortalLocations.length > 0; i++) {
+        let position;
+        let quaternion;
+
         // position
         const portalLocation = candidatePortalLocations.splice(Math.floor(rng() * candidatePortalLocations.length), 1)[0];
-        position = localVector.fromArray(portalLocation);
+        position = new THREE.Vector3().fromArray(portalLocation);
 
         // quaternion
         const lookCandidateLocations = (firstFloorPlaneIndex !== -1 ? [
@@ -2875,7 +2895,7 @@ export class PanelRenderer extends EventTarget {
               .multiply(localQuaternion2.setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI/2))
             up.applyQuaternion(localQuaternion);
           }
-          quaternion = localQuaternion.setFromRotationMatrix(
+          quaternion = new THREE.Quaternion().setFromRotationMatrix(
             localMatrix.lookAt(
               position,
               lookCandidateLocation,
@@ -2883,25 +2903,26 @@ export class PanelRenderer extends EventTarget {
             )
           );
         } else {
-          quaternion = localQuaternion.identity();
+          quaternion = new THREE.Quaternion();
         }
-        return {
+        result[i] = {
           position,
           quaternion,
         };
-      } else {
-        return null;
       }
+      return result;
     };
-    const avatarsTransform = _getCandidateTransform();
+    // place avatars and mobs
+    const [
+      avatarsTransform,
+      mobsTransform,
+    ] = _getCandidateTransforms(2);
     if (avatarsTransform) {
       this.avatars.position.copy(avatarsTransform.position);
       this.avatars.quaternion.copy(avatarsTransform.quaternion);
       this.avatars.updateMatrixWorld();
       this.avatars.visible = true;
     }
-    // place mobs
-    const mobsTransform = _getCandidateTransform();
     if (mobsTransform) {
       this.mobs.position.copy(mobsTransform.position);
       this.mobs.quaternion.copy(mobsTransform.quaternion);
