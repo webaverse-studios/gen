@@ -110,7 +110,6 @@ export const StoryboardRendererComponent = ({
 
   // panel tracking
   useEffect(() => {
-    console.log('panel change');
     if (panel) {
       const onbusyupdate = e => {
         setBusy(panel.isBusy());
@@ -118,7 +117,6 @@ export const StoryboardRendererComponent = ({
       };
       panel.addEventListener('busyupdate', onbusyupdate);
       const onupdate = e => {
-        console.log('set dimension 1', panel.getLayer(0), panel.getDimension());
         setEmpty(_getEmpty());
         setDimension(panel.getDimension());
       };
@@ -127,7 +125,6 @@ export const StoryboardRendererComponent = ({
       setEmpty(_getEmpty());
       setBusy(panel.isBusy());
       setBusyMessage(panel.getBusyMessage());
-      console.log('set dimension 0', panel.getLayer(0), panel.getDimension());
       setDimension(panel.getDimension());
 
       return () => {
@@ -143,11 +140,6 @@ export const StoryboardRendererComponent = ({
         if (busy) {
           return <div className={styles.busy}>{busyMessage}</div>
         } else {
-          console.log('render panel', panel, [
-            panel?.getLayer(0),
-            panel?.getLayer(1),
-            panel?.getLayer(2),
-          ], panel?.getDimension());
           if (panel) {
             if (empty) {
               return <StoryboardGeneratorComponent
@@ -162,7 +154,6 @@ export const StoryboardRendererComponent = ({
               //     layer={layer}
               //   />
               // } else {
-                console.log('render dimension', dimension);
                 if (dimension === 2) {
                   return <Storyboard2DRendererComponent
                     storyboard={storyboard}  
