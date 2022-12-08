@@ -18,18 +18,13 @@ export const Storyboard2DRendererComponent = ({
   panel,
 }) => {
   const _getImage = () => {
-    console.log('got image 0', {panel});
     const layer = panel.getLayer(0);
-    console.log('got image 1', {layer});
     const image = layer.getData(mainImageKey);
-    console.log('got image 2', {layer, image});
     return image ?? '';
   };
   const _getPrompt = () => {
     const layer = panel.getLayer(0);
-    console.log('got layer 1', {layer});
     const prompt = layer?.getData(promptKey);
-    console.log('got prompt 2', {layer, prompt});
     return prompt ?? '';
   };
   const [prompt, setPrompt] = useState(_getPrompt);
