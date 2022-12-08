@@ -2138,13 +2138,55 @@ class SceneMaterial extends THREE.ShaderMaterial {
 
 //
 
+class FloorNetMesh extends THREE.Mesh {
+  constructor() {
+    const geometry = new THREE.PlaneBufferGeometry(1, 1);
+
+    const material = new THREE.MeshPhongMaterial({
+      color: 0xFF0000,
+      transparent: true,
+      opacity: 0.7,
+      side: THREE.BackSide,
+    });
+
+    super(geometry, material);
+
+    const floorNetMesh = this;
+    floorNetMesh.enabled = false;
+    let hasGeometry = false;
+    floorNetMesh.setGeometry = ({
+      floorNetDepths,
+      floorNetCamera,
+    }) => {
+      const geometry = depthFloat32ArrayToOrthographicGeometry(
+        floorNetDepths,
+        floorNetPixelSize,
+        floorNetPixelSize,
+        floorNetCamera,
+      );
+      geometry.computeVertexNormals();
+      floorNetMesh.geometry = geometry;
+
+      hasGeometry = true;
+      floorNetMesh.updateVisibility();
+    };
+    floorNetMesh.updateVisibility = () => {
+      floorNetMesh.visible = floorNetMesh.enabled && hasGeometry;
+    };
+    floorNetMesh.frustumCulled = false;
+    floorNetMesh.visible = false;
+  }
+}
+
+//
+
 export class PanelRenderer extends EventTarget {
   constructor(canvas, panel, {
     debug = false,
   } = {}) {
     super();
 
-    // debugging
+    /* // debugging
     {
       const layer0 = panel.getLayer(0);
       console.log('cons PanelRenderer', {
@@ -2155,7 +2197,7 @@ export class PanelRenderer extends EventTarget {
       if (!layer0) {
         debugger;
       }
-    }
+    } */
 
     this.canvas = canvas;
     this.panel = panel;
@@ -2474,43 +2516,9 @@ export class PanelRenderer extends EventTarget {
     this.sceneMesh = sceneMesh;
 
     // floor net mesh
-    {
-      const geometry = new THREE.PlaneBufferGeometry(1, 1);
-
-      const material = new THREE.MeshPhongMaterial({
-        color: 0xFF0000,
-        transparent: true,
-        opacity: 0.7,
-        side: THREE.BackSide,
-      });
-
-      const floorNetMesh = new THREE.Mesh(geometry, material);
-      floorNetMesh.enabled = false;
-      let hasGeometry = false;
-      floorNetMesh.setGeometry = ({
-        floorNetDepths,
-        floorNetCamera,
-      }) => {
-        const geometry = depthFloat32ArrayToOrthographicGeometry(
-          floorNetDepths,
-          floorNetPixelSize,
-          floorNetPixelSize,
-          floorNetCamera,
-        );
-        geometry.computeVertexNormals();
-        floorNetMesh.geometry = geometry;
-
-        hasGeometry = true;
-        floorNetMesh.updateVisibility();
-      };
-      floorNetMesh.updateVisibility = () => {
-        floorNetMesh.visible = floorNetMesh.enabled && hasGeometry;
-      };
-      floorNetMesh.frustumCulled = false;
-      floorNetMesh.visible = false;
-      this.scene.add(floorNetMesh);
-      this.floorNetMesh = floorNetMesh;
-    };
+    const floorNetMesh = new FloorNetMesh();
+    this.scene.add(floorNetMesh);
+    this.floorNetMesh = floorNetMesh;
     this.floorNetMesh.setGeometry({
       floorNetDepths,
       floorNetCamera,
