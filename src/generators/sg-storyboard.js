@@ -75,6 +75,16 @@ export class Storyboard extends EventTarget {
       this.zs.removeEventListener('panelupdate', onupdate);
     };
   }
+
+  clear() {
+    this.zs.clear();
+  }
+  load(uint8Array) {
+    this.zs.load(uint8Array);
+  }
+  export() {
+    return this.zs.export();
+  }
   
   addPanel() {
     const zp = this.zs.addPanel();

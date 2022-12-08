@@ -4,6 +4,10 @@ import {
 import {
   mainImageKey,
 } from '../zine/zine-data-specs.js';
+import {
+  zbencode,
+  zbdecode,
+} from '../utils/encoding.mjs';
 
 //
 
@@ -472,8 +476,7 @@ export class ZineData extends EventTarget {
     }
 
     this.data = zbdecode(uint8Array);
-    for (const panelData of this.data) {
-      const {id} = panelData;
+    for (const [id, panelData] of this.data) {
       this.dispatchEvent(new MessageEvent('add', {
         data: {
           keyPath: [id],
