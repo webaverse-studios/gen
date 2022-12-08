@@ -129,11 +129,18 @@ export class ZineStoryboard extends EventTarget {
 
     this.zd = new ZineData();
 
+    this.#init();
     this.#listen();
   }
   prefix = [];
   #panels = [];
   #unlisten;
+  #init() {
+    this.#panels = this.getKeys().map(id => {
+      const keyPath = this.prefix.concat([id]);
+      return new ZinePanel(this.zd, keyPath);
+    });
+  }
   #listen() {
     const onadd = e => {
       console.log('zine panel add event', e.data.keyPath, this.prefix);
@@ -190,6 +197,10 @@ export class ZineStoryboard extends EventTarget {
       this.zd.removeEventListener('add', onadd);
       this.zd.removeEventListener('remove', onremove);
     };
+  }
+
+  getKeys() {
+    return this.zd.getKeys(this.prefix);
   }
   
   clear() {
@@ -261,6 +272,7 @@ export class ZinePanel extends EventTarget {
     this.zd = zd;
     this.prefix = prefix;
 
+    this.#init();
     this.#listen();
   }
   get id() {
@@ -269,6 +281,12 @@ export class ZinePanel extends EventTarget {
   prefix;
   #layers = [];
   #unlisten;
+  #init() {
+    this.#layers = this.getKeys().map(id => {
+      const keyPath = this.prefix.concat([id]);
+      return new ZineLayer(this.zd, keyPath);
+    })
+  }
   #listen() {
     const onadd = e => {
       // console.log('got panel add event', e.data.keyPath, this.prefix);
@@ -336,6 +354,11 @@ export class ZinePanel extends EventTarget {
     };
   }
 
+  getKeys() {
+    const keyPath = this.prefix;
+    return this.zd.getKeys(keyPath);
+  }
+
   getLayers() {
     return this.#layers;
   }
@@ -379,6 +402,7 @@ class ZineLayer extends EventTarget {
     this.zd = zd;
     this.prefix = prefix;
   }
+
   get id() {
     return this.prefix[this.prefix.length - 1];
   }

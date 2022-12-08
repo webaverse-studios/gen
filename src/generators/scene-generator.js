@@ -2144,6 +2144,7 @@ export class PanelRenderer extends EventTarget {
   } = {}) {
     super();
 
+    // debugging
     {
       const layer0 = panel.getLayer(0);
       console.log('cons PanelRenderer', {
