@@ -36,7 +36,6 @@ import {
 } from '../zine/zine-format.js';
 
 import {ImageAiClient} from '../clients/image-client.js';
-// import {getLabel} from '../clients/perception-client.js';
 import {
   pointcloudStride,
   getPointCloud,
@@ -88,12 +87,24 @@ import {
   arrowsUpUrl,
 } from '../utils/light-arrow.js';
 import {makePromise} from '../../utils.js';
+import {
+  VQAClient,
+} from '../clients/vqa-client.js';
+import {
+  mainImageKey,
+  promptKey,
+  layer2Specs,
+} from '../zine/zine-data-specs.js';
 
 //
 
 export {
   ZineStoryboard,
 };
+
+//
+
+const vqaClient = new VQAClient();
 
 // constants
 
@@ -2128,11 +2139,16 @@ class SceneMaterial extends THREE.ShaderMaterial {
 
 //
 
-class PanelRenderer extends EventTarget {
+export class PanelRenderer extends EventTarget {
   constructor(canvas, panel, {
     debug = false,
   } = {}) {
     super();
+
+    console.log('PanelRenderer', {
+      canvas,
+      panel,
+    });
 
     this.canvas = canvas;
     this.panel = panel;
@@ -2246,23 +2262,25 @@ class PanelRenderer extends EventTarget {
     this.mobs = mobs;
 
     // read the mesh from the panel
-    const imgArrayBuffer = panel.zd.getData(mainImageKey);
-    const segmentMask = panel.zd.getData('layer1/segmentMask');
-    // const labelImageData = panel.zd.getData('layer1/labelImageData');
-    const pointCloudHeaders = panel.zd.getData('layer1/pointCloudHeaders');
-    let pointCloudArrayBuffer = panel.zd.getData('layer1/pointCloud');
-    // const planeMatrices = panel.zd.getData('layer1/planeMatrices');
-    const planesJson = panel.zd.getData('layer1/planesJson');
-    const planesMask = panel.zd.getData('layer1/planesMask');
-    const portalJson = panel.zd.getData('layer1/portalJson');
-    const segmentSpecs = panel.zd.getData('layer1/segmentSpecs');
-    const planeSpecs = panel.zd.getData('layer1/planeSpecs');
-    const portalSpecs = panel.zd.getData('layer1/portalSpecs');
-    const firstFloorPlaneIndex = panel.zd.getData('layer1/firstFloorPlaneIndex');
-    const floorNetDepths = panel.zd.getData('layer1/floorNetDepths');
-    const floorNetCameraJson = panel.zd.getData('layer1/floorNetCameraJson');
-    const predictedHeight = panel.zd.getData('layer1/predictedHeight');
-    const portalLocations = panel.zd.getData('layer1/portalLocations');
+    const layer0 = panel.getLayer(0);
+    const layer1 = panel.getLayer(1);
+    const imgArrayBuffer = layer0.getData(mainImageKey);
+    const segmentMask = layer1.getData('segmentMask');
+    // const labelImageData = layer1.getData('labelImageData');
+    const pointCloudHeaders = layer1.getData('pointCloudHeaders');
+    let pointCloudArrayBuffer = layer1.getData('pointCloud');
+    // const planeMatrices = layer1.getData('planeMatrices');
+    const planesJson = layer1.getData('planesJson');
+    const planesMask = layer1.getData('planesMask');
+    const portalJson = layer1.getData('portalJson');
+    const segmentSpecs = layer1.getData('segmentSpecs');
+    const planeSpecs = layer1.getData('planeSpecs');
+    const portalSpecs = layer1.getData('portalSpecs');
+    const firstFloorPlaneIndex = layer1.getData('firstFloorPlaneIndex');
+    const floorNetDepths = layer1.getData('floorNetDepths');
+    const floorNetCameraJson = layer1.getData('floorNetCameraJson');
+    const predictedHeight = layer1.getData('predictedHeight');
+    const portalLocations = layer1.getData('portalLocations');
 
     // camera
     this.camera.fov = Number(pointCloudHeaders['x-fov']);
@@ -3131,9 +3149,14 @@ class PanelRenderer extends EventTarget {
 
                   const outmeshMeshResult = await this.renderOutmeshMesh(outmeshImageResult);
 
-                  for (const {name, type} of layer2Specs) {
+                  const layer = this.panel.zp.addLayer();
+                  for (const name of layer2Specs) {
                     const value = outmeshImageResult[name] ?? outmeshMeshResult[name];
-                    this.panel.zd.setData('layer2/' + name, value, type);
+                    if (!value) {
+                      console.warn('missing value', name);
+                      debugger;
+                    }
+                    layer.setData(name, value);
                   }
                 } finally {
                   this.outmeshMesh.setState('finished');
@@ -3218,6 +3241,10 @@ class PanelRenderer extends EventTarget {
     };
 
     const canvas = this.renderer.domElement;
+    if (!canvas) {
+      console.warn('no canvas', canvas);
+      debugger;
+    }
     canvas.addEventListener('mousedown', mousedown);
     document.addEventListener('mouseup', mouseup);
     canvas.addEventListener('mousemove', mousemove);
@@ -3227,7 +3254,9 @@ class PanelRenderer extends EventTarget {
     const update = e => {
       this.updateOutmeshLayers();
     };
-    this.panel.zd.addEventListener('update', update);
+    this.panel.zp.addEventListener('layeradd', update);
+    this.panel.zp.addEventListener('layerremove', update);
+    this.panel.zp.addEventListener('layerupdate', update);
 
     this.addEventListener('destroy', e => {
       document.removeEventListener('keydown', keydown);
@@ -3238,7 +3267,9 @@ class PanelRenderer extends EventTarget {
       canvas.removeEventListener('click', blockEvent);
       canvas.removeEventListener('wheel', blockEvent);
 
-      this.panel.zd.removeEventListener('update', update);
+      this.panel.zp.removeEventListener('layeradd', update);
+      this.panel.zp.removeEventListener('layerremove', update);
+      this.panel.zp.removeEventListener('layerupdate', update);
     });
   }
   render() {
@@ -3283,7 +3314,8 @@ class PanelRenderer extends EventTarget {
     _startLoop();
   }
   async renderOutmeshImage() {
-    const prompt = this.panel.zd.getData(promptKey);
+    const layer0 = this.panel.getLayer(0);
+    const prompt = layer0.getData(promptKey);
     if (!prompt) {
       throw new Error('no prompt, so cannot outmesh');
     }
@@ -3296,6 +3328,7 @@ class PanelRenderer extends EventTarget {
     const auxMeshes = [
       this.avatar,
       this.avatars,
+      this.mobs,
       this.floorNetMesh,
       this.portalNetMesh,
       this.overlay.overlayScene,
@@ -3373,8 +3406,9 @@ class PanelRenderer extends EventTarget {
     maskBlob,
     editCameraJson,
   }) {
-    const oldPointCloudArrayBuffer = this.panel.zd.getData('layer1/pointCloud');
-    const floorPlaneJson = this.panel.zd.getData('layer1/floorPlaneJson');
+    const layer1 = this.panel.getLayer(1);
+    const oldPointCloudArrayBuffer = layer1.getData('pointCloud');
+    const floorPlaneJson = layer1.getData('floorPlaneJson');
 
     // reify objects
     const editCamera = setPerspectiveCameraFromJson(localCamera, editCameraJson).clone();
@@ -3629,25 +3663,24 @@ class PanelRenderer extends EventTarget {
     const {width, height} = this.renderer.domElement;
     clipGeometryZ(geometry, width, height, depthFloats32Array);
   }
-  createOutmeshLayer(layerEntries) {
-    const _getLayerEntry = key => layerEntries.find(layerEntry => layerEntry.key.endsWith('/' + key))?.value;
-    const maskImg = _getLayerEntry('maskImg');
-    const editedImg = _getLayerEntry('editedImg');
-    const maskIndex = _getLayerEntry('maskIndex');
-    const pointCloudHeaders = _getLayerEntry('pointCloudHeaders');
-    const pointCloud = _getLayerEntry('pointCloud');
-    const depthFloatImageData = _getLayerEntry('depthFloatImageData');
-    const distanceFloatImageData = _getLayerEntry('distanceFloatImageData');
-    const distanceNearestPositions = _getLayerEntry('distanceNearestPositions');
-    const newDepthFloatImageData = _getLayerEntry('newDepthFloatImageData');
-    const reconstructedDepthFloats = _getLayerEntry('reconstructedDepthFloats');
-    const planesJson = _getLayerEntry('planesJson');
-    const planesMask = _getLayerEntry('planesMask');
-    const portalJson = _getLayerEntry('portalJson');
-    const floorNetDepths = _getLayerEntry('floorNetDepths');
-    const floorNetCameraJson = _getLayerEntry('floorNetCameraJson');
-    const segmentMask = _getLayerEntry('segmentMask');
-    const editCameraJson = _getLayerEntry('editCameraJson');
+  createOutmeshLayer(layer) {
+    const maskImg = layer.getData('maskImg');
+    const editedImg = layer.getData('editedImg');
+    const maskIndex = layer.getData('maskIndex');
+    const pointCloudHeaders = layer.getData('pointCloudHeaders');
+    const pointCloud = layer.getData('pointCloud');
+    const depthFloatImageData = layer.getData('depthFloatImageData');
+    const distanceFloatImageData = layer.getData('distanceFloatImageData');
+    const distanceNearestPositions = layer.getData('distanceNearestPositions');
+    const newDepthFloatImageData = layer.getData('newDepthFloatImageData');
+    const reconstructedDepthFloats = layer.getData('reconstructedDepthFloats');
+    const planesJson = layer.getData('planesJson');
+    const planesMask = layer.getData('planesMask');
+    const portalJson = layer.getData('portalJson');
+    const floorNetDepths = layer.getData('floorNetDepths');
+    const floorNetCameraJson = layer.getData('floorNetCameraJson');
+    const segmentMask = layer.getData('segmentMask');
+    const editCameraJson = layer.getData('editCameraJson');
 
     //
 
@@ -3879,16 +3912,23 @@ class PanelRenderer extends EventTarget {
     return layerScene;
   }
   updateOutmeshLayers() {
-    const layers = this.panel.zd.getDataLayersMatchingSpec(layer2Specs);
+    // const layers = this.panel.zd.getDataLayersMatchingSpec(layer2Specs);
+    let layer = this.panel.getLayer(2);
+    if (layer && !layer.matchesSpecs(layer2Specs)) {
+      layer = null;
+    }
+    const layers = layer ? [
+      layer,
+    ] : [];
+    // console.log('update outmesh layers', layer, layer2Specs, layers);
 
     const _addNewLayers = () => {
-      const startLayer = 2;
-      for (let i = startLayer; i < layers.length; i++) {
+      for (let i = 0; i < layers.length; i++) {
         let layerScene = this.layerScenes[i];
         if (!layerScene) {
-          const layerDatas = layers[i];
+          const layer = layers[i];
           // console.log ('pre add layer scene', i, layerDatas);
-          layerScene = this.createOutmeshLayer(layerDatas);
+          layerScene = this.createOutmeshLayer(layer);
           // console.log('add layer scene', i, layerScene);
           this.scene.add(layerScene);
           this.layerScenes[i] = layerScene;
@@ -4038,13 +4078,22 @@ const _getImageSegements = async imgBlob => {
 
 //
 
-async function compileVirtualScene(imageArrayBuffer, width, height/*, camera */) {
+export async function compileVirtualScene(imageArrayBuffer, width, height/*, camera */) {
   // color
   const blob = new Blob([imageArrayBuffer], {
     type: 'image/png',
   });
-  const img = await blob2img(blob);
-  img.classList.add('img');
+  console.log('load blob 1', imageArrayBuffer, blob);
+  let img;
+  try {
+    img = await blob2img(blob);
+    console.log('load blob 2', blob);
+    img.classList.add('img');
+    console.log('load blob 3', blob);
+  } catch (err) {
+    console.log('load blob err', blob, err);
+    throw err;
+  }
   // document.body.appendChild(img);
 
   // {
@@ -4256,7 +4305,7 @@ async function compileVirtualScene(imageArrayBuffer, width, height/*, camera */)
   const portalLocations = getPortalLocations(portalSpecs, floorHeightfield, floorPlaneLabelSpec);
 
   // query the height
-  const predictedHeight = await _getPredictedHeight(blob);
+  const predictedHeight = await vqaClient.getPredictedHeight(blob);
   // console.log('got predicted height', predictedHeight);
 
   // return result

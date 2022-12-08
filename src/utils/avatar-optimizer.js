@@ -45,20 +45,21 @@ class MorphAttributeLayout extends AttributeLayout {
   }
 }
 
-const getRenderer = (() => {
-  let renderer = null;
-  return () => {
-    if (!renderer) {
-      renderer = new THREE.WebGLRenderer();
-    }
-    return renderer;
-  };
-})();
+// const getRenderer = (() => {
+//   let renderer = null;
+//   return () => {
+//     if (!renderer) {
+//       renderer = new THREE.WebGLRenderer();
+//     }
+//     return renderer;
+//   };
+// })();
 const getObjectKeyDefault = (type, object, material) => {
-  const renderer = getRenderer();
+  // const renderer = getRenderer();
   return [
     type,
-    renderer.getProgramCacheKey(object, material),
+    // renderer.getProgramCacheKey(object, material),
+    // object.className,
   ].join(',');
 };
 export const getSkeletons = (object) => {
@@ -109,6 +110,8 @@ export const getMergeableObjects = (model, getObjectKey = getObjectKeyDefault) =
         if (!m) {
           m = {
             type,
+            className: o.className,
+            metadatas: [],
             material: objectMaterial,
             objects: [],
             geometries: [],
@@ -124,6 +127,7 @@ export const getMergeableObjects = (model, getObjectKey = getObjectKeyDefault) =
         }
 
         m.objects.push(o);
+        m.metadatas.push(o.metadata ?? null);
         m.geometries.push(objectGeometry);
         m.maps.push(map);
         m.emissiveMaps.push(emissiveMap);
@@ -624,6 +628,8 @@ export const optimizeAvatarModel = async (model, options = {}) => {
     const {
       type,
       material,
+      className,
+      metadatas,
       // geometries,
       // maps,
       // emissiveMaps,
@@ -632,6 +638,25 @@ export const optimizeAvatarModel = async (model, options = {}) => {
       morphTargetDictionaryArray,
       morphTargetInfluencesArray,
     } = mergeable;
+
+    // add metadata attribute
+    for (let i = 0; i < mergeable.geometries.length; i++) {
+      const geometry = mergeable.geometries[i];
+      const metadata = metadatas[i];
+      if (metadata) {
+        const metadataArray = new Float32Array(geometry.attributes.position.array.length / 3 * 4);
+        for (let i = 0; i < metadataArray.length; i += 4) {
+          metadataArray[i + 0] = metadata[0];
+          metadataArray[i + 1] = metadata[1];
+          metadataArray[i + 2] = metadata[2];
+          metadataArray[i + 3] = metadata[3];
+        }
+        const metadataAttr = new THREE.BufferAttribute(metadataArray, 4);
+        geometry.setAttribute('metadata', metadataAttr);
+        console.log('add metadata attr', metadataAttr);
+      }
+    }
+
     const {
       // atlas,
       // atlasImages,
@@ -661,21 +686,22 @@ export const optimizeAvatarModel = async (model, options = {}) => {
     _updateMaterial();
 
     const _makeMesh = () => {
-      if (type === 'mesh') {
+      if (type === 'mesh' || type === 'skinnedMesh') {
         const mesh = new THREE.Mesh(geometry, m);
         return mesh;
-      } else if (type === 'skinnedMesh') {
-        const skinnedMesh = new THREE.SkinnedMesh(geometry, m);
-        skinnedMesh.skeleton = skeletons[0];
-        skinnedMesh.morphTargetDictionary = morphTargetDictionaryArray[0];
-        skinnedMesh.morphTargetInfluences = morphTargetInfluencesArray[0];
-        // skinnedMesh.updateMorphTargets();
-        return skinnedMesh;
+      // } else if (type === 'skinnedMesh') {
+        // const skinnedMesh = new THREE.SkinnedMesh(geometry, m);
+        // skinnedMesh.skeleton = skeletons[0];
+        // skinnedMesh.morphTargetDictionary = morphTargetDictionaryArray[0];
+        // skinnedMesh.morphTargetInfluences = morphTargetInfluencesArray[0];
+        // // skinnedMesh.updateMorphTargets();
+        // return skinnedMesh;
       } else {
         throw new Error(`unknown type ${type}`);
       }
     };
     const mesh = _makeMesh();
+    mesh.className = className;
     // console.log('got mesh', mesh);
 
     return mesh;

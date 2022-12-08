@@ -131,6 +131,9 @@ export const StoryboardRendererComponent = ({
     if (panel) {
       const onupdate = e => {
         console.log('panel layer add/remove', _getEmpty());
+        // if (_getEmpty()) {
+        //   debugger;
+        // }
         setEmpty(_getEmpty());
       };
       panel.addEventListener('update', onupdate);

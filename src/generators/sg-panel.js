@@ -4,6 +4,9 @@ import {
 import {
   mainImageKey,
   promptKey,
+  layer0Specs,
+  layer1Specs,
+  layer2Specs,
 } from '../zine/zine-data-specs.js';
 import {
   blob2img,
@@ -17,6 +20,9 @@ import {
 import {
   ImageAiClient,
 } from '../clients/image-client.js';
+import {
+  compileVirtualScene,
+} from './scene-generator.js';
 import {
   panelSize,
 } from '../constants/sg-constants.js';
@@ -140,13 +146,18 @@ export class Panel extends EventTarget {
   //   return layers;
   // }
 
+  getLayers() {
+    return this.zp.getLayers();
+  }
   getLayer(index) {
     return this.zp.getLayer(index);
   }
 
   isEmpty() {
     // return !this.hasData(mainImageKey);
-    return this.zp.getLayers().length === 0;
+    // return this.zp.getLayers().length === 0;
+    const layer0 = this.zp.getLayer(0);
+    return !layer0 || !layer0.matchesSpecs(layer0Specs);
   }
   getDimension() {
     // return this.hasDataMatch(/^layer1/) ? 3 : 2;
@@ -155,9 +166,32 @@ export class Panel extends EventTarget {
     //   debugger;
     // }
 
-    const numLayers = this.zp.getLayers().length;
-    // return numLayers >= 1 ? 3 : 2;
-    return Math.min(numLayers + 1, 3)
+    const layer = this.zp.getLayer(1);
+    const keys = layer?.getKeys() ?? [];
+    const candidateLayer1Specs = layer1Specs.filter(spec => !keys.includes(spec));
+    // console.log('layer matches', !!this.zp.getLayer(1), !!this.zp.getLayer(1)?.matchesSpecs(layer1Specs), {
+    //   layer,
+    //   keys,
+    //   candidateLayer1Specs,
+    // });
+
+    // const hasLayer0 = !!this.zp.getLayer(0)?.matchesSpecs(layer0Specs);
+    const hasLayer1 = !!this.zp.getLayer(1)?.matchesSpecs(layer1Specs);
+    // const hasLayer2 = !!this.zp.getLayer(2)?.matchesSpec(layer2Specs);
+
+    // if (hasLayer0) {
+      if (hasLayer1) {
+        return 3;
+      } else {
+        return 2;
+      }
+    // } else {
+    //   return 0;
+    // }
+
+    // const numLayers = this.zp.getLayers().length;
+    // // return numLayers >= 1 ? 3 : 2;
+    // return Math.min(numLayers + 1, 3);
   }
   isBusy() {
     return this.runningTasks.length > 0;
@@ -175,12 +209,14 @@ export class Panel extends EventTarget {
     const layer = this.zp.addLayer();
     (async () => {
       const arrayBuffer = await file.arrayBuffer();
+      console.log('set file');
       layer.setData(mainImageKey, arrayBuffer);
     })();
     (async () => {
       if (!prompt) {
         prompt = await vqaClient.getImageCaption(file);
       }
+      console.log('set prompt', promptKey, prompt);
       layer.setData(promptKey, prompt);
     })();
   }
@@ -193,15 +229,19 @@ export class Panel extends EventTarget {
 
   async compile() {
     await this.task(async ({signal}) => {
-      const imageArrayBuffer = this.getData(mainImageKey);
+      const layer = this.zp.getLayer(0);
+      const imageArrayBuffer = layer.getData(mainImageKey);
       const compileResult = await compileVirtualScene(
         imageArrayBuffer,
         panelSize,
         panelSize,
       );
 
-      for (const {name, type} of layer1Specs) {
-        this.setData('layer1/' + name, compileResult[name], type);
+      const layer1 = this.zp.addLayer();
+      for (const name of layer1Specs) {
+        const v = compileResult[name];
+        console.log('set compile result data', v);
+        layer1.setData(name, v);
       }
     }, 'compiling');
   }

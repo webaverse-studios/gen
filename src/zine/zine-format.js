@@ -1,6 +1,9 @@
 import {
   makeId,
 } from '../utils/id-utils.js';
+import {
+  mainImageKey,
+} from '../zine/zine-data-specs.js';
 
 //
 
@@ -129,9 +132,9 @@ export class ZineStoryboard extends EventTarget {
   #unlisten;
   #listen() {
     const onadd = e => {
-      console.log('got add event', e.data.keyPath, this.prefix);
+      // console.log('got add event', e.data.keyPath, this.prefix);
       if (!checkEventKeypathPrefix(e, this.prefix)) {
-        console.log('bail');
+        // console.log('bail');
         return;
       }
 
@@ -338,7 +341,6 @@ export class ZinePanel extends EventTarget {
 
 //
 
-
 class ZineLayer extends EventTarget {
   constructor(zd, prefix) {
     super();
@@ -361,14 +363,14 @@ class ZineLayer extends EventTarget {
     //   debugger;
     // }
 
-    if (!key) {
-      console.warn('no key during get', key);
-      debugger;
-    }
+    // if (!key) {
+    //   console.warn('no key during get', key);
+    //   debugger;
+    // }
 
     const keyPath = this.prefix.concat([key]);
     const value = this.zd.getData(keyPath);
-    console.log('get data', key, value, keyPath, structuredClone(this.zd.data));
+    // console.log('get data', key, value, keyPath, structuredClone(this.zd.data));
     return value;
   }
   setData(key, value) {
@@ -377,10 +379,10 @@ class ZineLayer extends EventTarget {
     //   debugger;
     // }
     
-    if (!key) {
-      console.warn('no key during set', key);
-      debugger;
-    }
+    // if (!key) {
+    //   console.warn('no key during set', key);
+    //   debugger;
+    // }
     
     const keyPath = this.prefix.concat([key]);
     this.zd.setData(keyPath, value);
@@ -394,6 +396,21 @@ class ZineLayer extends EventTarget {
       },
     }));
   }
+  getKeys() {
+    const keyPath = this.prefix;
+    return this.zd.getKeys(keyPath);
+  }
+
+  matchesSpecs(specs) {
+    const keys = this.getKeys();
+    for (const spec of specs) {
+      if (!keys.includes(spec)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   destroy() {
     // nothing
   }
@@ -493,6 +510,15 @@ export class ZineData extends EventTarget {
   }
   hasData(key) {
     return this.getData(key) !== undefined;
+  }
+  getKeys(key) {
+    const parent = this.getData(key);
+    if (parent) {
+      // console.log('get keys for', structuredClone(this.data));
+      return parent.map(([key]) => key);
+    } else {
+      return [];
+    }
   }
   // hasDataMatch(regex) {
   //   return this.data.some(item => regex.test(item.key));
