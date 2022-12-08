@@ -2180,6 +2180,54 @@ class FloorNetMesh extends THREE.Mesh {
 
 //
 
+class PortalNetMesh extends THREE.Mesh {
+  constructor({
+    portalLocations,
+  }) {
+    const boxGeometry = new THREE.BoxBufferGeometry(0.1, 0.1, 0.1);
+    const geometries = portalLocations.map(portalLocation => {
+      const g = boxGeometry.clone();
+      g.applyMatrix4(localMatrix.makeTranslation(portalLocation[0], portalLocation[1], portalLocation[2]));
+      return g;
+    });
+    const geometry = geometries.length > 0 ? BufferGeometryUtils.mergeBufferGeometries(geometries) : new THREE.BufferGeometry();
+
+    const material = new THREE.ShaderMaterial({
+      vertexShader: `\
+        varying vec2 vUv;
+
+        void main() {
+          vUv = uv;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `\
+        varying vec2 vUv;
+
+        void main() {
+          vec3 c = vec3(0., 0.5, 1.);
+          gl_FragColor = vec4(c, 0.5);
+          gl_FragColor.rg += vUv * 0.2;
+        }
+      `,
+      transparent: true,
+    });
+    super(geometry, material);
+
+    const hasGeometry = geometries.length > 0;
+
+    const portalNetMesh = this;
+    portalNetMesh.frustumCulled = false;
+    portalNetMesh.enabled = false;
+    portalNetMesh.visible = false;
+    portalNetMesh.updateVisibility = () => {
+      portalNetMesh.visible = portalNetMesh.enabled && hasGeometry;
+    };
+  }
+}
+
+//
+
 export class PanelRenderer extends EventTarget {
   constructor(canvas, panel, {
     debug = false,
@@ -2525,50 +2573,11 @@ export class PanelRenderer extends EventTarget {
     });
 
     // portal net mesh
-    {
-      const boxGeometry = new THREE.BoxBufferGeometry(0.1, 0.1, 0.1);
-      const geometries = portalLocations.map(portalLocation => {
-        portalLocation = localVector.fromArray(portalLocation);
-
-        const g = boxGeometry.clone();
-        g.applyMatrix4(localMatrix.makeTranslation(portalLocation.x, portalLocation.y, portalLocation.z));
-        return g;
-      });
-      const geometry = geometries.length > 0 ? BufferGeometryUtils.mergeBufferGeometries(geometries) : new THREE.BufferGeometry();
-
-      const material = new THREE.ShaderMaterial({
-        vertexShader: `\
-          varying vec2 vUv;
-
-          void main() {
-            vUv = uv;
-            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-          }
-        `,
-        fragmentShader: `\
-          varying vec2 vUv;
-
-          void main() {
-            vec3 c = vec3(0., 0.5, 1.);
-            gl_FragColor = vec4(c, 0.5);
-            gl_FragColor.rg += vUv * 0.2;
-          }
-        `,
-        transparent: true,
-      });
-
-      const hasGeometry = geometries.length > 0;
-
-      const portalNetMesh = new THREE.Mesh(geometry, material);
-      portalNetMesh.frustumCulled = false;
-      portalNetMesh.enabled = false;
-      portalNetMesh.visible = false;
-      portalNetMesh.updateVisibility = () => {
-        portalNetMesh.visible = portalNetMesh.enabled && hasGeometry;
-      };
-      this.scene.add(portalNetMesh);
-      this.portalNetMesh = portalNetMesh;
-    }
+    const portalNetMesh = new PortalNetMesh({
+      portalLocations,
+    });
+    this.scene.add(portalNetMesh);
+    this.portalNetMesh = portalNetMesh;
 
     // selector
     {
