@@ -71,7 +71,6 @@ import {
   img2ImageData,
   resizeImage,
 } from '../utils/convert-utils.js';
-import {makeId} from '../utils/id-utils.js';
 import {classes, categories, categoryClassIndices} from '../../constants/classes.js';
 import {colors, rainbowColors, detectronColors} from '../constants/detectron-colors.js';
 import {mobUrls} from '../constants/urls.js';
@@ -2145,10 +2144,17 @@ export class PanelRenderer extends EventTarget {
   } = {}) {
     super();
 
-    console.log('PanelRenderer', {
-      canvas,
-      panel,
-    });
+    {
+      const layer0 = panel.getLayer(0);
+      console.log('cons PanelRenderer', {
+        panel,
+        layer0,
+        canvas,
+      });
+      if (!layer0) {
+        debugger;
+      }
+    }
 
     this.canvas = canvas;
     this.panel = panel;
@@ -3951,6 +3957,8 @@ export class PanelRenderer extends EventTarget {
     // console.log('ending layer scenes length', this.layerScenes.length);
   }
   destroy() {
+    console.log('destroy PanelRenderer', this);
+
     this.dispatchEvent(new MessageEvent('destroy'));
   }
 }
@@ -4083,17 +4091,8 @@ export async function compileVirtualScene(imageArrayBuffer, width, height/*, cam
   const blob = new Blob([imageArrayBuffer], {
     type: 'image/png',
   });
-  console.log('load blob 1', imageArrayBuffer, blob);
-  let img;
-  try {
-    img = await blob2img(blob);
-    console.log('load blob 2', blob);
-    img.classList.add('img');
-    console.log('load blob 3', blob);
-  } catch (err) {
-    console.log('load blob err', blob, err);
-    throw err;
-  }
+  const img = await blob2img(blob);
+  img.classList.add('img');
   // document.body.appendChild(img);
 
   // {

@@ -132,10 +132,12 @@ export class ZineStoryboard extends EventTarget {
   #unlisten;
   #listen() {
     const onadd = e => {
-      // console.log('got add event', e.data.keyPath, this.prefix);
+      console.log('zine panel add event', e.data.keyPath, this.prefix);
       if (!checkEventKeypathPrefix(e, this.prefix)) {
-        // console.log('bail');
+        console.log('bail');
         return;
+      } else {
+        console.log('continue');
       }
 
       const {
@@ -146,6 +148,7 @@ export class ZineStoryboard extends EventTarget {
 
       this.dispatchEvent(new MessageEvent('paneladd', {
         data: {
+          keyPath,
           panel,
         },
       }));
@@ -153,7 +156,13 @@ export class ZineStoryboard extends EventTarget {
     this.zd.addEventListener('add', onadd);
 
     const onremove = e => {
-      if (!checkEventKeypathPrefix(e, this.prefix)) return;
+      console.log('zine panel remove event', e.data.keyPath, this.prefix);
+      if (!checkEventKeypathPrefix(e, this.prefix)) {
+        console.log('bail');
+        return;
+      } else {
+        console.log('continue');
+      }
 
       const {
         keyPath,
@@ -166,6 +175,7 @@ export class ZineStoryboard extends EventTarget {
 
       this.dispatchEvent(new MessageEvent('panelremove', {
         data: {
+          keyPath,
           panel,
         },
       }));
@@ -192,18 +202,27 @@ export class ZineStoryboard extends EventTarget {
     return this.#panels;
   }
   addPanel() {
-    if (!this.zd) {
-      console.warn('no zd c', this);
-      debugger;
-    }
+    // if (!this.zd) {
+    //   console.warn('no zd c', this);
+    //   debugger;
+    // }
 
     const id = makeId();
     const keyPath = this.prefix.concat([id]);
     this.zd.setData(keyPath, []);
 
-    console.log('got panels', this.#panels.slice(), this.#panels.map(p => p.id), keyPath);
-    const panel = this.#panels.find(panel => panel.id === id);
+    // console.log('got panels', this.#panels.slice(), this.#panels.map(p => p.id), keyPath);
+    // const panel = this.#panels.find(panel => panel.id === id);
+    const panel = this.#panels[this.#panels.length - 1];
+    // console.log('zine add panel', panel);
     return panel;
+  }
+
+  getPanels() {
+    return this.#panels;
+  }
+  getPanel(index) {
+    return this.#panels[index];
   }
 
   removePanel(panel) {
@@ -212,7 +231,8 @@ export class ZineStoryboard extends EventTarget {
   }
   removePanelIndex(index) {
     if (index !== -1) {
-      const keyPath = this.prefix.concat([index]);
+      const panel = this.#panels[index];
+      const keyPath = this.prefix.concat([panel.id]);
       this.zd.deleteData(keyPath);
     } else {
       // console.warn('panel not found', {
@@ -247,9 +267,9 @@ export class ZinePanel extends EventTarget {
   #unlisten;
   #listen() {
     const onadd = e => {
-      console.log('got panel add event', e.data.keyPath, this.prefix);
+      // console.log('got panel add event', e.data.keyPath, this.prefix);
       if (!checkEventKeypathPrefix(e, this.prefix)) {
-        console.warn('panel bail');
+        // console.warn('panel bail');
         return;
       }
 
@@ -262,6 +282,7 @@ export class ZinePanel extends EventTarget {
       layer.addEventListener('update', e => {
         this.dispatchEvent(new MessageEvent('layerupdate', {
           data: {
+            keyPath,
             layer,
           },
         }));
@@ -269,6 +290,7 @@ export class ZinePanel extends EventTarget {
 
       this.dispatchEvent(new MessageEvent('layeradd', {
         data: {
+          keyPath,
           layer,
         },
       }));
@@ -297,6 +319,7 @@ export class ZinePanel extends EventTarget {
 
       this.dispatchEvent(new MessageEvent('layerremove', {
         data: {
+          keyPath,
           layer,
         },
       }));
@@ -316,16 +339,15 @@ export class ZinePanel extends EventTarget {
     return this.#layers[index];
   }
   addLayer() {
-    if (!this.zd) {
-      console.warn('no zd d', this);
-      debugger;
-    }
+    // if (!this.zd) {
+    //   console.warn('no zd d', this);
+    //   debugger;
+    // }
 
     const id = makeId();
     const keyPath = this.prefix.concat([id]);
     this.zd.setData(keyPath, []);
 
-    console.log('got layers', this.#layers.slice(), this.#layers.map(p => p.id), keyPath);
     const layer = this.#layers.find(layer => layer.id === id);
     if (!layer) {
       console.warn('failed to get layer');

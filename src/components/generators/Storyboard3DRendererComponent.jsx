@@ -25,9 +25,26 @@ const Panel3DCanvas = ({
   const canvasRef = useRef();
   const [dimension, setDimension] = useState(panel.getDimension());
 
-  // track canvas
+  useEffect(() => {
+    const onupdate = e => {
+      setDimension(panel.getDimension());
+    };
+    panel.addEventListener('layeradd', onupdate);
+    panel.addEventListener('layerremove', onupdate);
+    panel.addEventListener('layerupdate', onupdate);
+
+    setDimension(panel.getDimension());
+
+    return () => {
+      panel.removeEventListener('layeradd', onupdate);
+      panel.removeEventListener('layerremove', onupdate);
+      panel.removeEventListener('layerupdate', onupdate);
+    };
+  }, [panel]);
+  
   useEffect(() => {
     const canvas = canvasRef.current;
+    const dimension = panel.getDimension();
     if (canvas && dimension === 3) {
       // console.log('render canvas', canvas);
       const renderer = new PanelRenderer(canvas, panel);
@@ -37,22 +54,6 @@ const Panel3DCanvas = ({
       };
     }
   }, [panel, canvasRef.current, dimension]);
-
-  useEffect(() => {
-    const onupdate = e => {
-      const dimension = panel.getDimension();
-      setDimension(dimension);
-    };
-    panel.addEventListener('layeradd', onupdate);
-    panel.addEventListener('layerremove', onupdate);
-    panel.addEventListener('layerupdate', onupdate);
-
-    return () => {
-      panel.removeEventListener('layeradd', onupdate);
-      panel.removeEventListener('layerremove', onupdate);
-      panel.removeEventListener('layerupdate', onupdate);
-    };
-  }, [panel]);
 
   return (
     <canvas
@@ -74,7 +75,7 @@ export const Storyboard3DRendererComponent = ({
   const [layer, setLayer] = useState(null);
 
   useEffect(() => {
-    console.log('Storyboard3DRendererComponent panel', panel);
+    // console.log('Storyboard3DRendererComponent panel', panel);
     if (panel) {
       const onupdate = e => {
         setPrompt(_getPrompt());

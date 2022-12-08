@@ -52,7 +52,6 @@ export class Panel extends EventTarget {
     //   debugger;
     // }
 
-    this.id = makeId();
     this.zp = zp;
 
     this.runningTasks = [];
@@ -64,11 +63,13 @@ export class Panel extends EventTarget {
   #listen() {
     const onupdate = e => {
       const {keyPath} = e.data;
-      this.dispatchEvent(new MessageEvent('update', {
+      const opts = {
         data: {
           keyPath,
         },
-      }));
+      };
+      this.dispatchEvent(new MessageEvent(e.type, opts));
+      this.dispatchEvent(new MessageEvent('update', opts));
     };
     this.zp.addEventListener('layeradd', onupdate);
     this.zp.addEventListener('layerremove', onupdate);
@@ -167,9 +168,9 @@ export class Panel extends EventTarget {
     //   debugger;
     // }
 
-    const layer = this.zp.getLayer(1);
-    const keys = layer?.getKeys() ?? [];
-    const candidateLayer1Specs = layer1Specs.filter(spec => !keys.includes(spec));
+    // const layer = this.zp.getLayer(1);
+    // const keys = layer?.getKeys() ?? [];
+    // const candidateLayer1Specs = layer1Specs.filter(spec => !keys.includes(spec));
     // console.log('layer matches', !!this.zp.getLayer(1), !!this.zp.getLayer(1)?.matchesSpecs(layer1Specs), {
     //   layer,
     //   keys,
@@ -210,14 +211,14 @@ export class Panel extends EventTarget {
     const layer = this.zp.addLayer();
     (async () => {
       const arrayBuffer = await file.arrayBuffer();
-      console.log('set file');
+      // console.log('set file');
       layer.setData(mainImageKey, arrayBuffer);
     })();
     (async () => {
       if (!prompt) {
         prompt = await vqaClient.getImageCaption(file);
       }
-      console.log('set prompt', promptKey, prompt);
+      // console.log('set prompt', promptKey, prompt);
       layer.setData(promptKey, prompt);
     })();
   }
@@ -241,7 +242,6 @@ export class Panel extends EventTarget {
       const layer1 = this.zp.addLayer();
       for (const name of layer1Specs) {
         const v = compileResult[name];
-        console.log('set compile result data', v);
         layer1.setData(name, v);
       }
     }, 'compiling');

@@ -7,7 +7,9 @@ import {Storyboard3DRendererComponent} from  './Storyboard3DRendererComponent.js
 // import {BlobRenderer} from '../renderers/BlobRenderer.jsx';
 import {ArrayBufferRenderer} from '../renderers/ArrayBufferRenderer.jsx';
 
-import {mainImageKey} from '../../generators/scene-generator.js';
+import {
+  mainImageKey,
+} from '../../zine/zine-data-specs.js';
 
 import styles from '../../../styles/StoryboardRenderer.module.css';
 
@@ -17,7 +19,7 @@ const StoryboardLayerComponent = ({
   storyboard,
   panel,
 }) => {
-  const _getImage = () => panel.getData(mainImageKey);
+  const _getImage = () => panel?.getLayer(0)?.getData(mainImageKey);
   const [image, setImage] = useState(_getImage);
 
   useEffect(() => {
@@ -106,41 +108,30 @@ export const StoryboardRendererComponent = ({
   const [empty, setEmpty] = useState(_getEmpty);
   const [dimension, setDimension] = useState(_getDimension);
 
-  // busy tracking
+  // panel tracking
   useEffect(() => {
+    console.log('panel change');
     if (panel) {
       const onbusyupdate = e => {
         setBusy(panel.isBusy());
         setBusyMessage(panel.getBusyMessage());
-        setDimension(panel.getDimension());
       };
       panel.addEventListener('busyupdate', onbusyupdate);
+      const onupdate = e => {
+        console.log('set dimension 1', panel.getLayer(0), panel.getDimension());
+        setEmpty(_getEmpty());
+        setDimension(panel.getDimension());
+      };
+      panel.addEventListener('update', onupdate);
 
+      setEmpty(_getEmpty());
       setBusy(panel.isBusy());
       setBusyMessage(panel.getBusyMessage());
+      console.log('set dimension 0', panel.getLayer(0), panel.getDimension());
       setDimension(panel.getDimension());
 
       return () => {
         panel.removeEventListener('busyupdate', onbusyupdate);
-      };
-    }
-  }, [panel, busy]);
-
-  // empty tracking
-  useEffect(() => {
-    if (panel) {
-      const onupdate = e => {
-        console.log('panel layer add/remove', _getEmpty());
-        // if (_getEmpty()) {
-        //   debugger;
-        // }
-        setEmpty(_getEmpty());
-      };
-      panel.addEventListener('update', onupdate);
-      
-      setEmpty(_getEmpty());
-
-      return () => {
         panel.removeEventListener('update', onupdate);
       };
     }
@@ -152,6 +143,11 @@ export const StoryboardRendererComponent = ({
         if (busy) {
           return <div className={styles.busy}>{busyMessage}</div>
         } else {
+          console.log('render panel', panel, [
+            panel?.getLayer(0),
+            panel?.getLayer(1),
+            panel?.getLayer(2),
+          ], panel?.getDimension());
           if (panel) {
             if (empty) {
               return <StoryboardGeneratorComponent
@@ -166,7 +162,7 @@ export const StoryboardRendererComponent = ({
               //     layer={layer}
               //   />
               // } else {
-                console.log('got dimension', dimension);
+                console.log('render dimension', dimension);
                 if (dimension === 2) {
                   return <Storyboard2DRendererComponent
                     storyboard={storyboard}  

@@ -19,7 +19,7 @@ export const Storyboard2DRendererComponent = ({
 }) => {
   const _getImage = () => {
     const layer = panel.getLayer(0);
-    const image = layer.getData(mainImageKey);
+    const image = layer?.getData(mainImageKey);
     return image ?? '';
   };
   const _getPrompt = () => {

@@ -9,10 +9,12 @@ import styles from '../../../styles/Storyboard.module.css';
 import {
   zineMagicBytes,
 } from '../../zine/zine-format.js';
+import {
+  mainImageKey,
+} from '../../zine/zine-data-specs.js';
 
 //
 
-import {mainImageKey} from '../../generators/scene-generator.js';
 const textDecoder = new TextDecoder();
 
 //
@@ -25,7 +27,7 @@ const StoryboardPanel = ({
 }) => {
   const _getBusy = () => panel ? panel.isBusy() : false;
   const _getBusyMessage = () => panel ? panel.getBusyMessage() : '';
-  const _getImage = () => panel.getData(mainImageKey);
+  const _getImage = () => panel.getLayer(0)?.getData(mainImageKey);
   const [busy, setBusy] = useState(_getBusy);
   const [busyMessage, setBusyMessage] = useState(_getBusyMessage);
   const [image, setImage] = useState(_getImage);
@@ -173,7 +175,7 @@ export const StoryboardComponent = ({
                 // check magic bytes
                 const firstBytes = new Uint8Array(arrayBuffer, 0, 4);
                 const firstBytesString = textDecoder.decode(firstBytes);
-                if (firstBytesString === 'WVSB') {
+                if (firstBytesString === zineMagicBytes) {
                   const uint8Array = new Uint8Array(arrayBuffer, 4);
                   onPanelsLoad(uint8Array);
                 } else {
@@ -193,7 +195,7 @@ export const StoryboardComponent = ({
           onClick={e => {
             onPanelSelect(p);
           }}
-          key={p.id}
+          key={p.zp.id}
         />
       ))}
       <StoryboardPanelPlaceholder
