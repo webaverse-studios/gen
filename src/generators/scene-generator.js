@@ -308,6 +308,8 @@ const _getCandidateTransforms = (() => {
   return ({
     portalLocations,
     firstFloorPlaneIndex,
+    floorTransform,
+    planeSpecs,
     n = 1
   }) => {
     const rng = alea('avatars');
@@ -324,7 +326,7 @@ const _getCandidateTransforms = (() => {
 
       // quaternion
       const lookCandidateLocations = (firstFloorPlaneIndex !== -1 ? [
-        this.avatar.position,
+        floorTransform.position,
       ] : [])
         .concat(candidatePortalLocations.map(portalLocation => {
           return new THREE.Vector3().fromArray(portalLocation);
@@ -2935,6 +2937,8 @@ export class PanelRenderer extends EventTarget {
     ] = _getCandidateTransforms({
       portalLocations,
       firstFloorPlaneIndex,
+      floorTransform,
+      planeSpecs,
       n: 2,
     });
     if (avatarsTransform) {
@@ -3108,27 +3112,6 @@ export class PanelRenderer extends EventTarget {
     const outmeshMesh = new OutmeshToolMesh(geometry);
     this.scene.add(outmeshMesh);
     this.outmeshMesh = outmeshMesh;
-
-    /* // floor plane mesh
-    {
-      const floorMesh = (() => {
-        const geometry = new THREE.PlaneGeometry(1, 1)
-          .rotateX(-Math.PI/2)
-        const material = new THREE.MeshBasicMaterial({
-          color: 0x808080,
-          transparent: true,
-          opacity: 0.1,
-        });
-        const mesh = new THREE.Mesh(geometry, material);
-        mesh.name = 'floorMesh';
-        mesh.frustumCulled = false;
-        return mesh;
-      })();
-      floorMesh.position.y = -predictedHeight;
-      floorMesh.updateMatrixWorld();
-      // this.scene.add(floorMesh);
-      this.floorMesh = floorMesh;
-    } */
 
     // initial render
     this.updateOutmeshLayers();
