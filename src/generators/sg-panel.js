@@ -157,7 +157,8 @@ export class Panel extends EventTarget {
     // return !this.hasData(mainImageKey);
     // return this.zp.getLayers().length === 0;
     const layer0 = this.zp.getLayer(0);
-    return !layer0 || !layer0.matchesSpecs(layer0Specs);
+    // return !layer0 || !layer0.matchesSpecs(layer0Specs);
+    return !layer0;
   }
   getDimension() {
     // return this.hasDataMatch(/^layer1/) ? 3 : 2;
