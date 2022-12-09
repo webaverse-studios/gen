@@ -3,7 +3,7 @@ import classnames from 'classnames';
 
 import {PlaceholderImg} from '../placeholders/PlaceholderImg.jsx';
 import {ArrayBufferRenderer} from '../renderers/ArrayBufferRenderer.jsx';
-import {zbencode, zbdecode} from '../../utils/encoding.mjs';
+// import {zbencode, zbdecode} from '../../zine/encoding.js';
 import {downloadFile} from '../../utils/http-utils.js';
 import styles from '../../../styles/Storyboard.module.css';
 import {
