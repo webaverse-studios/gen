@@ -19,7 +19,7 @@ import {
   makeGltfLoader,
   pushMeshes,
   makeDefaultCamera,
-} from '../../utils/three-utils.js';
+} from '../../zine/zine-utils.js';
 import {
   makePromise,
   loadImage,

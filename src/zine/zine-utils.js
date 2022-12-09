@@ -4,7 +4,7 @@ import {DRACOLoader} from 'three/examples/jsm/loaders/DRACOLoader.js';
 import {
   floorNetWorldSize,
   floorNetWorldDepth,
-} from '../constants/sg-constants.js';
+} from './zine-constants.js';
 
 //
 
@@ -82,3 +82,21 @@ export const pushMeshes = (scene, meshes, options = {}) => {
     }
   };
 };
+
+//
+
+export const normalToQuaternion = (() => {
+  const localVector = new THREE.Vector3();
+  // const localVector2 = new THREE.Vector3();
+  const localMatrix = new THREE.Matrix4();
+
+  return (normal, quaternion, up) => {
+    return quaternion.setFromRotationMatrix(
+      localMatrix.lookAt(
+        normal,
+        localVector.set(0, 0, 0),
+        up
+      )
+    );
+  };
+})();

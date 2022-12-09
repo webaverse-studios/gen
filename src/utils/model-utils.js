@@ -5,7 +5,7 @@ import {
   makeGltfLoader,
   pushMeshes,
   makeDefaultCamera,
-} from './three-utils.js';
+} from '../zine/zine-utils.js';
 import {
   blob2img,
   canvas2blob,

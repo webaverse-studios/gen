@@ -1,11 +1,5 @@
 import * as THREE from 'three';
 import {
-  // setPerspectiveCameraFromJson,
-  // getPerspectiveCameraJson,
-  // setOrthographicCameraFromJson,
-  getOrthographicCameraJson,
-} from '../utils/camera-utils.js';
-import {
   pointCloudArrayBufferToGeometry,
   reinterpretFloatImageData,
   clipGeometryZ,
@@ -24,8 +18,8 @@ import {
   floorNetWorldDepth,
   floorNetResolution,
   floorNetPixelSize,
-} from '../constants/sg-constants.js';
-import {makeRenderer} from '../utils/three-utils.js';
+} from '../zine/zine-constants.js';
+import {makeRenderer} from '../zine/zine-utils.js';
 import {
   maskIndex2Canvas,
 } from './sg-debug.js';

@@ -25,7 +25,7 @@ import {
 } from './scene-generator.js';
 import {
   panelSize,
-} from '../constants/sg-constants.js';
+} from '../zine/zine-constants.js';
 
 //
 

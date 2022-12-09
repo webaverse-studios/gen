@@ -1,10 +1,10 @@
 import * as THREE from 'three';
 import {
   panelSize,
-} from '../constants/sg-constants.js';
+} from '../zine/zine-constants.js';
 import {
   setCameraViewPositionFromViewZ,
-} from '../clients/reconstruction-client.js';
+} from '../zine/zine-geometry-utils.js';
 import {colors, rainbowColors, detectronColors} from '../constants/detectron-colors.js';
 
 //

@@ -5,7 +5,7 @@ import {
 } from '../generators/sg-materials.js';
 import {
   pushMeshes,
-} from './three-utils.js';
+} from '../zine/zine-utils.js';
 
 const localVectorA = new three_1.Vector3();
 // const localColor = new three_1.Color();
