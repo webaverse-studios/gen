@@ -1,3 +1,6 @@
 [submodule "packages/three"]
 	path = packages/three
 	url = https://github.com/webaverse/three.git
+[submodule "src/zine"]
+	path = src/zine
+	url = https://github.com/webaverse/zine
