@@ -1601,7 +1601,11 @@ class Selector {
 
     const _updateSceneMeshes = () => {
       for (const sceneMesh of this.sceneMeshes) {
-        sceneMesh.update();
+        // if (!this.selector) {
+        //   console.warn('no selector', this);
+        //   debugger;
+        // }
+        sceneMesh.update(this);
       }
     };
     _updateSceneMeshes();
@@ -2231,6 +2235,142 @@ class SceneMaterial extends THREE.ShaderMaterial {
         }
       `,
     })
+  }
+}
+class SceneMesh extends THREE.Mesh {
+  constructor({
+    pointCloudArrayBuffer,
+    imgArrayBuffer,
+    width,
+    height,
+    segmentSpecs,
+    planeSpecs,
+    portalSpecs,
+    firstFloorPlaneIndex,
+  }) {
+    const map = new THREE.Texture();
+    const material = new SceneMaterial({
+      map,
+    });
+
+    // scene mesh
+    let geometry = pointCloudArrayBufferToGeometry(
+      pointCloudArrayBuffer,
+      width,
+      height,
+    );
+    geometry.setAttribute('segment', new THREE.BufferAttribute(segmentSpecs.array, 1));
+    geometry.setAttribute('segmentColor', new THREE.BufferAttribute(segmentSpecs.colorArray, 3));
+    geometry.setAttribute('plane', new THREE.BufferAttribute(planeSpecs.array, 1));
+    geometry.setAttribute('planeColor', new THREE.BufferAttribute(planeSpecs.colorArray, 3));
+    // geometry.setAttribute('portal', new THREE.BufferAttribute(portalSpecs.array, 1));
+    geometry.setAttribute('portalColor', new THREE.BufferAttribute(portalSpecs.colorArray, 3));
+    const indexedGeometry = geometry;
+    geometry = geometry.toNonIndexed();
+    decorateGeometryTriangleIds(geometry);
+
+    super(geometry, material);
+
+    const sceneMesh = this;
+    sceneMesh.name = 'sceneMesh';
+    sceneMesh.frustumCulled = false;
+    sceneMesh.indexedGeometry = indexedGeometry;
+    sceneMesh.segmentSpecs = segmentSpecs;
+    sceneMesh.planeSpecs = planeSpecs;
+    sceneMesh.portalSpecs = portalSpecs;
+    sceneMesh.firstFloorPlaneIndex = firstFloorPlaneIndex;
+    sceneMesh.update = (selector) => {
+      sceneMesh.material.uniforms.uMouseDown.value = +selector.mousedown;
+      sceneMesh.material.uniforms.uMouseDown.needsUpdate = true;
+    };
+    (async () => { // load the texture image
+      sceneMesh.visible = false;
+
+      const imgBlob = new Blob([imgArrayBuffer], {
+        type: 'image/png',
+      });
+      map.image = await createImageBitmap(imgBlob, {
+        imageOrientation: 'flipY',
+      });
+      // map.encoding = THREE.sRGBEncoding;
+      map.needsUpdate = true;
+
+      sceneMesh.visible = true;
+    })();
+  }
+}
+
+class ZineRenderer {
+  constructor({
+    panel,
+  }) {
+    const layer0 = panel.getLayer(0);
+    const layer1 = panel.getLayer(1);
+    const imgArrayBuffer = layer0.getData(mainImageKey);
+    const resolution = layer1.getData('resolution');
+    const segmentMask = layer1.getData('segmentMask');
+    // const labelImageData = layer1.getData('labelImageData');
+    const pointCloudHeaders = layer1.getData('pointCloudHeaders');
+    let pointCloudArrayBuffer = layer1.getData('pointCloud');
+    // const planeMatrices = layer1.getData('planeMatrices');
+    const planesJson = layer1.getData('planesJson');
+    const planesMask = layer1.getData('planesMask');
+    const portalJson = layer1.getData('portalJson');
+    const segmentSpecs = layer1.getData('segmentSpecs');
+    const planeSpecs = layer1.getData('planeSpecs');
+    const portalSpecs = layer1.getData('portalSpecs');
+    const firstFloorPlaneIndex = layer1.getData('firstFloorPlaneIndex');
+    const floorNetDepths = layer1.getData('floorNetDepths');
+    const floorNetCameraJson = layer1.getData('floorNetCameraJson');
+    const predictedHeight = layer1.getData('predictedHeight');
+    const portalLocations = layer1.getData('portalLocations');
+
+    // camera
+    this.camera = makeDefaultCamera();
+    this.camera.fov = Number(pointCloudHeaders['x-fov']);
+    this.camera.updateProjectionMatrix();
+
+    // floor net camera
+    const floorNetCamera = setOrthographicCameraFromJson(localOrthographicCamera, floorNetCameraJson).clone();
+
+    // scene mesh
+    const sceneMesh = new SceneMesh({
+      pointCloudArrayBuffer,
+      imgArrayBuffer,
+      width: resolution[0],
+      height: resolution[1],
+      segmentSpecs,
+      planeSpecs,
+      portalSpecs,
+      firstFloorPlaneIndex,
+    });
+    this.sceneMesh = sceneMesh;
+
+    // floor net mesh
+    const floorNetMesh = new FloorNetMesh();
+    this.floorNetMesh = floorNetMesh;
+    this.floorNetMesh.setGeometry({
+      floorNetDepths,
+      floorNetCamera,
+    });
+
+    // transforms
+    const floorTransform = _getFloorTransform({
+      planeSpecs,
+      firstFloorPlaneIndex,
+    });
+    this.floorTransform = floorTransform;
+
+    const candidateTransforms = _getCandidateTransforms({
+      portalLocations,
+      firstFloorPlaneIndex,
+      floorTransform,
+      planeSpecs,
+      n: 2,
+    });
+    this.candidateTransforms = candidateTransforms;
+
+    this.portalLocations = portalLocations;
   }
 }
 
@@ -2890,41 +3030,18 @@ export class PanelRenderer extends EventTarget {
     this.mobs = mobs;
 
     // read the mesh from the panel
-    const layer0 = panel.getLayer(0);
-    const layer1 = panel.getLayer(1);
-    const imgArrayBuffer = layer0.getData(mainImageKey);
-    const segmentMask = layer1.getData('segmentMask');
-    // const labelImageData = layer1.getData('labelImageData');
-    const pointCloudHeaders = layer1.getData('pointCloudHeaders');
-    let pointCloudArrayBuffer = layer1.getData('pointCloud');
-    // const planeMatrices = layer1.getData('planeMatrices');
-    const planesJson = layer1.getData('planesJson');
-    const planesMask = layer1.getData('planesMask');
-    const portalJson = layer1.getData('portalJson');
-    const segmentSpecs = layer1.getData('segmentSpecs');
-    const planeSpecs = layer1.getData('planeSpecs');
-    const portalSpecs = layer1.getData('portalSpecs');
-    const firstFloorPlaneIndex = layer1.getData('firstFloorPlaneIndex');
-    const floorNetDepths = layer1.getData('floorNetDepths');
-    const floorNetCameraJson = layer1.getData('floorNetCameraJson');
-    const predictedHeight = layer1.getData('predictedHeight');
-    const portalLocations = layer1.getData('portalLocations');
-
-    // camera
-    this.camera.fov = Number(pointCloudHeaders['x-fov']);
-    this.camera.updateProjectionMatrix();
-
-    // floor net camera
-    const floorNetCamera = setOrthographicCameraFromJson(localOrthographicCamera, floorNetCameraJson).clone();
+    this.zineRenderer = new ZineRenderer({
+      panel,
+    });
+    const {sceneMesh, floorNetMesh} = this.zineRenderer;
+    scene.add(sceneMesh);
+    scene.add(floorNetMesh);
+    this.camera.copy(this.zineRenderer.camera);
 
     // place avatar
-    const floorTransform = _getFloorTransform({
-      planeSpecs,
-      firstFloorPlaneIndex,
-    });
-    if (floorTransform) {
-      this.avatar.position.copy(floorTransform.position);
-      this.avatar.quaternion.copy(floorTransform.quaternion);
+    if (this.zineRenderer.floorTransform) {
+      this.avatar.position.copy(this.zineRenderer.floorTransform.position);
+      this.avatar.quaternion.copy(this.zineRenderer.floorTransform.quaternion);
       this.avatar.updateMatrixWorld();
       this.avatar.visible = true;
     }
@@ -2934,13 +3051,7 @@ export class PanelRenderer extends EventTarget {
     const [
       avatarsTransform,
       mobsTransform,
-    ] = _getCandidateTransforms({
-      portalLocations,
-      firstFloorPlaneIndex,
-      floorTransform,
-      planeSpecs,
-      n: 2,
-    });
+    ] = this.zineRenderer.candidateTransforms;
     if (avatarsTransform) {
       this.avatars.position.copy(avatarsTransform.position);
       this.avatars.quaternion.copy(avatarsTransform.quaternion);
@@ -2999,70 +3110,9 @@ export class PanelRenderer extends EventTarget {
     fcm.frustumCulled = false;
     this.scene.add(fcm); */
 
-    //
-
-    const map = new THREE.Texture();
-    const material = new SceneMaterial({
-      map,
-    });
-
-    // scene mesh
-    let geometry = pointCloudArrayBufferToGeometry(
-      pointCloudArrayBuffer,
-      this.canvas.width,
-      this.canvas.height,
-    );
-    geometry.setAttribute('segment', new THREE.BufferAttribute(segmentSpecs.array, 1));
-    geometry.setAttribute('segmentColor', new THREE.BufferAttribute(segmentSpecs.colorArray, 3));
-    geometry.setAttribute('plane', new THREE.BufferAttribute(planeSpecs.array, 1));
-    geometry.setAttribute('planeColor', new THREE.BufferAttribute(planeSpecs.colorArray, 3));
-    // geometry.setAttribute('portal', new THREE.BufferAttribute(portalSpecs.array, 1));
-    geometry.setAttribute('portalColor', new THREE.BufferAttribute(portalSpecs.colorArray, 3));
-    const indexedGeometry = geometry;
-    geometry = geometry.toNonIndexed();
-    decorateGeometryTriangleIds(geometry);
-
-    const sceneMesh = new THREE.Mesh(geometry, material);
-    sceneMesh.name = 'sceneMesh';
-    sceneMesh.frustumCulled = false;
-    sceneMesh.indexedGeometry = indexedGeometry;
-    sceneMesh.segmentSpecs = segmentSpecs;
-    sceneMesh.planeSpecs = planeSpecs;
-    sceneMesh.portalSpecs = portalSpecs;
-    sceneMesh.firstFloorPlaneIndex = firstFloorPlaneIndex;
-    sceneMesh.update = () => {
-      sceneMesh.material.uniforms.uMouseDown.value = +this.selector.mousedown;
-      sceneMesh.material.uniforms.uMouseDown.needsUpdate = true;
-    };
-    (async () => { // load the texture image
-      sceneMesh.visible = false;
-
-      const imgBlob = new Blob([imgArrayBuffer], {
-        type: 'image/png',
-      });
-      map.image = await createImageBitmap(imgBlob, {
-        imageOrientation: 'flipY',
-      });
-      // map.encoding = THREE.sRGBEncoding;
-      map.needsUpdate = true;
-
-      sceneMesh.visible = true;
-    })();
-    this.scene.add(sceneMesh);
-    this.sceneMesh = sceneMesh;
-
-    // floor net mesh
-    const floorNetMesh = new FloorNetMesh();
-    this.scene.add(floorNetMesh);
-    this.floorNetMesh = floorNetMesh;
-    this.floorNetMesh.setGeometry({
-      floorNetDepths,
-      floorNetCamera,
-    });
-
     // portal net mesh
     const portalNetMesh = new PortalNetMesh({
-      portalLocations,
+      portalLocations: this.zineRenderer.portalLocations,
     });
     this.scene.add(portalNetMesh);
     this.portalNetMesh = portalNetMesh;
@@ -3096,20 +3146,16 @@ export class PanelRenderer extends EventTarget {
     }
 
     // overlay
-    {
-      const overlay = new Overlay({
-        renderer,
-        selector: this.selector,
-      });
-
-      overlay.addMesh(sceneMesh);
-      scene.add(overlay.overlayScene);
-
-      this.overlay = overlay;
-    }
+    const overlay = new Overlay({
+      renderer,
+      selector: this.selector,
+    });
+    overlay.addMesh(sceneMesh);
+    scene.add(overlay.overlayScene);
+    this.overlay = overlay;
 
     // outmesh
-    const outmeshMesh = new OutmeshToolMesh(geometry);
+    const outmeshMesh = new OutmeshToolMesh(sceneMesh.geometry);
     this.scene.add(outmeshMesh);
     this.outmeshMesh = outmeshMesh;
 
@@ -3123,8 +3169,12 @@ export class PanelRenderer extends EventTarget {
   setTool(tool) {
     this.tool = tool;
 
-    this.sceneMesh.material.uniforms.uEraser.value = tool === 'eraser' ? 1 : 0;
-    this.sceneMesh.material.uniforms.uEraser.needsUpdate = true;
+    {
+      this.zineRenderer.sceneMesh.material.uniforms.uEraser.value = tool === 'eraser' ? 1 : 0;
+      this.zineRenderer.sceneMesh.material.uniforms.uEraser.needsUpdate = true;
+      this.zineRenderer.floorNetMesh.enabled = this.tool === 'plane';
+      this.zineRenderer.floorNetMesh.updateVisibility();
+    }
 
     this.outmeshMesh.visible = tool === 'outmesh';
 
@@ -3135,9 +3185,6 @@ export class PanelRenderer extends EventTarget {
       'plane',
       'portal',
     ].includes(this.tool);
-
-    this.floorNetMesh.enabled = this.tool === 'plane';
-    this.floorNetMesh.updateVisibility();
 
     this.portalNetMesh.enabled = this.tool === 'portal';
     this.portalNetMesh.updateVisibility();
@@ -4130,7 +4177,7 @@ const _getImageSegements = async imgBlob => {
 
 //
 
-export async function compileVirtualScene(imageArrayBuffer, width, height/*, camera */) {
+export async function compileVirtualScene(imageArrayBuffer) {
   // color
   const blob = new Blob([imageArrayBuffer], {
     type: 'image/png',
@@ -4138,6 +4185,14 @@ export async function compileVirtualScene(imageArrayBuffer, width, height/*, cam
   const img = await blob2img(blob);
   img.classList.add('img');
   // document.body.appendChild(img);
+
+  const {width, height} = img;
+
+  // resolution
+  const resolution = [
+    width,
+    height,
+  ];
 
   // {
   //   const res = await fetch(`https://depth.webaverse.com/predictFov`, {
@@ -4353,6 +4408,7 @@ export async function compileVirtualScene(imageArrayBuffer, width, height/*, cam
 
   // return result
   return {
+    resolution,
     segmentMask,
     pointCloudHeaders,
     pointCloud: pointCloudArrayBuffer,

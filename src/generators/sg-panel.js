@@ -235,8 +235,6 @@ export class Panel extends EventTarget {
       const imageArrayBuffer = layer.getData(mainImageKey);
       const compileResult = await compileVirtualScene(
         imageArrayBuffer,
-        panelSize,
-        panelSize,
       );
 
       const layer1 = this.zp.addLayer();
