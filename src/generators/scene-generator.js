@@ -43,7 +43,6 @@ import {ImageAiClient} from '../clients/image-client.js';
 import {
   getPointCloud,
   // drawPointCloudCanvas,
-  setCameraViewPositionFromViewZ,
   // reprojectCameraFovArray,
   // applySkybox,
   // pointCloudArrayBufferToColorAttributeArray,
@@ -62,6 +61,7 @@ import {
   depthFloat32ArrayToHeightfield,
   getDepthFloatsFromPointCloud,
   getDepthFloatsFromIndexedGeometry,
+  setCameraViewPositionFromViewZ,
 } from '../zine/zine-geometry-utils.js';
 import {
   depthFloats2Canvas,
