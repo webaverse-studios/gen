@@ -2609,6 +2609,8 @@ export class PanelRenderer extends EventTarget {
     scene.add(sceneMesh);
     scene.add(floorNetMesh);
     this.camera.copy(this.zineRenderer.camera);
+    this.sceneMesh = sceneMesh;
+    this.floorNetMesh = floorNetMesh;
 
     // place avatar
     if (this.zineRenderer.floorTransform) {
