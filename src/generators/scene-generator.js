@@ -208,7 +208,6 @@ const getFirstFloorPlaneIndex = (planeSpecs) => {
         distanceSquaredF,
       };
     });
-    // labelSpecs.sort((a, b) => a.distanceSquaredF - b.distanceSquaredF);
     const snapAngle = Math.PI / 16;
     const _getForwardAngle = a => {
       const v = localVector.fromArray(a.normal);
