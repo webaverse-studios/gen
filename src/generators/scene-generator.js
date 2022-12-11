@@ -3273,7 +3273,10 @@ export class PanelRenderer extends EventTarget {
     // globalThis.oldFloorNetDepthRenderGeometry = oldFloorNetDepthRenderGeometry;
     // globalThis.newFloorNetDepthRenderGeometry = newFloorNetDepthRenderGeometry;
     const floorNetCamera = makeFloorNetCamera();
-    const floorNetDepths = passes.reconstructFloor({
+    const {
+      floorNetDepths,
+      floorResolution,
+    } = passes.reconstructFloor({
       renderSpecs: [
         {
           geometry: oldFloorNetDepthRenderGeometry,
@@ -3305,12 +3308,12 @@ export class PanelRenderer extends EventTarget {
       depthFloatImageData,
       distanceFloatImageData,
       distanceNearestPositions,
-      // indexColorsAlphasArray,
       newDepthFloatImageData,
       reconstructedDepthFloats,
       planesJson,
       planesMask,
       portalJson,
+      floorResolution,
       floorNetDepths,
       floorNetCameraJson,
       segmentMask,
@@ -3337,6 +3340,7 @@ export class PanelRenderer extends EventTarget {
     const planesJson = layer.getData('planesJson');
     const planesMask = layer.getData('planesMask');
     const portalJson = layer.getData('portalJson');
+    const floorResolution = layer.getData('floorResolution');
     const floorNetDepths = layer.getData('floorNetDepths');
     const floorNetCameraJson = layer.getData('floorNetCameraJson');
     const segmentMask = layer.getData('segmentMask');
@@ -3900,10 +3904,11 @@ export async function compileVirtualScene(imageArrayBuffer) {
   console.time('floorReconstruction');
   const floorNetCamera = makeFloorNetCamera();
   let floorNetDepths;
+  let floorResolution;
   let floorNetCameraJson;
   {
     const floorNetDepthRenderGeometry = pointCloudArrayBufferToGeometry(pointCloudArrayBuffer, width, height);
-    floorNetDepths = passes.reconstructFloor({
+    const reconstructionSpec = passes.reconstructFloor({
       renderSpecs: [
         {
           geometry: floorNetDepthRenderGeometry,
@@ -3915,6 +3920,8 @@ export async function compileVirtualScene(imageArrayBuffer) {
       camera: floorNetCamera,
       floorPlane,
     });
+    floorNetDepths = reconstructionSpec.floorNetDepths;
+    floorResolution = reconstructionSpec.floorResolution;
     floorNetCameraJson = getOrthographicCameraJson(floorNetCamera);
   }
   console.timeEnd('floorReconstruction');
@@ -3983,6 +3990,7 @@ export async function compileVirtualScene(imageArrayBuffer) {
     portalSpecs,
     firstFloorPlaneIndex,
     floorPlaneJson,
+    floorResolution,
     floorNetDepths,
     floorNetCameraJson,
     portalLocations,

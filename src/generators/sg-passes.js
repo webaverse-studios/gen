@@ -91,5 +91,9 @@ export function reconstructFloor({
     }
     floorNetDepths[i] = value;
   }
-  return floorNetDepths;
+  const floorResolution = [width, height];
+  return {
+    floorNetDepths,
+    floorResolution,
+  };
 }
