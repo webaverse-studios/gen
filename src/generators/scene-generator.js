@@ -304,23 +304,6 @@ const getFirstFloorPlaneIndex = (planeSpecs) => {
 
 //
 
-function trilinearFilter(field, width, height, x, z) {
-  const x0 = Math.floor(x);
-  const x1 = x0 + 1;
-  const z0 = Math.floor(z);
-  const z1 = z0 + 1;
-  const y00 = field[z0 * width + x0];
-  const y01 = field[z0 * width + x1];
-  const y10 = field[z1 * width + x0];
-  const y11 = field[z1 * width + x1];
-  const y0 = y00 + (y01 - y00) * (x - x0);
-  const y1 = y10 + (y11 - y10) * (x - x0);
-  const y = y0 + (y1 - y0) * (z - z0);
-  return y;
-}
-
-//
-
 const getSemanticSpecs = ({
   geometry,
   segmentMask,
