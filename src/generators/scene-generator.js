@@ -2850,18 +2850,6 @@ export class PanelRenderer extends EventTarget {
             this.clip();
             break;
           }
-          /* case 'PageUp': {
-            this.sceneMesh.material.uniforms.uColorEnabled.value = 1;
-            this.sceneMesh.material.uniforms.uColorEnabled.needsUpdate = true;
-            blockEvent(e);
-            break;
-          }
-          case 'PageDown': {
-            this.sceneMesh.material.uniforms.uColorEnabled.value = 0;
-            this.sceneMesh.material.uniforms.uColorEnabled.needsUpdate = true;
-            blockEvent(e);
-            break;
-          } */
         }
       }
     };
