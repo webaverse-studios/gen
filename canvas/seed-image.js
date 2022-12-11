@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import {createCanvas, loadImage} from 'canvas';
+// import {createCanvas, loadImage} from 'canvas';
 // import materialColors from './material-colors.json';
 // import ColorScheme from './color-scheme.js';
 import {colors} from '../src/constants/detectron-colors.js';
@@ -12,6 +12,15 @@ import {colors} from '../src/constants/detectron-colors.js';
 
 const rng = () => (Math.random() * 2) - 1;
 const localColor = new THREE.Color();
+
+//
+
+const createCanvas = (w, h) => {
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  return canvas;
+};
 
 //
 
