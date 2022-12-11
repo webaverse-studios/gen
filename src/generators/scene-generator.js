@@ -2580,11 +2580,13 @@ export class PanelRenderer extends EventTarget {
     this.zineRenderer = new ZineRenderer({
       panel,
     });
-    const {sceneMesh, floorNetMesh} = this.zineRenderer;
+    const {sceneMesh, scenePhysicsMesh, floorNetMesh} = this.zineRenderer;
     scene.add(sceneMesh);
+    scene.add(scenePhysicsMesh);
     scene.add(floorNetMesh);
     this.camera.copy(this.zineRenderer.camera);
     this.sceneMesh = sceneMesh;
+    this.scenePhysicsMesh = scenePhysicsMesh;
     this.floorNetMesh = floorNetMesh;
 
     // place avatar
@@ -2721,6 +2723,8 @@ export class PanelRenderer extends EventTarget {
     {
       this.zineRenderer.sceneMesh.material.uniforms.uEraser.value = tool === 'eraser' ? 1 : 0;
       this.zineRenderer.sceneMesh.material.uniforms.uEraser.needsUpdate = true;
+      this.zineRenderer.scenePhysicsMesh.enabled = this.tool === 'plane';
+      this.zineRenderer.scenePhysicsMesh.updateVisibility();
       this.zineRenderer.floorNetMesh.enabled = this.tool === 'plane';
       this.zineRenderer.floorNetMesh.updateVisibility();
     }
@@ -2813,7 +2817,6 @@ export class PanelRenderer extends EventTarget {
           }
           case 'r': {
             const {planeSpecs, firstFloorPlaneIndex} = this.sceneMesh;
-            // console.log('normalize to plane', firstFloorPlaneIndex, planeSpecs);
             const labelSpec = planeSpecs.labels[firstFloorPlaneIndex];
             const normal = localVector.fromArray(labelSpec.normal);
             // const center = localVector2.fromArray(labelSpec.center);
@@ -2963,6 +2966,7 @@ export class PanelRenderer extends EventTarget {
       this.avatar,
       this.avatars,
       this.mobs,
+      this.scenePhysicsMesh,
       this.floorNetMesh,
       this.portalNetMesh,
       this.overlay.overlayScene,
@@ -3068,7 +3072,6 @@ export class PanelRenderer extends EventTarget {
     let segmentMask;
     {
       const imageSegmentationSpec = await _getImageSegements(editedImgBlob);
-      // console.log('got image segmentation spec', imageSegmentationSpec);
       const {segmentsBlob, boundingBoxLayers} = imageSegmentationSpec;
 
       const segmentsImageBitmap = await createImageBitmap(segmentsBlob);
@@ -3162,21 +3165,6 @@ export class PanelRenderer extends EventTarget {
       );
     }
     console.timeEnd('reprojectFov'); */
-
-    // // set fov
-    // console.time('fov');
-    // {
-    //   const fov = Number(pointCloudHeaders['x-fov']);
-
-    //   this.camera.fov = fov;
-    //   this.camera.updateProjectionMatrix();
-      
-    //   editCamera.fov = fov;
-    //   editCamera.updateMatrixWorld();
-      
-    //   editCameraJson = getPerspectiveCameraJson(editCamera);
-    // }
-    // console.timeEnd('fov');
 
     // depth reconstruction
     const {
