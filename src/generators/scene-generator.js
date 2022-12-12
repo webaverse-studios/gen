@@ -3813,15 +3813,14 @@ export async function compileVirtualScene(imageArrayBuffer) {
   } = await getSemanticPlanes(img, fov, depthFloats32Array, segmentMask);
   console.timeEnd('planeDetection');
 
-  // console.time('snapPointCloud');
-  // {
-  //   const originalCamera = camera.clone();
-  //   originalCamera.fov = Number(pointCloudHeaders['x-fov']);
-  //   originalCamera.updateProjectionMatrix();
-  //   console.log('got fov', originalCamera.fov);
-  //   pointCloudArrayBuffer = snapPointCloudToCamera(pointCloudArrayBuffer, width, height, originalCamera);
-  // }
-  // console.timeEnd('snapPointCloud');
+  console.time('camera');
+  let cameraJson;
+  {
+    const camera = makeDefaultCamera();
+    camera.fov = fov;
+    cameraJson = getPerspectiveCameraJson(camera);
+  }
+  console.timeEnd('camera');
 
   const geometry = pointCloudArrayBufferToGeometry(pointCloudArrayBuffer, img.width, img.height);
   const semanticSpecs = getSemanticSpecs({
@@ -3939,6 +3938,7 @@ export async function compileVirtualScene(imageArrayBuffer) {
   return {
     resolution,
     segmentMask,
+    cameraJson,
     pointCloudHeaders,
     pointCloud: pointCloudArrayBuffer,
     planesJson,
