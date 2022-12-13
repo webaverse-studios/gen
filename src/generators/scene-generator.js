@@ -2907,9 +2907,10 @@ export class PanelRenderer extends EventTarget {
     this.floorNetMesh = floorNetMesh;
 
     // place avatar
-    if (this.zineRenderer.floorTransform) {
-      this.avatar.position.copy(this.zineRenderer.floorTransform.position);
-      this.avatar.quaternion.copy(this.zineRenderer.floorTransform.quaternion);
+    const {floorPlaneLocation} = this.zineRenderer.metadata;
+    if (floorPlaneLocation) {
+      this.avatar.position.fromArray(floorPlaneLocation.position);
+      this.avatar.quaternion.fromArray(floorPlaneLocation.quaternion);
       this.avatar.updateMatrixWorld();
       this.avatar.visible = true;
     }
@@ -2919,16 +2920,16 @@ export class PanelRenderer extends EventTarget {
     const [
       avatarsTransform,
       mobsTransform,
-    ] = this.zineRenderer.candidateTransforms;
+    ] = this.zineRenderer.metadata.candidateLocations;
     if (avatarsTransform) {
-      this.avatars.position.copy(avatarsTransform.position);
-      this.avatars.quaternion.copy(avatarsTransform.quaternion);
+      this.avatars.position.fromArray(avatarsTransform.position);
+      this.avatars.quaternion.fromArray(avatarsTransform.quaternion);
       this.avatars.updateMatrixWorld();
       this.avatars.visible = true;
     }
     if (mobsTransform) {
-      this.mobs.position.copy(mobsTransform.position);
-      this.mobs.quaternion.copy(mobsTransform.quaternion);
+      this.mobs.position.fromArray(mobsTransform.position);
+      this.mobs.quaternion.fromArray(mobsTransform.quaternion);
       this.mobs.updateMatrixWorld();
       this.mobs.visible = true;
     }
@@ -2980,7 +2981,7 @@ export class PanelRenderer extends EventTarget {
 
     // portal net mesh
     const portalNetMesh = new PortalNetMesh({
-      portalLocations: this.zineRenderer.portalLocations,
+      portalLocations: this.zineRenderer.metadata.portalLocations,
     });
     this.scene.add(portalNetMesh);
     this.portalNetMesh = portalNetMesh;
