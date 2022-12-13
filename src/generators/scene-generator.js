@@ -4339,6 +4339,8 @@ export async function compileVirtualScene(imageArrayBuffer) {
   const predictedHeight = await vqaClient.getPredictedHeight(blob);
   // console.log('got predicted height', predictedHeight);
 
+  const scale = 1;
+
   // return result
   return {
     resolution,
@@ -4363,5 +4365,6 @@ export async function compileVirtualScene(imageArrayBuffer) {
     portalLocations,
     candidateLocations,
     predictedHeight,
+    scale,
   };
 }
