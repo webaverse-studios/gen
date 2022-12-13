@@ -596,43 +596,68 @@ const getRaycastedCameraEntranceLocation = (() => {
   const localVector = new THREE.Vector3();
   const localVector2 = new THREE.Vector3();
   const localVector3 = new THREE.Vector3();
-  // const localPlane = new THREE.Plane();
+  const localQuaternion = new THREE.Quaternion();
+  const localPlane = new THREE.Plane();
 
-  const cameraDistance = 2;
-  
   // raycast 2m in front of the camera, and check for a floor hit
-  return (camera, depthFloatsRaw) => {
-    const targetPosition = localVector.copy(camera.position)
-      .add(
-        localVector2.set(0, 0, -cameraDistance)
-          .applyQuaternion(camera.quaternion)
+  return (camera, depthFloatsRaw, floorPlaneLocation, floorPlaneJson) => {
+    const cameraNearScan = camera.near;
+    const cameraFarScan = 2;
+    const cameraScanStep = floorNetResolution;
+    // console.log('scan', {
+    //   cameraNearScan,
+    //   cameraFarScan,
+    //   cameraScanStep,
+    // });
+    for (
+      let cameraDistance = cameraNearScan;
+      cameraDistance <= cameraFarScan;
+      cameraDistance += cameraScanStep
+    ) {
+      const targetPosition = localVector.copy(camera.position)
+        .add(
+          localVector2.set(0, 0, -cameraDistance)
+            .applyQuaternion(camera.quaternion)
+        );
+
+      // compute the sample coordinates:
+      const floorCornerBasePosition = localVector2.set(0, 0, 0)
+        .add(localVector3.set(-floorNetWorldSize / 2, 0, -floorNetWorldSize / 2));
+      const px = (targetPosition.x - floorCornerBasePosition.x) / floorNetWorldSize;
+      const pz = (targetPosition.z - floorCornerBasePosition.z) / floorNetWorldSize;
+      const x = Math.floor(px * floorNetPixelSize);
+      const z = Math.floor(pz * floorNetPixelSize);
+      const index = z * floorNetPixelSize + x;
+      targetPosition.y = depthFloatsRaw[index];
+      
+      // const cameraPlane = localPlane.setFromNormalAndCoplanarPoint(
+      //   localVector3.set(0, 0, -1)
+      //     .applyQuaternion(camera.quaternion),
+      //   camera.position
+      // );
+
+      const floorPlane = localPlane.set(
+        localVector3.fromArray(floorPlaneJson.normal),
+        floorPlaneJson.constant
       );
 
-    // compute the sample coordinates:
-    const floorCornerBasePosition = localVector2.set(0, 0, 0)
-      .add(localVector3.set(-floorNetWorldSize / 2, 0, -floorNetWorldSize / 2));
-    const px = (targetPosition.x - floorCornerBasePosition.x) / floorNetWorldSize;
-    const pz = (targetPosition.z - floorCornerBasePosition.z) / floorNetWorldSize;
-    const x = Math.floor(px * floorNetPixelSize);
-    const z = Math.floor(pz * floorNetPixelSize);
-    const index = z * floorNetPixelSize + x;
-    targetPosition.y = depthFloatsRaw[index];
-    
-    // const cameraPlane = localPlane.setFromNormalAndCoplanarPoint(
-    //   localVector3.set(0, 0, -1)
-    //     .applyQuaternion(camera.quaternion),
-    //   camera.position
-    // );
-    // if (cameraPlane.distanceToPoint(targetPosition) < camera.near * 2) {
-      const position = targetPosition.toArray();
-      const quaternion = camera.quaternion.toArray();
-      return {
-        position,
-        quaternion,
-      };
-    // } else {
-    //   return null;
-    // }
+      // console.log('distance', floorPlane.distanceToPoint(targetPosition), targetPosition.toArray(), camera.near, camera.far);
+      if (floorPlane.distanceToPoint(targetPosition) < (camera.near + camera.far) / 4) { // mesh hit
+        const position = targetPosition.toArray();
+        const quaternion = floorPlaneLocation.quaternion.slice();
+        // const quaternion = camera.quaternion.toArray();
+        // console.log('camera entrance return', {
+        //   position,
+        //   quaternion,
+        // });
+        return {
+          position,
+          quaternion,
+        };
+      }
+    }
+
+    return null;
   };
 })();
 const getRaycastedPortalLocations = (() => {
@@ -2300,7 +2325,8 @@ class EntranceExitMesh extends THREE.Mesh {
     entranceExitLocations,
   }) {
     const baseSize = 2;
-    const baseGeometry = new THREE.BoxGeometry(baseSize, baseSize, baseSize);
+    const baseGeometry = new THREE.BoxGeometry(baseSize * 2, baseSize, baseSize * 10)
+      .translate(0, baseSize / 2, baseSize * 10 / 2);
     const geometries = entranceExitLocations.map(portalLocation => {
       const g = baseGeometry.clone();
       g.applyMatrix4(
@@ -3399,7 +3425,7 @@ export class PanelRenderer extends EventTarget {
 
     // reify objects
     const editCamera = setPerspectiveCameraFromJson(localCamera, editCameraJson).clone();
-    const floorPlane = new THREE.Plane(localVector.fromArray(floorPlaneJson.normal), floorPlaneJson.constant)
+    const floorPlane = new THREE.Plane(localVector.fromArray(floorPlaneJson.normal), floorPlaneJson.constant);
 
     // extract image array buffers
     let maskImgArrayBuffer;
@@ -4260,7 +4286,7 @@ export async function compileVirtualScene(imageArrayBuffer) {
     floorPlaneNormal,
   });
 
-  const cameraEntranceLocation = getRaycastedCameraEntranceLocation(camera, floorHeightfieldRaw);
+  const cameraEntranceLocation = getRaycastedCameraEntranceLocation(camera, floorHeightfieldRaw, floorPlaneLocation, floorPlaneJson);
   const portalLocations = getRaycastedPortalLocations(portalSpecs, floorHeightfield, floorPlaneLocation);
 
   const {
