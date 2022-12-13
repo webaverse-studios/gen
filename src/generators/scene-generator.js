@@ -585,10 +585,6 @@ const getFloorPlaneLocation = (() => {
     const quaternion = normalToQuaternion(floorPlaneNormal, localQuaternion, backwardVector)
       .premultiply(localQuaternion2.setFromAxisAngle(localVector.set(1, 0, 0), -Math.PI/2))
     
-    // const direction = new THREE.Vector3(0, 0, -1)
-    //   .applyQuaternion(quaternion);
-    // console.log('got direction', direction.toArray(), floorPlaneNormal.toArray());
-
     return {
       position: floorPlaneCenter.toArray(),
       quaternion: quaternion.toArray(),
@@ -648,6 +644,9 @@ const getRaycastedPortalLocations = (() => {
   const localVector6 = new THREE.Vector3();
   const localVector7 = new THREE.Vector3();
   const localQuaternion = new THREE.Quaternion();
+  const localQuaternion2 = new THREE.Quaternion();
+  const localQuaternion3 = new THREE.Quaternion();
+  const localQuaternion4 = new THREE.Quaternion();
   const localEuler = new THREE.Euler();
   
   return (portalSpecs, depthFloats, floorPlaneLocation) => {
@@ -671,54 +670,28 @@ const getRaycastedPortalLocations = (() => {
       const index = z * floorNetPixelSize + x;
       portalCenter.y = depthFloats[index];
 
-      const targetQuaternion = new THREE.Quaternion();
+      const targetQuaternion = localQuaternion;
       normalToQuaternion(normal, targetQuaternion, upVector);
       localEuler.setFromQuaternion(targetQuaternion, 'YXZ');
       localEuler.x = 0;
       localEuler.z = 0;
       targetQuaternion.setFromEuler(localEuler);
 
-      const floorNormal = new THREE.Vector3().fromArray(floorPlaneLocation.normal);
-      const floorQuaternion = new THREE.Quaternion();
+      const floorNormal = localVector6.fromArray(floorPlaneLocation.normal);
+      const floorQuaternion = localQuaternion2;
       normalToQuaternion(floorNormal, floorQuaternion, backwardVector)
-        .multiply(localQuaternion.setFromAxisAngle(localVector6.set(1, 0, 0), -Math.PI/2));
+        .multiply(localQuaternion3.setFromAxisAngle(localVector7.set(1, 0, 0), -Math.PI/2));
       
       // set the quaternion to face towards targetQuaternion, but with the floor normal as the up vector
-      const quaternion = new THREE.Quaternion();
-      // quaternion.setFromRotationMatrix(
-      //   localMatrix.lookAt(
-      //     zeroVector,
-      //     localVector6.set(0, 0, -1)
-      //       .applyQuaternion(targetQuaternion),
-      //     localVector7.set(0, 1, 0)
-      //       .applyQuaternion(floorQuaternion)
-      //   )
-      // );
+      const quaternion = localQuaternion4;
       quaternion.multiplyQuaternions(
         floorQuaternion,
         targetQuaternion
       );
-      // console.log('got quaternion', quaternion.toArray());
-
-      // const targetForward = new THREE.Vector3(0, 0, -1)
-      //   .applyQuaternion(targetQuaternion);
-      // const floorUp = new THREE.Vector3(0, 1, 0)
-      //   .applyQuaternion(floorQuaternion);
-
-      // const quaternion = new THREE.Quaternion();
-      // quaternion.setFromRotationMatrix(
-      //   localMatrix.lookAt(
-      //     zeroVector,
-      //     targetForward,
-      //     floorUp
-      //   )
-      // );
 
       portalLocations.push({
         position: portalCenter.toArray(),
         quaternion: quaternion.toArray(),
-        // quaternion: targetQuaternion.toArray(),
-        // quaternion: floorQuaternion.toArray(),
       });
     }
     return portalLocations;
@@ -739,7 +712,7 @@ const sortLocations = (() => {
   const localVector4 = new THREE.Vector3();
   // const localVector5 = new THREE.Vector3();
   const localQuaternion = new THREE.Quaternion();
-  const localQuaternion2 = new THREE.Quaternion();
+  // const localQuaternion2 = new THREE.Quaternion();
   const localEuler = new THREE.Euler();
   const localMatrix = new THREE.Matrix4();
 
@@ -759,15 +732,6 @@ const sortLocations = (() => {
     // }
     candidateLocations.push(...portalLocations);
     candidateLocations = structuredClone(candidateLocations); // do not scribble over original arrays
-
-    console.log('sort locations 0', {
-      floorPlaneLocation,
-      floorNormal: new THREE.Vector3(0, 1, 0)
-        .applyQuaternion(new THREE.Quaternion().fromArray(floorPlaneLocation.quaternion)).toArray(),
-      cameraEntranceLocation,
-      portalLocations,
-      candidateLocations,
-    });
 
     // remove candidate locations that are too close to each other
     const minSeparationDistance = 1;
@@ -4218,85 +4182,6 @@ export async function compileVirtualScene(imageArrayBuffer) {
     floorNetPixelSize,
     floorNetCamera,
   );
-  /* const makeDepthCubesMesh2 = (depthFloats, width, height, camera) => {
-    // render an instanced cubes mesh to show the depth
-    const depthCubesGeometry = new THREE.BoxBufferGeometry(0.05, 0.05, 0.05);
-    const depthCubesMaterial = new THREE.MeshPhongMaterial({
-      color: 0x00FFFF,
-      // vertexColors: true,
-    });
-    const depthCubesMesh = new THREE.InstancedMesh(depthCubesGeometry, depthCubesMaterial, depthFloats.length);
-    depthCubesMesh.name = 'depthCubesMesh';
-    depthCubesMesh.frustumCulled = false;
-    // set the matrices by projecting the depth from the perspective camera
-    depthCubesMesh.count = 0;
-    for (let i = 0; i < depthFloats.length; i++) {
-      const x = (i % width) / width;
-      const y = Math.floor(i / width) / height;
-
-      // get the corner base position of the floor net mesh
-      const floorCornerBasePosition = localVector5.copy(this.floorNetMesh.position)
-        .add(localVector6.set(-floorNetWorldSize / 2, 0, -floorNetWorldSize / 2));
-
-      // get the local coordinates of the portal center
-      const ax = floorCornerBasePosition.x + x * floorNetWorldSize;
-      const az = floorCornerBasePosition.z + y * floorNetWorldSize;
-      const ay = depthFloats[i];
-
-      if (ay !== 0) {
-        localMatrix.makeTranslation(ax, ay, az);
-        depthCubesMesh.setMatrixAt(i, localMatrix);
-        depthCubesMesh.count++;
-      }
-    }
-    depthCubesMesh.instanceMatrix.needsUpdate = true;
-    return depthCubesMesh;
-  };
-  const dcm = makeDepthCubesMesh2(floorHeightfield, floorNetPixelSize, floorNetPixelSize, floorNetCamera);
-  dcm.frustumCulled = false;
-  this.scene.add(dcm); */
-  
-  // const floorPlaneLabelSpec = firstFloorPlaneIndex !== -1 ?
-  //   planeSpecs.labels[firstFloorPlaneIndex]
-  // :
-  //   null;
-
-  // return ({
-  //   portalLocations,
-  //   firstFloorPlaneIndex,
-  //   floorTransform,
-  //   planeSpecs,
-  //   n = 1,
-  //   seed = 'avatars',
-  // }) => {
-  //   const rng = alea(seed);
-  //   const candidatePortalLocations = portalLocations.slice();
-
-  //   const result = Array(n);
-  //   for (let i = 0; i < n && candidatePortalLocations.length > 0; i++) {
-  //     let position;
-  //     let quaternion;
-
-  //     // position
-  //     const portalLocation = candidatePortalLocations.splice(Math.floor(rng() * candidatePortalLocations.length), 1)[0];
-  //     position = new THREE.Vector3().fromArray(portalLocation);
-
-  //     // quaternion
-  //     const lookCandidateLocations = (firstFloorPlaneIndex !== -1 ? [
-  //       floorTransform.position,
-  //     ] : [])
-  //       .concat(candidatePortalLocations.map(portalLocation => {
-  //         return new THREE.Vector3().fromArray(portalLocation);
-  //       }));
-  //     if (lookCandidateLocations.length > 0) {
-  //       const lookCandidateLocation = lookCandidateLocations[Math.floor(rng() * lookCandidateLocations.length)];
-  //       // match up vector to first plane
-  //       const up = localVector2.set(0, 1, 0);
-  //       if (firstFloorPlaneIndex !== -1) {
-  //         const labelSpec = planeSpecs.labels[firstFloorPlaneIndex];
-  //         const normal = localVector3.fromArray(labelSpec.normal);
-
-  console.log('sort 1');
 
   const floorPlaneLabelSpec = firstFloorPlaneIndex !== -1 ?
     planeSpecs.labels[firstFloorPlaneIndex]
@@ -4309,12 +4194,8 @@ export async function compileVirtualScene(imageArrayBuffer) {
     floorPlaneNormal,
   });
 
-  console.log('sort 2');
-
   const cameraEntranceLocation = getRaycastedCameraEntranceLocation(camera, floorHeightfieldRaw);
-  console.log('sort 3', cameraEntranceLocation);
   const portalLocations = getRaycastedPortalLocations(portalSpecs, floorHeightfield, floorPlaneLocation);
-  console.log('sort 4');
 
   const {
     entranceExitLocations,
@@ -4324,8 +4205,6 @@ export async function compileVirtualScene(imageArrayBuffer) {
     cameraEntranceLocation,
     portalLocations,
   });
-
-  console.log('sort 5');
 
   // query the height
   const predictedHeight = await vqaClient.getPredictedHeight(blob);
