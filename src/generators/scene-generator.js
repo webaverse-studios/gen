@@ -532,7 +532,7 @@ const zipPlanesSegmentsJson = (planeSpecs, planesJson) => {
 //
 
 const getFloorPlaneLocation = (() => {
-  const localVector = new THREE.Vector3();
+  // const localVector = new THREE.Vector3();
   const localQuaternion = new THREE.Quaternion();
   const localQuaternion2 = new THREE.Quaternion();
 
