@@ -3225,6 +3225,18 @@ export class PanelRenderer extends EventTarget {
             this.clip();
             break;
           }
+          case 'PageUp': {
+            e.preventDefault();
+            e.stopPropagation();
+            this.scale(1);
+            break;
+          }
+          case 'PageDown': {
+            e.preventDefault();
+            e.stopPropagation();
+            this.scale(-1);
+            break;
+          }
         }
       }
     };
@@ -3660,6 +3672,12 @@ export class PanelRenderer extends EventTarget {
     const depthFloats32Array = getDepthFloatsFromIndexedGeometry(indexedGeometry);
     const {width, height} = this.renderer.domElement;
     clipGeometryZ(geometry, width, height, depthFloats32Array);
+  }
+  scale(f) {
+    const oldScale = this.zineRenderer.getScale();
+    const scaleFactor = 1.2;
+    const newScale = oldScale * (f < 0 ? scaleFactor : 1 / scaleFactor);
+    this.zineRenderer.setScale(newScale);
   }
   createOutmeshLayer(layer) {
     const maskImg = layer.getData('maskImg');
