@@ -1881,7 +1881,7 @@ class Overlay {
         transparent: true,
         // alphaTest: 0.1,
         alphaToCoverage: true,
-        side: THREE.DoubleSide,
+        // side: THREE.DoubleSide,
       });
       const mesh = new THREE.Mesh(arrowGeometry, material);
       mesh.frustumCulled = false;
@@ -2231,7 +2231,8 @@ class Overlay {
         // arrow mesh
         const arrowMesh = makeArrowsMesh();
         arrowMesh.position.copy(center);
-        normalToQuaternion(normal, arrowMesh.quaternion, upVector);
+        normalToQuaternion(normal, arrowMesh.quaternion, upVector)
+          .multiply(localQuaternion.setFromAxisAngle(upVector, Math.PI));
         arrowMesh.updateMatrixWorld();
         arrowMesh.frustumCulled = false;
         portalMesh.add(arrowMesh);
