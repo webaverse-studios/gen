@@ -723,6 +723,185 @@ const getRaycastedPortalLocations = (() => {
     return portalLocations;
   };
 })();
+function shuffle(array, seed = '') {
+  const rng = alea(seed);
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
+}
+const sortLocations = (() => {
+  const localVector = new THREE.Vector3();
+  const localVector2 = new THREE.Vector3();
+  const localVector3 = new THREE.Vector3();
+  const localVector4 = new THREE.Vector3();
+  // const localVector5 = new THREE.Vector3();
+  const localQuaternion = new THREE.Quaternion();
+  const localQuaternion2 = new THREE.Quaternion();
+  const localEuler = new THREE.Euler();
+  const localMatrix = new THREE.Matrix4();
+
+  return ({
+    cameraEntranceLocation,
+    floorPlaneLocation,
+    portalLocations,
+    seed = 'avatars',
+  }) => {
+    // collect candidate locations
+    let candidateLocations = [];
+    // if (cameraEntranceLocation) {
+    //   candidateLocations.push(cameraEntranceLocation);
+    // }
+    // if (floorPlaneLocation) {
+    //   candidateLocations.push(floorPlaneLocation);
+    // }
+    candidateLocations.push(...portalLocations);
+    candidateLocations = structuredClone(candidateLocations); // do not scribble over original arrays
+
+    console.log('sort locations 0', {
+      floorPlaneLocation,
+      floorNormal: new THREE.Vector3(0, 1, 0)
+        .applyQuaternion(new THREE.Quaternion().fromArray(floorPlaneLocation.quaternion)).toArray(),
+      cameraEntranceLocation,
+      portalLocations,
+      candidateLocations,
+    });
+
+    // remove candidate locations that are too close to each other
+    const minSeparationDistance = 1;
+    candidateLocations = candidateLocations.filter((candidateLocation, i) => {
+      for (let j = i + 1; j < candidateLocations.length; j++) {
+        const otherCandidateLocation = candidateLocations[j];
+        const d = localVector.fromArray(candidateLocation.position)
+          .distanceTo(
+            localVector2.fromArray(otherCandidateLocation.position)
+          );
+        if (d < minSeparationDistance) {
+          return false;
+        }
+      }
+      return true;
+    });
+
+    // entrances + exits
+    const entranceExits = [];
+    if (cameraEntranceLocation) {
+      entranceExits.push(cameraEntranceLocation);
+
+      // find the furthest portal from the camera entrance
+      let furthestPortalIndex = -1;
+      let furthestPortalDistance = 0;
+      for (let i = 0; i < candidateLocations.length; i++) {
+        const portalLocation = candidateLocations[i];
+        const d = localVector.fromArray(cameraEntranceLocation.position)
+          .distanceTo(
+            localVector2.fromArray(portalLocation.position)
+          );
+        if (d > furthestPortalDistance) {
+          furthestPortalDistance = d;
+          furthestPortalIndex = i;
+        }
+      }
+      if (furthestPortalIndex !== -1) {
+        entranceExits.push(candidateLocations[furthestPortalIndex]);
+        candidateLocations.splice(furthestPortalIndex, 1);
+      }
+    } else {
+      // find the two furthest portals from each other
+      let furthestPortalIndex1 = -1;
+      let furthestPortalIndex2 = -1;
+      let furthestPortalDistance = 0;
+      for (let i = 0; i < candidateLocations.length; i++) {
+        const portalLocation1 = candidateLocations[i];
+        for (let j = i + 1; j < candidateLocations.length; j++) {
+          const portalLocation2 = candidateLocations[j];
+          const d = localVector.fromArray(portalLocation1.position)
+            .distanceTo(
+              localVector2.fromArray(portalLocation2.position)
+            );
+          if (d > furthestPortalDistance) {
+            furthestPortalDistance = d;
+            furthestPortalIndex1 = i;
+            furthestPortalIndex2 = j;
+          }
+        }
+      }
+      if (furthestPortalIndex1 !== -1 && furthestPortalIndex2 !== -1) {
+        const portal1 = candidateLocations[furthestPortalIndex1];
+        const portal2 = candidateLocations[furthestPortalIndex2];
+
+        entranceExits.push(portal1);
+        entranceExits.push(portal2);
+
+        const portalLocationIndexes = [
+          furthestPortalIndex1,
+          furthestPortalIndex2,
+        ].sort((a, b) => a - b);
+        candidateLocations.splice(portalLocationIndexes[1], 1);
+        candidateLocations.splice(portalLocationIndexes[0], 1);
+      }
+    }
+
+    // randomize remaining candidate locations
+    shuffle(candidateLocations, seed);
+
+    // compute remaining candidate location look quaternions
+    {
+      const rng = alea(seed);
+      for (let i = 0; i < candidateLocations.length; i++) {
+        const candidateLocation = candidateLocations[i];
+        // const candidatePosition = localVector.fromArray(candidateLocation.position);
+        
+        const lookCandidateLocations = candidateLocations.filter((lookCandidateLocation, j) => {
+          return j !== i;
+        });
+
+        let quaternion;
+        if (lookCandidateLocations.length > 0) {
+          const position = localVector2.fromArray(candidateLocation.position);
+
+          const lookCandidateLocation = lookCandidateLocations[
+            Math.floor(rng() * lookCandidateLocations.length)
+          ];
+          const lookPosition = localVector3.fromArray(lookCandidateLocation.position);
+
+          const targetQuaternion = new THREE.Quaternion();
+          // normalToQuaternion(normal, targetQuaternion, upVector);
+          targetQuaternion.setFromRotationMatrix(
+            localMatrix.lookAt(
+              position,
+              lookPosition,
+              upVector
+            )
+          );
+          localEuler.setFromQuaternion(targetQuaternion, 'YXZ');
+          localEuler.x = 0;
+          localEuler.z = 0;
+          targetQuaternion.setFromEuler(localEuler);
+    
+          const floorNormal = new THREE.Vector3().fromArray(floorPlaneLocation.normal);
+          const floorQuaternion = new THREE.Quaternion();
+          normalToQuaternion(floorNormal, floorQuaternion, backwardVector)
+            .multiply(localQuaternion.setFromAxisAngle(localVector4.set(1, 0, 0), -Math.PI/2));
+
+          quaternion = localQuaternion.multiplyQuaternions(
+            floorQuaternion,
+            targetQuaternion,
+          );
+        } else {
+          quaternion = localQuaternion.identity();
+        }
+        quaternion.toArray(candidateLocation.quaternion);
+      }
+    }
+
+    return {
+      entranceExits,
+      candidateLocations,
+    };
+  };
+})();
 
 //
 
