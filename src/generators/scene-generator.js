@@ -127,6 +127,7 @@ export const tools = [
 const localVector = new THREE.Vector3();
 const localVector2 = new THREE.Vector3();
 const localQuaternion = new THREE.Quaternion();
+const localQuaternion2 = new THREE.Quaternion();
 const localMatrix = new THREE.Matrix4();
 const localBox = new THREE.Box3();
 const localCamera = new THREE.PerspectiveCamera();
@@ -3157,12 +3158,13 @@ export class PanelRenderer extends EventTarget {
             const normal = localVector.fromArray(labelSpec.normal);
             // const center = localVector2.fromArray(labelSpec.center);
 
-            normalToQuaternion(normal, this.sceneMesh.quaternion, backwardVector)
-              .multiply(localQuaternion.setFromAxisAngle(rightVector, -Math.PI/2))
-              .invert()
-            this.sceneMesh.updateMatrixWorld();
+            normalToQuaternion(normal, localQuaternion, backwardVector)
+              .multiply(localQuaternion2.setFromAxisAngle(rightVector, -Math.PI/2))
+              .invert();
+            const layer1 = this.zineRenderer.panel.getLayer(1);
+            layer1.setData('quaternion', localQuaternion.toArray());
 
-            defaultCameraMatrix.copy(this.sceneMesh.matrixWorld);
+            defaultCameraMatrix.copy(this.zineRenderer.transformScene.matrixWorld);
             break;
           }
           case 'f': {
@@ -4071,6 +4073,11 @@ export async function compileVirtualScene(imageArrayBuffer) {
     height,
   ];
 
+  // transform
+  const position = [0, 0, 0];
+  const quaternion = [0, 0, 0, 1];
+  const scale = [1, 1, 1];
+
   // {
   //   const res = await fetch(`https://depth.webaverse.com/predictFov`, {
   //     method: 'POST',
@@ -4278,11 +4285,12 @@ export async function compileVirtualScene(imageArrayBuffer) {
   const predictedHeight = await vqaClient.getPredictedHeight(blob);
   // console.log('got predicted height', predictedHeight);
 
-  const scale = 1;
-
   // return result
   return {
     resolution,
+    position,
+    quaternion,
+    scale,
     segmentMask,
     cameraJson,
     pointCloudHeaders,
@@ -4304,6 +4312,5 @@ export async function compileVirtualScene(imageArrayBuffer) {
     portalLocations,
     candidateLocations,
     predictedHeight,
-    scale,
   };
 }
