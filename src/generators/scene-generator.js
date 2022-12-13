@@ -3167,7 +3167,7 @@ export class PanelRenderer extends EventTarget {
             defaultCameraMatrix.copy(this.zineRenderer.transformScene.matrixWorld);
             break;
           }
-          case 'f': {
+          case 'g': {
             // set the camera to match the scene origin
             this.camera.matrixWorld.copy(defaultCameraMatrix);
             this.camera.matrix.copy(this.camera.matrixWorld)
