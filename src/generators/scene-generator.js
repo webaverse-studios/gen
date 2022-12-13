@@ -540,7 +540,7 @@ const getFloorPlaneLocation = (() => {
     floorPlaneNormal,
   }) => {
     const quaternion = normalToQuaternion(floorPlaneNormal, localQuaternion, backwardVector)
-      .premultiply(localQuaternion2.setFromAxisAngle(localVector.set(1, 0, 0), -Math.PI/2))
+      .multiply(localQuaternion2.setFromAxisAngle(rightVector, -Math.PI/2))
     
     return {
       position: floorPlaneCenter.toArray(),
@@ -704,7 +704,7 @@ const getRaycastedPortalLocations = (() => {
       const floorNormal = localVector6.fromArray(floorPlaneLocation.normal);
       const floorQuaternion = localQuaternion2;
       normalToQuaternion(floorNormal, floorQuaternion, backwardVector)
-        .multiply(localQuaternion3.setFromAxisAngle(localVector7.set(1, 0, 0), -Math.PI/2));
+        .multiply(localQuaternion3.setFromAxisAngle(rightVector, -Math.PI/2));
       
       // set the quaternion to face towards targetQuaternion, but with the floor normal as the up vector
       const quaternion = localQuaternion4;
@@ -872,7 +872,7 @@ const sortLocations = (() => {
           const floorNormal = new THREE.Vector3().fromArray(floorPlaneLocation.normal);
           const floorQuaternion = new THREE.Quaternion();
           normalToQuaternion(floorNormal, floorQuaternion, backwardVector)
-            .multiply(localQuaternion.setFromAxisAngle(localVector4.set(1, 0, 0), -Math.PI/2));
+            .multiply(localQuaternion.setFromAxisAngle(rightVector, -Math.PI/2));
 
           quaternion = localQuaternion.multiplyQuaternions(
             floorQuaternion,
@@ -3158,8 +3158,8 @@ export class PanelRenderer extends EventTarget {
             // const center = localVector2.fromArray(labelSpec.center);
 
             normalToQuaternion(normal, this.sceneMesh.quaternion, backwardVector)
+              .multiply(localQuaternion.setFromAxisAngle(rightVector, -Math.PI/2))
               .invert()
-              .premultiply(localQuaternion.setFromAxisAngle(localVector.set(1, 0, 0), Math.PI/2))
             this.sceneMesh.updateMatrixWorld();
 
             defaultCameraMatrix.copy(this.sceneMesh.matrixWorld);
