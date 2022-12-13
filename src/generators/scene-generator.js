@@ -750,9 +750,9 @@ const sortLocations = (() => {
     });
 
     // entrances + exits
-    const entranceExits = [];
+    const entranceExitLocations = [];
     if (cameraEntranceLocation) {
-      entranceExits.push(cameraEntranceLocation);
+      entranceExitLocations.push(cameraEntranceLocation);
 
       // find the furthest portal from the camera entrance
       let furthestPortalIndex = -1;
@@ -769,7 +769,7 @@ const sortLocations = (() => {
         }
       }
       if (furthestPortalIndex !== -1) {
-        entranceExits.push(candidateLocations[furthestPortalIndex]);
+        entranceExitLocations.push(candidateLocations[furthestPortalIndex]);
         candidateLocations.splice(furthestPortalIndex, 1);
       }
     } else {
@@ -796,8 +796,8 @@ const sortLocations = (() => {
         const portal1 = candidateLocations[furthestPortalIndex1];
         const portal2 = candidateLocations[furthestPortalIndex2];
 
-        entranceExits.push(portal1);
-        entranceExits.push(portal2);
+        entranceExitLocations.push(portal1);
+        entranceExitLocations.push(portal2);
 
         const portalLocationIndexes = [
           furthestPortalIndex1,
@@ -862,7 +862,7 @@ const sortLocations = (() => {
     }
 
     return {
-      entranceExits,
+      entranceExitLocations,
       candidateLocations,
     };
   };
