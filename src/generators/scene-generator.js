@@ -3289,10 +3289,6 @@ export class PanelRenderer extends EventTarget {
     };
 
     const canvas = this.renderer.domElement;
-    if (!canvas) {
-      console.warn('no canvas', canvas);
-      debugger;
-    }
     canvas.addEventListener('mousedown', mousedown);
     document.addEventListener('mouseup', mouseup);
     canvas.addEventListener('mousemove', mousemove);
