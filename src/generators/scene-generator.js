@@ -4132,9 +4132,10 @@ export async function compileVirtualScene(imageArrayBuffer) {
   console.timeEnd('planeDetection');
 
   console.time('camera');
+  let camera;
   let cameraJson;
   {
-    const camera = makeDefaultCamera();
+    camera = makeDefaultCamera();
     camera.fov = fov;
     cameraJson = getPerspectiveCameraJson(camera);
   }
@@ -4179,6 +4180,7 @@ export async function compileVirtualScene(imageArrayBuffer) {
 
   console.time('floorReconstruction');
   const floorNetCamera = makeFloorNetCamera();
+  let floorNetDepthsRaw;
   let floorNetDepths;
   let floorResolution;
   let floorNetCameraJson;
@@ -4196,12 +4198,19 @@ export async function compileVirtualScene(imageArrayBuffer) {
       camera: floorNetCamera,
       floorPlane,
     });
+    floorNetDepthsRaw = reconstructionSpec.floorNetDepthsRaw;
     floorNetDepths = reconstructionSpec.floorNetDepths;
     floorResolution = reconstructionSpec.floorResolution;
     floorNetCameraJson = getOrthographicCameraJson(floorNetCamera);
   }
   console.timeEnd('floorReconstruction');
 
+  const floorHeightfieldRaw = depthFloat32ArrayToHeightfield(
+    floorNetDepthsRaw,
+    floorNetPixelSize,
+    floorNetPixelSize,
+    floorNetCamera,
+  );
   const floorHeightfield = depthFloat32ArrayToHeightfield(
     floorNetDepths,
     floorNetPixelSize,
@@ -4245,8 +4254,77 @@ export async function compileVirtualScene(imageArrayBuffer) {
   const dcm = makeDepthCubesMesh2(floorHeightfield, floorNetPixelSize, floorNetPixelSize, floorNetCamera);
   dcm.frustumCulled = false;
   this.scene.add(dcm); */
-  const floorPlaneLabelSpec = firstFloorPlaneIndex !== -1 ? planeSpecs.labels[firstFloorPlaneIndex] : null;
-  const portalLocations = getPortalLocations(portalSpecs, floorHeightfield, floorPlaneLabelSpec);
+  
+  // const floorPlaneLabelSpec = firstFloorPlaneIndex !== -1 ?
+  //   planeSpecs.labels[firstFloorPlaneIndex]
+  // :
+  //   null;
+
+  // return ({
+  //   portalLocations,
+  //   firstFloorPlaneIndex,
+  //   floorTransform,
+  //   planeSpecs,
+  //   n = 1,
+  //   seed = 'avatars',
+  // }) => {
+  //   const rng = alea(seed);
+  //   const candidatePortalLocations = portalLocations.slice();
+
+  //   const result = Array(n);
+  //   for (let i = 0; i < n && candidatePortalLocations.length > 0; i++) {
+  //     let position;
+  //     let quaternion;
+
+  //     // position
+  //     const portalLocation = candidatePortalLocations.splice(Math.floor(rng() * candidatePortalLocations.length), 1)[0];
+  //     position = new THREE.Vector3().fromArray(portalLocation);
+
+  //     // quaternion
+  //     const lookCandidateLocations = (firstFloorPlaneIndex !== -1 ? [
+  //       floorTransform.position,
+  //     ] : [])
+  //       .concat(candidatePortalLocations.map(portalLocation => {
+  //         return new THREE.Vector3().fromArray(portalLocation);
+  //       }));
+  //     if (lookCandidateLocations.length > 0) {
+  //       const lookCandidateLocation = lookCandidateLocations[Math.floor(rng() * lookCandidateLocations.length)];
+  //       // match up vector to first plane
+  //       const up = localVector2.set(0, 1, 0);
+  //       if (firstFloorPlaneIndex !== -1) {
+  //         const labelSpec = planeSpecs.labels[firstFloorPlaneIndex];
+  //         const normal = localVector3.fromArray(labelSpec.normal);
+
+  console.log('sort 1');
+
+  const floorPlaneLabelSpec = firstFloorPlaneIndex !== -1 ?
+    planeSpecs.labels[firstFloorPlaneIndex]
+  :
+    null;
+  const floorPlaneCenter = floorPlaneLabelSpec && localVector.fromArray(floorPlaneLabelSpec.center);
+  const floorPlaneNormal = floorPlaneLabelSpec && localVector2.fromArray(floorPlaneLabelSpec.normal);
+  const floorPlaneLocation = getFloorPlaneLocation({
+    floorPlaneCenter,
+    floorPlaneNormal,
+  });
+
+  console.log('sort 2');
+
+  const cameraEntranceLocation = getRaycastedCameraEntranceLocation(camera, floorHeightfieldRaw);
+  console.log('sort 3', cameraEntranceLocation);
+  const portalLocations = getRaycastedPortalLocations(portalSpecs, floorHeightfield, floorPlaneLocation);
+  console.log('sort 4');
+
+  const {
+    entranceExitLocations,
+    candidateLocations,
+  } = sortLocations({
+    floorPlaneLocation,
+    cameraEntranceLocation,
+    portalLocations,
+  });
+
+  console.log('sort 5');
 
   // query the height
   const predictedHeight = await vqaClient.getPredictedHeight(blob);
@@ -4270,7 +4348,11 @@ export async function compileVirtualScene(imageArrayBuffer) {
     floorResolution,
     floorNetDepths,
     floorNetCameraJson,
+    floorPlaneLocation,
+    cameraEntranceLocation,
+    entranceExitLocations,
     portalLocations,
+    candidateLocations,
     predictedHeight,
   };
 }

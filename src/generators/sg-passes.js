@@ -42,11 +42,11 @@ export function reconstructFloor({
   const height = floorNetPixelSize;
   const meshes = getRenderSpecsMeshes(renderSpecs, camera);
 
-  const floorNetDepthsOriginal = getRenderSpecsMeshesDepth(meshes, width, height, camera);
-  const floorNetDepths = new Float32Array(floorNetDepthsOriginal.length);
+  const floorNetDepthsRaw = getRenderSpecsMeshesDepth(meshes, width, height, camera);
+  const floorNetDepths = new Float32Array(floorNetDepthsRaw.length);
   const offset = 0.1 / 2;
-  for (let i = 0; i < floorNetDepthsOriginal.length; i++) {
-    let value = floorNetDepthsOriginal[i];
+  for (let i = 0; i < floorNetDepthsRaw.length; i++) {
+    let value = floorNetDepthsRaw[i];
     if (value !== 0) {
       value = value + offset;
     } else {
@@ -72,7 +72,7 @@ export function reconstructFloor({
           const distance = Math.sqrt(dx*dx + dy*dy);
           const weight = 1 / (1 + distance);
           if (x >= 0 && x < width && y >= 0 && y < height) {
-            const value2 = floorNetDepthsOriginal[index];
+            const value2 = floorNetDepthsRaw[index];
             if (value2 !== 0) { // real hit
               sum += value2 * weight;
             } else { // fake plane hit
@@ -93,6 +93,7 @@ export function reconstructFloor({
   }
   const floorResolution = [width, height];
   return {
+    floorNetDepthsRaw,
     floorNetDepths,
     floorResolution,
   };
