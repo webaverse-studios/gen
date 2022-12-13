@@ -2295,6 +2295,61 @@ class PortalNetMesh extends THREE.Mesh {
 
 //
 
+class EntranceExitMesh extends THREE.Mesh {
+  constructor({
+    entranceExitLocations,
+  }) {
+    const baseSize = 2;
+    const baseGeometry = new THREE.BoxGeometry(baseSize, baseSize, baseSize);
+    const geometries = entranceExitLocations.map(portalLocation => {
+      const g = baseGeometry.clone();
+      g.applyMatrix4(
+        localMatrix.compose(
+          localVector.fromArray(portalLocation.position),
+          localQuaternion.fromArray(portalLocation.quaternion),
+          localVector2.setScalar(1)
+        )
+      );
+      return g;
+    });
+    const geometry = geometries.length > 0 ? BufferGeometryUtils.mergeBufferGeometries(geometries) : new THREE.BufferGeometry();
+
+    const material = new THREE.ShaderMaterial({
+      vertexShader: `\
+        varying vec2 vUv;
+
+        void main() {
+          vUv = uv;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `\
+        varying vec2 vUv;
+
+        void main() {
+          vec3 c = vec3(1., 0., 1.);
+          gl_FragColor = vec4(c, 0.5);
+          gl_FragColor.rg += vUv * 0.2;
+        }
+      `,
+      transparent: true,
+    });
+    super(geometry, material);
+
+    const hasGeometry = geometries.length > 0;
+
+    const entranceExitMesh = this;
+    entranceExitMesh.frustumCulled = false;
+    entranceExitMesh.enabled = false;
+    entranceExitMesh.visible = false;
+    entranceExitMesh.updateVisibility = () => {
+      entranceExitMesh.visible = entranceExitMesh.enabled && hasGeometry;
+    };
+  }
+}
+
+//
+
 class OutmeshToolMesh extends THREE.Object3D {
   constructor() {
     super();
@@ -2951,6 +3006,13 @@ export class PanelRenderer extends EventTarget {
     this.scene.add(portalNetMesh);
     this.portalNetMesh = portalNetMesh;
 
+    // entrance exit mesh
+    const entranceExitMesh = new EntranceExitMesh({
+      entranceExitLocations: this.zineRenderer.metadata.entranceExitLocations,
+    });
+    this.scene.add(entranceExitMesh);
+    this.entranceExitMesh = entranceExitMesh;
+
     // selector
     {
       const selector = new Selector({
@@ -3024,6 +3086,9 @@ export class PanelRenderer extends EventTarget {
 
     this.portalNetMesh.enabled = this.tool === 'portal';
     this.portalNetMesh.updateVisibility();
+
+    this.entranceExitMesh.enabled = this.tool === 'portal';
+    this.entranceExitMesh.updateVisibility();
 
     this.selector.setTool(this.tool);
     this.overlay.setTool(this.tool);
@@ -3252,6 +3317,7 @@ export class PanelRenderer extends EventTarget {
       this.scenePhysicsMesh,
       this.floorNetMesh,
       this.portalNetMesh,
+      this.entranceExitMesh,
       this.overlay.overlayScene,
       this.outmeshMesh,
       this.selector.lensOutputMesh,
