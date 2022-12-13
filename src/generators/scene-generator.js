@@ -572,15 +572,84 @@ const zipPlanesSegmentsJson = (planeSpecs, planesJson) => {
 
 //
 
-const getPortalLocations = (() => {
+const getFloorPlaneLocation = (() => {
+  const localVector = new THREE.Vector3();
+  const localQuaternion = new THREE.Quaternion();
+  const localQuaternion2 = new THREE.Quaternion();
+
+  return ({
+    floorPlaneCenter,
+    floorPlaneNormal,
+  }) => {
+    const quaternion = normalToQuaternion(floorPlaneNormal, localQuaternion, backwardVector)
+      .premultiply(localQuaternion2.setFromAxisAngle(localVector.set(1, 0, 0), -Math.PI/2))
+    
+    // const direction = new THREE.Vector3(0, 0, -1)
+    //   .applyQuaternion(quaternion);
+    // console.log('got direction', direction.toArray(), floorPlaneNormal.toArray());
+
+    return {
+      position: floorPlaneCenter.toArray(),
+      quaternion: quaternion.toArray(),
+      normal: floorPlaneNormal.toArray(),
+    };
+  };
+})();
+const getRaycastedCameraEntranceLocation = (() => {
+  const localVector = new THREE.Vector3();
+  const localVector2 = new THREE.Vector3();
+  const localVector3 = new THREE.Vector3();
+  // const localPlane = new THREE.Plane();
+
+  const cameraDistance = 2;
+  
+  // raycast 2m in front of the camera, and check for a floor hit
+  return (camera, depthFloatsRaw) => {
+    const targetPosition = localVector.copy(camera.position)
+      .add(
+        localVector2.set(0, 0, -cameraDistance)
+          .applyQuaternion(camera.quaternion)
+      );
+
+    // compute the sample coordinates:
+    const floorCornerBasePosition = localVector2.set(0, 0, 0)
+      .add(localVector3.set(-floorNetWorldSize / 2, 0, -floorNetWorldSize / 2));
+    const px = (targetPosition.x - floorCornerBasePosition.x) / floorNetWorldSize;
+    const pz = (targetPosition.z - floorCornerBasePosition.z) / floorNetWorldSize;
+    const x = Math.floor(px * floorNetPixelSize);
+    const z = Math.floor(pz * floorNetPixelSize);
+    const index = z * floorNetPixelSize + x;
+    targetPosition.y = depthFloatsRaw[index];
+    
+    // const cameraPlane = localPlane.setFromNormalAndCoplanarPoint(
+    //   localVector3.set(0, 0, -1)
+    //     .applyQuaternion(camera.quaternion),
+    //   camera.position
+    // );
+    // if (cameraPlane.distanceToPoint(targetPosition) < camera.near * 2) {
+      const position = targetPosition.toArray();
+      const quaternion = camera.quaternion.toArray();
+      return {
+        position,
+        quaternion,
+      };
+    // } else {
+    //   return null;
+    // }
+  };
+})();
+const getRaycastedPortalLocations = (() => {
   const localVector = new THREE.Vector3();
   const localVector2 = new THREE.Vector3();
   const localVector3 = new THREE.Vector3();
   const localVector4 = new THREE.Vector3();
   const localVector5 = new THREE.Vector3();
   const localVector6 = new THREE.Vector3();
+  const localVector7 = new THREE.Vector3();
+  const localQuaternion = new THREE.Quaternion();
+  const localEuler = new THREE.Euler();
   
-  return (portalSpecs, depthFloats, floorPlaneLabelSpec) => {
+  return (portalSpecs, depthFloats, floorPlaneLocation) => {
     const portalLocations = [];
     for (let i = 0; i < portalSpecs.labels.length; i++) {
       const labelSpec = portalSpecs.labels[i];
@@ -590,7 +659,7 @@ const getPortalLocations = (() => {
       // portal center in world space, 1m in front of the center
       const portalCenter = localVector3.copy(center)
         .add(localVector4.copy(normal).multiplyScalar(-1));
-      
+
       // compute the sample coordinates:
       const floorCornerBasePosition = localVector5.set(0, 0, 0)
         .add(localVector6.set(-floorNetWorldSize / 2, 0, -floorNetWorldSize / 2));
@@ -600,7 +669,56 @@ const getPortalLocations = (() => {
       const z = Math.floor(pz * floorNetPixelSize);
       const index = z * floorNetPixelSize + x;
       portalCenter.y = depthFloats[index];
-      portalLocations.push(portalCenter.toArray());
+
+      const targetQuaternion = new THREE.Quaternion();
+      normalToQuaternion(normal, targetQuaternion, upVector);
+      localEuler.setFromQuaternion(targetQuaternion, 'YXZ');
+      localEuler.x = 0;
+      localEuler.z = 0;
+      targetQuaternion.setFromEuler(localEuler);
+
+      const floorNormal = new THREE.Vector3().fromArray(floorPlaneLocation.normal);
+      const floorQuaternion = new THREE.Quaternion();
+      normalToQuaternion(floorNormal, floorQuaternion, backwardVector)
+        .multiply(localQuaternion.setFromAxisAngle(localVector6.set(1, 0, 0), -Math.PI/2));
+      
+      // set the quaternion to face towards targetQuaternion, but with the floor normal as the up vector
+      const quaternion = new THREE.Quaternion();
+      // quaternion.setFromRotationMatrix(
+      //   localMatrix.lookAt(
+      //     zeroVector,
+      //     localVector6.set(0, 0, -1)
+      //       .applyQuaternion(targetQuaternion),
+      //     localVector7.set(0, 1, 0)
+      //       .applyQuaternion(floorQuaternion)
+      //   )
+      // );
+      quaternion.multiplyQuaternions(
+        floorQuaternion,
+        targetQuaternion
+      );
+      // console.log('got quaternion', quaternion.toArray());
+
+      // const targetForward = new THREE.Vector3(0, 0, -1)
+      //   .applyQuaternion(targetQuaternion);
+      // const floorUp = new THREE.Vector3(0, 1, 0)
+      //   .applyQuaternion(floorQuaternion);
+
+      // const quaternion = new THREE.Quaternion();
+      // quaternion.setFromRotationMatrix(
+      //   localMatrix.lookAt(
+      //     zeroVector,
+      //     targetForward,
+      //     floorUp
+      //   )
+      // );
+
+      portalLocations.push({
+        position: portalCenter.toArray(),
+        quaternion: quaternion.toArray(),
+        // quaternion: targetQuaternion.toArray(),
+        // quaternion: floorQuaternion.toArray(),
+      });
     }
     return portalLocations;
   };
