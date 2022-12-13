@@ -604,10 +604,10 @@ const getFloorHit = (() => {
     //   position: camera?.position,
     //   offset,
     // });
-    if (!camera.position) {
-      console.warn('bad camera 3', camera);
-      debugger;
-    }
+    // if (!camera.position) {
+    //   console.warn('bad camera 3', camera);
+    //   debugger;
+    // }
     targetPosition.copy(camera.position)
       .add(
         localVector.copy(offset)

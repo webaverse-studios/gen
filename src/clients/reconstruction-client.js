@@ -144,10 +144,6 @@ export function applyGeometryClipZMask(geometry, clipZMask) {
 }
 export function clipGeometryZ(geometry, width, height, depthFloats32Array) {
   const clipZMask = getGeometryClipZMask(geometry, width, height, depthFloats32Array);
-  // if (clipZMask.length !== geometry.attributes.position.array.length) {
-  //   console.warn('wrong length', clipZMask, geometry.attributes.position.array);
-  //   debugger;
-  // }
   applyGeometryClipZMask(geometry, clipZMask);
 }
 
