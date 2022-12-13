@@ -260,50 +260,6 @@ const getFirstFloorPlaneIndex = (planeSpecs) => {
   } else {
     return -1;
   }
-
-  /* console.log('get first floor plane index', {
-    segmentSpecs,
-    planeSpecs,
-  });
-  debugger;
-
-  // const segmentLabelIndices = segmentSpecs.labelIndices;
-  const planeLabelIndices = planeSpecs.labelIndices;
-
-  const _getPlanesBySegmentIndices = selectSegmentIndices => {
-    const planeAcc = new Map();
-
-    for (let i = 0; i < segmentSpecs.mask.length; i++) {
-      const segmentIndex = segmentSpecs.mask[i];
-      if (selectSegmentIndices.includes(segmentIndex)) {
-        const planeIndex = planeLabelIndices[i];
-        
-        let acc = planeAcc.get(planeIndex) ?? 0;
-        acc++;
-        planeAcc.set(planeIndex, acc);
-      }
-    }
-
-    // divide planeAcc by numVertices
-    for (const planeIndex of planeAcc.keys()) {
-      let acc = planeAcc.get(planeIndex);
-      // acc /= planeSpecs.labels[planeIndex].numPixels;
-      acc /= planeSpecs.labels[planeIndex].distanceSquaredF;
-      // if (isNaN(acc)) {
-      //   console.warn('invalid plane acc', planeIndex, planeAcc.get(planeIndex), planeSpecs.labels[planeIndex].numPixels);
-      //   debugger;
-      // }
-      planeAcc.set(planeIndex, acc);
-    }
-
-    // return the plane indices sorted by highest acc count
-    return Array.from(planeAcc.entries())
-      .sort((a, b) => b[1] - a[1])
-      .map(entry => entry[0]);
-  };
-  const floorPlaneIndices = _getPlanesBySegmentIndices(categoryClassIndices.floor);
-  // const floorPlaneLabels = floorPlaneIndices.map(planeIndex => planeSpecs.labels[planeIndex]);
-  return floorPlaneIndices.length > 0 ? floorPlaneIndices[0] : -1; */
 };
 
 //
