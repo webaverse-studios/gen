@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import alea from 'alea';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 import {Text} from 'troika-three-text';
 import * as passes from './sg-passes.js';
