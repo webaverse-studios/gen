@@ -137,10 +137,11 @@ const localFloat32Array4 = new Float32Array(4);
 const localUint8ArrayPanelSize = new Uint8Array(((panelSize - 1) * 2) * (panelSize - 1) * 4);
 
 const upVector = new THREE.Vector3(0, 1, 0);
-const downVector = new THREE.Vector3(0, -1, 0);
-const forwardVector = new THREE.Vector3(0, 0, -1);
+// const downVector = new THREE.Vector3(0, -1, 0);
+// const forwardVector = new THREE.Vector3(0, 0, -1);
 const backwardVector = new THREE.Vector3(0, 0, 1);
-const zeroVector = new THREE.Vector3(0, 0, 0);
+const rightVector = new THREE.Vector3(1, 0, 0);
+// const zeroVector = new THREE.Vector3(0, 0, 0);
 
 const gltfLoader = makeGltfLoader();
 
