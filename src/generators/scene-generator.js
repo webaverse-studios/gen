@@ -2363,7 +2363,7 @@ class PortalNetMesh extends THREE.Mesh {
 //
 
 const entranceExitHeight = 2;
-const entranceExitWidth = 4;
+const entranceExitWidth = 2;
 const entranceExitDepth = 20;
 class EntranceExitMesh extends THREE.Mesh {
   constructor({
