@@ -2988,86 +2988,12 @@ export class PanelRenderer extends EventTarget {
       panel,
     });
     const {sceneMesh, scenePhysicsMesh, floorNetMesh} = this.zineRenderer;
-    scene.add(sceneMesh);
-    scene.add(scenePhysicsMesh);
-    scene.add(floorNetMesh);
+    scene.add(this.zineRenderer.scene);
     this.camera.copy(this.zineRenderer.camera);
     this.sceneMesh = sceneMesh;
     this.scenePhysicsMesh = scenePhysicsMesh;
     this.floorNetMesh = floorNetMesh;
-
-    // place avatar
-    const {floorPlaneLocation} = this.zineRenderer.metadata;
-    if (floorPlaneLocation) {
-      this.avatar.position.fromArray(floorPlaneLocation.position);
-      this.avatar.quaternion.fromArray(floorPlaneLocation.quaternion);
-      this.avatar.updateMatrixWorld();
-      this.avatar.visible = true;
-    }
-    
-    // place avatars
-    // place avatars and mobs
-    const [
-      avatarsTransform,
-      mobsTransform,
-    ] = this.zineRenderer.metadata.candidateLocations;
-    if (avatarsTransform) {
-      this.avatars.position.fromArray(avatarsTransform.position);
-      this.avatars.quaternion.fromArray(avatarsTransform.quaternion);
-      this.avatars.updateMatrixWorld();
-      this.avatars.visible = true;
-    }
-    if (mobsTransform) {
-      this.mobs.position.fromArray(mobsTransform.position);
-      this.mobs.quaternion.fromArray(mobsTransform.quaternion);
-      this.mobs.updateMatrixWorld();
-      this.mobs.visible = true;
-    }
-
-    /* const floorHeightfield = depthFloat32ArrayToHeightfield(
-      floorNetDepths,
-      floorNetPixelSize,
-      floorNetPixelSize,
-      floorNetCamera,
-    );
-    const makeFloorCubesMesh = (depthFloats, width, height, camera) => {
-      // render an instanced cubes mesh to show the depth
-      const depthCubesGeometry = new THREE.BoxBufferGeometry(0.05, 0.05, 0.05);
-      const depthCubesMaterial = new THREE.MeshPhongMaterial({
-        color: 0x00FFFF,
-        // vertexColors: true,
-      });
-      const depthCubesMesh = new THREE.InstancedMesh(depthCubesGeometry, depthCubesMaterial, depthFloats.length);
-      depthCubesMesh.name = 'depthCubesMesh';
-      depthCubesMesh.frustumCulled = false;
-      // set the matrices by projecting the depth from the perspective camera
-      depthCubesMesh.count = 0;
-      for (let i = 0; i < depthFloats.length; i++) {
-        const x = (i % width) / width;
-        const y = Math.floor(i / width) / height;
-
-        // get the corner base position of the floor net mesh
-        // const floorCornerBasePosition = localVector5.copy(this.floorNetMesh.position)
-        const floorCornerBasePosition = localVector5.set(0, 0, 0)
-          .add(localVector6.set(-floorNetWorldSize / 2, 0, -floorNetWorldSize / 2));
-
-        // get the local coordinates of the portal center
-        const ax = floorCornerBasePosition.x + x * floorNetWorldSize;
-        const az = floorCornerBasePosition.z + y * floorNetWorldSize;
-        const ay = depthFloats[i];
-
-        if (ay !== 0) {
-          localMatrix.makeTranslation(ax, ay, az);
-          depthCubesMesh.setMatrixAt(i, localMatrix);
-          depthCubesMesh.count++;
-        }
-      }
-      depthCubesMesh.instanceMatrix.needsUpdate = true;
-      return depthCubesMesh;
-    };
-    const fcm = makeFloorCubesMesh(floorHeightfield, floorNetPixelSize, floorNetPixelSize, floorNetCamera);
-    fcm.frustumCulled = false;
-    this.scene.add(fcm); */
+    this.updateObjectTransforms();
 
     // portal net mesh
     const portalNetMesh = new PortalNetMesh({
@@ -3131,6 +3057,41 @@ export class PanelRenderer extends EventTarget {
     // bootstrap
     this.listen();
     this.animate();
+  }
+  updateObjectTransforms() {
+    const scale = this.zineRenderer.getScale();
+
+    // place avatar
+    const {floorPlaneLocation} = this.zineRenderer.metadata;
+    if (floorPlaneLocation) {
+      this.avatar.position.fromArray(floorPlaneLocation.position)
+        .multiplyScalar(scale);
+      this.avatar.quaternion.fromArray(floorPlaneLocation.quaternion);
+      this.avatar.updateMatrixWorld();
+      this.avatar.visible = true;
+    }
+    
+    // place avatars
+    const [
+      avatarsTransform,
+      mobsTransform,
+    ] = this.zineRenderer.metadata.candidateLocations;
+    if (avatarsTransform) {
+      this.avatars.position.fromArray(avatarsTransform.position)
+        .multiplyScalar(scale);
+      this.avatars.quaternion.fromArray(avatarsTransform.quaternion);
+      this.avatars.updateMatrixWorld();
+      this.avatars.visible = true;
+    }
+
+    // place mobs
+    if (mobsTransform) {
+      this.mobs.position.fromArray(mobsTransform.position)
+        .multiplyScalar(scale);
+      this.mobs.quaternion.fromArray(mobsTransform.quaternion);
+      this.mobs.updateMatrixWorld();
+      this.mobs.visible = true;
+    }
   }
   setTool(tool) {
     this.tool = tool;
@@ -3302,6 +3263,11 @@ export class PanelRenderer extends EventTarget {
     this.panel.zp.addEventListener('layerremove', update);
     this.panel.zp.addEventListener('layerupdate', update);
 
+    const transformchange = e => {
+      this.updateObjectTransforms();
+    };
+    this.zineRenderer.addEventListener('transformchange', transformchange);
+
     this.addEventListener('destroy', e => {
       document.removeEventListener('keydown', keydown);
 
@@ -3314,6 +3280,8 @@ export class PanelRenderer extends EventTarget {
       this.panel.zp.removeEventListener('layeradd', update);
       this.panel.zp.removeEventListener('layerremove', update);
       this.panel.zp.removeEventListener('layerupdate', update);
+
+      this.zineRenderer.removeEventListener('transformchange', transformchange);
     });
   }
   render() {
