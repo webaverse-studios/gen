@@ -2270,10 +2270,26 @@ class PortalNetMesh extends THREE.Mesh {
   constructor({
     portalLocations,
   }) {
-    const boxGeometry = new THREE.BoxBufferGeometry(0.1, 0.1, 0.1);
+    const baseGeometry = (() => {
+      const baseSize = 0.1;
+      const geometries = [
+        new THREE.BoxGeometry(baseSize, baseSize, baseSize),
+        new THREE.BoxGeometry(baseSize * 0.2, baseSize * 2, baseSize * 0.2)
+          .translate(0, baseSize, 0),
+        new THREE.BoxGeometry(baseSize * 0.2, baseSize * 0.2, baseSize)
+          .translate(0, 0, -baseSize / 2),
+      ];
+      return BufferGeometryUtils.mergeBufferGeometries(geometries);
+    })();
     const geometries = portalLocations.map(portalLocation => {
-      const g = boxGeometry.clone();
-      g.applyMatrix4(localMatrix.makeTranslation(portalLocation[0], portalLocation[1], portalLocation[2]));
+      const g = baseGeometry.clone();
+      g.applyMatrix4(
+        localMatrix.compose(
+          localVector.fromArray(portalLocation.position),
+          localQuaternion.fromArray(portalLocation.quaternion),
+          localVector2.setScalar(1)
+        )
+      );
       return g;
     });
     const geometry = geometries.length > 0 ? BufferGeometryUtils.mergeBufferGeometries(geometries) : new THREE.BufferGeometry();
