@@ -592,17 +592,63 @@ const getFloorPlaneLocation = (() => {
     };
   };
 })();
-const getRaycastedCameraEntranceLocation = (() => {
+const getFloorHit = (() => {
   const localVector = new THREE.Vector3();
   const localVector2 = new THREE.Vector3();
   const localVector3 = new THREE.Vector3();
-  const localQuaternion = new THREE.Quaternion();
   const localPlane = new THREE.Plane();
+
+  return (offset, camera, depthFloatsRaw, floorPlaneJson, targetPosition) => {
+    // console.log('copy', {
+    //   camera,
+    //   position: camera?.position,
+    //   offset,
+    // });
+    if (!camera.position) {
+      console.warn('bad camera 3', camera);
+      debugger;
+    }
+    targetPosition.copy(camera.position)
+      .add(
+        localVector.copy(offset)
+          .applyQuaternion(camera.quaternion)
+      );
+
+    // compute the sample coordinates:
+    const floorCornerBasePosition = localVector.set(0, 0, 0)
+      .add(localVector2.set(-floorNetWorldSize / 2, 0, -floorNetWorldSize / 2));
+    const px = (targetPosition.x - floorCornerBasePosition.x) / floorNetWorldSize;
+    const pz = (targetPosition.z - floorCornerBasePosition.z) / floorNetWorldSize;
+    const x = Math.floor(px * floorNetPixelSize);
+    const z = Math.floor(pz * floorNetPixelSize);
+    const index = z * floorNetPixelSize + x;
+    targetPosition.y = depthFloatsRaw[index];
+
+    const floorPlane = localPlane.set(
+      localVector3.fromArray(floorPlaneJson.normal),
+      floorPlaneJson.constant
+    );
+
+    if (floorPlane.distanceToPoint(targetPosition) < (camera.near + camera.far) / 4) { // mesh hit
+      return targetPosition;
+    } else {
+      return null;
+    }
+  };
+})();
+const getRaycastedCameraEntranceLocation = (() => {
+  const localVector = new THREE.Vector3();
+  const localVector2 = new THREE.Vector3();
 
   // raycast 2m in front of the camera, and check for a floor hit
   return (camera, depthFloatsRaw, floorPlaneLocation, floorPlaneJson) => {
+    if (!camera.position) {
+      console.warn('bad raycast camera', camera);
+      debugger;
+    } 
     const cameraNearScan = camera.near;
     const cameraFarScan = 2;
+    const cameraScanWidth = entranceExitWidth;
     const cameraScanStep = floorNetResolution;
     // console.log('scan', {
     //   cameraNearScan,
@@ -614,39 +660,35 @@ const getRaycastedCameraEntranceLocation = (() => {
       cameraDistance <= cameraFarScan;
       cameraDistance += cameraScanStep
     ) {
-      const targetPosition = localVector.copy(camera.position)
-        .add(
-          localVector2.set(0, 0, -cameraDistance)
-            .applyQuaternion(camera.quaternion)
+      let everyXHit = true;
+      for (let dx = -cameraScanWidth / 2; dx <= cameraScanWidth / 2; dx += cameraScanStep) {
+        if (!camera.position) {
+          console.warn('bad raycast camera 2', camera);
+          debugger;
+        }
+        const targetPosition = getFloorHit(
+          localVector2.set(dx, 0, -cameraDistance),
+          camera,
+          depthFloatsRaw,
+          floorPlaneJson,
+          localVector
         );
-
-      // compute the sample coordinates:
-      const floorCornerBasePosition = localVector2.set(0, 0, 0)
-        .add(localVector3.set(-floorNetWorldSize / 2, 0, -floorNetWorldSize / 2));
-      const px = (targetPosition.x - floorCornerBasePosition.x) / floorNetWorldSize;
-      const pz = (targetPosition.z - floorCornerBasePosition.z) / floorNetWorldSize;
-      const x = Math.floor(px * floorNetPixelSize);
-      const z = Math.floor(pz * floorNetPixelSize);
-      const index = z * floorNetPixelSize + x;
-      targetPosition.y = depthFloatsRaw[index];
-      
-      // const cameraPlane = localPlane.setFromNormalAndCoplanarPoint(
-      //   localVector3.set(0, 0, -1)
-      //     .applyQuaternion(camera.quaternion),
-      //   camera.position
-      // );
-
-      const floorPlane = localPlane.set(
-        localVector3.fromArray(floorPlaneJson.normal),
-        floorPlaneJson.constant
-      );
-
-      // console.log('distance', floorPlane.distanceToPoint(targetPosition), targetPosition.toArray(), camera.near, camera.far);
-      if (floorPlane.distanceToPoint(targetPosition) < (camera.near + camera.far) / 4) { // mesh hit
+        if (!targetPosition) {
+          everyXHit = false;
+          break;
+        }
+      }
+      if (everyXHit) {
+        const targetPosition = getFloorHit(
+          localVector2.set(0, 0, -cameraDistance),
+          camera,
+          depthFloatsRaw,
+          floorPlaneJson,
+          localVector
+        );
         const position = targetPosition.toArray();
         const quaternion = floorPlaneLocation.quaternion.slice();
-        // const quaternion = camera.quaternion.toArray();
-        // console.log('camera entrance return', {
+        // console.log('floor hit 3', {
         //   position,
         //   quaternion,
         // });
@@ -2320,13 +2362,15 @@ class PortalNetMesh extends THREE.Mesh {
 
 //
 
+const entranceExitHeight = 2;
+const entranceExitWidth = 4;
+const entranceExitDepth = 20;
 class EntranceExitMesh extends THREE.Mesh {
   constructor({
     entranceExitLocations,
   }) {
-    const baseSize = 2;
-    const baseGeometry = new THREE.BoxGeometry(baseSize * 2, baseSize, baseSize * 10)
-      .translate(0, baseSize / 2, baseSize * 10 / 2);
+    const baseGeometry = new THREE.BoxGeometry(entranceExitWidth, entranceExitHeight, entranceExitDepth)
+      .translate(0, entranceExitHeight / 2, entranceExitDepth / 2);
     const geometries = entranceExitLocations.map(portalLocation => {
       const g = baseGeometry.clone();
       g.applyMatrix4(
