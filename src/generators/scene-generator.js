@@ -3635,7 +3635,7 @@ export class PanelRenderer extends EventTarget {
 
     //
 
-    console.time('depthPreviewReconstructed');
+    /* console.time('depthPreviewReconstructed');
     {
       const depthPreviewReconstructedMesh = makeDepthCubesMesh(
         reconstructedDepthFloats,
@@ -3660,9 +3660,9 @@ export class PanelRenderer extends EventTarget {
     // globalThis.reconstructedDepthFloats = reconstructedDepthFloats;
     // globalThis.depthFloatImageData = depthFloatImageData;
     // globalThis.newDepthFloatImageData = newDepthFloatImageData;
-    console.timeEnd('depthPreviewReconstructed');
+    console.timeEnd('depthPreviewReconstructed'); */
 
-    console.time('depthPreviewNew');
+    /* console.time('depthPreviewNew');
     {
       const depthPreviewNewMesh = makeDepthCubesMesh(
         newDepthFloatImageData,
@@ -3683,7 +3683,7 @@ export class PanelRenderer extends EventTarget {
       
       // layerScene.add(depthPreviewNewMesh);
     }
-    console.timeEnd('depthPreviewNew');
+    console.timeEnd('depthPreviewNew'); */
 
     /* console.time('depthPreviewOld');
     {
