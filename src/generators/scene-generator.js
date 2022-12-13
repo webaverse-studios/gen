@@ -3178,7 +3178,11 @@ export class PanelRenderer extends EventTarget {
               .add(this.camera.getWorldDirection(localVector).multiplyScalar(3));
             this.controls.update();
             break;
-            
+          }
+          case 'n': {
+            console.log('connect');
+            // XXX
+            break;
           }
           case 'c': {
             this.clip();
