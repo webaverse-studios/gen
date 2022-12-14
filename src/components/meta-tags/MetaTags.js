@@ -9,9 +9,9 @@ export const MetaTags = (props) => {
             <meta name="description" content={description} />
 
             {/* Schema.org markup for Google+ */}
-            <meta itemprop="name" content={title} />
-            <meta itemprop="description" content={description} />
-            <meta itemprop="image" content={image} />
+            <meta itemProp="name" content={title} />
+            <meta itemProp="description" content={description} />
+            <meta itemProp="image" content={image} />
 
             {/* Twitter Card data */}
             <meta name="twitter:card" content="summary_large_image" />
