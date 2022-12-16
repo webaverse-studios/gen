@@ -387,159 +387,32 @@ const generateAvatar = async (canvas, prompt, negativePrompt) => {
   controls.target.z = 0;
   controls.update();
 
-  const seed = 'lol' + Math.random();
-  globalThis.seed = seed;
-  const rng = alea(seed);
-
   const avatars = new THREE.Object3D();
+
   (async () => {
-    const gltfLoader = makeGltfLoader();
-    const p = makePromise();
-    gltfLoader.load(avatarUrl, gltf => {
-      p.resolve(gltf);
-    }, function onProgress(xhr) {
-      // console.log('progress', xhr.loaded / xhr.total);
-    }, p.reject);
+    const gltf = await selectAvatar();
+    const model = gltf.scene;
 
-    let model = await p;
-    model = model.scene;
+    // return;
 
-    // recompile the model
-    const getMeshes = model => {
-      const meshes = [];
-      model.traverse(o => {
-        if (o.isMesh) {
-          meshes.push(o);
-        }
-      });
-      return meshes;
-    };
-    let meshes = getMeshes(model);
-
-    // sort meshes into invisible categories
-    // metadata = [alpha, shiftHSV]
-    const hairShift = rng() * Math.PI * 2;
-    const clothingShift = rng() * Math.PI * 2;
-    const hairMetadata = [1, hairShift, 0.5, 0.5];
-    const chestMetadata = [0, clothingShift, 0, 0.3];
-    const clothingMetadata = [1, clothingShift, 0, 0.3];
-    const headMetadata = [1, 0, 0, 0];
-    const bodyMetadata = [1, 0, 0, 0];
-    const categorySpecs = [
-      {
-        prefix: 'hair_',
-        name: 'hair',
-        className: 'hair',
-        metadata: hairMetadata,
-      },
-      {
-        prefix: 'foot_',
-        name: 'foot',
-        className: 'clothing',
-        metadata: clothingMetadata,
-      },
-      {
-        prefix: 'accessories_',
-        name: 'accessories',
-        className: 'clothing',
-        metadata: clothingMetadata,
-      },
-      {
-        prefix: 'chest_',
-        name: 'chest',
-        className: 'clothing',
-        metadata: chestMetadata,
-      },
-      {
-        prefix: 'legs_',
-        name: 'legs',
-        className: 'clothing',
-        metadata: clothingMetadata,
-      },
-      {
-        prefix: 'head_',
-        name: 'head',
-        className: 'body',
-        metadata: headMetadata,
-      },
-      {
-        prefix: 'body_',
-        name: 'body',
-        className: 'body',
-        metadata: bodyMetadata,
-      },
-    ];
-
-    const categories = {};
-    for (const mesh of meshes) {
-      const {name} = mesh;
-      const categoryIndex = categorySpecs.findIndex(categorySpec => name.startsWith(categorySpec.prefix));
-      if (categoryIndex !== -1) {
-        const categorySpec = categorySpecs[categoryIndex];
-        let entry = categories[categorySpec.name];
-        if (!entry) {
-          entry = {
-            meshes: [],
-          };
-          categories[categorySpec.name] = entry;
-        }
-        mesh.className = 'avatar';
-        mesh.metadata = categorySpec.metadata;
-        entry.meshes.push(mesh);
-      } else {
-        console.warn('failed to match mesh to category', name);
-        debugger;
-      }
-      mesh.visible = false;
-    }
-    // sort by name
-    for (const categoryName in categories) {
-      categories[categoryName].meshes.sort((a, b) => a.name.localeCompare(b.name));
-    }
-
-    // select and show a random mesh from each category
-    const categorySelections = {};
-    for (const categorySpec of categorySpecs) {
-      const {name} = categorySpec;
-      const category = categories[name];
-      const mesh = category.meshes[Math.floor(rng() * category.meshes.length)];
-      mesh.visible = true;
-      categorySelections[name] = mesh;
-    }
-
-    // enable base meshes
-    for (const mesh of categories.body.meshes) {
-      mesh.visible = true;
-    }
-    for (const mesh of categories.head.meshes) {
-      mesh.visible = true;
-    }
-
-    // remove invisible meshes
-    for (const mesh of meshes) {
-      if (!mesh.visible) {
-        mesh.parent.remove(mesh);
-      }
-    }
-
-    // XXX: hack because this mesh does not have an identity transform
-    model.updateMatrixWorld();
-    const beltMesh = categories.accessories.meshes.find(mesh => mesh.name === 'accessories_HipBelt');
-    beltMesh.matrix.decompose(beltMesh.position, beltMesh.quaternion, beltMesh.scale);
-    beltMesh.geometry.applyMatrix4(beltMesh.matrix);
-    beltMesh.matrix.identity()
-      .decompose(beltMesh.position, beltMesh.quaternion, beltMesh.scale);
-    beltMesh.updateMatrixWorld();
+    // // XXX: hack because this mesh does not have an identity transform
+    // model.updateMatrixWorld();
+    // const beltMesh = categories.accessories.meshes.find(mesh => mesh.name === 'accessories_HipBelt');
+    // beltMesh.matrix.decompose(beltMesh.position, beltMesh.quaternion, beltMesh.scale);
+    // beltMesh.geometry.applyMatrix4(beltMesh.matrix);
+    // beltMesh.matrix.identity()
+    //   .decompose(beltMesh.position, beltMesh.quaternion, beltMesh.scale);
+    // beltMesh.updateMatrixWorld();
 
     // optimize the resulting model
     model = await optimizeAvatarModel(model);
-    globalThis.optimizedModel = model;
+    // globalThis.optimizedModel = model;
 
     // // add the model to the scene
     avatars.add(model);
     model.updateMatrixWorld();
 
-    meshes = getMeshes(model);
+    const meshes = getMeshes(model);
     if (meshes.length !== 1) {
       console.warn('unexpected number of meshes', meshes.length);
       debugger;
