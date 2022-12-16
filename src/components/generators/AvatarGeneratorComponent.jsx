@@ -194,20 +194,6 @@ const getMeshes = model => {
   });
   return meshes;
 };
-// const gltfPromiseCache = {};
-// const loadCachedGltf = avatarUrl => {
-//   let p = gltfPromiseCache[avatarUrl];
-//   if (!p) {
-//     p = makePromise();
-//     gltfLoader.load(avatarUrl, gltf => {
-//       p.resolve(gltf);
-//     }, function onProgress(xhr) {
-//       // console.log('progress', xhr.loaded / xhr.total);
-//     }, p.reject);
-//     gltfPromiseCache[avatarUrl] = p;
-//   }
-//   return p;
-// };
 const loadGltf = avatarUrl => {
   const p = makePromise();
   gltfLoader.load(avatarUrl, gltf => {
