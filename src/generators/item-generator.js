@@ -1,13 +1,20 @@
 import * as THREE from 'three';
+import {GLTFExporter} from 'three/examples/jsm/exporters/GLTFExporter.js';
 import {ImageAiClient} from '../clients/image-client.js';
 import materialColors from '../constants/material-colors.js';
 import {prompts} from '../constants/prompts.js';
 import {ColorScheme} from '../utils/color-scheme.js';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
+import {
+  txt2img,
+  img2img,
+} from '../clients/image-client.js';
+import {img2canvas} from '../utils/convert-utils.js';
 
 //
 
 const imageAiClient = new ImageAiClient();
+const gltfExporter = new GLTFExporter();
 
 //
 
@@ -84,21 +91,22 @@ const createSeedImage = (
 };
 
 const previewCanvasSize = 1024;
+const colorDistance = 32;
 
 export class ItemGenerator {
   async generate(prompt = prompts.item) {
-    const {
-      canvas: imgCanvas,
-      maskCanvas,
-    } = createSeedImage(
-      512, // w
-      512, // h
-      100, // rw
-      100, // rh
-      1, // p
-      256, // n
-      'rectangle', // shape
-    );
+    // const {
+    //   canvas: imgCanvas,
+    //   maskCanvas,
+    // } = createSeedImage(
+    //   512, // w
+    //   512, // h
+    //   100, // rw
+    //   100, // rh
+    //   1, // p
+    //   256, // n
+    //   'rectangle', // shape
+    // );
 
     const canvas = document.createElement('canvas');
     canvas.classList.add('canvas');
@@ -106,41 +114,100 @@ export class ItemGenerator {
     canvas.height = previewCanvasSize;
     document.body.appendChild(canvas);
   
-    imgCanvas.classList.add('imgCanvas');
-    imgCanvas.style.cssText = `\
-      background: red;
-    `;
-    const imgContext = imgCanvas.getContext('2d');
-    document.body.appendChild(imgCanvas);
+    // imgCanvas.classList.add('imgCanvas');
+    // imgCanvas.style.cssText = `\
+    //   background: red;
+    // `;
+    // const imgContext = imgCanvas.getContext('2d');
+    // document.body.appendChild(imgCanvas);
     
-    maskCanvas.classList.add('maskCanvas');
-    maskCanvas.style.cssText = `\
+    // maskCanvas.classList.add('maskCanvas');
+    // maskCanvas.style.cssText = `\
+    //   background: red;
+    // `;
+    // document.body.appendChild(maskCanvas);
+  
+    const blobCanvas = document.createElement('canvas');
+    blobCanvas.classList.add('blobCanvas');
+    blobCanvas.width = 512;
+    blobCanvas.height = 512;
+    blobCanvas.style.cssText = `\
       background: red;
     `;
-    document.body.appendChild(maskCanvas);
-  
+    document.body.appendChild(blobCanvas);
+
+    // draw full canvas rect white
+    const blobCtx = blobCanvas.getContext('2d');
+    blobCtx.fillStyle = '#fff';
+    blobCtx.fillRect(0, 0, blobCanvas.width, blobCanvas.height);
     const blob = await new Promise((accept, reject) => {
-      imgCanvas.toBlob(accept, 'image/png');
+      blobCanvas.toBlob(accept, 'image/png');
     });
+
+    // clear the center rect (80% size of the canvas) to transparent, but keep the outer border white
+    blobCtx.fillStyle = 'rgba(255, 255, 255, 1)';
+    blobCtx.globalCompositeOperation = 'destination-out';
+    blobCtx.fillRect(
+      blobCanvas.width * 0.1,
+      blobCanvas.height * 0.1,
+      blobCanvas.width * 0.8,
+      blobCanvas.height * 0.8,
+    );
     const maskBlob = await new Promise((accept, reject) => {
-      maskCanvas.toBlob(accept, 'image/png');
+      blobCanvas.toBlob(accept, 'image/png');
     });
+
+    // const [
+    //   blob,
+    //   maskBlob,
+    // ] = await Promise.all([
+    //   new Promise((accept, reject) => {
+    //     imgCanvas.toBlob(accept, 'image/png');
+    //   }),
+    //   await new Promise((accept, reject) => {
+    //     maskCanvas.toBlob(accept, 'image/png');
+    //   }),
+    // ]);
+    // this.blob = blob;
+    // this.maskBlob = maskBlob;
   
-    const img = await imageAiClient.createImage(prompt);
+    // const img = await imageAiClient.createImage(prompt);
+    // img.classList.add('img');
+    // document.body.appendChild(img);
+
+    // console.log('get image', {
+    //   prompt,
+    //   blob,
+    //   maskBlob,
+    // });
+
+    const img = await img2img({
+      prompt,
+      blob,
+      maskBlob,
+    });
     img.classList.add('img');
     document.body.appendChild(img);
 
     // image canvas (transparent)
+    const pixelSize = 32;
     const imgCanvasTransparent = document.createElement('canvas');
     imgCanvasTransparent.classList.add('imgCanvasTransparent');
-    imgCanvasTransparent.width = img.width;
-    imgCanvasTransparent.height = img.height;
+    imgCanvasTransparent.width = pixelSize;
+    imgCanvasTransparent.height = pixelSize;
     imgCanvasTransparent.style.cssText = `\
       background: red;
     `;
     {
       const imgCanvasTransparentContext = imgCanvasTransparent.getContext('2d');
-      imgCanvasTransparentContext.drawImage(img, 0, 0);
+      // scale down the image
+      imgCanvasTransparentContext.drawImage(
+        img,
+        0, 0,
+        img.width, img.height,
+        0, 0,
+        imgCanvasTransparent.width, imgCanvasTransparent.height,
+      );
       const imageData = imgCanvasTransparentContext.getImageData(0, 0, imgCanvasTransparent.width, imgCanvasTransparent.height);
       // make a copy of the imageDAta data
       const data2 = imageData.data.slice();
@@ -164,7 +231,7 @@ export class ItemGenerator {
         };
         const _colorEquals = (color1, color2) => {
           const distance = Math.abs(color1[0] - color2[0]) + Math.abs(color1[1] - color2[1]) + Math.abs(color1[2] - color2[2]);
-          return distance <= 32;
+          return distance <= colorDistance;
         };
         const queue = [];
         const _floodFillInner = (x, y) => {
@@ -206,7 +273,6 @@ export class ItemGenerator {
     document.body.appendChild(imgCanvasTransparent);
   
     // pixel canvas (solid)
-    const pixelSize = 32;
     const pixelCanvas = document.createElement('canvas');
     pixelCanvas.classList.add('pixelCanvas');
     pixelCanvas.width = pixelSize;
@@ -249,49 +315,7 @@ export class ItemGenerator {
       }
     }
 
-    // start renderer
-    const _startRender = () => {
-      const renderer = new THREE.WebGLRenderer({
-        canvas,
-        alpha: true,
-        antialias: true,
-      });
-
-      // set up high quality shadow map (2048px)
-      renderer.shadowMap.enabled = true;
-      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-
-      const scene = new THREE.Scene();
-      // scene.background = new THREE.Color(0x000000);
-      const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
-      camera.position.x = 0.5;
-      camera.position.y = 1;
-      camera.position.z = 2;
-      // camera.lookAt(new THREE.Vector3(0, 0.5, 0));
-      camera.updateMatrixWorld();
-
-      // lights
-      const directionalLight = new THREE.DirectionalLight(0xffffff, 3);
-      directionalLight.position.set(3, 2, 3);
-      directionalLight.castShadow = true;
-      scene.add(directionalLight);
-
-      // receive shadow on the floor
-      const floorMesh = new THREE.Mesh(
-        new THREE.PlaneBufferGeometry(10, 10),
-        new THREE.MeshStandardMaterial({
-          color: 0xFFFFFF,
-          roughness: 0.5,
-          metalness: 0.5,
-        })
-      );
-      floorMesh.receiveShadow = true;
-      floorMesh.rotation.x = -Math.PI / 2;
-      floorMesh.frustumCulled = false;
-      floorMesh.updateMatrixWorld();
-      scene.add(floorMesh);
-
-      // collect the pixels into a flat voxel grid along the x-y plane
+    const makeSceneMesh = (pixelsList) => {
       const cubeGeometry = new THREE.BoxGeometry(1, 1, 1);
       const geometry = new THREE.BufferGeometry();
       const positions = new Float32Array(pixelsList.length * cubeGeometry.attributes.position.array.length);
@@ -328,6 +352,78 @@ export class ItemGenerator {
         geometry,
         material,
       );
+      return sceneMesh;
+    };
+    const sceneMesh = makeSceneMesh(pixelsList);
+
+    // exports
+    const imgCanvas = img2canvas(img);
+    const imgBlob = await new Promise((accept, reject) => {
+      imgCanvas.toBlob(accept, 'image/png');
+    });
+    const glbBlob = await (async () => {
+      const exportScene = new THREE.Scene();
+      exportScene.add(sceneMesh);
+
+      const arrayBuffer = await new Promise((accept, reject) => {
+        gltfExporter.parse(exportScene, (result) => {
+          accept(result);
+        }, err => {
+          // console.warn(err);
+          reject(err);
+        }, {
+          binary: true,
+        });
+      });
+      return new Blob([arrayBuffer], {
+        type: 'model/gltf-binary',
+      });
+    })();
+
+    // start renderer
+    const _startRender = () => {
+      const renderer = new THREE.WebGLRenderer({
+        canvas,
+        alpha: true,
+        antialias: true,
+      });
+
+      // set up high quality shadow map (2048px)
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+      const scene = new THREE.Scene();
+      
+      // scene.background = new THREE.Color(0x000000);
+      const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
+      camera.position.x = 0.5;
+      camera.position.y = 1;
+      camera.position.z = 2;
+      // camera.lookAt(new THREE.Vector3(0, 0.5, 0));
+      camera.updateMatrixWorld();
+
+      // lights
+      const directionalLight = new THREE.DirectionalLight(0xffffff, 3);
+      directionalLight.position.set(3, 2, 3);
+      directionalLight.castShadow = true;
+      scene.add(directionalLight);
+
+      // receive shadow on the floor
+      const floorMesh = new THREE.Mesh(
+        new THREE.PlaneBufferGeometry(10, 10),
+        new THREE.MeshStandardMaterial({
+          color: 0xFFFFFF,
+          roughness: 0.5,
+          metalness: 0.5,
+        })
+      );
+      floorMesh.receiveShadow = true;
+      floorMesh.rotation.x = -Math.PI / 2;
+      floorMesh.frustumCulled = false;
+      floorMesh.updateMatrixWorld();
+      scene.add(floorMesh);
+
+      // collect the pixels into a flat voxel grid along the x-y plane
       sceneMesh.castShadow = true;
       sceneMesh.frustumCulled = false;
       scene.add(sceneMesh);
@@ -399,5 +495,10 @@ export class ItemGenerator {
       _startLoop();
     };
     const renderManager = _startRender();
+
+    return {
+      imgBlob,
+      glbBlob,
+    };
   }
 };
