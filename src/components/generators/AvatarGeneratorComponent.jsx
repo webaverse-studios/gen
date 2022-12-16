@@ -378,8 +378,6 @@ const generateAvatar = async (canvas, prompt, negativePrompt) => {
   const ambientLight = new THREE.AmbientLight(0xffffff, 1);
   scene.add(ambientLight);
 
-  const localColor = new THREE.Color();
-
   const controls = new OrbitControls(camera, canvas);
   controls.minDistance = 1;
   controls.maxDistance = 100;
