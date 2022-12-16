@@ -13,10 +13,11 @@ import {
 import {
   generateTextureMaps,
 } from '../../clients/material-map-client.js';
-import {mobUrls} from '../../constants/urls.js';
+// import {mobUrls} from '../../constants/urls.js';
 import {
   makeRenderer,
   makeGltfLoader,
+  makeGltfExporter,
   pushMeshes,
   makeDefaultCamera,
 } from '../../zine/zine-utils.js';
@@ -43,13 +44,317 @@ import {
   preprocessMeshForTextureEdit,
   editMeshTextures,
 } from '../../utils/model-utils.js';
+import {downloadFile} from '../../utils/http-utils.js';
 
 import styles from '../../../styles/MobGenerator.module.css';
 
 //
 
-const avatarUrl = `/models/Avatar_Bases/Drophunter Class/DropHunter_Master_v1_Guilty.vrm`;
+const avatarUrls = [
+  `/models/Avatar_Bases/Hacker Class/HackerClassMaster_v2.1_Guilty.vrm`,
+  `/models/Avatar_Bases/Drophunter Class/DropHunter_Master_v2_Guilty.vrm`,
+];
+// const seed = 'lol' + Math.random();
+const seed = 'lol';
+globalThis.seed = seed;
+const rng = alea(seed);
+const hairShift = rng() * Math.PI * 2;
+const clothingShift = rng() * Math.PI * 2;
+const hairMetadata = [1, hairShift, 0.5, 0.5];
+const chestMetadata = [0, clothingShift, 0, 0.3];
+const clothingMetadata = [1, clothingShift, 0, 0.3];
+const headMetadata = [1, 0, 0, 0];
+const bodyMetadata = [1, 0, 0, 0];
+const categorySpecsArray = [
+  [
+    {
+      regex: /hair/i,
+      name: 'hair',
+      className: 'hair',
+      metadata: hairMetadata,
+    },
+    {
+      regex: /head/i,
+      name: 'head',
+      className: 'body',
+      metadata: headMetadata,
+    },
+    {
+      regex: /body/i,
+      name: 'body',
+      className: 'body',
+      metadata: bodyMetadata,
+    },
+    {
+      regex: /^chest_/,
+      name: 'chest',
+      className: 'clothing',
+      metadata: chestMetadata,
+    },
+    {
+      regex: /^legs_/,
+      name: 'legs',
+      className: 'clothing',
+      metadata: clothingMetadata,
+    },
+    {
+      regex: /^foot_/,
+      name: 'foot',
+      className: 'clothing',
+      metadata: clothingMetadata,
+    },
+    {
+      regex: /^outer_/,
+      name: 'outer',
+      className: 'clothing',
+      metadata: clothingMetadata,
+    },
+    {
+      regex: /^accessories_/,
+      name: 'accessories',
+      className: 'clothing',
+      metadata: clothingMetadata,
+    },
+    {
+      regex: /^solo_/,
+      name: 'solo',
+      className: 'solo',
+      metadata: clothingMetadata,
+    },
+  ],
+  [
+    {
+      regex: /^hair_/,
+      name: 'hair',
+      className: 'hair',
+      metadata: hairMetadata,
+    },
+    {
+      regex: /^foot_/,
+      name: 'foot',
+      className: 'clothing',
+      metadata: clothingMetadata,
+    },
+    {
+      regex: /^accessories_/,
+      name: 'accessories',
+      className: 'clothing',
+      metadata: clothingMetadata,
+    },
+    {
+      regex: /^outer_/,
+      name: 'outer',
+      className: 'clothing',
+      metadata: clothingMetadata,
+    },
+    {
+      regex: /^chest_/,
+      name: 'chest',
+      className: 'clothing',
+      metadata: chestMetadata,
+    },
+    {
+      regex: /^legs_/,
+      name: 'legs',
+      className: 'clothing',
+      metadata: clothingMetadata,
+    },
+    {
+      regex: /^head_/,
+      name: 'head',
+      className: 'body',
+      metadata: headMetadata,
+    },
+    {
+      regex: /^body_/,
+      name: 'body',
+      className: 'body',
+      metadata: bodyMetadata,
+    },
+    {
+      regex: /^solo_/,
+      name: 'solo',
+      className: 'solo',
+      metadata: clothingMetadata,
+    },
+  ],
+];
 const size = 1024;
+
+//
+
+const gltfLoader = makeGltfLoader();
+const gltfExporter = makeGltfExporter();
+const getMeshes = model => {
+  const meshes = [];
+  model.traverse(o => {
+    if (o.isMesh) {
+      meshes.push(o);
+    }
+  });
+  return meshes;
+};
+// const gltfPromiseCache = {};
+// const loadCachedGltf = avatarUrl => {
+//   let p = gltfPromiseCache[avatarUrl];
+//   if (!p) {
+//     p = makePromise();
+//     gltfLoader.load(avatarUrl, gltf => {
+//       p.resolve(gltf);
+//     }, function onProgress(xhr) {
+//       // console.log('progress', xhr.loaded / xhr.total);
+//     }, p.reject);
+//     gltfPromiseCache[avatarUrl] = p;
+//   }
+//   return p;
+// };
+const loadGltf = avatarUrl => {
+  const p = makePromise();
+  gltfLoader.load(avatarUrl, gltf => {
+    p.resolve(gltf);
+  }, function onProgress(xhr) {
+    // console.log('progress', xhr.loaded / xhr.total);
+  }, p.reject);
+  return p;
+};
+const selectAvatar = async (avatarUrlIndex = Math.floor(rng() * avatarUrls.length)) => {
+  const avatarUrl = avatarUrls[avatarUrlIndex];
+  const categorySpecs = categorySpecsArray[avatarUrlIndex];
+
+  const gltf = await loadGltf(avatarUrl);
+  const model = gltf.scene;
+
+  // recompile the model
+  let meshes = getMeshes(model);
+
+  // sort meshes
+  const categories = {};
+  for (const mesh of meshes) {
+    const {name} = mesh;
+    const categoryIndex = categorySpecs.findIndex(categorySpec => {
+      return categorySpec.regex.test(name);
+    });
+    if (categoryIndex !== -1) {
+      const categorySpec = categorySpecs[categoryIndex];
+      let entry = categories[categorySpec.name];
+      if (!entry) {
+        entry = {
+          meshes: [],
+        };
+        categories[categorySpec.name] = entry;
+      }
+      mesh.className = 'avatar';
+      mesh.metadata = categorySpec.metadata;
+      entry.meshes.push(mesh);
+    } else {
+      console.warn('failed to match mesh to category', name);
+      debugger;
+    }
+    mesh.visible = false;
+  }
+  // sort by name
+  for (const categoryName in categories) {
+    categories[categoryName].meshes.sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  // select and show a random mesh from each category
+  const categorySelections = {};
+  const _selectFromCategory = (name) => {
+    const category = categories[name];
+    // if (!category) {
+    //   debugger;
+    // }
+    const mesh = category.meshes[Math.floor(rng() * category.meshes.length)];
+    mesh.visible = true;
+    categorySelections[name] = mesh;
+  };
+  for (const categorySpec of categorySpecs) {
+    const {name, className} = categorySpec;
+    if (!['solo', 'clothing'].includes(className)) {
+      _selectFromCategory(name);
+    }
+  }
+  let isSolo = (categories['solo'] ?
+    (categories['solo'].meshes.length > 0)
+  :
+    false
+  ) && (rng() < 0.5);
+  if (isSolo) {
+    for (const categorySpec of categorySpecs) {
+      const {name, className} = categorySpec;
+      if (className === 'solo') {
+        _selectFromCategory(name);
+      }
+    }
+  } else {
+    for (const categorySpec of categorySpecs) {
+      const {name, className} = categorySpec;
+      if (className === 'clothing') {
+        _selectFromCategory(name);
+      }
+    }
+  }
+
+  // enable base meshes
+  for (const mesh of categories.body.meshes) {
+    mesh.visible = true;
+  }
+  for (const mesh of categories.head.meshes) {
+    mesh.visible = true;
+  }
+
+  // remove invisible meshes
+  for (const mesh of meshes) {
+    if (!mesh.visible) {
+      mesh.parent.remove(mesh);
+    }
+  }
+
+  // return
+  return gltf;
+};
+
+//
+
+const downloadGlb = async (gltf, name = 'avatar.vrm') => {
+  // export glb
+  const arrayBuffer = await new Promise((accept, reject) => {
+    gltfExporter.parse(
+      gltf.scene,
+      function onCompleted(arrayBuffer) {
+        accept(arrayBuffer);
+      }, function onError(error) {
+        reject(error);
+      },
+      {
+        binary: true,
+        // onlyVisible: false,
+        // forceIndices: true,
+        // truncateDrawRange: false,
+        includeCustomExtensions: true,
+      },
+    );
+  });
+  const avatarBlob = new Blob([
+    arrayBuffer,
+  ], {
+    type: 'model/gltf-binary',
+  });
+  downloadFile(avatarBlob, name);
+};
+
+//
+
+const generateAvatars = async () => {
+  const numAvatarsPerIndex = 10;
+  for (let i = 0; i < avatarUrls.length; i++) {
+    for (let j = 0; j < numAvatarsPerIndex; j++) {
+      const gltf = await selectAvatar();
+      await downloadGlb(gltf, `avatar_${i}_${j}.vrm`);
+    }
+  }
+};
+globalThis.generateAvatars = generateAvatars;
 
 //
 
