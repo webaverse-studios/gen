@@ -18,7 +18,8 @@ export const prompts = {
   // const prompt = `ancient magical high tech book with digital symbols on it on a white background, studio ghibli anime style, digital art`;
   // const prompt = `ancient magical cloudy potion of terrible death soul on a white background, studio ghibli anime style, digital art`;
   // const prompt = `fun magical anime item, lush vegetation, ancient technology, white background, digital art`;
-  item: `small fun magical game console anime item with aura, white background, digital art`,
+  // item: `small fun magical game console anime item with aura, white background, digital art`,
+  item: `item, jrpg, dragon ball, one piece, pokemon, final fantasy, persona, splatoon, studio ghibli, studio trigger, white background, digital art`,
 };
 
 export const labelClasses = ['person', 'floor', 'path', 'sidewalk', 'ground', 'road', 'runway', 'land', 'dirt', 'ceiling', 'field', 'river', 'water', 'sea', 'sky', 'mountain', 'leaves', 'wall', 'house', 'machine', 'rock', 'flower', 'door', 'gate', 'car', 'boat', 'animal', 'mat', 'grass', 'plant', 'metal', 'light', 'tree', 'wood', 'food', 'smoke', 'forest', 'shirt', 'pant', 'structure', 'bird', 'tunnel', 'cave', 'skyscraper', 'sign', 'stairs', 'box', 'sand', 'fruit', 'vegetable', 'barrier'];
