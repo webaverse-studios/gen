@@ -74,6 +74,7 @@ const editRequestBlob = async req => {
     },
     // pipe the node stream to the fetch body
     body: req,
+    duplex: 'half',
   });
   if (response.ok) {
     const responseData = await response.json();
