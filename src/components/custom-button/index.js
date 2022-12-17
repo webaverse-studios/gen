@@ -42,7 +42,7 @@ export default function CustomButton(props) {
                         className={styles.buttonBackgroundColor}
                         fill="#D9D9D9"
                         stroke="#050B0E"
-                        stroke-width="4"
+                        strokeWidth="4"
                     />
                     <path
                         d="M9 9H62L58.2676 58H9V9Z"
@@ -78,7 +78,7 @@ export default function CustomButton(props) {
                         fill="#efefef"
                         className={styles.buttonBackgroundColor}
                         stroke="black"
-                        stroke-width="4"
+                        strokeWidth="4"
                     />
                     <path
                         d="M8.77795 7.28503H61.7957L59.8437 54.7911H11.367L8.77795 7.28503Z"
