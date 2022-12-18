@@ -1,16 +1,7 @@
-<!doctype html>
-<html>
+// import {useState} from 'react';
+// import classnames from 'classnames';
 
-<head>
-<!-- <title>Engine Backend</title> -->
-</head>
-
-<body>
-  <!-- <div id=iframe-container></div>
-  <div id="root"></div>
-  <canvas id="canvas"></canvas> -->
-<script type=module>
-import offscreenEngineApi from '../packages/offscreen-engine-runtime/offscreen-engine-runtime.js';
+import offscreenEngineApi from 'offscreen-engine/offscreen-engine-api.js';
 import {
   compileVirtualScene,
 } from '../src/generators/scene-generator.js';
@@ -24,7 +15,12 @@ offscreenEngineApi(async (funcName, args, opts) => {
     throw new Error('unknown function: ' + funcName);
   }
 });
-</script>
-</body>
 
-</html>
+//
+
+const Engine = () => {
+  return (
+    <div className='engine-fake-node' />
+  );
+};
+export default Engine;
