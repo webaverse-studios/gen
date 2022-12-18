@@ -3398,6 +3398,7 @@ export class PanelRenderer extends EventTarget {
     const layer1 = this.panel.getLayer(1);
     const oldPointCloudArrayBuffer = layer1.getData('pointCloud');
     const floorPlaneJson = layer1.getData('floorPlaneJson');
+    const segmentSpecs = layer1.getData('segmentSpecs');
 
     // reify objects
     const editCamera = setPerspectiveCameraFromJson(localCamera, editCameraJson).clone();
@@ -3623,10 +3624,10 @@ export class PanelRenderer extends EventTarget {
       planesJson,
       planesMask,
       portalJson,
+      segmentMask: segmentSpecs.mask,
       floorResolution,
       floorNetDepths,
       floorNetCameraJson,
-      segmentMask,
       editCameraJson,
     };
   }
@@ -3661,8 +3662,6 @@ export class PanelRenderer extends EventTarget {
     const floorNetCameraJson = layer.getData('floorNetCameraJson');
     const segmentMask = layer.getData('segmentMask');
     const editCameraJson = layer.getData('editCameraJson');
-
-    //
 
     const editCamera = setPerspectiveCameraFromJson(localCamera, editCameraJson).clone();
     const floorNetCamera = setOrthographicCameraFromJson(localOrthographicCamera, floorNetCameraJson).clone();
@@ -3851,7 +3850,7 @@ export class PanelRenderer extends EventTarget {
       layerScene.add(backgroundMesh);
     }
     console.timeEnd('backgroundMesh');
-    
+
     // globalThis.distanceFloatImageData = distanceFloatImageData;
     // globalThis.backgroundMesh = backgroundMesh;
     // globalThis.distanceNearestPositions = distanceNearestPositions;
@@ -4295,7 +4294,6 @@ export async function compileVirtualScene(imageArrayBuffer) {
     position,
     quaternion,
     scale,
-    segmentMask,
     cameraJson,
     pointCloudHeaders,
     pointCloud: pointCloudArrayBuffer,
