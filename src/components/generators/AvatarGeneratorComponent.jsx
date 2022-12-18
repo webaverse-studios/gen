@@ -208,7 +208,20 @@ const selectAvatar = async (avatarUrlIndex = Math.floor(rng() * avatarUrls.lengt
   const categorySpecs = categorySpecsArray[avatarUrlIndex];
 
   const gltf = await loadGltf(avatarUrl);
-  const model = gltf.scene;
+  const oldModel = gltf.scene;
+  
+  const model = new THREE.Scene();
+  model.position.copy(gltf.scene.position);
+  model.quaternion.copy(gltf.scene.quaternion);
+  model.scale.copy(gltf.scene.scale);
+  model.matrix.copy(gltf.scene.matrix);
+  model.matrixWorld.copy(gltf.scene.matrixWorld);
+  model.visible = gltf.scene.visible;
+  while(oldModel.children.length > 0) {
+    model.add(oldModel.children[0]);
+  }
+  model.updateMatrixWorld();
+  gltf.scene = model;
 
   // recompile the model
   let meshes = getMeshes(model);
@@ -314,10 +327,12 @@ const downloadGlb = async (gltf, name = 'avatar.vrm') => {
       },
       {
         binary: true,
-        // onlyVisible: false,
+        onlyVisible: false,
         // forceIndices: true,
         // truncateDrawRange: false,
         includeCustomExtensions: true,
+        vrm: true,
+        gltfObject: gltf,
       },
     );
   });
@@ -326,6 +341,16 @@ const downloadGlb = async (gltf, name = 'avatar.vrm') => {
   ], {
     type: 'model/gltf-binary',
   });
+  const url = URL.createObjectURL(avatarBlob);
+  
+  // XXX debug
+  // {
+  //   const gltf2 = await new Promise((accept, reject) => {
+  //     gltfLoader.load(url, accept, function onProgress(xhr) {}, reject);
+  //   });
+  //   console.log('load back gltf', gltf2);
+  // }
+
   downloadFile(avatarBlob, name);
 };
 
