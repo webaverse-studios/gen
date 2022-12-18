@@ -12,6 +12,7 @@ import {
 import {
   mainImageKey,
 } from '../../zine/zine-data-specs.js';
+import { decompressBlob } from '#Lib'
 
 //
 
@@ -176,7 +177,7 @@ export const StoryboardComponent = ({
             const file = e.target.files[0];
             if (file) {
               (async () => {
-                const arrayBuffer = await file.arrayBuffer();
+                const arrayBuffer = await decompressBlob(file).arrayBuffer();
                 // check magic bytes
                 const firstBytes = new Uint8Array(arrayBuffer, 0, 4);
                 const firstBytesString = textDecoder.decode(firstBytes);
