@@ -9,7 +9,7 @@ import fs from 'fs';
 
 const SERVER_ADDR = '0.0.0.0';
 const SERVER_NAME = 'local.webaverse.com';
-const port = parseInt(process.env.PORT, 10) || 4444;
+const port = parseInt(process.env.PORT, 10) || 9999;
 const dev = process.env.NODE_ENV !== 'production';
 const app = next({
   dev,
