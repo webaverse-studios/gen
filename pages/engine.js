@@ -1,6 +1,3 @@
-// import {useState} from 'react';
-// import classnames from 'classnames';
-
 import offscreenEngineApi from 'offscreen-engine/offscreen-engine-api.js';
 import {
   compileVirtualScene,
