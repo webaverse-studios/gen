@@ -1,3 +1,5 @@
+import imageCompression from 'browser-image-compression';
+
 // import {
 //   makeId,
 // } from '../utils/id-utils.js';
@@ -207,18 +209,31 @@ export class Panel extends EventTarget {
   }
 
   async setFile(file, prompt) {
+    // Resize file.
     file = await resizeBlob(file, panelSize, panelSize);
+
+    // Create new layer.
     const layer = this.zp.addLayer();
+
+    // Set data.
     (async () => {
-      const arrayBuffer = await file.arrayBuffer();
-      // console.log('set file');
+      // Dynamically compress file.
+      const compressedFile = await imageCompression(
+        file,
+        {useWebWorker: true},
+      );
+
+      // Set array buffer.
+      const arrayBuffer = await compressedFile.arrayBuffer();
       layer.setData(mainImageKey, arrayBuffer);
     })();
+
+    // Get image caption.
     (async () => {
       if (!prompt) {
         prompt = await vqaClient.getImageCaption(file);
       }
-      // console.log('set prompt', promptKey, prompt);
+
       layer.setData(promptKey, prompt);
     })();
   }
