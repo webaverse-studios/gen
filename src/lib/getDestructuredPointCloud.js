@@ -11,6 +11,7 @@ export function getDestructuredPointCloud(arrayBuffer) {
   const colors = new Uint8Array(numPoints * 3);
   const intensities = new Uint8Array(numPoints);
   const classifications = new Uint8Array(numPoints);
+  const dataView = new DataView(arrayBuffer);
 
   let pointIndex = 0;
   let colorIndex = 0;
@@ -18,9 +19,9 @@ export function getDestructuredPointCloud(arrayBuffer) {
   let classificationIndex = 0;
 
   for (let i = 0; i < arrayBuffer.byteLength; i += pointcloudStride) {
-    points[pointIndex++] = new DataView(arrayBuffer).getFloat32(i, true);
-    points[pointIndex++] = new DataView(arrayBuffer).getFloat32(i + 4, true);
-    points[pointIndex++] = new DataView(arrayBuffer).getFloat32(i + 8, true);
+    points[pointIndex++] = dataView.getFloat32(i, true);
+    points[pointIndex++] = dataView.getFloat32(i + 4, true);
+    points[pointIndex++] = dataView.getFloat32(i + 8, true);
 
     colors[colorIndex++] = arrayBuffer[i + 12];
     colors[colorIndex++] = arrayBuffer[i + 13];
