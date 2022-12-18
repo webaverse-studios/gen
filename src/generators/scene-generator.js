@@ -2967,9 +2967,7 @@ export class PanelRenderer extends EventTarget {
     this.outmeshMesh = outmeshMesh;
 
     // initial render
-    console.log( 'START!!!!!!!!!!!!!!!!!',  )
     this.updateOutmeshLayers();
-    console.log( 'END!!!!!!!!!!!!!!!!!!!!!!!',  )
 
     // bootstrap
     this.listen();
