@@ -463,9 +463,11 @@ export async function getPointCloud(blob, {
   });
   if (res.ok) {
     const headers = Object.fromEntries(res.headers.entries());
-    const arrayBuffer = getDestructuredPointCloud(
-      await res.arrayBuffer()
-    ).points;
+
+    // This will probably be handled server-side eventually.
+    const _arrayBuffer = await res.arrayBuffer();
+    const arrayBuffer = getDestructuredPointCloud(_arrayBuffer).points;
+
     return {
       headers,
       arrayBuffer,
