@@ -292,7 +292,6 @@ const getMaskSpecsByConnectivity = (geometry, mask, width, height) => {
   const positions = geometry.attributes.position.array;
 
   const array = new Float32Array(width * height);
-  const colorArray = new Float32Array(width * height * 3);
   const labels = [];
   const labelIndices = new Uint32Array(width * height);
 
@@ -339,7 +338,7 @@ const getMaskSpecsByConnectivity = (geometry, mask, width, height) => {
 
                   if (ax >= 0 && ax < width && ay >= 0 && ay < height) {
                     const aIndex = ay * width + ax;
-                    
+
                     if (!seenIndices.has(aIndex)) {
                       queue.push(aIndex);
                       seenIndices.add(aIndex);
@@ -356,13 +355,9 @@ const getMaskSpecsByConnectivity = (geometry, mask, width, height) => {
           for (const index of segmentIndices) {
             const position = localVector.fromArray(positions, index * 3);
             boundingBox.expandByPoint(position);
-
             array[index] = value;
-
-            colorArray[index * 3 + 0] = c.r;
-            colorArray[index * 3 + 1] = c.g;
-            colorArray[index * 3 + 2] = c.b;
           }
+
           labels.push({
             index: value,
             bbox: [
@@ -376,7 +371,6 @@ const getMaskSpecsByConnectivity = (geometry, mask, width, height) => {
   }
   return {
     array,
-    colorArray,
     labels,
     labelIndices,
     mask,
@@ -386,7 +380,6 @@ const getMaskSpecsByValue = (geometry, mask, width, height) => {
   const positions = geometry.attributes.position.array;
 
   const array = new Float32Array(width * height);
-  const colorArray = new Float32Array(width * height * 3);
   const labels = new Map();
   const labelIndices = new Uint32Array(width * height);
 
@@ -447,7 +440,7 @@ const getMaskSpecsByValue = (geometry, mask, width, height) => {
 
                   if (ax >= 0 && ax < width && ay >= 0 && ay < height) {
                     const aIndex = ay * width + ax;
-                    
+
                     if (!seenIndices.has(aIndex)) {
                       queue.push(aIndex);
                       seenIndices.add(aIndex);
@@ -467,10 +460,6 @@ const getMaskSpecsByValue = (geometry, mask, width, height) => {
             boundingBox.expandByPoint(position);
 
             array[index] = value;
-
-            colorArray[index * 3 + 0] = c.r;
-            colorArray[index * 3 + 1] = c.g;
-            colorArray[index * 3 + 2] = c.b;
           }
 
           boundingBox.min.toArray(label.bbox[0]);
@@ -481,33 +470,27 @@ const getMaskSpecsByValue = (geometry, mask, width, height) => {
   }
   return {
     array,
-    colorArray,
     labels: Array.from(labels.values()),
     labelIndices,
   };
 };
 const getMaskSpecsByMatch = (labels, segmentMask, highlightIndices, width, height) => {
   // const array = new Float32Array(width * height);
-  const colorArray = new Float32Array(width * height * 3);
 
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const index = y * width + x;
-      
+
       const value = segmentMask[index];
       const highlight = highlightIndices.includes(value);
       // array[index] = highlight ? 1 : 0;
-    
+
       const c = localColor.setHex(highlight ? 0xFFFFFF : 0x000000);
-      colorArray[index * 3 + 0] = c.r;
-      colorArray[index * 3 + 1] = c.g;
-      colorArray[index * 3 + 2] = c.b;
     }
   }
   return {
     labels,
     // array,
-    colorArray,
   };
 };
 const zipPlanesSegmentsJson = (planeSpecs, planesJson) => {
@@ -542,7 +525,7 @@ const getFloorPlaneLocation = (() => {
   }) => {
     const quaternion = normalToQuaternion(floorPlaneNormal, localQuaternion, backwardVector)
       .multiply(localQuaternion2.setFromAxisAngle(rightVector, -Math.PI/2))
-    
+
     return {
       position: floorPlaneCenter.toArray(),
       quaternion: quaternion.toArray(),
@@ -603,7 +586,7 @@ const getRaycastedCameraEntranceLocation = (() => {
     if (!camera.position) {
       console.warn('bad raycast camera', camera);
       debugger;
-    } 
+    }
     const cameraNearScan = camera.near;
     const cameraFarScan = 2;
     const cameraScanWidth = entranceExitWidth;
@@ -673,14 +656,14 @@ const getRaycastedPortalLocations = (() => {
   const localQuaternion3 = new THREE.Quaternion();
   const localQuaternion4 = new THREE.Quaternion();
   const localEuler = new THREE.Euler();
-  
+
   return (portalSpecs, depthFloats, floorPlaneLocation) => {
     const portalLocations = [];
     for (let i = 0; i < portalSpecs.labels.length; i++) {
       const labelSpec = portalSpecs.labels[i];
       const normal = localVector.fromArray(labelSpec.normal);
       const center = localVector2.fromArray(labelSpec.center);
-      
+
       // portal center in world space, 1m in front of the center
       const portalCenter = localVector3.copy(center)
         .add(localVector4.copy(normal).multiplyScalar(-1));
@@ -706,7 +689,7 @@ const getRaycastedPortalLocations = (() => {
       const floorQuaternion = localQuaternion2;
       normalToQuaternion(floorNormal, floorQuaternion, backwardVector)
         .multiply(localQuaternion3.setFromAxisAngle(rightVector, -Math.PI/2));
-      
+
       // set the quaternion to face towards targetQuaternion, but with the floor normal as the up vector
       const quaternion = localQuaternion4;
       quaternion.multiplyQuaternions(
@@ -842,7 +825,7 @@ const sortLocations = (() => {
       for (let i = 0; i < candidateLocations.length; i++) {
         const candidateLocation = candidateLocations[i];
         // const candidatePosition = localVector.fromArray(candidateLocation.position);
-        
+
         const lookCandidateLocations = candidateLocations.filter((lookCandidateLocation, j) => {
           return j !== i;
         });
@@ -869,7 +852,7 @@ const sortLocations = (() => {
           localEuler.x = 0;
           localEuler.z = 0;
           targetQuaternion.setFromEuler(localEuler);
-    
+
           const floorNormal = new THREE.Vector3().fromArray(floorPlaneLocation.normal);
           const floorQuaternion = new THREE.Quaternion();
           normalToQuaternion(floorNormal, floorQuaternion, backwardVector)
@@ -947,7 +930,7 @@ const _mergeMask = (geometry, depthFloatImageData, distanceNearestPositions) => 
     localVector.fromArray(distanceNearestPositions, srcIndex * 3)
       .toArray(newPositions, dstIndex * 3);
   };
-  
+
   // copy over only the triangles that are not completely masked
   const newIndices = new geometry.index.array.constructor(geometry.index.array.length);
   let numIndices = 0;
@@ -963,7 +946,7 @@ const _mergeMask = (geometry, depthFloatImageData, distanceNearestPositions) => 
       newIndices[numIndices + 1] = b;
       newIndices[numIndices + 2] = c;
       numIndices += 3;
-      
+
       // if at least one of them is masked, we have a boundary point
       if (aMasked || bMasked || cMasked) {
         !aMasked && _snapPoint(a);
@@ -990,7 +973,7 @@ const getSemanticPlanes = async (img, fov, newDepthFloatImageData, segmentMask) 
         const index2 = segmentMask[index];
         return categoryClassIndices.floor.includes(index2) ? n : Infinity;
       });
-      
+
       const {width, height} = img;
       const planesSpec = await getPlanesRgbd(
         width,
@@ -1155,7 +1138,7 @@ class Selector {
 
     this.sceneMeshes = [];
     this.indexMeshes = [];
-    
+
     const lensRenderTarget = new THREE.WebGLRenderTarget(selectorSize, selectorSize, {
       minFilter: THREE.NearestFilter,
       magFilter: THREE.NearestFilter,
@@ -1169,7 +1152,7 @@ class Selector {
       selectorSize,
     });
     this.lensMaterial = lensMaterial;
-    
+
     const lensScene = new THREE.Scene();
     lensScene.autoUpdate = false;
     lensScene.overrideMaterial = lensMaterial;
@@ -1216,7 +1199,7 @@ class Selector {
     })();
     this.lensOutputMesh = lensOutputMesh;
 
-    // index full screen pass 
+    // index full screen pass
     const indicesRenderTarget = new THREE.WebGLRenderTarget((panelSize - 1) * 2, panelSize - 1, {
       minFilter: THREE.NearestFilter,
       magFilter: THREE.NearestFilter,
@@ -1653,7 +1636,7 @@ class Selector {
         const a = lensFloat32Data[3];
         if (a > 0) {
           const index = Math.floor(lensFloat32Data[0] * 65536 + lensFloat32Data[1] * 256 + lensFloat32Data[2]);
-          
+
           // look up the position index in the scene mesh indexed geometry
           if (this.sceneMeshes.length === 1) {
             // nothing
@@ -1904,7 +1887,7 @@ class Overlay {
         tex.image = img;
         tex.needsUpdate = true;
       })();
-      
+
       const material = new THREE.MeshBasicMaterial({
         // color: 0x000000,
         map: tex,
@@ -1968,32 +1951,16 @@ class Overlay {
         },
         vertexShader: `\
           attribute float segment;
-          attribute vec3 segmentColor;
           attribute float plane;
-          attribute vec3 planeColor;
-          // attribute float portal;
-          attribute vec3 portalColor;
-          // attribute vec3 barycentric;
           
           flat varying float vSegment;
-          flat varying vec3 vSegmentColor;
           flat varying float vPlane;
-          flat varying vec3 vPlaneColor;
-          // varying float vPortal;
-          flat varying vec3 vPortalColor;
-          // varying vec3 vBarycentric;
           varying vec2 vUv;
           varying vec3 vPosition;
   
           void main() {
             vSegment = segment;
-            vSegmentColor = segmentColor;
             vPlane = plane;
-            vPlaneColor = planeColor;
-            // vPortal = portal;
-            vPortalColor = portalColor;
-  
-            // vBarycentric = barycentric;
             vUv = uv;
             vPosition = position;
             gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
@@ -2004,12 +1971,7 @@ class Overlay {
           uniform int uSelectorIndex;
           
           flat varying float vSegment;
-          flat varying vec3 vSegmentColor;
           flat varying float vPlane;
-          flat varying vec3 vPlaneColor;
-          // varying vec3 vBarycentric;
-          // varying float vPortal;
-          flat varying vec3 vPortalColor;
           varying vec2 vUv;
           varying vec3 vPosition;
   
@@ -2017,7 +1979,6 @@ class Overlay {
           const vec3 lineColor = vec3(${new THREE.Vector3(0x00BBCC).toArray().map(n => n.toFixed(8)).join(',')});
   
           float edgeFactor(vec3 bary, float width) {
-            // vec3 bary = vec3(vBC.x, vBC.y, 1.0 - vBC.x - vBC.y);
             vec3 d = fwidth(bary);
             vec3 a3 = smoothstep(d * (width - 0.5), d * (width + 0.5), bary);
             return min(min(a3.x, a3.y), a3.z);
@@ -2033,16 +1994,17 @@ class Overlay {
   
             float a = max(1. - f, 0.);
             a = max(a, 0.5);
-  
+            
+            /* Eraser */
             if (uRenderMode == 0) {
               vec3 c = lineColor;
               vec3 p = vPosition;
   
               gl_FragColor = vec4(c, a);
               gl_FragColor.rg = uv;
+            
+            /* Segment */  
             } else if (uRenderMode == 1) {
-              gl_FragColor = vec4(vSegmentColor, a);
-              
               // highlight support
               if (uSelectorIndex != -1) {
                 if (vSegment == float(uSelectorIndex)) {
@@ -2052,12 +2014,7 @@ class Overlay {
                 }
                 gl_FragColor.a = max(gl_FragColor.a, 0.7);
               }
-            } else if (uRenderMode == 2) {
-              gl_FragColor = vec4(vPlaneColor, 0.7);
-            } else if (uRenderMode == 3) {
-              gl_FragColor = vec4(vPortalColor, 0.5);
             } else {
-              // gl_FragColor = vec4(1., 0., 0., 1.);
               discard;
             }
           }
@@ -2080,7 +2037,7 @@ class Overlay {
           const {pickerIndex} = this.selector;
           let selectorIndex;
           if (pickerIndex !== -1) {
-            const {array, /*colorArray, labelIndices, labels, mask*/} = segmentSpecs;
+            const {array, /*labelIndices, labels, mask*/} = segmentSpecs;
             const segmentIndex = array[pickerIndex];
             if (segmentIndex !== undefined) {
               selectorIndex = segmentIndex;
@@ -2146,7 +2103,7 @@ class Overlay {
         );
         const center = boundingBox.getCenter(localVector);
         const size = boundingBox.getSize(localVector2);
-        
+
         {
           const textMesh = new Text();
           textMesh.position.copy(center);
@@ -2725,7 +2682,7 @@ class OutmeshToolMesh extends THREE.Object3D {
     imageMesh.visible = false;
 
     //
-    
+
     const outmeshMesh = this;
     outmeshMesh.visible = false;
 
@@ -2765,7 +2722,7 @@ class OutmeshToolMesh extends THREE.Object3D {
         outmeshMesh.quaternion.copy(camera.quaternion);
         outmeshMesh.updateMatrixWorld();
       }
-      
+
       // update meshes
       for (const mesh of meshes) {
         // update uTime
@@ -2852,7 +2809,7 @@ export class PanelRenderer extends EventTarget {
     const scene = new THREE.Scene();
     scene.autoUpdate = false;
     this.scene = scene;
-    
+
     const camera = makeDefaultCamera();
     this.camera = camera;
 
@@ -2884,14 +2841,14 @@ export class PanelRenderer extends EventTarget {
     avatar.visible = false;
     (async () => {
       const modelUrl = './models/scillia.glb';
-      
+
       const p = makePromise();
       gltfLoader.load(modelUrl, gltf => {
         p.resolve(gltf);
       }, function onProgress(xhr) {
         // console.log('progress', xhr.loaded / xhr.total);
       }, p.reject);
-  
+
       const model = await p;
       avatar.add(model.scene);
       model.scene.updateMatrixWorld();
@@ -2931,7 +2888,7 @@ export class PanelRenderer extends EventTarget {
         }, function onProgress(xhr) {
           // console.log('progress', xhr.loaded / xhr.total);
         }, p.reject);
-  
+
         const model = await p;
         mobs.add(model.scene);
         model.scene.updateMatrixWorld();
@@ -2980,13 +2937,13 @@ export class PanelRenderer extends EventTarget {
       selector.lensOutputMesh.position.x = -10;
       selector.lensOutputMesh.updateMatrixWorld();
       scene.add(selector.lensOutputMesh);
-      
+
       selector.indicesOutputMesh.position.x = -10;
       selector.indicesOutputMesh.position.z = -10;
       selector.indicesOutputMesh.quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
       selector.indicesOutputMesh.updateMatrixWorld();
       scene.add(selector.indicesOutputMesh);
-      
+
       sceneMesh.material.uniforms.selectedIndicesMap.value = selector.indicesRenderTarget.texture;
       sceneMesh.material.uniforms.selectedIndicesMap.needsUpdate = true;
       sceneMesh.material.uniforms.iSelectedIndicesMapResolution.value.set(selector.indicesRenderTarget.width, selector.indicesRenderTarget.height);
@@ -3010,7 +2967,9 @@ export class PanelRenderer extends EventTarget {
     this.outmeshMesh = outmeshMesh;
 
     // initial render
+    console.log( 'START!!!!!!!!!!!!!!!!!',  )
     this.updateOutmeshLayers();
+    console.log( 'END!!!!!!!!!!!!!!!!!!!!!!!',  )
 
     // bootstrap
     this.listen();
@@ -3028,7 +2987,7 @@ export class PanelRenderer extends EventTarget {
       this.avatar.updateMatrixWorld();
       this.avatar.visible = true;
     }
-    
+
     // place avatars
     const [
       avatarsTransform,
@@ -3115,13 +3074,13 @@ export class PanelRenderer extends EventTarget {
             // XXX hack
             if (this.tool === 'outmesh') {
               defaultCameraMatrix.copy(this.camera.matrixWorld);
-              
+
               (async () => {
                 this.outmeshMesh.setState('running');
 
                 try {
                   const outmeshImageResult = await this.renderOutmeshImage();
-                  
+
                   (async () => {
                     const {
                       editedImgBlob,
@@ -3172,7 +3131,7 @@ export class PanelRenderer extends EventTarget {
             this.camera.matrixWorld.copy(defaultCameraMatrix);
             this.camera.matrix.copy(this.camera.matrixWorld)
               .decompose(this.camera.position, this.camera.quaternion, this.camera.scale);
-            
+
             // set the orbitControls target in front of us
             this.controls.target.copy(this.camera.position)
               .add(this.camera.getWorldDirection(localVector).multiplyScalar(3));
@@ -3426,7 +3385,7 @@ export class PanelRenderer extends EventTarget {
       const {segmentsBlob, boundingBoxLayers} = imageSegmentationSpec;
 
       const segmentsImageBitmap = await createImageBitmap(segmentsBlob);
-      
+
       {
         const segmentsCanvasMono = segmentsImg2Canvas(segmentsImageBitmap);
         const ctx = segmentsCanvasMono.getContext('2d');
@@ -3693,7 +3652,7 @@ export class PanelRenderer extends EventTarget {
         j++;
       }
       depthPreviewReconstructedMesh.geometry.setAttribute('color', new THREE.InstancedBufferAttribute(colors, 3));
-      
+
       // layerScene.add(depthPreviewReconstructedMesh);
     }
     // globalThis.reconstructedDepthFloats = reconstructedDepthFloats;
@@ -3719,7 +3678,7 @@ export class PanelRenderer extends EventTarget {
         j++;
       }
       depthPreviewNewMesh.geometry.setAttribute('color', new THREE.InstancedBufferAttribute(colors, 3));
-      
+
       // layerScene.add(depthPreviewNewMesh);
     }
     console.timeEnd('depthPreviewNew'); */
@@ -3774,10 +3733,9 @@ export class PanelRenderer extends EventTarget {
         planeSpecs,
         portalSpecs,
       } = semanticSpecs;
+
       // geometry.setAttribute('segment', new THREE.BufferAttribute(segmentSpecs.array, 1));
-      // geometry.setAttribute('segmentColor', new THREE.BufferAttribute(segmentSpecs.colorArray, 3));
       // geometry.setAttribute('plane', new THREE.BufferAttribute(planeSpecs.array, 1));
-      // geometry.setAttribute('planeColor', new THREE.BufferAttribute(planeSpecs.colorArray, 3));
       geometry.computeVertexNormals();
 
       // const distanceFloatImageDataTex = new THREE.DataTexture(
