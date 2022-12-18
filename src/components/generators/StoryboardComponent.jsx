@@ -12,7 +12,7 @@ import {
 import {
   mainImageKey,
 } from '../../zine/zine-data-specs.js';
-import { decompressBlob } from '#Lib'
+import { decompressBlob } from '../../lib/index.js';
 
 //
 

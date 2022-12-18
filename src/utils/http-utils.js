@@ -1,4 +1,5 @@
-import { saveCompressedBlob } from '#Lib'
+import { saveCompressedBlob } from '../lib/index.js'
+
 
 export const getFormData = o => {
   const formData = new FormData();
