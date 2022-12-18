@@ -4,3 +4,9 @@
 [submodule "packages/three"]
 	path = packages/three
 	url = https://github.com/webaverse/three.git
+[submodule "packages/zjs"]
+	path = packages/zjs
+	url = https://github.com/webaverse/zjs
+[submodule "packages/offscreen-engine"]
+	path = packages/offscreen-engine
+	url = https://github.com/webaverse/offscreen-engine.git
