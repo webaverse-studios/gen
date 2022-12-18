@@ -16,6 +16,7 @@ import {
 //
 
 const textDecoder = new TextDecoder();
+const defaultFilename = 'storyboard.zine.gz';
 
 //
 
@@ -165,7 +166,7 @@ export const StoryboardComponent = ({
           ], {
             type: 'application/octet-stream',
           });
-          downloadFile(blob, 'storyboard.zine');
+          downloadFile(blob, defaultFilename);
         }}>
           <img src='/images/download.svg' className={styles.img} />
         </button>
