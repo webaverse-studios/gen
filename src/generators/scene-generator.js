@@ -15,6 +15,7 @@ import {
   floorNetWorldDepth,
   floorNetResolution,
   floorNetPixelSize,
+  physicsPixelStride,
 } from '../zine/zine-constants.js';
 import {
   LensMaterial,
@@ -62,7 +63,12 @@ import {
   getDepthFloatsFromPointCloud,
   getDepthFloatsFromIndexedGeometry,
   setCameraViewPositionFromViewZ,
+  getDoubleSidedGeometry,
+  getGeometryHeights,
 } from '../zine/zine-geometry-utils.js';
+import {
+  getFloorNetPhysicsMesh,
+} from '../zine/zine-mesh-utils.js';
 import {
   depthFloats2Canvas,
   distanceFloats2Canvas,
@@ -77,6 +83,7 @@ import {
   resizeImage,
 } from '../utils/convert-utils.js';
 import {classes, categories, categoryClassIndices} from '../../constants/classes.js';
+import {heightfieldScale} from '../../constants/physics-constants.js';
 import {colors, rainbowColors, detectronColors} from '../constants/detectron-colors.js';
 import {mobUrls} from '../constants/urls.js';
 import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUtils.js';
@@ -99,6 +106,8 @@ import {
   promptKey,
   layer2Specs,
 } from '../zine/zine-data-specs.js';
+
+import {PathMesh} from '../zine-aux/meshes/path-mesh.js';
 
 //
 
@@ -2967,6 +2976,14 @@ export class PanelRenderer extends EventTarget {
     this.scene.add(entranceExitMesh);
     this.entranceExitMesh = entranceExitMesh;
 
+    // path mesh
+    const splinePoints = this.zineRenderer.metadata.paths.map(p => new THREE.Vector3().fromArray(p.position));
+    const pathMesh = new PathMesh(splinePoints);
+    pathMesh.visible = false;
+    pathMesh.frustumCulled = false;
+    this.scene.add(pathMesh);
+    this.pathMesh = pathMesh;
+
     // selector
     {
       const selector = new Selector({
@@ -3078,6 +3095,8 @@ export class PanelRenderer extends EventTarget {
 
     this.entranceExitMesh.enabled = this.tool === 'portal';
     this.entranceExitMesh.updateVisibility();
+
+    this.pathMesh.visible = this.tool === 'portal';
 
     this.selector.setTool(this.tool);
     this.overlay.setTool(this.tool);
