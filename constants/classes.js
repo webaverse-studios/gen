@@ -173,6 +173,7 @@ export const categories = {
     "platform",
     "stairs",
     "window-other",
+    "tree-merged",
     "building-other-merged",
     "tent",
   ],
