@@ -4244,8 +4244,8 @@ export async function compileVirtualScene(imageArrayBuffer) {
 
   console.time('floorReconstruction');
   const floorNetCamera = makeFloorNetCamera();
-  let floorNetDepthsRaw;
-  let floorNetDepths;
+  let floorNetDepthsRaw; // no clipping optimization
+  let floorNetDepths; // has clipping optimization
   let floorResolution;
   let floorNetCameraJson;
   {
