@@ -135,6 +135,10 @@ export const tools = [
 
 const localVector = new THREE.Vector3();
 const localVector2 = new THREE.Vector3();
+const localVector3 = new THREE.Vector3();
+const localVector4 = new THREE.Vector3();
+const localVector5 = new THREE.Vector3();
+const localVector6 = new THREE.Vector3();
 const localQuaternion = new THREE.Quaternion();
 const localQuaternion2 = new THREE.Quaternion();
 const localMatrix = new THREE.Matrix4();
@@ -676,7 +680,6 @@ const getRaycastedPortalLocations = (() => {
   const localVector4 = new THREE.Vector3();
   const localVector5 = new THREE.Vector3();
   const localVector6 = new THREE.Vector3();
-  const localVector7 = new THREE.Vector3();
   const localQuaternion = new THREE.Quaternion();
   const localQuaternion2 = new THREE.Quaternion();
   const localQuaternion3 = new THREE.Quaternion();
@@ -743,7 +746,7 @@ const sortLocations = (() => {
   const localVector = new THREE.Vector3();
   const localVector2 = new THREE.Vector3();
   const localVector3 = new THREE.Vector3();
-  const localVector4 = new THREE.Vector3();
+  // const localVector4 = new THREE.Vector3();
   // const localVector5 = new THREE.Vector3();
   const localQuaternion = new THREE.Quaternion();
   // const localQuaternion2 = new THREE.Quaternion();
@@ -2210,8 +2213,6 @@ class Overlay {
         planeMeshes[firstFloorPlaneIndex].material.uniforms.uColor.value.set(0x00FF00);
         planeMeshes[firstFloorPlaneIndex].material.uniforms.uColor.needsUpdate = true;
       }
-      // globalThis.planeArrowMeshes = planeArrowMeshes;
-      // globalThis.planeMeshes = planeMeshes;
     }
 
     // portal gizmo meshes
@@ -4308,6 +4309,150 @@ export async function compileVirtualScene(imageArrayBuffer) {
   const predictedHeight = await vqaClient.getPredictedHeight(blob);
   // console.log('got predicted height', predictedHeight);
 
+  // physics
+  let paths;
+  {
+    const physicsScene = physicsManager.getScene();
+    const physicsIds = [];
+    // object physics
+    {
+      console.log('object physics');
+
+      const geometry = pointCloudArrayBufferToGeometry(
+        pointCloudArrayBuffer,
+        width,
+        height,
+        physicsPixelStride,
+      );
+      const geometry2 = getDoubleSidedGeometry(geometry);
+
+      const scenePhysicsMeshMaterial = new THREE.MeshPhongMaterial({
+        color: 0xFF0000,
+        side: THREE.BackSide,
+        transparent: true,
+        opacity: 0.5,
+      });
+      const scenePhysicsMesh = new THREE.Mesh(geometry2, scenePhysicsMeshMaterial);
+      scenePhysicsMesh.name = 'scenePhysicsMesh';
+      // scenePhysicsMesh.visible = false;
+      // zineRenderer.transformScene.add(scenePhysicsMesh);
+
+      const scenePhysicsObject = physicsScene.addGeometry(scenePhysicsMesh);
+      physicsIds.push(scenePhysicsObject);
+    }
+    // floor physics
+    {
+      console.log('floor physics');
+
+      const [width, height] = floorResolution;
+
+      const floorNetPhysicsMaterial = new THREE.MeshPhongMaterial({
+        color: 0xFF0000,
+        side: THREE.BackSide,
+        transparent: true,
+        opacity: 0.5,
+      });
+      const floorNetPhysicsMesh = getFloorNetPhysicsMesh({
+        floorNetDepths,
+        floorNetCamera,
+        material: floorNetPhysicsMaterial,
+      });
+      floorNetPhysicsMesh.name = 'floorNetPhysicsMesh';
+      // floorNetPhysicsMesh.visible = false;
+      // zineRenderer.transformScene.add(floorNetPhysicsMesh);
+
+      const numRows = width;
+      const numColumns = height;
+      const heights = getGeometryHeights(
+        floorNetPhysicsMesh.geometry,
+        width,
+        height,
+        heightfieldScale
+      );
+      const floorNetPhysicsObject = physicsScene.addHeightFieldGeometry(
+        floorNetPhysicsMesh,
+        numRows,
+        numColumns,
+        heights,
+        heightfieldScale,
+        floorNetResolution,
+        floorNetResolution
+      );
+      physicsIds.push(floorNetPhysicsObject);
+      // this.floorNetPhysicsObject = floorNetPhysicsObject;
+    }
+    // pathfinding
+    if (entranceExitLocations.length >= 2) {
+      // const portalLocations = [];
+      const els = entranceExitLocations.slice(0, 2).map(el => {
+        return new THREE.Vector3().fromArray(el.position);
+      });
+      const entrancePosition = els[0];
+      const exitPosition = els[1];
+      const stepSize = 1;
+      const points = [];
+      const direction = exitPosition.clone()
+        .sub(entrancePosition);
+      const distance = direction.length();
+      direction.normalize();
+      for (let d = 0; d < distance; d += stepSize) {
+        const point = entrancePosition.clone()
+          .add(direction.clone().multiplyScalar(d));
+        points.push(point);
+      }
+      points.push(exitPosition.clone());
+      // make this a directional walk from the entrance to the exit
+      const depthFloats = floorHeightfield;
+      const yOffset = 0.1;
+      const rng = alea('paths');
+      for (let i = 0; i < points.length; i++) {
+        // const labelSpec = portalSpecs.labels[i];
+        // const normal = localVector.fromArray(labelSpec.normal);
+        // const center = localVector2.fromArray(labelSpec.center);
+        const center = points[i];
+        
+        // portal center in world space, 1m in front of the center
+        const portalCenter = localVector3.copy(center)
+          // .add(localVector4.copy(normal).multiplyScalar(-1));
+        if (i !== 0 && i !== points.length - 1) {
+          const prevCenter = points[i - 1];
+          localQuaternion.setFromRotationMatrix(
+            localMatrix.lookAt(
+              prevCenter,
+              exitPosition,
+              localVector4.set(0, 1, 0)
+            )
+          );
+          portalCenter.add(localVector4.set((rng() - 0.5) * 2 * 0.3, 0, 0).applyQuaternion(localQuaternion));
+        }
+        portalCenter.add(localVector4.set(0, 1, 0));
+
+        // compute the sample coordinates:
+        const floorCornerBasePosition = localVector5.set(0, 0, 0)
+          .add(localVector6.set(-floorNetWorldSize / 2, 0, -floorNetWorldSize / 2));
+        const px = (portalCenter.x - floorCornerBasePosition.x) / floorNetWorldSize;
+        const pz = (portalCenter.z - floorCornerBasePosition.z) / floorNetWorldSize;
+        const x = Math.floor(px * floorNetPixelSize);
+        const z = Math.floor(pz * floorNetPixelSize);
+        const index = z * floorNetPixelSize + x;
+        portalCenter.y = depthFloats[index];
+        portalCenter.y += yOffset;
+
+        center.copy(portalCenter);
+      }
+
+      paths = points.map(p => {
+        return {
+          position: p.toArray(),
+        };
+      });
+      // console.log('output paths', paths);
+    } else {
+      // console.warn('no entrance/exit locations, so no paths!');
+      paths = [];
+    }
+  }
+
   // return result
   return {
     resolution,
@@ -4335,5 +4480,6 @@ export async function compileVirtualScene(imageArrayBuffer) {
     portalLocations,
     candidateLocations,
     predictedHeight,
+    paths,
   };
 }
