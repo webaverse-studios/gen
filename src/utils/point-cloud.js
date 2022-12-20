@@ -1,12 +1,11 @@
-
-const pointcloudStride = 4 + 4 + 4 + 1 + 1 + 1;
+import { pointCloudFullStride } from '../zine/zine-constants.js'
 
 
 /**
  * Destructure a point cloud into its component parts.
  */
 export function destructurePointCloud( arrayBuffer) {
-  const numPoints = arrayBuffer.byteLength / pointcloudStride;
+  const numPoints = arrayBuffer.byteLength / pointCloudFullStride;
   const points = new Float32Array(numPoints * 3);
   const colors = new Uint8Array(numPoints * 3);
   const intensities = new Uint8Array(numPoints);
@@ -18,7 +17,7 @@ export function destructurePointCloud( arrayBuffer) {
   let intensityIndex = 0;
   let classificationIndex = 0;
 
-  for (let i = 0; i < arrayBuffer.byteLength; i += pointcloudStride) {
+  for (let i = 0; i < arrayBuffer.byteLength; i += pointCloudFullStride) {
     points[pointIndex++] = dataView.getFloat32(i, true);
     points[pointIndex++] = dataView.getFloat32(i + 4, true);
     points[pointIndex++] = dataView.getFloat32(i + 8, true);
