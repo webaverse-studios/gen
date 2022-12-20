@@ -3817,7 +3817,7 @@ export class PanelRenderer extends EventTarget {
         const editedImgBlob = new Blob([
           editedImg,
         ], {
-          type: 'image/png',
+          type: 'image/jpeg',
         });
          editedImgTex.image = await blob2img(editedImgBlob);
          editedImgTex.needsUpdate = true;
@@ -4086,7 +4086,7 @@ const _getImageSegements = async imgBlob => {
 export async function compileVirtualScene(imageArrayBuffer) {
   // color
   const blob = new Blob([imageArrayBuffer], {
-    type: 'image/png',
+    type: 'image/jpeg',
   });
   const img = await blob2img(blob);
   img.classList.add('img');
