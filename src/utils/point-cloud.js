@@ -5,7 +5,7 @@ const pointcloudStride = 4 + 4 + 4 + 1 + 1 + 1;
 /**
  * Destructure a point cloud into its component parts.
  */
-export function getDestructuredPointCloud(arrayBuffer) {
+export function destructurePointCloud( arrayBuffer) {
   const numPoints = arrayBuffer.byteLength / pointcloudStride;
   const points = new Float32Array(numPoints * 3);
   const colors = new Uint8Array(numPoints * 3);
