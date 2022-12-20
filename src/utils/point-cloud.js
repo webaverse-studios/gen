@@ -4,7 +4,7 @@ import { pointCloudFullStride } from '../zine/zine-constants.js'
 /**
  * Destructure a point cloud into its component parts.
  */
-export function destructurePointCloud( arrayBuffer) {
+export function destructurePointCloud(arrayBuffer) {
   const numPoints = arrayBuffer.byteLength / pointCloudFullStride;
   const points = new Float32Array(numPoints * 3);
   const colors = new Uint8Array(numPoints * 3);
