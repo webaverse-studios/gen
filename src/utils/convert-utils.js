@@ -55,12 +55,11 @@ export async function image2DataUrl(img, className = '') {
   );
   // get the blob url
   // read the data url from the blob
-  const dataUrl = await new Promise(resolve => {
+  return await new Promise(resolve => {
     const reader = new FileReader();
     reader.onload = e => resolve(e.target.result);
     reader.readAsDataURL(blob);
   });
-  return dataUrl;
 }
 
 export function img2ImageData(img) {
