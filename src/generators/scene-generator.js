@@ -4613,6 +4613,7 @@ export async function compileVirtualScene(imageArrayBuffer) {
     portalLocations,
     candidateLocations,
     predictedHeight,
+    edgeDepths,
     paths,
   };
 }
