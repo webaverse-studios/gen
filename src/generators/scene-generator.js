@@ -10,6 +10,9 @@ import {
   getOrthographicCameraJson,
 } from '../zine/zine-camera-utils.js';
 import {
+  getDepthFloat32ArrayWorldPositionPx,
+} from '../zine/zine-geometry-utils.js';
+import {
   panelSize,
   floorNetWorldSize,
   floorNetWorldDepth,
@@ -4305,9 +4308,138 @@ export async function compileVirtualScene(imageArrayBuffer) {
     portalLocations,
   });
 
-  // query the height
   const predictedHeight = await vqaClient.getPredictedHeight(blob);
-  // console.log('got predicted height', predictedHeight);
+
+  let edgeDepths;
+  {
+    const scaleVector = localVector.fromArray(scale);
+
+    // const tops = [];
+    // const bottoms = [];
+    // const lefts = [];
+    // const rights = [];
+
+    let top = {
+      min: [Infinity, Infinity, Infinity],
+      max: [-Infinity, -Infinity, -Infinity],
+    };
+    {
+      const py = 0;
+      for (let px = 0; px < width; px++) {
+        getDepthFloat32ArrayWorldPositionPx(
+          depthFloats32Array,
+          px,
+          py,
+          width,
+          height,
+          camera,
+          scaleVector,
+          localVector2
+        );
+        const z = localVector2.z;
+        if (z < top.min[2]) {
+          localVector2.toArray(top.min);
+        }
+        if (z > top.max[2]) {
+          localVector2.toArray(top.max);
+        }
+        // tops.push(localVector2.toArray());
+      }
+    }
+    let bottom = {
+      min: [Infinity, Infinity, Infinity],
+      max: [-Infinity, -Infinity, -Infinity],
+    };
+    {
+      const py = height - 1;
+      for (let px = 0; px < width; px++) {
+        getDepthFloat32ArrayWorldPositionPx(
+          depthFloats32Array,
+          px,
+          py,
+          width,
+          height,
+          camera,
+          scaleVector,
+          localVector2
+        );
+        const z = localVector2.z;
+        if (z < bottom.min[2]) {
+          localVector2.toArray(bottom.min);
+        }
+        if (z > bottom.max[2]) {
+          localVector2.toArray(bottom.max);
+        }
+        // bottoms.push(localVector2.toArray());
+      }
+    }
+    let left = {
+      min: [Infinity, Infinity, Infinity],
+      max: [-Infinity, -Infinity, -Infinity],
+    };
+    {
+      const px = 0;
+      for (let py = 0; py < height; py++) {
+        getDepthFloat32ArrayWorldPositionPx(
+          depthFloats32Array,
+          px,
+          py,
+          width,
+          height,
+          camera,
+          scaleVector,
+          localVector2
+        );
+        const z = localVector2.z;
+        if (z < left.min[2]) {
+          localVector2.toArray(left.min);
+        }
+        if (z > left.max[2]) {
+          localVector2.toArray(left.max);
+        }
+        // lefts.push(localVector2.toArray());
+      }
+    }
+    let right = {
+      min: [Infinity, Infinity, Infinity],
+      max: [-Infinity, -Infinity, -Infinity],
+    };
+    {
+      const px = width - 1;
+      for (let py = 0; py < height; py++) {
+        getDepthFloat32ArrayWorldPositionPx(
+          depthFloats32Array,
+          px,
+          py,
+          width,
+          height,
+          camera,
+          scaleVector,
+          localVector2
+        );
+        const z = localVector2.z;
+        if (z < right.min[2]) {
+          localVector2.toArray(right.min);
+        }
+        if (z > right.max[2]) {
+          localVector2.toArray(right.max);
+        }
+        // rights.push(localVector2.toArray());
+      }
+    }
+
+    edgeDepths = {
+      top,
+      bottom,
+      left,
+      right,
+      // tops,
+      // bottoms,
+      // lefts,
+      // rights,
+    };
+  }
+  // console.log('computed edge depths', edgeDepths);
 
   // physics
   let paths;
