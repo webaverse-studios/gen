@@ -4204,6 +4204,7 @@ export async function compileVirtualScene(imageArrayBuffer) {
   {
     camera = makeDefaultCamera();
     camera.fov = fov;
+    camera.updateProjectionMatrix();
     cameraJson = getPerspectiveCameraJson(camera);
   }
   console.timeEnd('camera');
