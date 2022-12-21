@@ -4442,78 +4442,9 @@ export async function compileVirtualScene(imageArrayBuffer) {
   }
   // console.log('computed edge depths', edgeDepths);
 
-  // physics
+  // paths
   let paths;
   {
-    const physicsScene = physicsManager.getScene();
-    const physicsIds = [];
-    // object physics
-    {
-      console.log('object physics');
-
-      const geometry = pointCloudArrayBufferToGeometry(
-        pointCloudArrayBuffer,
-        width,
-        height,
-        physicsPixelStride,
-      );
-      const geometry2 = getDoubleSidedGeometry(geometry);
-
-      const scenePhysicsMeshMaterial = new THREE.MeshPhongMaterial({
-        color: 0xFF0000,
-        side: THREE.BackSide,
-        transparent: true,
-        opacity: 0.5,
-      });
-      const scenePhysicsMesh = new THREE.Mesh(geometry2, scenePhysicsMeshMaterial);
-      scenePhysicsMesh.name = 'scenePhysicsMesh';
-      // scenePhysicsMesh.visible = false;
-      // zineRenderer.transformScene.add(scenePhysicsMesh);
-
-      const scenePhysicsObject = physicsScene.addGeometry(scenePhysicsMesh);
-      physicsIds.push(scenePhysicsObject);
-    }
-    // floor physics
-    {
-      console.log('floor physics');
-
-      const [width, height] = floorResolution;
-
-      const floorNetPhysicsMaterial = new THREE.MeshPhongMaterial({
-        color: 0xFF0000,
-        side: THREE.BackSide,
-        transparent: true,
-        opacity: 0.5,
-      });
-      const floorNetPhysicsMesh = getFloorNetPhysicsMesh({
-        floorNetDepths,
-        floorNetCamera,
-        material: floorNetPhysicsMaterial,
-      });
-      floorNetPhysicsMesh.name = 'floorNetPhysicsMesh';
-      // floorNetPhysicsMesh.visible = false;
-      // zineRenderer.transformScene.add(floorNetPhysicsMesh);
-
-      const numRows = width;
-      const numColumns = height;
-      const heights = getGeometryHeights(
-        floorNetPhysicsMesh.geometry,
-        width,
-        height,
-        heightfieldScale
-      );
-      const floorNetPhysicsObject = physicsScene.addHeightFieldGeometry(
-        floorNetPhysicsMesh,
-        numRows,
-        numColumns,
-        heights,
-        heightfieldScale,
-        floorNetResolution,
-        floorNetResolution
-      );
-      physicsIds.push(floorNetPhysicsObject);
-      // this.floorNetPhysicsObject = floorNetPhysicsObject;
-    }
     // pathfinding
     if (entranceExitLocations.length >= 2) {
       // const portalLocations = [];
