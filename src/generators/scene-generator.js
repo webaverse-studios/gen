@@ -4536,7 +4536,7 @@ export async function compileVirtualScene(imageArrayBuffer) {
       points.push(exitPosition.clone());
       // make this a directional walk from the entrance to the exit
       const depthFloats = floorHeightfield;
-      const yOffset = 0.1;
+      const yOffset = 0.15;
       const rng = alea('paths');
       for (let i = 0; i < points.length; i++) {
         // const labelSpec = portalSpecs.labels[i];
