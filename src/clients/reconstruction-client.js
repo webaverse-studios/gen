@@ -22,6 +22,7 @@ import {
   distanceFloats2Canvas,
   depthFloats2Canvas,
 } from '../generators/sg-debug.js';
+import { destructurePointCloud } from '../utils/point-cloud.js';
 
 //
 
@@ -462,7 +463,11 @@ export async function getPointCloud(blob, {
   });
   if (res.ok) {
     const headers = Object.fromEntries(res.headers.entries());
-    const arrayBuffer = await res.arrayBuffer();
+
+    // This will probably be handled server-side eventually.
+    const _arrayBuffer = await res.arrayBuffer();
+    const arrayBuffer = destructurePointCloud(_arrayBuffer).points;
+
     return {
       headers,
       arrayBuffer,
