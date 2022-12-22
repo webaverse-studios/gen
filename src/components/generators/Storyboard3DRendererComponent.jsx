@@ -1,5 +1,7 @@
-import {useState, useRef, useEffect} from 'react';
+import { useState, useRef, useEffect } from 'react';
 import classnames from 'classnames';
+
+import styles from '../../../styles/Storyboard3DRenderer.module.css';
 
 import {
   PanelRenderer,
@@ -7,7 +9,6 @@ import {
 } from '../../generators/scene-generator.js';
 
 import { panelSize } from '../../zine/zine-constants.js'
-import styles from '../../../styles/Storyboard3DRenderer.module.css';
 
 //
 
