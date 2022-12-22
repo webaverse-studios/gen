@@ -1,15 +1,15 @@
 [submodule "src/zine"]
 	path = src/zine
-	url = https://github.com/webaverse/zine
+	url = git@github.com:webaverse/zine.git
 [submodule "packages/three"]
 	path = packages/three
-	url = https://github.com/webaverse/three.git
+	url = git@github.com:webaverse/three.git
 [submodule "packages/zjs"]
 	path = packages/zjs
-	url = https://github.com/webaverse/zjs
+	url = git@github.com:webaverse/zjs.git
 [submodule "packages/offscreen-engine"]
 	path = packages/offscreen-engine
-	url = https://github.com/webaverse/offscreen-engine.git
+	url = git@github.com:webaverse/offscreen-engine.git
 [submodule "src/zine-aux"]
 	path = src/zine-aux
-	url = https://github.com/webaverse/zine-aux.git
+	url = git@github.com:webaverse/zine-aux.git
