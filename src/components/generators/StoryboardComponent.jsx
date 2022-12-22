@@ -12,7 +12,8 @@ import {
 import {
   mainImageKey,
 } from '../../zine/zine-data-specs.js';
-import { decompressBlob } from '../../lib/index.js';
+import { decompressStream } from '../../utils/compression.js';
+import { loadStream, saveCompressedStream } from '../../utils/file/index.js'
 
 //
 
@@ -153,21 +154,24 @@ export const StoryboardComponent = ({
       onDrop={drop}
     >
       <div className={styles.buttons}>
-        <button className={styles.button} onClick={e => {
+        <button className={styles.button} onClick={async e => {
           e.preventDefault();
           e.stopPropagation();
 
-          const uint8Array = storyboard.export();
-          // const firstBytes = uint8Array.slice(0, 4);
-          // const firstBytesString = textDecoder.decode(firstBytes);
-          // console.log('export decoded', {firstBytesString});
-          const blob = new Blob([
-            zineMagicBytes,
-            uint8Array,
-          ], {
-            type: 'application/octet-stream',
-          });
-          downloadFile(blob, defaultFilename);
+          // Export the storyboard to a blob.
+          const
+            uint8Array = storyboard.export(),
+
+            blob = new Blob([
+              zineMagicBytes,
+              uint8Array,
+            ], {
+              type: 'application/octet-stream',
+            });
+
+          // Compress and stream blob to file.
+          // TODO: Estimate compressed size so we can show progress.
+          await saveCompressedStream(blob.stream(), defaultFilename);
         }}>
           <img src='/images/download.svg' className={styles.img} />
         </button>
@@ -177,7 +181,17 @@ export const StoryboardComponent = ({
             const file = e.target.files[0];
             if (file) {
               (async () => {
-                const arrayBuffer = await decompressBlob(file).arrayBuffer();
+                const
+                  // Decompress stream.
+                  // TODO: Estimate compressed size so we can show progress.
+                  stream = loadStream(
+                    decompressStream(file.stream()),
+                    file.name
+                  ),
+
+                  // Get array buffer.
+                  arrayBuffer = await new Response( stream ).arrayBuffer();
+
                 // check magic bytes
                 const firstBytes = new Uint8Array(arrayBuffer, 0, 4);
                 const firstBytesString = textDecoder.decode(firstBytes);
