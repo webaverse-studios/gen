@@ -1,26 +1,18 @@
-import {useState, useEffect} from 'react';
+import { useState, useEffect } from 'react';
 import classnames from 'classnames';
 
-import {PlaceholderImg} from '../placeholders/PlaceholderImg.jsx';
-import {ArrayBufferRenderer} from '../renderers/ArrayBufferRenderer.jsx';
-// import {zbencode, zbdecode} from '../../zine/encoding.js';
-import {downloadFile} from '../../utils/http-utils.js';
+import { PlaceholderImg } from '../placeholders/PlaceholderImg.jsx';
+import { ArrayBufferRenderer } from '../renderers/ArrayBufferRenderer.jsx';
 import styles from '../../../styles/Storyboard.module.css';
-import {
-  zineMagicBytes,
-} from '../../zine/zine-format.js';
-import {
-  mainImageKey,
-} from '../../zine/zine-data-specs.js';
+import { zineMagicBytes } from '../../zine/zine-format.js';
+import { mainImageKey } from '../../zine/zine-data-specs.js';
 import { decompressStream } from '../../utils/compression.js';
 import { loadStream, saveCompressedStream } from '../../utils/file/index.js'
 
-//
 
 const textDecoder = new TextDecoder();
 const defaultFilename = 'storyboard.zine.gz';
 
-//
 
 const StoryboardPanel = ({
   storyboard,
