@@ -39,6 +39,7 @@
 
 .storyboard3DRenderer .layers {
   display: flex;
+  overflow-x: auto;
 }
 .storyboard3DRenderer .layers .layer {
   width: 150px;
