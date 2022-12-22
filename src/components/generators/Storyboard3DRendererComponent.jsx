@@ -3,10 +3,10 @@ import classnames from 'classnames';
 
 import {
   PanelRenderer,
-  panelSize,
   tools,
 } from '../../generators/scene-generator.js';
 
+import { panelSize } from '../../zine/zine-constants.js'
 import styles from '../../../styles/Storyboard3DRenderer.module.css';
 
 //
