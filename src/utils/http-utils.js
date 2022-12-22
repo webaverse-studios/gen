@@ -1,5 +1,3 @@
-import { saveCompressedBlob } from '../lib/index.js'
-
 
 export const getFormData = o => {
   const formData = new FormData();
@@ -9,6 +7,14 @@ export const getFormData = o => {
   return formData;
 };
 
-export async function downloadFile(file, filename) {
-  return saveCompressedBlob(file, filename)
+export function downloadFile(file, filename) {
+  const blobURL = URL.createObjectURL(file);
+  const tempLink = document.createElement('a');
+  tempLink.style.display = 'none';
+  tempLink.href = blobURL;
+  tempLink.setAttribute('download', filename);
+
+  document.body.appendChild(tempLink);
+  tempLink.click();
+  document.body.removeChild(tempLink);
 }
