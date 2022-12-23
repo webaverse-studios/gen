@@ -4124,6 +4124,40 @@ const _getImageSegements = async imgBlob => {
 
 //
 
+/* const bumpFloorHeightfieldByBoxes = (
+  floorHeightfield, // Float32Array(width * height)
+  width, // number
+  height, // number
+  portalLocations, // [{position, quaterion}]
+) => {
+  const _isPointInsidePortal = (x, z) => {
+  };
+
+  for (let z = 0; z < height; z++) {
+    for (let x = 0; x < width; x++) {
+      const portalCenter = hitscanCamera.position.clone()
+        .add(
+          new THREE.Vector3(0, 0, -cameraDistance - portalExtrusion)
+            .applyQuaternion(hitscanCamera.quaternion)
+        );
+
+      // compute the sample coordinates:
+      const floorCornerBasePosition = localVector5.set(0, 0, 0)
+        .add(localVector6.set(-floorNetWorldSize / 2, 0, -floorNetWorldSize / 2));
+      const px = (portalCenter.x - floorCornerBasePosition.x) / floorNetWorldSize;
+      const pz = (portalCenter.z - floorCornerBasePosition.z) / floorNetWorldSize;
+      let x = Math.floor(px * floorNetPixelSize);
+      x = Math.min(Math.max(0, x), floorNetPixelSize - 1);
+      let z = Math.floor(pz * floorNetPixelSize);
+      z = Math.min(Math.max(0, z), floorNetPixelSize - 1);
+      const index = z * floorNetPixelSize + x;
+      portalCenter.y = depthFloats[index];
+    }
+  }
+}; */
+
+//
+
 export async function compileVirtualScene(imageArrayBuffer) {
   // color
   const blob = new Blob([imageArrayBuffer], {
@@ -4344,7 +4378,7 @@ export async function compileVirtualScene(imageArrayBuffer) {
     floorPlaneLocation,
     floorPlaneJson
   );
-  let portalLocations = getRaycastedPortalLocations(
+  const portalLocations = getRaycastedPortalLocations(
     portalSpecs,
     floorHeightfield,
     floorHeightfieldRaw,
@@ -4354,11 +4388,11 @@ export async function compileVirtualScene(imageArrayBuffer) {
 
   // XXX bump the floor heightfield to underpin the the entrance/exit locations w/ gaussian blur
   // XXX note: this means we will need to refresh the entire floor heightfield when the scale changes
-  floorHeightfield = bumpFloorHeightfieldByBoxes(
-    floorHeightfield,
-    floorNetPixelSize,
-    portalLocations,
-  );
+  // bumpFloorHeightfieldByBoxes(
+  //   floorHeightfield,
+  //   floorNetPixelSize,
+  //   portalLocations,
+  // );
 
   const {
     entranceExitLocations,
