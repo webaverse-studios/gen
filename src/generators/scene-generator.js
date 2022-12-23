@@ -10,7 +10,7 @@ import {
   getOrthographicCameraJson,
 } from '../zine/zine-camera-utils.js';
 import {
-  getDepthFloat32ArrayWorldPositionPx,
+  getDepthFloat32ArrayViewPositionPx,
 } from '../zine/zine-geometry-utils.js';
 import {
   panelSize,
@@ -4324,7 +4324,7 @@ export async function compileVirtualScene(imageArrayBuffer) {
     {
       const py = 0;
       for (let px = 0; px < width; px++) {
-        getDepthFloat32ArrayWorldPositionPx(
+        getDepthFloat32ArrayViewPositionPx(
           depthFloats32Array,
           px,
           py,
@@ -4351,7 +4351,7 @@ export async function compileVirtualScene(imageArrayBuffer) {
     {
       const py = height - 1;
       for (let px = 0; px < width; px++) {
-        getDepthFloat32ArrayWorldPositionPx(
+        getDepthFloat32ArrayViewPositionPx(
           depthFloats32Array,
           px,
           py,
@@ -4378,7 +4378,7 @@ export async function compileVirtualScene(imageArrayBuffer) {
     {
       const px = 0;
       for (let py = 0; py < height; py++) {
-        getDepthFloat32ArrayWorldPositionPx(
+        getDepthFloat32ArrayViewPositionPx(
           depthFloats32Array,
           px,
           py,
@@ -4405,7 +4405,7 @@ export async function compileVirtualScene(imageArrayBuffer) {
     {
       const px = width - 1;
       for (let py = 0; py < height; py++) {
-        getDepthFloat32ArrayWorldPositionPx(
+        getDepthFloat32ArrayViewPositionPx(
           depthFloats32Array,
           px,
           py,
