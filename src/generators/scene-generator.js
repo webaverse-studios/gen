@@ -639,10 +639,6 @@ const getRaycastedCameraEntranceLocation = (() => {
     ) {
       let everyXHit = true;
       for (let dx = -cameraScanWidth / 2; dx <= cameraScanWidth / 2; dx += cameraScanStep) {
-        if (!camera.position) {
-          console.warn('bad raycast camera 2', camera);
-          debugger;
-        }
         const targetPosition = getFloorHit(
           localVector2.set(dx, 0, -cameraDistance),
           camera,
@@ -4294,8 +4290,27 @@ export async function compileVirtualScene(imageArrayBuffer) {
     floorPlaneNormal,
   });
 
-  const cameraEntranceLocation = getRaycastedCameraEntranceLocation(camera, floorHeightfieldRaw, floorPlaneLocation, floorPlaneJson);
-  const portalLocations = getRaycastedPortalLocations(portalSpecs, floorHeightfield, floorPlaneLocation);
+  const cameraEntranceLocation = getRaycastedCameraEntranceLocation(
+    camera,
+    floorHeightfieldRaw,
+    floorPlaneLocation,
+    floorPlaneJson
+  );
+  let portalLocations = getRaycastedPortalLocations(
+    portalSpecs,
+    floorHeightfield,
+    floorHeightfieldRaw,
+    floorPlaneLocation,
+    floorPlaneJson
+  );
+
+  // XXX bump the floor heightfield to underpin the the entrance/exit locations w/ gaussian blur
+  // XXX note: this means we will need to refresh the entire floor heightfield when the scale changes
+  floorHeightfield = bumpFloorHeightfieldByBoxes(
+    floorHeightfield,
+    floorNetPixelSize,
+    portalLocations,
+  );
 
   const {
     entranceExitLocations,
