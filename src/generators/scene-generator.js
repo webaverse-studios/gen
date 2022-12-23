@@ -19,6 +19,7 @@ import {
   floorNetResolution,
   floorNetPixelSize,
   physicsPixelStride,
+  portalExtrusion,
 } from '../zine/zine-constants.js';
 import {
   LensMaterial,
@@ -613,25 +614,16 @@ const getFloorHit = (() => {
     }
   };
 })();
-const getRaycastedCameraEntranceLocation = (() => {
+const hitScan = (() => {
   const localVector = new THREE.Vector3();
   const localVector2 = new THREE.Vector3();
 
-  // raycast 2m in front of the camera, and check for a floor hit
-  return (camera, depthFloatsRaw, floorPlaneLocation, floorPlaneJson) => {
-    if (!camera.position) {
-      console.warn('bad raycast camera', camera);
-      debugger;
-    } 
-    const cameraNearScan = camera.near;
-    const cameraFarScan = 2;
-    const cameraScanWidth = entranceExitWidth;
-    const cameraScanStep = floorNetResolution;
-    // console.log('scan', {
-    //   cameraNearScan,
-    //   cameraFarScan,
-    //   cameraScanStep,
-    // });
+  return (camera, depthFloatsRaw, floorPlaneJson, {
+    cameraNearScan = camera.near,
+    cameraFarScan = 3,
+    cameraScanWidth = entranceExitWidth,
+    cameraScanStep = floorNetResolution,
+  } = {}) => {
     for (
       let cameraDistance = cameraNearScan;
       cameraDistance <= cameraFarScan;
@@ -652,27 +644,36 @@ const getRaycastedCameraEntranceLocation = (() => {
         }
       }
       if (everyXHit) {
-        const targetPosition = getFloorHit(
-          localVector2.set(0, 0, -cameraDistance),
-          camera,
-          depthFloatsRaw,
-          floorPlaneJson,
-          localVector
-        );
-        const position = targetPosition.toArray();
-        const quaternion = floorPlaneLocation.quaternion.slice();
-        // console.log('floor hit 3', {
-        //   position,
-        //   quaternion,
-        // });
-        return {
-          position,
-          quaternion,
-        };
+        return cameraDistance;
       }
     }
+    return NaN;
+  };
+})();
+const getRaycastedCameraEntranceLocation = (() => {
+  const localVector = new THREE.Vector3();
+  const localVector2 = new THREE.Vector3();
 
-    return null;
+  // raycast in front of the camera and check for a floor hit
+  return (camera, depthFloatsRaw, floorPlaneLocation, floorPlaneJson) => {
+    const cameraDistance = hitScan(camera, depthFloatsRaw, floorPlaneJson);
+    if (cameraDistance !== null) {
+      const targetPosition = getFloorHit(
+        localVector2.set(0, 0, -cameraDistance - portalExtrusion),
+        camera,
+        depthFloatsRaw,
+        floorPlaneJson,
+        localVector
+      );
+      const position = targetPosition.toArray();
+      const quaternion = floorPlaneLocation.quaternion.slice();
+      return {
+        position,
+        quaternion,
+      };
+    } else {
+      return null;
+    }
   };
 })();
 const getRaycastedPortalLocations = (() => {
@@ -688,50 +689,97 @@ const getRaycastedPortalLocations = (() => {
   const localQuaternion4 = new THREE.Quaternion();
   const localEuler = new THREE.Euler();
   
-  return (portalSpecs, depthFloats, floorPlaneLocation) => {
+  return (portalSpecs, depthFloats, depthFloatsRaw, floorPlaneLocation, floorPlaneJson) => {
     const portalLocations = [];
     for (let i = 0; i < portalSpecs.labels.length; i++) {
       const labelSpec = portalSpecs.labels[i];
       const normal = localVector.fromArray(labelSpec.normal);
       const center = localVector2.fromArray(labelSpec.center);
-      
-      // portal center in world space, 1m in front of the center
-      const portalCenter = localVector3.copy(center)
-        .add(localVector4.copy(normal).multiplyScalar(-1));
 
-      // compute the sample coordinates:
-      const floorCornerBasePosition = localVector5.set(0, 0, 0)
-        .add(localVector6.set(-floorNetWorldSize / 2, 0, -floorNetWorldSize / 2));
-      const px = (portalCenter.x - floorCornerBasePosition.x) / floorNetWorldSize;
-      const pz = (portalCenter.z - floorCornerBasePosition.z) / floorNetWorldSize;
-      const x = Math.floor(px * floorNetPixelSize);
-      const z = Math.floor(pz * floorNetPixelSize);
-      const index = z * floorNetPixelSize + x;
-      portalCenter.y = depthFloats[index];
-
-      const targetQuaternion = localQuaternion;
-      normalToQuaternion(normal, targetQuaternion, upVector);
-      localEuler.setFromQuaternion(targetQuaternion, 'YXZ');
-      localEuler.x = 0;
-      localEuler.z = 0;
-      targetQuaternion.setFromEuler(localEuler);
-
+      // compute floor quaternion
       const floorNormal = localVector6.fromArray(floorPlaneLocation.normal);
       const floorQuaternion = localQuaternion2;
       normalToQuaternion(floorNormal, floorQuaternion, backwardVector)
         .multiply(localQuaternion3.setFromAxisAngle(rightVector, -Math.PI/2));
-      
-      // set the quaternion to face towards targetQuaternion, but with the floor normal as the up vector
-      const quaternion = localQuaternion4;
-      quaternion.multiplyQuaternions(
-        floorQuaternion,
-        targetQuaternion
-      );
 
-      portalLocations.push({
-        position: portalCenter.toArray(),
-        quaternion: quaternion.toArray(),
-      });
+      // scan for the portal forward using hitScan
+      const hitscanCamera = new THREE.PerspectiveCamera();
+      hitscanCamera.position.copy(center);
+      hitscanCamera.quaternion.setFromRotationMatrix(
+        new THREE.Matrix4().lookAt(
+          new THREE.Vector3(0, 0, 0),
+          normal.clone().multiplyScalar(-1),
+          new THREE.Vector3(0, 1, 0).applyQuaternion(floorQuaternion)
+        )
+      );
+      const cameraDistance = hitScan(
+        hitscanCamera,
+        depthFloatsRaw,
+        floorPlaneJson,
+        {
+          cameraNearScan: 0,
+          cameraFarScan: 3,
+          cameraScanWidth: entranceExitWidth,
+          cameraScanStep: floorNetResolution,
+        }
+      );
+      if (cameraDistance !== null) {
+        // hitscan to find the portal center in world space
+        const portalCenter = hitscanCamera.position.clone()
+          .add(
+            new THREE.Vector3(0, 0, -cameraDistance - portalExtrusion)
+              .applyQuaternion(hitscanCamera.quaternion)
+          );
+
+        // compute the sample coordinates:
+        const floorCornerBasePosition = localVector5.set(0, 0, 0)
+          .add(localVector6.set(-floorNetWorldSize / 2, 0, -floorNetWorldSize / 2));
+        const px = (portalCenter.x - floorCornerBasePosition.x) / floorNetWorldSize;
+        const pz = (portalCenter.z - floorCornerBasePosition.z) / floorNetWorldSize;
+        let x = Math.floor(px * floorNetPixelSize);
+        x = Math.min(Math.max(0, x), floorNetPixelSize - 1);
+        let z = Math.floor(pz * floorNetPixelSize);
+        z = Math.min(Math.max(0, z), floorNetPixelSize - 1);
+        const index = z * floorNetPixelSize + x;
+        portalCenter.y = depthFloats[index];
+        // XXX make this the minimum of the scanned points instead,
+        // to prevent the portal from hanging above the floor and causing clipping after transition
+        // (?) this might not be needed if we snap the target portal center under ourselves during transition
+        // with uniformly raised floor net mesh for entrances/exits
+
+        const targetQuaternion = localQuaternion;
+        normalToQuaternion(normal, targetQuaternion, upVector);
+        localEuler.setFromQuaternion(targetQuaternion, 'YXZ');
+        if (localEuler.x > 0) {
+          localEuler.y += Math.PI;
+        }
+        localEuler.x = 0;
+        localEuler.z = 0;
+        targetQuaternion.setFromEuler(localEuler);
+        
+        // set the quaternion to face towards targetQuaternion, but with the floor normal as the up vector
+        const quaternion = localQuaternion4;
+        quaternion.multiplyQuaternions(
+          floorQuaternion,
+          targetQuaternion
+        );
+
+        // compute the portal box center, which is behind the position
+        const center = portalCenter.clone()
+          .add(
+            new THREE.Vector3(0, 0, entranceExitDepth / 2)
+              .applyQuaternion(quaternion)
+          );
+        // set the size
+        const size = new THREE.Vector3(entranceExitWidth, entranceExitHeight, entranceExitDepth);
+
+        portalLocations.push({
+          position: portalCenter.toArray(),
+          quaternion: quaternion.toArray(),
+          center: center.toArray(),
+          size: size.toArray(),
+        });
+      }
     }
     return portalLocations;
   };
