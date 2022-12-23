@@ -2970,14 +2970,16 @@ export class PanelRenderer extends EventTarget {
     const portalNetMesh = new PortalNetMesh({
       portalLocations: this.zineRenderer.metadata.portalLocations,
     });
-    this.scene.add(portalNetMesh);
+    this.zineRenderer.transformScene.add(portalNetMesh);
+    portalNetMesh.updateMatrixWorld();
     this.portalNetMesh = portalNetMesh;
 
     // entrance exit mesh
     const entranceExitMesh = new EntranceExitMesh({
       entranceExitLocations: this.zineRenderer.metadata.entranceExitLocations,
     });
-    this.scene.add(entranceExitMesh);
+    this.zineRenderer.transformScene.add(entranceExitMesh);
+    entranceExitMesh.updateMatrixWorld();
     this.entranceExitMesh = entranceExitMesh;
 
     // path mesh
@@ -2985,7 +2987,8 @@ export class PanelRenderer extends EventTarget {
     const pathMesh = new PathMesh(splinePoints);
     pathMesh.visible = false;
     pathMesh.frustumCulled = false;
-    this.scene.add(pathMesh);
+    this.zineRenderer.transformScene.add(pathMesh);
+    pathMesh.updateMatrixWorld();
     this.pathMesh = pathMesh;
 
     // selector
@@ -3000,13 +3003,15 @@ export class PanelRenderer extends EventTarget {
 
       selector.lensOutputMesh.position.x = -10;
       selector.lensOutputMesh.updateMatrixWorld();
-      scene.add(selector.lensOutputMesh);
+      this.zineRenderer.transformScene.add(selector.lensOutputMesh);
+      selector.lensOutputMesh.updateMatrixWorld();
       
       selector.indicesOutputMesh.position.x = -10;
       selector.indicesOutputMesh.position.z = -10;
       selector.indicesOutputMesh.quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
       selector.indicesOutputMesh.updateMatrixWorld();
-      scene.add(selector.indicesOutputMesh);
+      this.zineRenderer.transformScene.add(selector.indicesOutputMesh);
+      selector.indicesOutputMesh.updateMatrixWorld();
       
       sceneMesh.material.uniforms.selectedIndicesMap.value = selector.indicesRenderTarget.texture;
       sceneMesh.material.uniforms.selectedIndicesMap.needsUpdate = true;
@@ -3022,12 +3027,14 @@ export class PanelRenderer extends EventTarget {
       selector: this.selector,
     });
     overlay.addMesh(sceneMesh);
-    scene.add(overlay.overlayScene);
+    this.zineRenderer.transformScene.add(overlay.overlayScene);
+    overlay.overlayScene.updateMatrixWorld();
     this.overlay = overlay;
 
     // outmesh
     const outmeshMesh = new OutmeshToolMesh(sceneMesh.geometry);
-    this.scene.add(outmeshMesh);
+    this.zineRenderer.transformScene.add(outmeshMesh);
+    outmeshMesh.updateMatrixWorld();
     this.outmeshMesh = outmeshMesh;
 
     // initial render
