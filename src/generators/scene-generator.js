@@ -4409,10 +4409,10 @@ export async function compileVirtualScene(imageArrayBuffer) {
   {
     const scaleVector = localVector.fromArray(scale);
 
-    // const tops = [];
-    // const bottoms = [];
-    // const lefts = [];
-    // const rights = [];
+    const tops = [];
+    const bottoms = [];
+    const lefts = [];
+    const rights = [];
 
     let top = {
       min: [Infinity, Infinity, Infinity],
@@ -4438,7 +4438,7 @@ export async function compileVirtualScene(imageArrayBuffer) {
         if (z > top.max[2]) {
           localVector2.toArray(top.max);
         }
-        // tops.push(localVector2.toArray());
+        tops.push(localVector2.toArray());
       }
     }
     let bottom = {
@@ -4465,7 +4465,7 @@ export async function compileVirtualScene(imageArrayBuffer) {
         if (z > bottom.max[2]) {
           localVector2.toArray(bottom.max);
         }
-        // bottoms.push(localVector2.toArray());
+        bottoms.push(localVector2.toArray());
       }
     }
     let left = {
@@ -4492,7 +4492,7 @@ export async function compileVirtualScene(imageArrayBuffer) {
         if (z > left.max[2]) {
           localVector2.toArray(left.max);
         }
-        // lefts.push(localVector2.toArray());
+        lefts.push(localVector2.toArray());
       }
     }
     let right = {
@@ -4519,7 +4519,7 @@ export async function compileVirtualScene(imageArrayBuffer) {
         if (z > right.max[2]) {
           localVector2.toArray(right.max);
         }
-        // rights.push(localVector2.toArray());
+        rights.push(localVector2.toArray());
       }
     }
 
@@ -4528,10 +4528,10 @@ export async function compileVirtualScene(imageArrayBuffer) {
       bottom,
       left,
       right,
-      // tops,
-      // bottoms,
-      // lefts,
-      // rights,
+      tops,
+      bottoms,
+      lefts,
+      rights,
     };
   }
   // console.log('computed edge depths', edgeDepths);
