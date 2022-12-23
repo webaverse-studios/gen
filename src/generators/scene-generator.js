@@ -2225,10 +2225,6 @@ class Overlay {
     {
       const portalMesh = this.toolOverlayMeshes['portal'];
 
-      // if (!portalSpecs.labels) {
-      //   console.warn('no portal labels', portalSpecs);
-      //   debugger;
-      // }
       for (const label of portalSpecs.labels) {
         // compute label planes
         const center = localVector.fromArray(label.center);
@@ -3142,7 +3138,6 @@ export class PanelRenderer extends EventTarget {
             e.preventDefault();
             e.stopPropagation();
 
-            // XXX hack
             if (this.tool === 'outmesh') {
               defaultCameraMatrix.copy(this.camera.matrixWorld);
               
@@ -3209,11 +3204,10 @@ export class PanelRenderer extends EventTarget {
             this.controls.update();
             break;
           }
-          case 'n': {
+          /* case 'n': {
             console.log('connect');
-            // XXX
             break;
-          }
+          } */
           case 'c': {
             this.clip();
             break;
@@ -3922,7 +3916,6 @@ export class PanelRenderer extends EventTarget {
     return layerScene;
   }
   updateOutmeshLayers() {
-    // const layers = this.panel.zd.getDataLayersMatchingSpec(layer2Specs);
     let layer = this.panel.getLayer(2);
     if (layer && !layer.matchesSpecs(layer2Specs)) {
       layer = null;
@@ -3930,16 +3923,13 @@ export class PanelRenderer extends EventTarget {
     const layers = layer ? [
       layer,
     ] : [];
-    // console.log('update outmesh layers', layer, layer2Specs, layers);
 
     const _addNewLayers = () => {
       for (let i = 0; i < layers.length; i++) {
         let layerScene = this.layerScenes[i];
         if (!layerScene) {
           const layer = layers[i];
-          // console.log ('pre add layer scene', i, layerDatas);
           layerScene = this.createOutmeshLayer(layer);
-          // console.log('add layer scene', i, layerScene);
           this.scene.add(layerScene);
           this.layerScenes[i] = layerScene;
         }
