@@ -668,9 +668,21 @@ const getRaycastedCameraEntranceLocation = (() => {
       );
       const position = targetPosition.toArray();
       const quaternion = floorPlaneLocation.quaternion.slice();
+
+      // compute the portal box center, which is behind the position
+      const center = targetPosition.clone()
+        .add(
+          new THREE.Vector3(0, entranceExitHeight / 2, entranceExitDepth / 2)
+            .applyQuaternion(new THREE.Quaternion().fromArray(quaternion))
+        ).toArray();
+      // set the size
+      const size = new THREE.Vector3(entranceExitWidth, entranceExitHeight, entranceExitDepth)
+        .toArray();
       return {
         position,
         quaternion,
+        center,
+        size,
       };
     } else {
       return null;
