@@ -780,7 +780,7 @@ const getRaycastedPortalLocations = (() => {
         // compute the portal box center, which is behind the position
         const center = portalCenter.clone()
           .add(
-            new THREE.Vector3(0, 0, entranceExitDepth / 2)
+            new THREE.Vector3(0, entranceExitHeight / 2, entranceExitDepth / 2)
               .applyQuaternion(quaternion)
           );
         // set the size
