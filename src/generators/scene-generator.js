@@ -3553,16 +3553,8 @@ export class PanelRenderer extends EventTarget {
       });
       pointCloudHeaders = pc.headers;
       pointCloudArrayBuffer = pc.arrayBuffer;
-      // const pointCloudCanvas = drawPointCloudCanvas(pointCloudArrayBuffer);
-      // this.element.appendChild(pointCloudCanvas);
     }
     console.timeEnd('pointCloud');
-
-    // console.time('snapPointCloud');
-    // {
-    //   pointCloudArrayBuffer = snapPointCloudToCamera(pointCloudArrayBuffer, this.renderer.domElement.width, this.renderer.domElement.width, editCamera);
-    // }
-    // console.timeEnd('snapPointCloud');
 
     console.time('extractDepths');
     let newDepthFloatImageData = getDepthFloatsFromPointCloud(pointCloudArrayBuffer, panelSize, panelSize);
@@ -3577,26 +3569,6 @@ export class PanelRenderer extends EventTarget {
       portalMask,
     } = await getSemanticPlanes(editedImg, editCamera.fov, newDepthFloatImageData, segmentMask);
     console.timeEnd('planeDetection');
-
-    /* // reproject fov from new to old
-    console.time('reprojectFov');
-    {
-      const oldCamera = editCamera;
-      // const oldFov = oldCamera.fov;
-      const newFov = Number(pointCloudHeaders['x-fov']);
-      const newCamera = editCamera.clone();
-      newCamera.fov = newFov;
-      newCamera.updateProjectionMatrix();
-
-      newDepthFloatImageData = reprojectCameraFovArray(
-        newDepthFloatImageData,
-        this.renderer.domElement.width,
-        this.renderer.domElement.height,
-        newCamera,
-        oldCamera,
-      );
-    }
-    console.timeEnd('reprojectFov'); */
 
     // depth reconstruction
     const {
@@ -3661,8 +3633,6 @@ export class PanelRenderer extends EventTarget {
       this.renderer.domElement.height,
       editCamera,
     );
-    // globalThis.oldFloorNetDepthRenderGeometry = oldFloorNetDepthRenderGeometry;
-    // globalThis.newFloorNetDepthRenderGeometry = newFloorNetDepthRenderGeometry;
     const floorNetCamera = makeFloorNetCamera();
     const {
       floorNetDepths,
