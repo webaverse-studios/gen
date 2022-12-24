@@ -3658,6 +3658,26 @@ export class PanelRenderer extends EventTarget {
     const floorNetCameraJson = getOrthographicCameraJson(floorNetCamera);
     console.timeEnd('floorReconstruction');
 
+    // XXX enable this when there are outmeshed entrances/exits
+    // bump the floor heightfield to underpin the the entrance/exit locations w/ gaussian blur
+    // {
+    //   floorNetDepths = bumpFloorNetDepthsByBoxes(
+    //     floorNetDepths,
+    //     floorNetCamera,
+    //     floorNetPixelSize,
+    //     floorNetPixelSize,
+    //     entranceExitLocations,
+    //     floorPlaneLocation,
+    //   );
+    //   // have to recompute the heightfield from the new floor net depths
+    //   floorHeightfield = depthFloat32ArrayToHeightfield(
+    //     floorNetDepths,
+    //     floorNetPixelSize,
+    //     floorNetPixelSize,
+    //     floorNetCamera,
+    //   );
+    // }
+
     // return result
     return {
       maskImg: maskImgArrayBuffer,
@@ -4107,37 +4127,120 @@ const _getImageSegements = async imgBlob => {
 
 //
 
-/* const bumpFloorHeightfieldByBoxes = (
-  floorHeightfield, // Float32Array(width * height)
+const bumpFloorNetDepthsByBoxes = (
+  floorNetDepths, // Float32Array(width * height)
+  floorNetCamera, // THREE.PerspectiveCamera
   width, // number
   height, // number
-  portalLocations, // [{position, quaterion}]
+  portalLocations, // [{position, quaterion, center, size}]
+  floorPlaneLocation,
 ) => {
-  const _isPointInsidePortal = (x, z) => {
+  // console.log('got portal locations', portalLocations.slice());
+  // if (portalLocations.length !== 2) {
+  //   // throw new Error('expected two portal locations');
+  //   debugger;
+  // }
+  floorNetDepths = floorNetDepths.slice();
+
+  globalThis.portalLocations = portalLocations.slice();
+  globalThis.intersections = [];
+  globalThis.intersectValues = [];
+  globalThis.oldValues = [];
+  globalThis.newValues = [];
+  const _intersectPortal = (ray) => {
+    for (let i = 0; i < portalLocations.length; i++) {
+      const portalLocation = portalLocations[i];
+      let {quaternion, center, size} = portalLocation;
+      quaternion = new THREE.Quaternion().fromArray(quaternion);
+      center = new THREE.Vector3().fromArray(center);
+      size = new THREE.Vector3().fromArray(size);
+
+      // flatten the portal onto the floor
+      center.add(
+        new THREE.Vector3(0, -size.y / 2, 0)
+          .applyQuaternion(quaternion)
+      );
+      size.y = 0;
+
+      const box = new THREE.Box3()
+        .setFromCenterAndSize(new THREE.Vector3(0, 0, 0), size);
+      
+      // undo the box rotation transform so that we can perform a world space intersection test
+      const rotatedRay = ray.clone();
+      // if (isNaN(rotatedRay.origin.x)) {
+      //   console.warn('rotatedRay.origin A', rotatedRay.origin);
+      //   debugger;
+      // }
+      const m = new THREE.Matrix4()
+        .compose(
+          center,
+          quaternion,
+          new THREE.Vector3(1, 1, 1)
+        );
+      rotatedRay.applyMatrix4(
+        m.clone().invert()
+      );
+
+      const intersection = rotatedRay.intersectBox(box, new THREE.Vector3());
+      if (intersection) {
+        return intersection.distanceTo(rotatedRay.origin);
+      }
+    }
+    return null;
   };
 
-  for (let z = 0; z < height; z++) {
-    for (let x = 0; x < width; x++) {
-      const portalCenter = hitscanCamera.position.clone()
-        .add(
-          new THREE.Vector3(0, 0, -cameraDistance - portalExtrusion)
-            .applyQuaternion(hitscanCamera.quaternion)
-        );
+  // console.log('bumpFloorNetDepthsByBoxes', {
+  //   floorNetDepths,
+  //   floorNetCamera,
+  //   width,
+  //   height,
+  //   portalLocations,
+  //   floorPlaneLocation,
+  // });
 
-      // compute the sample coordinates:
-      const floorCornerBasePosition = localVector5.set(0, 0, 0)
-        .add(localVector6.set(-floorNetWorldSize / 2, 0, -floorNetWorldSize / 2));
-      const px = (portalCenter.x - floorCornerBasePosition.x) / floorNetWorldSize;
-      const pz = (portalCenter.z - floorCornerBasePosition.z) / floorNetWorldSize;
-      let x = Math.floor(px * floorNetPixelSize);
-      x = Math.min(Math.max(0, x), floorNetPixelSize - 1);
-      let z = Math.floor(pz * floorNetPixelSize);
-      z = Math.min(Math.max(0, z), floorNetPixelSize - 1);
-      const index = z * floorNetPixelSize + x;
-      portalCenter.y = depthFloats[index];
+  // loop through and adjust the points based on portal intersections
+  for (let i = 0; i < floorNetDepths.length; i++) {
+    let x = (i % width);
+    let y = Math.floor(i / width);
+    y = height - 1 - y;
+    // x = width - 1 - x;
+
+    // const floorQuaternion = new THREE.Quaternion().fromArray(floorPlaneLocation.quaternion);
+
+    const point = new THREE.Vector3(
+      (x / width) * floorNetWorldSize - floorNetWorldSize / 2,
+      (y / height) * floorNetWorldSize - floorNetWorldSize / 2,
+      0
+    );
+    const direction = new THREE.Vector3(0, 0, -1);
+    const ray = new THREE.Ray(point, direction)
+      .applyMatrix4(
+        floorNetCamera.matrixWorld
+      );
+
+    const viewZ = floorNetDepths[i];
+    // const worldHeight = floorNetCamera.position.y - viewZ;
+
+    // compute the new value
+    let v;
+    const portalIntersectionDistance = _intersectPortal(ray);
+    if (portalIntersectionDistance !== null) {
+      // new value is the portal's height
+      // v = portalHeight.position.y;
+      // bump to indicate hit
+      intersectValues.push(portalIntersectionDistance);
+      v = -portalIntersectionDistance;
+      newValues.push(v);
+    } else {
+      // use the old value
+      v = viewZ;
+      oldValues.push(v);
     }
+
+    floorNetDepths[i] = v;
   }
-}; */
+  return floorNetDepths;
+};
 
 //
 
@@ -4306,8 +4409,8 @@ export async function compileVirtualScene(imageArrayBuffer) {
 
   console.time('floorReconstruction');
   const floorNetCamera = makeFloorNetCamera();
-  let floorNetDepthsRaw; // no clipping optimization
-  let floorNetDepths; // has clipping optimization
+  let floorNetDepthsRaw; // no clipping or portal optimization
+  let floorNetDepths; // has clipping and portal optimization
   let floorResolution;
   let floorNetCameraJson;
   {
@@ -4337,7 +4440,8 @@ export async function compileVirtualScene(imageArrayBuffer) {
     floorNetPixelSize,
     floorNetCamera,
   );
-  const floorHeightfield = depthFloat32ArrayToHeightfield(
+
+  let floorHeightfield = depthFloat32ArrayToHeightfield(
     floorNetDepths,
     floorNetPixelSize,
     floorNetPixelSize,
@@ -4369,14 +4473,6 @@ export async function compileVirtualScene(imageArrayBuffer) {
     floorPlaneJson
   );
 
-  // XXX bump the floor heightfield to underpin the the entrance/exit locations w/ gaussian blur
-  // XXX note: this means we will need to refresh the entire floor heightfield when the scale changes
-  // bumpFloorHeightfieldByBoxes(
-  //   floorHeightfield,
-  //   floorNetPixelSize,
-  //   portalLocations,
-  // );
-
   const {
     entranceExitLocations,
     candidateLocations,
@@ -4385,6 +4481,25 @@ export async function compileVirtualScene(imageArrayBuffer) {
     cameraEntranceLocation,
     portalLocations,
   });
+
+  // bump the floor heightfield to underpin the the entrance/exit locations w/ gaussian blur
+  {
+    floorNetDepths = bumpFloorNetDepthsByBoxes(
+      floorNetDepths,
+      floorNetCamera,
+      floorNetPixelSize,
+      floorNetPixelSize,
+      entranceExitLocations,
+      floorPlaneLocation,
+    );
+    // have to recompute the heightfield from the new floor net depths
+    floorHeightfield = depthFloat32ArrayToHeightfield(
+      floorNetDepths,
+      floorNetPixelSize,
+      floorNetPixelSize,
+      floorNetCamera,
+    );
+  }
 
   const predictedHeight = await vqaClient.getPredictedHeight(blob);
 
