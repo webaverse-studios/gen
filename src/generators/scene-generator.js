@@ -277,6 +277,7 @@ const getFirstFloorPlaneIndex = (planeSpecs) => {
         }
       }
     });
+    // XXX this can be reduced to an average transform of the matching planes in the set to improve accuracy
     const firstFloorPlaneIndex = labelSpecs[0].index;
     return firstFloorPlaneIndex;
   } else {
