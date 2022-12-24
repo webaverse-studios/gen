@@ -3138,7 +3138,7 @@ export class PanelRenderer extends EventTarget {
     {
       this.zineRenderer.sceneMesh.material.uniforms.uEraser.value = tool === 'eraser' ? 1 : 0;
       this.zineRenderer.sceneMesh.material.uniforms.uEraser.needsUpdate = true;
-      this.zineRenderer.scenePhysicsMesh.enabled = this.tool === 'plane';
+      this.zineRenderer.scenePhysicsMesh.enabled = false; // this.tool === 'plane';
       this.zineRenderer.scenePhysicsMesh.updateVisibility();
       this.zineRenderer.floorNetMesh.enabled = this.tool === 'plane';
       this.zineRenderer.floorNetMesh.updateVisibility();
