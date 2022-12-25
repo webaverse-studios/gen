@@ -663,7 +663,7 @@ const getRangeHit = (() => {
     for (let dx = -size.x / 2; dx <= size.x / 2; dx += cameraScanStep) {
       for (let dz = -size.z / 2; dz <= size.z / 2; dz += cameraScanStep) {
         const distance = Math.sqrt(dx * dx + dz * dz);
-        if (distance < radius) {
+        if (distance < radius) { // if we're inside the range circle
           const targetPosition2 = getFloorHit(
             position,
             quaternion,
