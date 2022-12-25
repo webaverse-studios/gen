@@ -574,8 +574,8 @@ const getFloorPlaneLocation = (() => {
 const getFloorHit = (() => {
   const localVector = new THREE.Vector3();
   const localVector2 = new THREE.Vector3();
-  const localVector3 = new THREE.Vector3();
-  const localPlane = new THREE.Plane();
+  // const localVector3 = new THREE.Vector3();
+  // const localPlane = new THREE.Plane();
 
   return (position, quaternion, offset, depthFloatsRaw, floorPlaneJson, targetPosition) => {
     targetPosition.copy(position)
@@ -589,19 +589,48 @@ const getFloorHit = (() => {
       .add(localVector2.set(-floorNetWorldSize / 2, 0, -floorNetWorldSize / 2));
     const px = (targetPosition.x - floorCornerBasePosition.x) / floorNetWorldSize;
     const pz = (targetPosition.z - floorCornerBasePosition.z) / floorNetWorldSize;
-    const x = Math.floor(px * floorNetPixelSize);
-    const z = Math.floor(pz * floorNetPixelSize);
-    const index = z * floorNetPixelSize + x;
-    targetPosition.y = depthFloatsRaw[index];
+    // const x = Math.floor(px * floorNetPixelSize);
+    // const z = Math.floor(pz * floorNetPixelSize);
+    // const index = z * floorNetPixelSize + x;
+    // targetPosition.y = depthFloatsRaw[index];
+    targetPosition.y = binearInterpolate(
+      depthFloatsRaw,
+      floorNetPixelSize,
+      floorNetPixelSize,
+      px,
+      pz,
+    );
+    function binearInterpolate(
+      depthFloatsRaw,
+      width,
+      height,
+      px,
+      pz,
+    ) {
+      // first, compute the sample coordinates:
+      const x = Math.floor(px * width);
+      const z = Math.floor(pz * height);
+      const x1 = Math.min(x + 1, width - 1);
+      const z1 = Math.min(z + 1, height - 1);
+      const index = z * width + x;
+      const index1 = z * width + x1;
+      const index2 = z1 * width + x;
+      const index3 = z1 * width + x1;
+      
+      // then, compute the interpolation coefficients:
+      const fx = px * width - x;
+      const fz = pz * height - z;
+      const fx1 = 1 - fx;
+      const fz1 = 1 - fz;
 
-    // if (!floorPlaneJson?.normal) {
-    //   console.warn('no floor plane json', floorPlaneJson);
-    //   debugger;
-    // }
-    // const floorPlane = localPlane.set(
-    //   localVector3.fromArray(floorPlaneJson.normal),
-    //   floorPlaneJson.constant
-    // );
+      // and finally, interpolate:
+      return (
+        depthFloatsRaw[index] * fx1 * fz1 +
+        depthFloatsRaw[index1] * fx * fz1 +
+        depthFloatsRaw[index2] * fx1 * fz +
+        depthFloatsRaw[index3] * fx * fz
+      );
+    }
 
     if (targetPosition.y > -floorNetWorldDepth * 0.4) { // mesh hit
       return targetPosition;
