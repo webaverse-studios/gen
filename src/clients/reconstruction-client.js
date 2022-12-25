@@ -71,10 +71,11 @@ export const skyboxScaleFactor = 5;
 
 //
 
-export function getGeometryClipZMask(geometry, width, height, depthFloats32Array) {
-  const clipZMask = new Uint8Array(geometry.attributes.position.array.length / 3).fill(255);
+export function getGeometryClipZMask(geometry, width, height, depthFloats32Array, clipDistance = 0.2) {
+  // XXX do not clip floor-type segment classes/categories,
+  // XXX because floors should be solid for physics and a reliable ground truth for outmeshing
 
-  const clipDistance = 0.1;
+  const clipZMask = new Uint8Array(geometry.attributes.position.array.length / 3).fill(255);
 
   // for all points in left to right
   const gridX = width - 1;
