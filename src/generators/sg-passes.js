@@ -44,7 +44,8 @@ export function reconstructFloor({
 
   const floorNetDepthsRaw = getRenderSpecsMeshesDepth(meshes, width, height, camera);
   const floorNetDepths = new Float32Array(floorNetDepthsRaw.length);
-  const offset = 0.1 / 2;
+  // const offset = 0.1 / 2;
+  const offset = 0;
   for (let i = 0; i < floorNetDepthsRaw.length; i++) {
     let value = floorNetDepthsRaw[i];
     if (value !== 0) {
