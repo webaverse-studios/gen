@@ -550,6 +550,74 @@ const zipPlanesSegmentsJson = (planeSpecs, planesJson) => {
   }
   return planeSpecs;
 };
+function binearInterpolate(
+  depthFloatsRaw,
+  width,
+  height,
+  px,
+  pz,
+) {
+  // first, compute the sample coordinates:
+  const x = Math.floor(px * width);
+  const z = Math.floor(pz * height);
+  const x1 = Math.min(x + 1, width - 1);
+  const z1 = Math.min(z + 1, height - 1);
+  const index = z * width + x;
+  const index1 = z * width + x1;
+  const index2 = z1 * width + x;
+  const index3 = z1 * width + x1;
+  
+  // then, compute the interpolation coefficients:
+  const fx = px * width - x;
+  const fz = pz * height - z;
+  const fx1 = 1 - fx;
+  const fz1 = 1 - fz;
+
+  // and finally, interpolate:
+  return (
+    depthFloatsRaw[index] * fx1 * fz1 +
+    depthFloatsRaw[index1] * fx * fz1 +
+    depthFloatsRaw[index2] * fx1 * fz +
+    depthFloatsRaw[index3] * fx * fz
+  );
+}
+const projectQuaternionToFloor = (() => {
+  const localVector = new THREE.Vector3();
+  const localVector2 = new THREE.Vector3();
+  const localVector3 = new THREE.Vector3();
+  const localPlane = new THREE.Plane();
+
+  return (
+    srcQuaternion,
+    floorQuaternion,
+    targetQuaternion,
+  ) => {
+    // get the floor plane
+    const floorUpDirection = localVector.set(0, 1, 0)
+      .applyQuaternion(floorQuaternion);
+    const floorPlane = localPlane
+      .setFromNormalAndCoplanarPoint(
+        floorUpDirection,
+        new THREE.Vector3(0, 0, 0)
+      );
+
+    const forwardDirection = localVector2.set(0, 0, -1)
+      .applyQuaternion(srcQuaternion);
+    // project the forward direction onto the floor plane
+    const projectedForwardDirection = floorPlane.projectPoint(
+      forwardDirection,
+      localVector3
+    ).normalize();
+
+    return targetQuaternion.setFromRotationMatrix(
+      new THREE.Matrix4().lookAt(
+        new THREE.Vector3(0, 0, 0),
+        projectedForwardDirection,
+        floorUpDirection
+      )
+    );
+  };
+})();
 
 //
 
@@ -597,10 +665,6 @@ const getFloorHit = (() => {
       .add(localVector2.set(-floorNetWorldSize / 2, 0, -floorNetWorldSize / 2));
     const px = (targetPosition.x - floorCornerBasePosition.x) / floorNetWorldSize;
     const pz = (targetPosition.z - floorCornerBasePosition.z) / floorNetWorldSize;
-    // const x = Math.floor(px * floorNetPixelSize);
-    // const z = Math.floor(pz * floorNetPixelSize);
-    // const index = z * floorNetPixelSize + x;
-    // targetPosition.y = depthFloatsRaw[index];
     targetPosition.y = binearInterpolate(
       depthFloatsRaw,
       floorNetPixelSize,
@@ -608,37 +672,6 @@ const getFloorHit = (() => {
       px,
       pz,
     );
-    function binearInterpolate(
-      depthFloatsRaw,
-      width,
-      height,
-      px,
-      pz,
-    ) {
-      // first, compute the sample coordinates:
-      const x = Math.floor(px * width);
-      const z = Math.floor(pz * height);
-      const x1 = Math.min(x + 1, width - 1);
-      const z1 = Math.min(z + 1, height - 1);
-      const index = z * width + x;
-      const index1 = z * width + x1;
-      const index2 = z1 * width + x;
-      const index3 = z1 * width + x1;
-      
-      // then, compute the interpolation coefficients:
-      const fx = px * width - x;
-      const fz = pz * height - z;
-      const fx1 = 1 - fx;
-      const fz1 = 1 - fz;
-
-      // and finally, interpolate:
-      return (
-        depthFloatsRaw[index] * fx1 * fz1 +
-        depthFloatsRaw[index1] * fx * fz1 +
-        depthFloatsRaw[index2] * fx1 * fz +
-        depthFloatsRaw[index3] * fx * fz
-      );
-    }
 
     if (targetPosition.y > -floorNetWorldDepth * 0.4) { // mesh hit
       return targetPosition;
@@ -862,36 +895,6 @@ const getRaycastedPortalLocations = (() => {
           floorQuaternion,
           localQuaternion3
         );
-        function projectQuaternionToFloor(
-          srcQuaternion,
-          floorQuaternion,
-          targetQuaternion,
-        ) {
-          // get the floor plane
-          const floorUpDirection = new THREE.Vector3(0, 1, 0)
-            .applyQuaternion(floorQuaternion);
-          const floorPlane = new THREE.Plane()
-            .setFromNormalAndCoplanarPoint(
-              floorUpDirection,
-              new THREE.Vector3(0, 0, 0)
-            );
-
-          const forwardDirection = new THREE.Vector3(0, 0, -1)
-            .applyQuaternion(srcQuaternion);
-          // project the forward direction onto the floor plane
-          const projectedForwardDirection = floorPlane.projectPoint(
-            forwardDirection,
-            new THREE.Vector3()
-          ).normalize();
-
-          return targetQuaternion.setFromRotationMatrix(
-            new THREE.Matrix4().lookAt(
-              new THREE.Vector3(0, 0, 0),
-              projectedForwardDirection,
-              floorUpDirection
-            )
-          );
-        }
         
         // ensure there is space for the player to stand
         const targetPosition = getRangeHit(
