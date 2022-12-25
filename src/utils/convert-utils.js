@@ -31,7 +31,7 @@ export function img2canvas(img) {
 
 export function canvas2blob(canvas) {
   return new Promise((accept, reject) => {
-    canvas.toBlob(accept, 'image/png');
+    canvas.toBlob(accept, 'image/jpeg');
   });
 }
 
@@ -50,15 +50,16 @@ export async function image2DataUrl(img, className = '') {
   document.body.appendChild(canvas);
 
   // get the blob
-  const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+  const blob = await new Promise(resolve =>
+    canvas.toBlob(resolve, 'image/jpeg')
+  );
   // get the blob url
   // read the data url from the blob
-  const dataUrl = await new Promise(resolve => {
+  return await new Promise(resolve => {
     const reader = new FileReader();
     reader.onload = e => resolve(e.target.result);
     reader.readAsDataURL(blob);
   });
-  return dataUrl;
 }
 
 export function img2ImageData(img) {
