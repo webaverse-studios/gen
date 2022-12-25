@@ -813,6 +813,7 @@ const getRaycastedPortalLocations = (() => {
   const localQuaternion2 = new THREE.Quaternion();
   const localQuaternion3 = new THREE.Quaternion();
   const localQuaternion4 = new THREE.Quaternion();
+  const localQuaternion5 = new THREE.Quaternion();
   const localEuler = new THREE.Euler();
   
   return (portalSpecs, depthFloats, depthFloatsRaw, floorPlaneLocation, floorPlaneJson) => {
@@ -865,6 +866,42 @@ const getRaycastedPortalLocations = (() => {
             new THREE.Vector3(0, 0, -cameraDistance - portalExtrusion)
               .applyQuaternion(hitScanQuaternion)
           );
+        
+        const quaternion = projectQuaternionToFloor(
+          hitScanQuaternion,
+          floorQuaternion,
+          localQuaternion
+        );
+        function projectQuaternionToFloor(
+          srcQuaternion,
+          floorQuaternion,
+          targetQuaternion,
+        ) {
+          // get the floor plane
+          const floorUpDirection = new THREE.Vector3(0, 1, 0)
+            .applyQuaternion(floorQuaternion);
+          const floorPlane = new THREE.Plane()
+            .setFromNormalAndCoplanarPoint(
+              floorUpDirection,
+              new THREE.Vector3(0, 0, 0)
+            );
+
+          const forwardDirection = new THREE.Vector3(0, 0, -1)
+            .applyQuaternion(srcQuaternion);
+          // project the forward direction onto the floor plane
+          const projectedForwardDirection = floorPlane.projectPoint(
+            forwardDirection,
+            new THREE.Vector3()
+          ).normalize();
+
+          return targetQuaternion.setFromRotationMatrix(
+            new THREE.Matrix4().lookAt(
+              new THREE.Vector3(0, 0, 0),
+              projectedForwardDirection,
+              floorUpDirection
+            )
+          );
+        }
 
         // compute the sample coordinates:
         const floorCornerBasePosition = localVector5.set(0, 0, 0)
@@ -882,30 +919,12 @@ const getRaycastedPortalLocations = (() => {
         // (?) this might not be needed if we snap the target portal center under ourselves during transition
         // with uniformly raised floor net mesh for entrances/exits
 
-        const targetQuaternion = localQuaternion;
-        normalToQuaternion(normal, targetQuaternion, upVector);
-        localEuler.setFromQuaternion(targetQuaternion, 'YXZ');
-        if (localEuler.x > 0) {
-          localEuler.y += Math.PI;
-        }
-        localEuler.x = 0;
-        localEuler.z = 0;
-        targetQuaternion.setFromEuler(localEuler);
-        
-        // set the quaternion to face towards targetQuaternion, but with the floor normal as the up vector
-        const quaternion = localQuaternion4;
-        quaternion.multiplyQuaternions(
-          floorQuaternion,
-          targetQuaternion
-        );
-
         // compute the portal box center, which is behind the position
         const center = portalCenter.clone()
           .add(
             new THREE.Vector3(0, entranceExitHeight / 2, entranceExitDepth / 2)
               .applyQuaternion(quaternion)
           );
-        // set the size
         const size = new THREE.Vector3(entranceExitWidth, entranceExitHeight, entranceExitDepth);
 
         portalLocations.push({
