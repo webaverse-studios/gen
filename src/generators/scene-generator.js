@@ -4542,7 +4542,7 @@ export async function compileVirtualScene(imageArrayBuffer) {
     portalLocations,
   });
 
-  // bump the floor heightfield to underpin the the entrance/exit locations w/ gaussian blur
+  /* // bump the floor heightfield to underpin the the entrance/exit locations w/ gaussian blur
   {
     floorNetDepths = bumpFloorNetDepthsByBoxes(
       floorNetDepths,
@@ -4558,7 +4558,7 @@ export async function compileVirtualScene(imageArrayBuffer) {
       floorNetPixelSize,
       floorNetCamera,
     );
-  }
+  } */
 
   const predictedHeight = await vqaClient.getPredictedHeight(blob);
 
