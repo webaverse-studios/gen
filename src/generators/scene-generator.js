@@ -4341,6 +4341,24 @@ const bumpFloorNetDepthsByBoxes = (
 };
 
 //
+// function that given an image extracts depth maps and sends both + scale to `https://dataset.webaverse.com/store`
+export async function getDepth(imageArrayBuffer) {
+
+  const blob = new Blob([imageArrayBuffer], {
+    type: 'image/png',
+  });
+
+  // fetch depth map o'f imageArrayBuffer from `http://192.168.0.36:5555:5555/predictDepth`
+  const res = await fetch(`https://127.0.0.1:5555/predictDepth`, {
+    method: 'POST',
+    body: blob,
+    headers: {
+      'Content-Type': 'image/png',
+    },
+    mode: 'cors',
+  });
+  return res
+}
 
 export async function compileVirtualScene(imageArrayBuffer) {
   // color

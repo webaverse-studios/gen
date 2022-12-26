@@ -22,6 +22,7 @@ import {
 } from '../clients/image-client.js';
 import {
   compileVirtualScene,
+  getDepth
 } from './scene-generator.js';
 import {
   panelSize,
@@ -227,6 +228,52 @@ export class Panel extends EventTarget {
       const blob = await imageAiClient.createImageBlob(prompt, {signal});
       await this.setFile(blob, prompt);
     }, 'generating image');
+  }
+
+  async collectData() {
+    await this.task(async ({signal}) => {
+      console.log("Collected data");
+      // get image from layer 0
+      const layer = this.zp.getLayer(0);
+      const imageArrayBuffer = layer.getData(mainImageKey);
+      console.log('got image array buffer', imageArrayBuffer);
+      const depthRes = await getDepth(imageArrayBuffer)
+      // get scale from layer 1
+      const layer1 = this.zp.getLayer(1);
+      const scale = layer1.getData("scale");
+      console.log("scale", scale);
+
+      // if depthRes.ok then create blob from imageArrayBuffer and depthRes.arrayBuffer() and scale and send to server
+      if (depthRes.ok) {
+        console.log("Sending Data");
+        // turn depthRes.arrayBuffer() into a Float32Array
+        const depthArrayBuffer = await depthRes.arrayBuffer();
+        const depthFloat32Array = new Float32Array(depthArrayBuffer);
+
+
+        const headers = new Headers();
+        headers.set('scale', scale[0]);
+        const depthMapArrayBuffer = depthFloat32Array.buffer;
+
+        const body = new FormData();
+        const image_blob = new Blob([imageArrayBuffer], {type: 'image/jpeg'});
+        body.append('image', image_blob, 'image.bin');
+        const depthMapBlob = new Blob([depthMapArrayBuffer], { type: 'application/octet-stream' });
+        body.append('depth_map', depthMapBlob, 'depth_map.bin');
+
+        const requestOptions = {
+          method: 'POST',
+          headers: headers,
+          body: body,
+        };
+
+        // send blob to server at 'http://192.168.0.36:5000/store'
+        const response = await fetch('https://127.0.0.1:5000/store', requestOptions);
+      } else {
+        console.log("Depth Error");
+        console.warn('invalid response', depthRes.status);
+      }
+    }, "collecting data");
   }
 
   async compile() {
