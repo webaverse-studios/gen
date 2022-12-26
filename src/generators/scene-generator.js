@@ -792,17 +792,18 @@ const getRaycastedCameraEntranceLocation = (() => {
     );
     if (cameraDistance !== null) {
       // ensure there is space for the player to stand
-      const targetPosition = getRangeHit(
+      const targetPosition = getFloorHit(
         position.clone()
           .add(
-            new THREE.Vector3(0, 0, -cameraDistance - portalExtrusion)
+            // new THREE.Vector3(0, 0, -cameraDistance - portalExtrusion)
+            new THREE.Vector3(0, 0, -cameraDistance)
               .applyQuaternion(quaternion)
           ),
         quaternion,
         localVector3.setScalar(entranceExitEmptyDiameter),
         depthFloatsRaw,
         floorPlaneJson,
-        localVector,
+        localVector
       );
       if (targetPosition !== null) {
         const position = targetPosition.toArray();
