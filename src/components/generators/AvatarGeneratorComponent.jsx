@@ -402,7 +402,7 @@ const generateAvatar = async (canvas, prompt, negativePrompt) => {
 
   (async () => {
     const gltf = await selectAvatar();
-    const model = gltf.scene;
+    let model = gltf.scene;
 
     // return;
 
