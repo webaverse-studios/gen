@@ -29,9 +29,7 @@ const nextConfig = {
   },
   webpack(config) {
     return Object.assign({}, config, {
-      /* externals: Object.assign({}, config.externals, {
-        fs: 'fs',
-      }), */
+      // target: ["web", "es2020"],
       module: Object.assign({}, config.module, {
         rules: config.module.rules.concat([
           /* {
@@ -49,6 +47,10 @@ const nextConfig = {
       }),
     });
   },
+  // experimental: {
+  //   legacyBrowsers: false,
+  //   browsersListForSwc: true,
+  // },
 };
 export default nextConfig;
 // module.exports = nextConfig;
