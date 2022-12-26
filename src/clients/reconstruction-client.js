@@ -469,6 +469,35 @@ export async function getPointCloud(blob, {
       arrayBuffer,
     };
   } else {
+    console.warn('point cloud request error', res);
+    debugger;
+  }
+}
+
+export async function getDepthField(blob, {
+  forceFov,
+} = {}) {
+  const u = new URL('https://depth.webaverse.com/depthfield');
+  if (forceFov !== undefined) {
+    u.searchParams.set('fov', forceFov);
+  }
+  const res = await fetch(u, {
+    method: 'POST',
+    body: blob,
+    // headers: {
+    //   'Content-Type': 'image/png',
+    // },
+    mode: 'cors',
+  });
+  if (res.ok) {
+    const headers = Object.fromEntries(res.headers.entries());
+    const arrayBuffer = await res.arrayBuffer();
+    return {
+      headers,
+      arrayBuffer,
+    };
+  } else {
+    console.warn('depth field request error', res);
     debugger;
   }
 }
