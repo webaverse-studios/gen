@@ -68,9 +68,9 @@ const SceneGeneratorComponent = () => {
   const onPanelSelect = panel => {
     setPanel(panel);
   };
-  const onPanelsLoad = uint8Array => {
+  const onPanelsLoad = async uint8Array => {
     storyboard.clear();
-    storyboard.load(uint8Array);
+    await storyboard.loadAsync(uint8Array);
 
     if (storyboard.panels.length > 0) {
       setPanel(storyboard.panels[0]);

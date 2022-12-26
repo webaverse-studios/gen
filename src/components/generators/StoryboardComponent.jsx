@@ -151,11 +151,11 @@ export const StoryboardComponent = ({
       onDrop={drop}
     >
       <div className={styles.buttons}>
-        <button className={styles.button} onClick={e => {
+        <button className={styles.button} onClick={async e => {
           e.preventDefault();
           e.stopPropagation();
 
-          const uint8Array = storyboard.export();
+          const uint8Array = await storyboard.exportAsync();
           // const firstBytes = uint8Array.slice(0, 4);
           // const firstBytesString = textDecoder.decode(firstBytes);
           // console.log('export decoded', {firstBytesString});
