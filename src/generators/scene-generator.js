@@ -36,27 +36,30 @@ import {
   makeFloorNetCamera,
   normalToQuaternion,
 } from '../zine/zine-utils.js';
-import {
-  ZineStoryboard,
-  ZinePanel,
-  ZineData,
-} from '../zine/zine-format.js';
+// import {
+//   ZineStoryboard,
+//   ZinePanel,
+//   ZineData,
+// } from '../zine/zine-format.js';
 import {
   ZineRenderer,
 } from '../zine/zine-renderer.js';
+import physicsManager from '../../physics-manager.js';
+// import {
+//   ZineStoryboardCompressor,
+// } from '../zine/zine-compression.js'
+
+//
 
 import {ImageAiClient} from '../clients/image-client.js';
 import {
-  getPointCloud,
-  // drawPointCloudCanvas,
-  // reprojectCameraFovArray,
-  // applySkybox,
-  // pointCloudArrayBufferToColorAttributeArray,
-  // skyboxDistance,
+  getDepthField,
+  // getPointCloud,
   clipGeometryZ,
   mergeOperator,
 } from '../clients/reconstruction-client.js';
 import {
+  reconstructPointCloudFromDepthField,
   pointCloudArrayBufferToPositionAttributeArray,
   pointCloudArrayBufferToGeometry,
   reinterpretFloatImageData,
@@ -118,13 +121,6 @@ import {
 } from '../zine/zine-constants.js';
 
 import {PathMesh} from '../zine-aux/meshes/path-mesh.js';
-
-
-//
-
-export {
-  ZineStoryboard,
-};
 
 //
 
@@ -811,8 +807,6 @@ const getRaycastedCameraEntranceLocation = (() => {
       if (targetPosition !== null) {
         const position = targetPosition.toArray();
         const quaternion = floorPlaneLocation.quaternion.slice();
-
-        console.log('camera hit', position.join(','));
 
         // compute the portal box center, which is behind the position
         const center = targetPosition.clone()
@@ -2287,7 +2281,7 @@ class Overlay {
           const {pickerIndex} = this.selector;
           let selectorIndex;
           if (pickerIndex !== -1) {
-            const {array, /*colorArray, labelIndices, labels, mask*/} = segmentSpecs;
+            const {array} = segmentSpecs;
             const segmentIndex = array[pickerIndex];
             if (segmentIndex !== undefined) {
               selectorIndex = segmentIndex;
@@ -3608,11 +3602,19 @@ export class PanelRenderer extends EventTarget {
     maskBlob,
     editCameraJson,
   }) {
+    const layer0 = this.panel.getLayer(1);
+    const resolution = layer0.getData('resolution');
     const layer1 = this.panel.getLayer(1);
-    const oldPointCloudArrayBuffer = layer1.getData('pointCloud');
+    const originalCameraJson = layer1.getData('cameraJson');
+    const oldDepthField = layer1.getData('depthField');
     const floorPlaneJson = layer1.getData('floorPlaneJson');
 
     // reify objects
+    const [
+      width,
+      height,
+    ] = resolution;
+    const originalCamera = setPerspectiveCameraFromJson(localCamera, originalCameraJson).clone();
     const editCamera = setPerspectiveCameraFromJson(localCamera, editCameraJson).clone();
     const floorPlane = new THREE.Plane(localVector.fromArray(floorPlaneJson.normal), floorPlaneJson.constant);
 
@@ -3675,16 +3677,34 @@ export class PanelRenderer extends EventTarget {
     }
     console.timeEnd('imageSegmentation');
 
-    // get point cloud
-    console.time('pointCloud');
-    let pointCloudHeaders;
-    let pointCloudArrayBuffer;
+    // get depth field
+    console.time('depthField');
+    let depthFieldHeaders;
+    let depthFieldArrayBuffer;
     {
-      const pc = await getPointCloud(editedImgBlob, {
+      const df = await getDepthField(editedImgBlob, {
         forceFov: editCamera.fov,
       });
-      pointCloudHeaders = pc.headers;
-      pointCloudArrayBuffer = pc.arrayBuffer;
+      depthFieldHeaders = df.headers;
+      depthFieldArrayBuffer = df.arrayBuffer;
+    }
+    console.log('got depth field', {
+      depthFieldArrayBuffer,
+      depthFieldFloat32Array: new Float32Array(depthFieldArrayBuffer),
+      depthFieldHeaders,
+    });
+    console.timeEnd('depthField');
+
+    console.time('pointCloud');
+    let pointCloudArrayBuffer;
+    {
+      const pointCloudFloat32Array = reconstructPointCloudFromDepthField(
+        depthFieldArrayBuffer,
+        width,
+        height,
+        editCamera.fov,
+      );
+      pointCloudArrayBuffer = pointCloudFloat32Array.buffer;
     }
     console.timeEnd('pointCloud');
 
@@ -3754,6 +3774,13 @@ export class PanelRenderer extends EventTarget {
     }
 
     console.time('floorReconstruction');
+    const oldPointCloudFloat32Array = reconstructPointCloudFromDepthField(
+      oldDepthField,
+      width,
+      height,
+      originalCamera.fov,
+    );
+    const oldPointCloudArrayBuffer = oldPointCloudFloat32Array.buffer;
     const oldFloorNetDepthRenderGeometry = pointCloudArrayBufferToGeometry(
       oldPointCloudArrayBuffer,
       this.renderer.domElement.width,
@@ -3815,8 +3842,8 @@ export class PanelRenderer extends EventTarget {
       editedImg: editedImgArrayBuffer,
       maskIndex,
 
-      pointCloudHeaders,
-      pointCloud: pointCloudArrayBuffer,
+      depthFieldHeaders,
+      depthField: depthFieldArrayBuffer,
       depthFloatImageData,
       distanceFloatImageData,
       distanceNearestPositions,
@@ -4364,35 +4391,6 @@ export async function compileVirtualScene(imageArrayBuffer) {
   const quaternion = [0, 0, 0, 1];
   const scale = [1, 1, 1];
 
-  // {
-  //   const res = await fetch(`https://depth.webaverse.com/predictFov`, {
-  //     method: 'POST',
-  //     body: blob,
-  //   });
-  //   if (res.ok) {
-  //     const j = await res.json();
-  //     console.log('predict fov json', j);
-  //   } else {
-  //     console.warn('invalid response', res.status);
-  //   }
-  // }
-  
-  // {
-  //   const res = await fetch(`https://depth.webaverse.com/depth`, {
-  //     method: 'POST',
-  //     body: blob,
-  //   });
-  //   if (res.ok) {
-  //     const arrayBuffer = await res.arrayBuffer();
-  //     console.log('got array buffer', arrayBuffer);
-  //     const float32Array = new Float32Array(arrayBuffer);
-  //     console.log('predict fov json', float32Array);
-  //   } else {
-  //     console.warn('invalid response', res.status);
-  //   }
-  // }
-  // debugger;
-
   // image segmentation
   console.time('imageSegmentation');
   let segmentMask;
@@ -4437,17 +4435,45 @@ export async function compileVirtualScene(imageArrayBuffer) {
   }
   console.timeEnd('imageSegmentation');
 
-  // point cloud reconstruction
+  // get depth field
+  console.time('depthField');
+  let depthFieldHeaders;
+  let depthFieldArrayBuffer;
+  {
+    const df = await getDepthField(blob);
+    depthFieldHeaders = df.headers;
+    depthFieldArrayBuffer = df.arrayBuffer;
+  }
+  console.log('got depth field', {
+    depthFieldArrayBuffer,
+    depthFieldFloat32Array: new Float32Array(depthFieldArrayBuffer),
+    depthFieldHeaders,
+  });
+  console.timeEnd('depthField');
+
+  // reconstruct point cloud
   console.time('pointCloud');
-  let {
-    headers: pointCloudHeaders,
-    arrayBuffer: pointCloudArrayBuffer,
-  } = await getPointCloud(blob);
+  const fov = Number(depthFieldHeaders['x-fov']);
+  let pointCloudArrayBuffer;
+  {
+    const pointCloudFloat32Array = reconstructPointCloudFromDepthField(
+      depthFieldArrayBuffer,
+      width,
+      height,
+      fov,
+    );
+    console.log('reconstruct point cloud', {
+      pointCloudFloat32Array,
+    });
+    if (pointCloudFloat32Array.byteOffset !== 0) {
+      throw new Error('unexpected point cloud byte offset');
+    }
+    pointCloudArrayBuffer = pointCloudFloat32Array.buffer;
+  }
   console.timeEnd('pointCloud');
 
   // plane detection
   console.time('planeDetection');
-  const fov = Number(pointCloudHeaders['x-fov']);
   const depthFloats32Array = getDepthFloatsFromPointCloud(pointCloudArrayBuffer, panelSize, panelSize);
   const {
     planesJson,
@@ -4815,8 +4841,8 @@ export async function compileVirtualScene(imageArrayBuffer) {
     scale,
     segmentMask,
     cameraJson,
-    pointCloudHeaders,
-    pointCloud: pointCloudArrayBuffer,
+    depthFieldHeaders,
+    depthField: depthFieldArrayBuffer,
     planesJson,
     planesMask,
     portalJson,

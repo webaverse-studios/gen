@@ -25,10 +25,6 @@ export class Storyboard extends EventTarget {
   #listen() {
     const onupdate = e => {
       const {keyPath} = e.data;
-      // console.log('storyboard got inner', {keyPath});
-      // if (!keyPath) {
-      //   debugger;
-      // }
       const opts = {
         data: {
           keyPath,
@@ -79,23 +75,16 @@ export class Storyboard extends EventTarget {
   clear() {
     this.zs.clear();
   }
-  load(uint8Array) {
-    this.zs.load(uint8Array);
+  async loadAsync(uint8Array) {
+    await this.zs.loadAsync(uint8Array);
   }
-  export() {
-    return this.zs.export();
+  async exportAsync() {
+    return await this.zs.exportAsync();
   }
   
   addPanel() {
     const zp = this.zs.addPanel();
-    // if (!zp) {
-    //   console.warn('construct with bad zp', zp);
-    //   debugger;
-    // }
-
     const panel = this.panels[this.panels.length - 1];
-    // const panel = new Panel(zp);
-    // this.panels.push(panel);
     return panel;
   }
   addPanelFromPrompt(prompt) {
