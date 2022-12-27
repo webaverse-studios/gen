@@ -266,9 +266,7 @@ export class Panel extends EventTarget {
           headers: headers,
           body: body,
         };
-
-        // send blob to server at 'http://192.168.0.36:5000/store'
-        const response = await fetch('https://127.0.0.1:5000/store', requestOptions);
+        const response = await fetch('https://training.webaverse.com/store', requestOptions);
       } else {
         console.log("Depth Error");
         console.warn('invalid response', depthRes.status);

@@ -4348,8 +4348,8 @@ export async function getDepth(imageArrayBuffer) {
     type: 'image/png',
   });
 
-  // fetch depth map o'f imageArrayBuffer from `http://192.168.0.36:5555:5555/predictDepth`
-  const res = await fetch(`https://127.0.0.1:5555/predictDepth`, {
+  // fetch depth map of imageArrayBuffer
+  const res = await fetch(`https://depth.webaverse.com/predictDepth`, {
     method: 'POST',
     body: blob,
     headers: {
