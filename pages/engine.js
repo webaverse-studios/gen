@@ -32,7 +32,7 @@ offscreenEngineApi(async (funcName, args, opts) => {
       layer1.setData(name, v);
     }
     
-    const uint8Array = storyboard.export();
+    const uint8Array = await storyboard.exportAsync();
     return uint8Array;
   } else {
     throw new Error('unknown function: ' + funcName);
