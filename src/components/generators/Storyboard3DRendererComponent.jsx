@@ -97,7 +97,7 @@ export const Storyboard3DRendererComponent = ({
         <button className={styles.button} onClick={async e => {
           await panel.collectData();
         }
-        }>Get Scale</button>
+        }>Submit Scale</button>
       </div>
       <Panel3DCanvas
         panel={panel}
