@@ -220,9 +220,9 @@ const resizeBoundingBoxLayers = (boundingBoxLayers, oldWidth, oldHeight, width, 
 
 //
 
-const getFirstFloorPlaneIndex = (planeSpecs) => {
-  if (planeSpecs.labels.length > 0) {
-    const labelSpecs = planeSpecs.labels.map((label, index) => {
+const getFirstFloorPlaneIndex = (planeLabels) => {
+  if (planeLabels.length > 0) {
+    const labelSpecs = planeLabels.map((label, index) => {
       const {normal, distanceSquaredF} = label;
       return {
         index,
@@ -292,17 +292,25 @@ const getSemanticSpecs = ({
   width,
   height,
 }) => {
-  const segmentSpecs = getMaskSpecsByConnectivity(geometry, segmentMask, width, height);
-  let planeSpecs = getMaskSpecsByValue(geometry, planesMask, width, height);
-  planeSpecs = zipPlanesSegmentsJson(planeSpecs, planesJson);
-  // const portalSpecs = getMaskSpecsByMatch(portalJson, segmentMask, categoryClassIndices.portal, width, height);
-  const portalSpecs = {
-    labels: portalJson,
-  };
+  const {
+    labels: segmentLabels,
+    labelIndices: segmentLabelIndices,
+  } = getMaskSpecsByConnectivity(geometry, segmentMask, width, height);
+  
+  const {
+    labels: planeLabels,
+    labelIndices: planeLabelIndices,
+  } = getMaskSpecsByValue(geometry, planesMask, width, height);
+  zipPlanesSegmentsJson(planeLabels, planesJson);
+
+  const portalLabels = portalJson;
+
   return {
-    segmentSpecs,
-    planeSpecs,
-    portalSpecs,
+    segmentLabels,
+    segmentLabelIndices,
+    planeLabels,
+    planeLabelIndices,
+    portalLabels,
   };
 };
 
@@ -485,23 +493,23 @@ const getMaskSpecsByValue = (geometry, mask, width, height) => {
     labelIndices,
   };
 };
-const zipPlanesSegmentsJson = (planeSpecs, planesJson) => {
-  if (planeSpecs.labels.length !== planesJson.length) {
+const zipPlanesSegmentsJson = (planeLabels, planesJson) => {
+  if (planeLabels.length !== planesJson.length) {
     console.warn('invalid planes zip lengths', {
-      planeSpecs,
+      planeLabels,
       planesJson,
     });
     debugger;
   }
 
-  for (let i = 0; i < planeSpecs.labels.length; i++) {
-    const label = planeSpecs.labels[i];
+  for (let i = 0; i < planeLabels.length; i++) {
+    const label = planeLabels[i];
     const planeJson = planesJson[i];
     for (const k in planeJson) {
       label[k] = planeJson[k];
     }
   }
-  return planeSpecs;
+  // return planeLabels;
 };
 function binearInterpolate(
   depthFloatsRaw,
@@ -791,10 +799,10 @@ const getRaycastedPortalLocations = (() => {
   const localQuaternion2 = new THREE.Quaternion();
   const localQuaternion3 = new THREE.Quaternion();
   
-  return (portalSpecs, depthFloats, depthFloatsRaw, floorPlaneLocation, floorPlaneJson) => {
+  return (portalLabels, depthFloats, depthFloatsRaw, floorPlaneLocation, floorPlaneJson) => {
     const portalLocations = [];
-    for (let i = 0; i < portalSpecs.labels.length; i++) {
-      const labelSpec = portalSpecs.labels[i];
+    for (let i = 0; i < portalLabels.length; i++) {
+      const labelSpec = portalLabels[i];
       const normal = localVector.fromArray(labelSpec.normal);
       const center = localVector2.fromArray(labelSpec.center);
 
@@ -1923,9 +1931,14 @@ class Overlay {
 
     const geometry = sceneMesh.geometry.clone();
     const {
-      segmentSpecs,
-      planeSpecs,
-      portalSpecs,
+      segmentLabels,
+      segmentLabelIndices,
+      planeLabels,
+      planeLabelIndices,
+      portalLabels,
+      // segmentSpecs,
+      // planeSpecs,
+      // portalSpecs,
       segmentArray,
       firstFloorPlaneIndex,
     } = sceneMesh;
@@ -2229,7 +2242,7 @@ class Overlay {
             if (segmentIndex !== undefined) {
               selectorIndex = segmentIndex;
             } else {
-              console.warn('no segment index', this, segmentSpecs, pickerIndex);
+              console.warn('no segment index', this, segmentArray, pickerIndex);
               debugger;
             }
           } else {
@@ -2279,8 +2292,7 @@ class Overlay {
     // segment text meshes
     {
       const segmentMesh = this.toolOverlayMeshes['segment'];
-      const {labels} = segmentSpecs;
-      for (const label of labels) {
+      for (const label of segmentLabels) {
         const {index, bbox} = label;
         const name = classes[index];
 
@@ -2315,7 +2327,7 @@ class Overlay {
 
       const planeArrowMeshes = [];
       const planeMeshes = [];
-      for (const label of planeSpecs.labels) {
+      for (const label of planeLabels) {
         // compute label planes
         const center = localVector.fromArray(label.center);
         const normal = localVector2.fromArray(label.normal);
@@ -2351,7 +2363,7 @@ class Overlay {
     {
       const portalMesh = this.toolOverlayMeshes['portal'];
 
-      for (const label of portalSpecs.labels) {
+      for (const label of portalLabels) {
         // compute label planes
         const center = localVector.fromArray(label.center);
         const normal = localVector2.fromArray(label.normal);
@@ -3305,7 +3317,7 @@ export class PanelRenderer extends EventTarget {
           }
           case 'r': {
             const {planeSpecs, firstFloorPlaneIndex} = this.sceneMesh;
-            const labelSpec = planeSpecs.labels[firstFloorPlaneIndex];
+            const labelSpec = planeLabels[firstFloorPlaneIndex];
             const normal = localVector.fromArray(labelSpec.normal);
             // const center = localVector2.fromArray(labelSpec.center);
 
@@ -3785,9 +3797,14 @@ export class PanelRenderer extends EventTarget {
       planesJson,
       planesMask,
       portalJson,
-      segmentSpecs,
-      planeSpecs,
-      portalSpecs,
+      segmentLabels,
+      segmentLabelIndices,
+      planeLabels,
+      planeLabelIndices,
+      portalLabels,
+      // segmentSpecs,
+      // planeSpecs,
+      // portalSpecs,
       floorResolution,
       floorNetDepths,
       floorNetCameraJson,
@@ -3825,9 +3842,14 @@ export class PanelRenderer extends EventTarget {
     const floorNetDepths = layer.getData('floorNetDepths');
     const floorNetCameraJson = layer.getData('floorNetCameraJson');
     const segmentMask = layer.getData('segmentMask');
-    const segmentSpecs = layer.getData('segmentSpecs');
-    const planeSpecs = layer.getData('planeSpecs');
-    const portalSpecs = layer.getData('portalSpecs');
+    const segmentLabels = layer.getData('segmentLabels');
+    const segmentLabelIndices = layer.getData('segmentLabelIndices');
+    const planeLabels = layer.getData('planeLabels');
+    const planeLabelIndices = layer.getData('planeLabelIndices');
+    const portalLabels = layer.getData('portalLabels');
+    // const segmentSpecs = layer.getData('segmentSpecs');
+    // const planeSpecs = layer.getData('planeSpecs');
+    // const portalSpecs = layer.getData('portalSpecs');
     const editCameraJson = layer.getData('editCameraJson');
 
     //
@@ -3937,9 +3959,14 @@ export class PanelRenderer extends EventTarget {
         height: this.canvas.height,
       });
       const {
-        segmentSpecs,
-        planeSpecs,
-        portalSpecs,
+        segmentLabels,
+        segmentLabelIndices,
+        planeLabels,
+        planeLabelIndices,
+        portalLabels,
+        // segmentSpecs,
+        // planeSpecs,
+        // portalSpecs,
       } = semanticSpecs;
       geometry.computeVertexNormals();
 
@@ -3993,25 +4020,21 @@ export class PanelRenderer extends EventTarget {
       });
       backgroundMesh = new THREE.Mesh(geometry, material);
       backgroundMesh.name = 'backgroundMesh';
-      // backgroundMesh.position.copy(this.camera.position);
-      // backgroundMesh.quaternion.copy(this.camera.quaternion);
-      // backgroundMesh.scale.copy(this.camera.scale);
-      // backgroundMesh.matrix.copy(this.camera.matrix);
-      // backgroundMesh.matrixWorld.copy(this.camera.matrixWorld);
       backgroundMesh.frustumCulled = false;
       // XXX reconstruct segmentArray from segmentSpecs and latch it here
-      backgroundMesh.segmentSpecs = segmentSpecs;
-      backgroundMesh.planeSpecs = planeSpecs;
-      backgroundMesh.portalSpecs = portalSpecs;
+      backgroundMesh.segmentLabels = segmentLabels;
+      backgroundMesh.segmentLabelIndices = segmentLabelIndices;
+      backgroundMesh.planeLabels = planeLabels;
+      backgroundMesh.planeLabelIndices = planeLabelIndices;
+      backgroundMesh.portalLabels = portalLabels;
+      // backgroundMesh.segmentSpecs = segmentSpecs;
+      // backgroundMesh.planeSpecs = planeSpecs;
+      // backgroundMesh.portalSpecs = portalSpecs;
 
       layerScene.add(backgroundMesh);
     }
     console.timeEnd('backgroundMesh');
     
-    // globalThis.distanceFloatImageData = distanceFloatImageData;
-    // globalThis.backgroundMesh = backgroundMesh;
-    // globalThis.distanceNearestPositions = distanceNearestPositions;
-
     this.floorNetMesh.setGeometry({
       floorNetDepths,
       floorNetCamera,
@@ -4411,9 +4434,14 @@ export async function compileVirtualScene(imageArrayBuffer) {
     height: img.height,
   });
   const {
-    segmentSpecs,
-    planeSpecs,
-    portalSpecs,
+    segmentLabels,
+    segmentLabelIndices,
+    planeLabels,
+    planeLabelIndices,
+    portalLabels,
+    // segmentSpecs,
+    // planeSpecs,
+    // portalSpecs,
   } = semanticSpecs;
 
   console.time('floorPlane');
@@ -4422,9 +4450,9 @@ export async function compileVirtualScene(imageArrayBuffer) {
       localVector.set(0, 1, 0),
       localVector2.set(0, 0, 0)
     );
-  const firstFloorPlaneIndex = getFirstFloorPlaneIndex(planeSpecs);
+  const firstFloorPlaneIndex = getFirstFloorPlaneIndex(planeLabels);
   if (firstFloorPlaneIndex !== -1) {
-    const labelSpec = planeSpecs.labels[firstFloorPlaneIndex];
+    const labelSpec = planeLabels[firstFloorPlaneIndex];
     const {normal, center} = labelSpec;
     floorPlane.setFromNormalAndCoplanarPoint(
       localVector.fromArray(normal),
@@ -4479,7 +4507,7 @@ export async function compileVirtualScene(imageArrayBuffer) {
   );
 
   const floorPlaneLabelSpec = firstFloorPlaneIndex !== -1 ?
-    planeSpecs.labels[firstFloorPlaneIndex]
+    planeLabels[firstFloorPlaneIndex]
   :
     null;
   const floorPlaneCenter = floorPlaneLabelSpec && localVector.fromArray(floorPlaneLabelSpec.center);
@@ -4497,7 +4525,7 @@ export async function compileVirtualScene(imageArrayBuffer) {
     floorPlaneJson
   );
   const portalLocations = getRaycastedPortalLocations(
-    portalSpecs,
+    portalLabels,
     floorHeightfield,
     floorHeightfieldRaw,
     floorPlaneLocation,
@@ -4692,7 +4720,7 @@ export async function compileVirtualScene(imageArrayBuffer) {
       const yOffset = 0.10;
       const rng = alea('paths');
       for (let i = 0; i < points.length; i++) {
-        // const labelSpec = portalSpecs.labels[i];
+        // const labelSpec = portalLabels[i];
         // const normal = localVector.fromArray(labelSpec.normal);
         // const center = localVector2.fromArray(labelSpec.center);
         const center = points[i];
@@ -4749,9 +4777,14 @@ export async function compileVirtualScene(imageArrayBuffer) {
     depthField: depthFieldArrayBuffer,
     planesJson,
     portalJson,
-    segmentSpecs,
-    planeSpecs,
-    portalSpecs,
+    segmentLabels,
+    segmentLabelIndices,
+    planeLabels,
+    planeLabelIndices,
+    portalLabels,
+    // segmentSpecs,
+    // planeSpecs,
+    // portalSpecs,
     firstFloorPlaneIndex,
     floorPlaneJson,
     floorResolution,
