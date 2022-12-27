@@ -295,7 +295,10 @@ const getSemanticSpecs = ({
   const segmentSpecs = getMaskSpecsByConnectivity(geometry, segmentMask, width, height);
   let planeSpecs = getMaskSpecsByValue(geometry, planesMask, width, height);
   planeSpecs = zipPlanesSegmentsJson(planeSpecs, planesJson);
-  const portalSpecs = getMaskSpecsByMatch(portalJson, segmentMask, categoryClassIndices.portal, width, height);
+  // const portalSpecs = getMaskSpecsByMatch(portalJson, segmentMask, categoryClassIndices.portal, width, height);
+  const portalSpecs = {
+    labels: portalJson,
+  };
   return {
     segmentSpecs,
     planeSpecs,
@@ -308,10 +311,8 @@ const getSemanticSpecs = ({
 const getMaskSpecsByConnectivity = (geometry, mask, width, height) => {
   const positions = geometry.attributes.position.array;
 
-  const array = new Float32Array(width * height);
-  const colorArray = new Float32Array(width * height * 3);
   const labels = [];
-  const labelIndices = new Uint32Array(width * height);
+  const labelIndices = new Uint8Array(width * height).fill(255);
 
   const seenIndices = new Set();
   for (let y = 0; y < height; y++) {
@@ -369,19 +370,13 @@ const getMaskSpecsByConnectivity = (geometry, mask, width, height) => {
             }
           }
 
-          const c = localColor.setHex(colors[value % colors.length]);
           for (const index of segmentIndices) {
             const position = localVector.fromArray(positions, index * 3);
             boundingBox.expandByPoint(position);
-
-            array[index] = value;
-
-            colorArray[index * 3 + 0] = c.r;
-            colorArray[index * 3 + 1] = c.g;
-            colorArray[index * 3 + 2] = c.b;
           }
           labels.push({
             index: value,
+            value,
             bbox: [
               boundingBox.min.toArray(),
               boundingBox.max.toArray(),
@@ -392,20 +387,15 @@ const getMaskSpecsByConnectivity = (geometry, mask, width, height) => {
     }
   }
   return {
-    array,
-    colorArray,
     labels,
     labelIndices,
-    mask,
   };
 };
 const getMaskSpecsByValue = (geometry, mask, width, height) => {
   const positions = geometry.attributes.position.array;
 
-  const array = new Float32Array(width * height);
-  const colorArray = new Float32Array(width * height * 3);
   const labels = new Map();
-  const labelIndices = new Uint32Array(width * height);
+  const labelIndices = new Uint8Array(width * height);
 
   const seenIndices = new Set();
   for (let y = 0; y < height; y++) {
@@ -428,6 +418,7 @@ const getMaskSpecsByValue = (geometry, mask, width, height) => {
           if (!label) {
             label = {
               index: labels.size,
+              value,
               bbox: [
                 [Infinity, Infinity, Infinity],
                 [-Infinity, -Infinity, -Infinity],
@@ -478,16 +469,9 @@ const getMaskSpecsByValue = (geometry, mask, width, height) => {
             }
           }
 
-          const c = localColor.setHex(colors[value % colors.length]);
           for (const index of segmentIndices) {
             const position = localVector.fromArray(positions, index * 3);
             boundingBox.expandByPoint(position);
-
-            array[index] = value;
-
-            colorArray[index * 3 + 0] = c.r;
-            colorArray[index * 3 + 1] = c.g;
-            colorArray[index * 3 + 2] = c.b;
           }
 
           boundingBox.min.toArray(label.bbox[0]);
@@ -497,34 +481,8 @@ const getMaskSpecsByValue = (geometry, mask, width, height) => {
     }
   }
   return {
-    array,
-    colorArray,
     labels: Array.from(labels.values()),
     labelIndices,
-  };
-};
-const getMaskSpecsByMatch = (labels, segmentMask, highlightIndices, width, height) => {
-  // const array = new Float32Array(width * height);
-  const colorArray = new Float32Array(width * height * 3);
-
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const index = y * width + x;
-      
-      const value = segmentMask[index];
-      const highlight = highlightIndices.includes(value);
-      // array[index] = highlight ? 1 : 0;
-    
-      const c = localColor.setHex(highlight ? 0xFFFFFF : 0x000000);
-      colorArray[index * 3 + 0] = c.r;
-      colorArray[index * 3 + 1] = c.g;
-      colorArray[index * 3 + 2] = c.b;
-    }
-  }
-  return {
-    labels,
-    // array,
-    colorArray,
   };
 };
 const zipPlanesSegmentsJson = (planeSpecs, planesJson) => {
@@ -1968,6 +1926,7 @@ class Overlay {
       segmentSpecs,
       planeSpecs,
       portalSpecs,
+      segmentArray,
       firstFloorPlaneIndex,
     } = sceneMesh;
 
@@ -2157,7 +2116,7 @@ class Overlay {
           attribute float plane;
           attribute vec3 planeColor;
           // attribute float portal;
-          attribute vec3 portalColor;
+          // attribute vec3 portalColor;
           // attribute vec3 barycentric;
           
           flat varying float vSegment;
@@ -2165,7 +2124,7 @@ class Overlay {
           flat varying float vPlane;
           flat varying vec3 vPlaneColor;
           // varying float vPortal;
-          flat varying vec3 vPortalColor;
+          // flat varying vec3 vPortalColor;
           // varying vec3 vBarycentric;
           varying vec2 vUv;
           varying vec3 vPosition;
@@ -2176,7 +2135,7 @@ class Overlay {
             vPlane = plane;
             vPlaneColor = planeColor;
             // vPortal = portal;
-            vPortalColor = portalColor;
+            // vPortalColor = portalColor;
   
             // vBarycentric = barycentric;
             vUv = uv;
@@ -2194,7 +2153,7 @@ class Overlay {
           flat varying vec3 vPlaneColor;
           // varying vec3 vBarycentric;
           // varying float vPortal;
-          flat varying vec3 vPortalColor;
+          // flat varying vec3 vPortalColor;
           varying vec2 vUv;
           varying vec3 vPosition;
   
@@ -2240,7 +2199,8 @@ class Overlay {
             } else if (uRenderMode == 2) {
               gl_FragColor = vec4(vPlaneColor, 0.7);
             } else if (uRenderMode == 3) {
-              gl_FragColor = vec4(vPortalColor, 0.5);
+              // gl_FragColor = vec4(vPortalColor, 0.5);
+              gl_FragColor = vec4(0., 0., 0., 0.5);
             } else {
               // gl_FragColor = vec4(1., 0., 0., 1.);
               discard;
@@ -2265,8 +2225,7 @@ class Overlay {
           const {pickerIndex} = this.selector;
           let selectorIndex;
           if (pickerIndex !== -1) {
-            const {array} = segmentSpecs;
-            const segmentIndex = array[pickerIndex];
+            const segmentIndex = segmentArray[pickerIndex];
             if (segmentIndex !== undefined) {
               selectorIndex = segmentIndex;
             } else {
@@ -3826,6 +3785,9 @@ export class PanelRenderer extends EventTarget {
       planesJson,
       planesMask,
       portalJson,
+      segmentSpecs,
+      planeSpecs,
+      portalSpecs,
       floorResolution,
       floorNetDepths,
       floorNetCameraJson,
@@ -3863,6 +3825,9 @@ export class PanelRenderer extends EventTarget {
     const floorNetDepths = layer.getData('floorNetDepths');
     const floorNetCameraJson = layer.getData('floorNetCameraJson');
     const segmentMask = layer.getData('segmentMask');
+    const segmentSpecs = layer.getData('segmentSpecs');
+    const planeSpecs = layer.getData('planeSpecs');
+    const portalSpecs = layer.getData('portalSpecs');
     const editCameraJson = layer.getData('editCameraJson');
 
     //
@@ -4034,8 +3999,10 @@ export class PanelRenderer extends EventTarget {
       // backgroundMesh.matrix.copy(this.camera.matrix);
       // backgroundMesh.matrixWorld.copy(this.camera.matrixWorld);
       backgroundMesh.frustumCulled = false;
+      // XXX reconstruct segmentArray from segmentSpecs and latch it here
       backgroundMesh.segmentSpecs = segmentSpecs;
       backgroundMesh.planeSpecs = planeSpecs;
+      backgroundMesh.portalSpecs = portalSpecs;
 
       layerScene.add(backgroundMesh);
     }
