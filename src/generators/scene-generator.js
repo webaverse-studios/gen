@@ -709,17 +709,8 @@ const getRangeHit = (() => {
             targetPosition
           );
           if (targetPosition2 === null) {
-            // console.log('bad position', {
-            //   position,
-            //   quaternion,
-            //   dx,
-            //   dz,
-            //   localVector2: localVector2.clone(),
-            // });
             return null;
-          } /* else {
-            console.log('hit ok');
-          } */
+          }
         }
       }
     }
@@ -1138,7 +1129,6 @@ const _mergeMask = (geometry, depthFloatImageData, distanceNearestPositions) => 
   // copy over snapped positions
   const newPositions = geometry.attributes.position.array.slice();
   const _snapPoint = index => {
-    // flip y
     const x = index % panelSize;
     let y = Math.floor(index / panelSize);
     y = panelSize - 1 - y;
@@ -1165,7 +1155,7 @@ const _mergeMask = (geometry, depthFloatImageData, distanceNearestPositions) => 
       newIndices[numIndices + 2] = c;
       numIndices += 3;
       
-      // if at least one of them is masked, we have a boundary point
+      // if at least one of them is masked, we have a boundary point, so snap it
       if (aMasked || bMasked || cMasked) {
         !aMasked && _snapPoint(a);
         !bMasked && _snapPoint(b);
@@ -1200,7 +1190,6 @@ const getSemanticPlanes = async (img, fov, newDepthFloatImageData, segmentMask) 
         newDepthFloatImageData2,
         10000,
       );
-      // console.log('read planes spec', {planesSpec, newDepthFloatImageData2});
       planesJson = planesSpec.planesJson;
       planesMask = planesSpec.planesMask;
 
@@ -1228,13 +1217,8 @@ const getSemanticPlanes = async (img, fov, newDepthFloatImageData, segmentMask) 
         newDepthFloatImageData2,
         5000,
       );
-      // console.log('read portal spec', {portalSpec, newDepthFloatImageData2});
       portalJson = portalSpec.planesJson;
       portalMask = portalSpec.planesMask;
-
-      // globalThis.portalJson = portalJson;
-      // globalThis.portalMask = portalMask;
-      // globalThis.newDepthFloatImageData2 = newDepthFloatImageData2;
 
       const portalCanvas = planesMask2Canvas(portalMask, {
         color: true,
@@ -1377,7 +1361,7 @@ class Selector {
     this.lensScene = lensScene;
 
     const lensOutputMesh = (() => {
-      const geometry = new THREE.PlaneBufferGeometry(1, 1);
+      const geometry = new THREE.PlaneGeometry(1, 1);
       const material = new THREE.ShaderMaterial({
         uniforms: {
           tIndex: {
@@ -1617,7 +1601,7 @@ class Selector {
 
     const indicesOutputMesh = (() => {
       const scale = 10;
-      const geometry = new THREE.PlaneBufferGeometry(2, 1)
+      const geometry = new THREE.PlaneGeometry(2, 1)
         .scale(scale, scale, scale);
       const material = new THREE.ShaderMaterial({
         uniforms: {
@@ -1673,7 +1657,7 @@ class Selector {
 
     // index mesh
     const indexMesh = (() => {
-      const planeGeometry = new THREE.PlaneBufferGeometry(1, 1)
+      const planeGeometry = new THREE.PlaneGeometry(1, 1)
         .translate(0.5, 0.5, 0);
       // position x, y is in the range [0, 1]
       const sceneMeshGeometry = sceneMesh.geometry;
@@ -1693,10 +1677,10 @@ class Selector {
         console.warn('triangle count mismatch 2', positions.length, triangles.length * 3);
         debugger;
       } */
-      if (width * height * 9 !== sceneMeshGeometry.attributes.position.array.length) {
-        console.warn('invalid width/height', width, height, sceneMeshGeometry.attributes.position.array.length);
-        debugger;
-      }
+      // if (width * height * 9 !== sceneMeshGeometry.attributes.position.array.length) {
+      //   console.warn('invalid width/height', width, height, sceneMeshGeometry.attributes.position.array.length);
+      //   debugger;
+      // }
       const pt1 = new Float32Array(planeGeometry.attributes.position.array.length * width * height);
       const pt2 = new Float32Array(planeGeometry.attributes.position.array.length * width * height);
       const pt3 = new Float32Array(planeGeometry.attributes.position.array.length * width * height);
@@ -2869,7 +2853,7 @@ class OutmeshToolMesh extends THREE.Object3D {
 
     //
 
-    const imageGeometry = new THREE.PlaneBufferGeometry(1, 1);
+    const imageGeometry = new THREE.PlaneGeometry(1, 1);
     const imageMaterial = new THREE.ShaderMaterial({
       uniforms: {
         uTime: {
@@ -3516,7 +3500,6 @@ export class PanelRenderer extends EventTarget {
 
     // snapshot camera state
     const editCameraJson = getPerspectiveCameraJson(this.camera);
-    // console.log('edit camera json init', editCameraJson);
 
     // helpers
     const auxMeshes = [
@@ -3688,11 +3671,6 @@ export class PanelRenderer extends EventTarget {
       depthFieldHeaders = df.headers;
       depthFieldArrayBuffer = df.arrayBuffer;
     }
-    console.log('got depth field', {
-      depthFieldArrayBuffer,
-      depthFieldFloat32Array: new Float32Array(depthFieldArrayBuffer),
-      depthFieldHeaders,
-    });
     console.timeEnd('depthField');
 
     console.time('pointCloud');
@@ -3738,10 +3716,6 @@ export class PanelRenderer extends EventTarget {
         this.sceneMesh,
       ].map(sceneMesh => {
         const {indexedGeometry} = sceneMesh;
-        // if (!indexedGeometry) {
-        //   console.warn('no indexed geometry', sceneMesh);
-        //   debugger;
-        // }
         return {
           geometry: indexedGeometry,
           width: this.renderer.domElement.width,
@@ -3986,9 +3960,8 @@ export class PanelRenderer extends EventTarget {
         editCamera,
       );
       _mergeMask(geometry, depthFloatImageData, distanceNearestPositions);
-      // const segmentSpecs = getMaskSpecsByConnectivity(geometry, segmentMask, this.canvas.width, this.canvas.height);
-      // let planeSpecs = getMaskSpecsByValue(geometry, planesMask, this.canvas.width, this.canvas.height);
-      // planeSpecs = zipPlanesSegmentsJson(planeSpecs, planesJson);
+
+      // compute the segment mask for the new geometry
       const semanticSpecs = getSemanticSpecs({
         geometry,
         segmentMask,
@@ -4003,20 +3976,7 @@ export class PanelRenderer extends EventTarget {
         planeSpecs,
         portalSpecs,
       } = semanticSpecs;
-      // geometry.setAttribute('segment', new THREE.BufferAttribute(segmentSpecs.array, 1));
-      // geometry.setAttribute('segmentColor', new THREE.BufferAttribute(segmentSpecs.colorArray, 3));
-      // geometry.setAttribute('plane', new THREE.BufferAttribute(planeSpecs.array, 1));
-      // geometry.setAttribute('planeColor', new THREE.BufferAttribute(planeSpecs.colorArray, 3));
       geometry.computeVertexNormals();
-
-      // const distanceFloatImageDataTex = new THREE.DataTexture(
-      //   distanceFloatImageData,
-      //   this.canvas.width,
-      //   this.canvas.height,
-      //   THREE.RGBAFormat,
-      //   THREE.FloatType,
-      // );
-      // distanceFloatImageDataTex.needsUpdate = true;
 
       const editedImgTex = new THREE.Texture();
       (async () => {
@@ -4145,15 +4105,11 @@ export class PanelRenderer extends EventTarget {
     const _removeOldLayers = () => {
       for (let i = layers.length; i < this.layerScenes.length; i++) {
         const layerScene = this.layerScenes[i];
-        // console.log('remove layer scene', i, layerScene);
         this.scene.remove(layerScene);
       }
-      // console.log('set layer scenes', layers.length);
       this.layerScenes.length = layers.length;
     };
     _removeOldLayers();
-
-    // console.log('ending layer scenes length', this.layerScenes.length);
   }
   destroy() {
     console.log('destroy PanelRenderer', this);
@@ -4212,28 +4168,22 @@ const getPlanesRgbd = async (width, height, focalLength, depthFloats32Array, min
     // parse the planes
     const planesJson = [];
     for (let i = 0; i < numPlanes; i++) {
-      // try {
-        const normal = new Float32Array(planesArrayBuffer, index, 3);
-        index += Float32Array.BYTES_PER_ELEMENT * 3;
-        const center = new Float32Array(planesArrayBuffer, index, 3);
-        index += Float32Array.BYTES_PER_ELEMENT * 3;
-        const numVertices = dataView.getUint32(index, true);
-        index += Uint32Array.BYTES_PER_ELEMENT;
-        const distanceSquaredF = new Float32Array(planesArrayBuffer, index, 1);
-        index += Float32Array.BYTES_PER_ELEMENT;
-        
-        // console.log('plane', i, normal, center, numVertices, distanceSquaredF);
-        const planeJson = {
-          normal,
-          center,
-          numVertices,
-          distanceSquaredF,
-        };
-        planesJson.push(planeJson);
-      // } catch(err) {
-      //   console.warn('fail', err.stack);
-      //   debugger;
-      // }
+      const normal = new Float32Array(planesArrayBuffer, index, 3);
+      index += Float32Array.BYTES_PER_ELEMENT * 3;
+      const center = new Float32Array(planesArrayBuffer, index, 3);
+      index += Float32Array.BYTES_PER_ELEMENT * 3;
+      const numVertices = dataView.getUint32(index, true);
+      index += Uint32Array.BYTES_PER_ELEMENT;
+      const distanceSquaredF = new Float32Array(planesArrayBuffer, index, 1);
+      index += Float32Array.BYTES_PER_ELEMENT;
+      
+      const planeJson = {
+        normal,
+        center,
+        numVertices,
+        distanceSquaredF,
+      };
+      planesJson.push(planeJson);
     }
 
     // the remainder is a Int32Array(width * height) of plane indices
@@ -4444,11 +4394,6 @@ export async function compileVirtualScene(imageArrayBuffer) {
     depthFieldHeaders = df.headers;
     depthFieldArrayBuffer = df.arrayBuffer;
   }
-  console.log('got depth field', {
-    depthFieldArrayBuffer,
-    depthFieldFloat32Array: new Float32Array(depthFieldArrayBuffer),
-    depthFieldHeaders,
-  });
   console.timeEnd('depthField');
 
   // reconstruct point cloud
@@ -4462,12 +4407,6 @@ export async function compileVirtualScene(imageArrayBuffer) {
       height,
       fov,
     );
-    console.log('reconstruct point cloud', {
-      pointCloudFloat32Array,
-    });
-    if (pointCloudFloat32Array.byteOffset !== 0) {
-      throw new Error('unexpected point cloud byte offset');
-    }
     pointCloudArrayBuffer = pointCloudFloat32Array.buffer;
   }
   console.timeEnd('pointCloud');
@@ -4826,7 +4765,6 @@ export async function compileVirtualScene(imageArrayBuffer) {
           position: p.toArray(),
         };
       });
-      // console.log('output paths', paths);
     } else {
       // console.warn('no entrance/exit locations, so no paths!');
       paths = [];
