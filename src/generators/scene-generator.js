@@ -3591,7 +3591,7 @@ export class PanelRenderer extends EventTarget {
     console.time('imageSegmentation');
     let segmentMask;
     {
-      const imageSegmentationSpec = await _getImageSegements(editedImgBlob);
+      const imageSegmentationSpec = await _getImageSegments(editedImgBlob);
       const {segmentsBlob, boundingBoxLayers} = imageSegmentationSpec;
 
       const segmentsImageBitmap = await createImageBitmap(segmentsBlob);
@@ -3942,7 +3942,7 @@ export class PanelRenderer extends EventTarget {
     {
       const geometry = depthFloat32ArrayToGeometry(
         reconstructedDepthFloats,
-        this.renderer.domElement.width,
+        this.renderer.domElement.width, // XXX should this be the original image width? this should not be changeable
         this.renderer.domElement.height,
         editCamera,
       );
@@ -3955,8 +3955,8 @@ export class PanelRenderer extends EventTarget {
         planesMask,
         planesJson,
         portalJson,
-        width: this.canvas.width,
-        height: this.canvas.height,
+        width: this.renderer.domElement.width, // XXX should this be the original image width as well?
+        height: this.renderer.domElement.height,
       });
       const {
         segmentLabels,
@@ -4199,7 +4199,11 @@ const imageSegmentationClasses = [
   'light',
   'npc',
 ].flatMap(categoryName => categories[categoryName]);
-const _getImageSegements = async imgBlob => {
+const _getImageSegments = async (
+  imgBlob,
+  targetWidth,
+  targetHeight,
+) => {
   const u = new URL(`https://mask2former.webaverse.com/predict`);
   u.searchParams.set('classes', imageSegmentationClasses.join(','));
   u.searchParams.set('boosts', Array(imageSegmentationClasses).fill(1).join(','));
@@ -4211,11 +4215,38 @@ const _getImageSegements = async imgBlob => {
   if (res.ok) {
     const segmentsBlob = await res.blob();
     const resHeaders = Object.fromEntries(res.headers.entries());
+    let boundingBoxLayers = JSON.parse(resHeaders['x-bounding-boxes']);
 
-    const boundingBoxLayers = JSON.parse(resHeaders['x-bounding-boxes']);
+    // resize to target size
+    const segmentsImageBitmap = await createImageBitmap(segmentsBlob);
+    const originalWidth = segmentsImageBitmap.width;
+    const originalHeight = segmentsImageBitmap.height;
+    const canvas = document.createElement('canvas');
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(segmentsImageBitmap, 0, 0, targetWidth, targetHeight);
+    
+    // get the segement mask, which is the u8 red channel of the image
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const segmentMask = new Uint8Array(imageData.data.length / 4);
+    for (let i = 0; i < segmentMask.length; i++) {
+      const r = imageData.data[i * 4 + 0];
+      segmentMask[i] = r;
+    }
+
+    // resize the bounding boxes
+    boundingBoxLayers = resizeBoundingBoxLayers(
+      boundingBoxLayers,
+      originalWidth,
+      originalHeight,
+      targetWidth,
+      targetHeight,
+    );
 
     return {
-      segmentsBlob,
+      segmentMask,
       boundingBoxLayers,
     };
   } else {
@@ -4314,7 +4345,10 @@ export async function compileVirtualScene(imageArrayBuffer) {
   const blob = new Blob([imageArrayBuffer], {
     type: 'image/png',
   });
-  const img = await blob2img(blob);
+  const img = await blob2img(blob, {
+    // width: panelSize,
+    // height: panelSize,
+  });
   img.classList.add('img');
   // document.body.appendChild(img);
 
@@ -4335,28 +4369,14 @@ export async function compileVirtualScene(imageArrayBuffer) {
   console.time('imageSegmentation');
   let segmentMask;
   {
-    const imageSegmentationSpec = await _getImageSegements(blob);
-    const {segmentsBlob, boundingBoxLayers} = imageSegmentationSpec;
-
-    const segmentsImageBitmap = await createImageBitmap(segmentsBlob);
-    
-    {
-      const segmentsCanvasMono = segmentsImg2Canvas(segmentsImageBitmap);
-      const ctx = segmentsCanvasMono.getContext('2d');
-
-      const imageData = ctx.getImageData(0, 0, segmentsCanvasMono.width, segmentsCanvasMono.height);
-      const {data} = imageData;
-      segmentMask = new Int32Array(data.byteLength / Int32Array.BYTES_PER_ELEMENT);
-      for (let i = 0; i < segmentMask.length; i++) {
-        const r = data[i * 4 + 0];
-        segmentMask[i] = r;
-      }
-    }
+    const imageSegmentationSpec = await _getImageSegments(blob, width, height);
+    segmentMask = imageSegmentationSpec.segmentMask;
+    const boundingBoxLayers = imageSegmentationSpec.boundingBoxLayers;
 
     {
-      const segmentsCanvasColor = segmentsImg2Canvas(segmentsImageBitmap, {
-        color: true,
-      });
+      const segmentsCanvasColor = document.createElement('canvas');
+      segmentsCanvasColor.width = width;
+      segmentsCanvasColor.height = height;
       segmentsCanvasColor.classList.add('imageSegmentationCanvas2');
       segmentsCanvasColor.style.cssText = `\
         background-color: red;
@@ -4364,13 +4384,19 @@ export async function compileVirtualScene(imageArrayBuffer) {
       document.body.appendChild(segmentsCanvasColor);
       const ctx = segmentsCanvasColor.getContext('2d');
 
-      drawLabels(ctx, resizeBoundingBoxLayers(
-        boundingBoxLayers,
-        segmentsImageBitmap.width,
-        segmentsImageBitmap.height,
-        segmentsCanvasColor.width,
-        segmentsCanvasColor.height
-      ));
+      const segmentImageData = ctx.createImageData(width, height);
+      for (let i = 0; i < segmentMask.length; i++) {
+        const segmentIndex = segmentMask[i];
+
+        const c = localColor.setHex(colors[segmentIndex % colors.length]);
+        segmentImageData.data[i * 4 + 0] = c.r * 255;
+        segmentImageData.data[i * 4 + 1] = c.g * 255;
+        segmentImageData.data[i * 4 + 2] = c.b * 255;
+        segmentImageData.data[i * 4 + 3] = 255;
+      }
+      ctx.putImageData(segmentImageData, 0, 0);
+
+      drawLabels(ctx, boundingBoxLayers);
     }
   }
   console.timeEnd('imageSegmentation');
@@ -4403,7 +4429,7 @@ export async function compileVirtualScene(imageArrayBuffer) {
 
   // plane detection
   console.time('planeDetection');
-  const depthFloats32Array = getDepthFloatsFromPointCloud(pointCloudArrayBuffer, panelSize, panelSize);
+  const depthFloats32Array = getDepthFloatsFromPointCloud(pointCloudArrayBuffer, width, height);
   const {
     planesJson,
     planesMask,
@@ -4423,15 +4449,15 @@ export async function compileVirtualScene(imageArrayBuffer) {
   }
   console.timeEnd('camera');
 
-  const geometry = pointCloudArrayBufferToGeometry(pointCloudArrayBuffer, img.width, img.height);
+  const geometry = pointCloudArrayBufferToGeometry(pointCloudArrayBuffer, width, height);
   const semanticSpecs = getSemanticSpecs({
     geometry,
     segmentMask,
     planesMask,
     planesJson,
     portalJson,
-    width: img.width,
-    height: img.height,
+    width,
+    height,
   });
   const {
     segmentLabels,
