@@ -3487,12 +3487,16 @@ export class PanelRenderer extends EventTarget {
       this.selector.indicesOutputMesh,
     ];
     const _pushAuxMeshes = () => {
-      for (const auxMesh of auxMeshes) {
-        this.scene.remove(auxMesh);
-      }
+      const parents = auxMeshes.map(auxMesh => {
+        const {parent} = auxMesh;
+        parent.remove(auxMesh);
+        return parent;
+      });
       return () => {
-        for (const auxMesh of auxMeshes) {
-          this.scene.add(auxMesh);
+        for (let i = 0; i < auxMeshes.length; i++) {
+          const auxMesh = auxMeshes[i];
+          const parent = parents[i];
+          parent.add(auxMesh);
         }
       };
     };
