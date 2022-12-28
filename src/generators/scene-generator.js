@@ -3092,12 +3092,18 @@ export class PanelRenderer extends EventTarget {
     this.zineRenderer = new ZineRenderer({
       panel,
     });
-    const {sceneMesh, scenePhysicsMesh, floorNetMesh} = this.zineRenderer;
+    const {
+      sceneMesh,
+      scenePhysicsMesh,
+      floorNetMesh,
+      edgeDepthMesh,
+    } = this.zineRenderer;
     scene.add(this.zineRenderer.scene);
     this.camera.copy(this.zineRenderer.camera);
     this.sceneMesh = sceneMesh;
     this.scenePhysicsMesh = scenePhysicsMesh;
     this.floorNetMesh = floorNetMesh;
+    this.edgeDepthMesh = edgeDepthMesh;
     this.updateObjectTransforms();
 
     // portal net mesh
@@ -3485,6 +3491,7 @@ export class PanelRenderer extends EventTarget {
       this.outmeshMesh,
       this.selector.lensOutputMesh,
       this.selector.indicesOutputMesh,
+      this.edgeDepthMesh,
     ];
     const _pushAuxMeshes = () => {
       const parents = auxMeshes.map(auxMesh => {
