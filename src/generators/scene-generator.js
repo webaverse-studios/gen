@@ -4764,7 +4764,165 @@ export async function compileVirtualScene(imageArrayBuffer) {
       rights,
     };
   }
-  // console.log('computed edge depths', edgeDepths);
+
+  // walls
+  // wall physics
+  // walls are the back, left, and right edges of the scene
+  // frustum planes order:
+  // planes[0] = right
+  // planes[1] = left
+  // planes[2] = bottom
+  // planes[3] = top
+  // planes[4] = far
+  // planes[5] = near
+  let wallPlanes = [];
+  {
+    // near wall
+    {
+      let minMaxPoint = new THREE.Vector3(Infinity, Infinity, Infinity);
+      if (edgeDepths.top.min[2] < minMaxPoint.z) {
+        minMaxPoint.fromArray(edgeDepths.top.max);
+      }
+      if (edgeDepths.bottom.min[2] < minMaxPoint.z) {
+        minMaxPoint.fromArray(edgeDepths.bottom.max);
+      }
+      if (edgeDepths.left.min[2] < minMaxPoint.z) {
+        minMaxPoint.fromArray(edgeDepths.left.max);
+      }
+      if (edgeDepths.right.min[2] < minMaxPoint.z) {
+        minMaxPoint.fromArray(edgeDepths.right.max);
+      }
+
+      let minMaxPoint2 = new THREE.Vector3(-Infinity, -Infinity, -Infinity);
+      if (edgeDepths.top.max[2] > minMaxPoint2.z) {
+        minMaxPoint2.fromArray(edgeDepths.top.max);
+      }
+      if (edgeDepths.bottom.max[2] > minMaxPoint2.z) {
+        minMaxPoint2.fromArray(edgeDepths.bottom.max);
+      }
+      if (edgeDepths.left.max[2] > minMaxPoint2.z) {
+        minMaxPoint2.fromArray(edgeDepths.left.max);
+      }
+      if (edgeDepths.right.max[2] > minMaxPoint2.z) {
+        minMaxPoint2.fromArray(edgeDepths.right.max);
+      }
+
+      const _getTransform = () => {
+        const wallPosition = minMaxPoint.clone()
+          .lerp(minMaxPoint2, 0.5);
+
+        // rotate the wall to be perpendicular to the floor, to prevent jump climbing exploits
+        const floorQuaternion = localQuaternion.fromArray(floorPlaneLocation.quaternion);
+        const wallQuaternion = projectQuaternionToFloor(
+          camera.quaternion,
+          floorQuaternion,
+          localQuaternion2
+        );
+
+        wallQuaternion.multiply(planeGeometryNormalizeQuaternion);
+        return {
+          position: wallPosition,
+          quaternion: wallQuaternion,
+        };
+      };
+      const {
+        position: centerPoint,
+        quaternion: planeQuaternion,
+      } = _getTransform();
+
+      wallPlanes.push({
+        position: centerPoint.toArray(),
+        quaternion: planeQuaternion.toArray(),
+        color: 0xffff00,
+      });
+    }
+    // left, right walls
+    {
+      const _getPlaneTransforms = () => {
+        localFrustum.setFromProjectionMatrix(
+          camera.projectionMatrix
+        );
+        const planeEdgeDepths = [
+          edgeDepths.right,
+          edgeDepths.left,
+          edgeDepths.top,
+          edgeDepths.bottom,
+          {
+            min: [-Infinity, -Infinity, -Infinity],
+            max: [Infinity, Infinity, Infinity],
+          },
+          {
+            min: [-Infinity, -Infinity, -Infinity],
+            max: [Infinity, Infinity, Infinity],
+          },
+        ];
+        // const planeDirections = [
+        //   new THREE.Vector3(1, 0, 0), // right
+        //   new THREE.Vector3(-1, 0, 0), // left
+        //   new THREE.Vector3(0, 16, 0), // top
+        //   new THREE.Vector3(0, -1, 0), // bottom
+        //   new THREE.Vector3(0, 0, 1), // far
+        //   new THREE.Vector3(0, 0, -1), // near
+        // ];
+        return localFrustum.planes.map((wallPlane, index) => {
+          // const planeDirection = planeDirections[index];
+          const planeEdgeDepth = planeEdgeDepths[index];
+          // compute a test point
+          const wallPosition = new THREE.Vector3()
+            .fromArray(planeEdgeDepth.min);
+          // project the test point onto the floor
+          const floorPoint = floorPlane.projectPoint(wallPosition, new THREE.Vector3());
+          // cross the floor up direction with the floor direction to get the wall direction
+          const floorDirection = floorPoint.clone()
+            .sub(camera.position)
+            .normalize();
+          const floorUpVector = new THREE.Vector3(0, 1, 0)
+            .applyQuaternion(
+              new THREE.Quaternion().fromArray(floorPlaneLocation.quaternion)
+            );
+          let wallDirection;
+          if (index === 0) {
+            wallDirection = floorUpVector.clone()
+              .cross(floorDirection)
+              .normalize();
+          } else {
+            wallDirection = floorDirection.clone()
+              .cross(floorUpVector)
+              .normalize();
+          }
+          const wallQuaternion = new THREE.Quaternion().setFromRotationMatrix(
+            new THREE.Matrix4().lookAt(
+              new THREE.Vector3(0, 0, 0),
+              wallDirection,
+              floorUpVector
+            )
+          );
+          
+          wallQuaternion.multiply(planeGeometryNormalizeQuaternion);
+          return {
+            position: wallPosition,
+            quaternion: wallQuaternion,
+          };
+        });
+      };
+      const planeTransforms = _getPlaneTransforms();
+      [
+        0, // right
+        1, // left
+        // 5, // near
+      ].forEach(i => {
+        const {
+          position: wallPlanePosition,
+          quaternion: wallPlaneQuaternion,
+        } = planeTransforms[i];
+        wallPlanes.push({
+          position: wallPlanePosition.toArray(),
+          quaternion: wallPlaneQuaternion.toArray(),
+          color: 0x00ffff,
+        });
+      });
+    }
+  }
 
   // paths
   let paths;
