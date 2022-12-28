@@ -3724,16 +3724,6 @@ export class PanelRenderer extends EventTarget {
         const {indexedGeometry} = sceneMesh;
         return {
           geometry: indexedGeometry,
-          // get width() {
-          //   console.warn('get width', new Error().stack);
-          //   debugger;
-          // },
-          // get height() {
-          //   console.warn('get height', new Error().stack);
-          //   debugger;
-          // },
-          // width: this.renderer.domElement.width,
-          // height: this.renderer.domElement.height,
         };
       }),
     });
@@ -3788,30 +3778,10 @@ export class PanelRenderer extends EventTarget {
       renderSpecs: [
         {
           geometry: oldFloorNetDepthRenderGeometry,
-          // oldWidth,
-          // oldHeight,
-          // get width() {
-          //   console.warn('get width reconstructFloor', new Error().stack);
-          //   debugger;
-          // },
-          // get height() {
-          //   console.warn('get height reconstructFloor', new Error().stack);
-          //   debugger;
-          // },
           clipZ: true,
         },
         {
           geometry: newFloorNetDepthRenderGeometry,
-          // width,
-          // height,
-          // get width() {
-          //   console.warn('get width reconstructFloor', new Error().stack);
-          //   debugger;
-          // },
-          // get height() {
-          //   console.warn('get height reconstructFloor', new Error().stack);
-          //   debugger;
-          // },
           clipZ: true,
         },
       ],
@@ -4540,16 +4510,6 @@ export async function compileVirtualScene(imageArrayBuffer) {
       renderSpecs: [
         {
           geometry: floorNetDepthRenderGeometry,
-          // width,
-          // height,
-          // get width() {
-          //   console.warn('get width reconstructFloor', new Error().stack);
-          //   debugger;
-          // },
-          // get height() {
-          //   console.warn('get height reconstructFloor', new Error().stack);
-          //   debugger;
-          // },
           clipZ: true,
         },
       ],
