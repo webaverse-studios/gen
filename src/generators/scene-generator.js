@@ -3572,9 +3572,14 @@ export class PanelRenderer extends EventTarget {
     const layer1 = this.panel.getLayer(1);
     const originalCameraJson = layer1.getData('cameraJson');
     const oldDepthField = layer1.getData('depthField');
+    const oldResolution = layer1.getData('resolution');
     const floorPlaneJson = layer1.getData('floorPlaneJson');
 
     // reify objects
+    const [
+      oldWidth,
+      oldHeight,
+    ] = oldResolution;
     const originalCamera = setPerspectiveCameraFromJson(localCamera, originalCameraJson).clone();
     const editCamera = setPerspectiveCameraFromJson(localCamera, editCameraJson).clone();
     const floorPlane = new THREE.Plane(localVector.fromArray(floorPlaneJson.normal), floorPlaneJson.constant);
@@ -3694,8 +3699,8 @@ export class PanelRenderer extends EventTarget {
       reconstructedDepthFloats,
     } = mergeOperator({
       newDepthFloatImageData,
-      width: this.renderer.domElement.width,
-      height: this.renderer.domElement.height,
+      width,
+      height,
       camera: editCamera,
       renderSpecs: [
         this.sceneMesh,
@@ -3703,30 +3708,38 @@ export class PanelRenderer extends EventTarget {
         const {indexedGeometry} = sceneMesh;
         return {
           geometry: indexedGeometry,
-          width: this.renderer.domElement.width,
-          height: this.renderer.domElement.height,
+          // get width() {
+          //   console.warn('get width', new Error().stack);
+          //   debugger;
+          // },
+          // get height() {
+          //   console.warn('get height', new Error().stack);
+          //   debugger;
+          // },
+          // width: this.renderer.domElement.width,
+          // height: this.renderer.domElement.height,
         };
       }),
     });
     {
       const maskIndexCanvas = maskIndex2Canvas(
         maskIndex,
-        this.renderer.domElement.width,
-        this.renderer.domElement.height,
+        width,
+        height,
       );
       document.body.appendChild(maskIndexCanvas);
 
       const distanceFloatsCanvas = distanceFloats2Canvas(
         distanceFloatImageData,
-        this.renderer.domElement.width,
-        this.renderer.domElement.height,
+        width,
+        height,
       );
       document.body.appendChild(distanceFloatsCanvas);
 
       const reconstructionCanvas = depthFloats2Canvas(
         reconstructedDepthFloats,
-        this.renderer.domElement.width,
-        this.renderer.domElement.height,
+        width,
+        height,
         editCamera,
       );
       document.body.appendChild(reconstructionCanvas);
@@ -3735,20 +3748,20 @@ export class PanelRenderer extends EventTarget {
     console.time('floorReconstruction');
     const oldPointCloudFloat32Array = reconstructPointCloudFromDepthField(
       oldDepthField,
-      width,
-      height,
+      oldWidth,
+      oldHeight,
       originalCamera.fov,
     );
     const oldPointCloudArrayBuffer = oldPointCloudFloat32Array.buffer;
     const oldFloorNetDepthRenderGeometry = pointCloudArrayBufferToGeometry(
       oldPointCloudArrayBuffer,
-      this.renderer.domElement.width,
-      this.renderer.domElement.height,
+      oldWidth,
+      oldHeight,
     );
     const newFloorNetDepthRenderGeometry = depthFloat32ArrayToGeometry(
       reconstructedDepthFloats,
-      this.renderer.domElement.width,
-      this.renderer.domElement.height,
+      width,
+      height,
       editCamera,
     );
     const floorNetCamera = makeFloorNetCamera();
@@ -3759,14 +3772,30 @@ export class PanelRenderer extends EventTarget {
       renderSpecs: [
         {
           geometry: oldFloorNetDepthRenderGeometry,
-          width: this.renderer.domElement.width,
-          height: this.renderer.domElement.height,
+          // oldWidth,
+          // oldHeight,
+          // get width() {
+          //   console.warn('get width reconstructFloor', new Error().stack);
+          //   debugger;
+          // },
+          // get height() {
+          //   console.warn('get height reconstructFloor', new Error().stack);
+          //   debugger;
+          // },
           clipZ: true,
         },
         {
           geometry: newFloorNetDepthRenderGeometry,
-          width: this.renderer.domElement.width,
-          height: this.renderer.domElement.height,
+          // width,
+          // height,
+          // get width() {
+          //   console.warn('get width reconstructFloor', new Error().stack);
+          //   debugger;
+          // },
+          // get height() {
+          //   console.warn('get height reconstructFloor', new Error().stack);
+          //   debugger;
+          // },
           clipZ: true,
         },
       ],
@@ -4517,8 +4546,16 @@ export async function compileVirtualScene(imageArrayBuffer) {
       renderSpecs: [
         {
           geometry: floorNetDepthRenderGeometry,
-          width,
-          height,
+          // width,
+          // height,
+          // get width() {
+          //   console.warn('get width reconstructFloor', new Error().stack);
+          //   debugger;
+          // },
+          // get height() {
+          //   console.warn('get height reconstructFloor', new Error().stack);
+          //   debugger;
+          // },
           clipZ: true,
         },
       ],
