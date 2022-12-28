@@ -712,11 +712,15 @@ const hitScan = (() => {
       cameraDistance += cameraScanStep
     ) {
       let everyXHit = true;
-      for (let dx = -cameraScanWidth / 2; dx <= cameraScanWidth / 2; dx += cameraScanStep) {
+      const numScanSteps = Math.ceil(cameraScanWidth / cameraScanStep);
+      for (let dx = -numScanSteps / 2; dx <= numScanSteps / 2; dx++) {
+        const dx2 = dx * cameraScanStep;
+        console.log('check dx2', dx2, cameraDistance);
         const targetPosition = getFloorHit(
           position,
           quaternion,
-          localVector2.set(dx, 0, -cameraDistance),
+          localVector2.set(dx2, 0, -cameraDistance)
+            .applyQuaternion(quaternion),
           depthFloatsRaw,
           floorPlaneJson,
           localVector
@@ -735,7 +739,7 @@ const hitScan = (() => {
 })();
 const getRaycastedCameraEntranceLocation = (() => {
   const localVector = new THREE.Vector3();
-  // const localVector2 = new THREE.Vector3();
+  const localVector2 = new THREE.Vector3();
   const localVector3 = new THREE.Vector3();
 
   // raycast in front of the camera and check for a floor hit
@@ -749,14 +753,10 @@ const getRaycastedCameraEntranceLocation = (() => {
     if (cameraDistance !== null) {
       // ensure there is space for the player to stand
       const targetPosition = getFloorHit(
-        position.clone()
-          .add(
-            // new THREE.Vector3(0, 0, -cameraDistance - portalExtrusion)
-            new THREE.Vector3(0, 0, -cameraDistance)
-              .applyQuaternion(quaternion)
-          ),
+        position,
         quaternion,
-        localVector3.setScalar(entranceExitEmptyDiameter),
+        localVector2.set(0, 0, -cameraDistance)
+          .applyQuaternion(quaternion),
         depthFloatsRaw,
         floorPlaneJson,
         localVector
@@ -793,8 +793,6 @@ const getRaycastedPortalLocations = (() => {
   const localVector3 = new THREE.Vector3();
   const localVector4 = new THREE.Vector3();
   const localVector5 = new THREE.Vector3();
-  // const localVector6 = new THREE.Vector3();
-  // const localVector7 = new THREE.Vector3();
   const localQuaternion = new THREE.Quaternion();
   const localQuaternion2 = new THREE.Quaternion();
   const localQuaternion3 = new THREE.Quaternion();
