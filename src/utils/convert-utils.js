@@ -1,23 +1,21 @@
-export function blob2img(blob) {
-  const img = new Image();
-  const u = URL.createObjectURL(blob);
-  const promise = new Promise((accept, reject) => {
-    function cleanup() {
-      URL.revokeObjectURL(u);
-    }
-    img.onload = () => {
-      accept(img);
-      cleanup();
-    };
-    img.onerror = err => {
-      reject(err);
-      cleanup();
-    };
-  });
-  img.crossOrigin = 'Anonymous';
-  img.src = u;
-  img.blob = blob;
-  return promise;
+export async function blob2img(blob, opts) {
+  const imageBitmap = await createImageBitmap(blob);
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  if (opts?.width !== undefined && opts?.height !== undefined) {
+    canvas.width = opts.width;
+    canvas.height = opts.height;
+    // draw the image in the center in contain mode, maintaining aspect ratio with blank space around
+    const scale = Math.min(opts.width / imageBitmap.width, opts.height / imageBitmap.height);
+    const x = (opts.width - imageBitmap.width * scale) / 2;
+    const y = (opts.height - imageBitmap.height * scale) / 2;
+    ctx.drawImage(imageBitmap, x, y, imageBitmap.width * scale, imageBitmap.height * scale);
+  } else {
+    canvas.width = imageBitmap.width;
+    canvas.height = imageBitmap.height;
+    ctx.drawImage(imageBitmap, 0, 0);
+  }
+  return canvas;
 }
 
 export function img2canvas(img) {
