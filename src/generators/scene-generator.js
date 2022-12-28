@@ -125,6 +125,11 @@ import {PathMesh} from '../zine-aux/meshes/path-mesh.js';
 
 const vqaClient = new VQAClient();
 
+//
+
+const planeGeometryNormalizeQuaternion = new THREE.Quaternion()
+  .setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI/2);
+
 // constants
 
 export const selectorSize = 8 + 1;
@@ -151,6 +156,7 @@ const localMatrix = new THREE.Matrix4();
 const localBox = new THREE.Box3();
 const localCamera = new THREE.PerspectiveCamera();
 const localOrthographicCamera = new THREE.OrthographicCamera();
+const localFrustum = new THREE.Frustum();
 const localColor = new THREE.Color();
 
 const localFloat32Array4 = new Float32Array(4);
@@ -172,12 +178,30 @@ const defaultCameraMatrix = new THREE.Matrix4();
 
 //
 
+const forwardizeQuaternion = (() => {
+  const localVector = new THREE.Vector3();
+  const localMatrix = new THREE.Matrix4();
+  
+  return quaternion => {
+    const forwardDirection = localVector.set(0, 0, -1)
+      .applyQuaternion(quaternion);
+    forwardDirection.y = 0;
+    forwardDirection.normalize();
+    return quaternion.setFromRotationMatrix(
+      localMatrix.lookAt(
+        zeroVector,
+        forwardDirection,
+        upVector,
+      )
+    );
+  };
+})();
+
 const depthRenderSkipRatio = 8;
 const makeDepthCubesMesh = (depthFloats, width, height, camera) => {
   // render an instanced cubes mesh to show the depth
   const depthCubesGeometry = new THREE.BoxBufferGeometry(0.01, 0.01, 0.01);
   const depthCubesMaterial = new THREE.MeshPhongMaterial({
-    // color: 0x00FFFF,
     vertexColors: true,
   });
   const depthCubesMesh = new THREE.InstancedMesh(depthCubesGeometry, depthCubesMaterial, depthFloats.length);
@@ -544,12 +568,28 @@ function binearInterpolate(
 }
 const projectQuaternionToFloor = (() => {
   const localVector = new THREE.Vector3();
-  const localVector2 = new THREE.Vector3();
-  const localVector3 = new THREE.Vector3();
-  const localPlane = new THREE.Plane();
 
   return (
     srcQuaternion,
+    floorQuaternion,
+    targetQuaternion,
+  ) => {
+    const forwardDirection = localVector.set(0, 0, -1)
+      .applyQuaternion(srcQuaternion);
+    return projectDirectionToFloor(
+      forwardDirection,
+      floorQuaternion,
+      targetQuaternion
+    );
+  };
+})();
+const projectDirectionToFloor = (() => {
+  const localVector = new THREE.Vector3();
+  const localVector2 = new THREE.Vector3();
+  const localPlane = new THREE.Plane();
+
+  return (
+    forwardDirection,
     floorQuaternion,
     targetQuaternion,
   ) => {
@@ -562,12 +602,10 @@ const projectQuaternionToFloor = (() => {
         new THREE.Vector3(0, 0, 0)
       );
 
-    const forwardDirection = localVector2.set(0, 0, -1)
-      .applyQuaternion(srcQuaternion);
     // project the forward direction onto the floor plane
     const projectedForwardDirection = floorPlane.projectPoint(
       forwardDirection,
-      localVector3
+      localVector2
     ).normalize();
 
     return targetQuaternion.setFromRotationMatrix(
@@ -740,7 +778,7 @@ const hitScan = (() => {
 const getRaycastedCameraEntranceLocation = (() => {
   const localVector = new THREE.Vector3();
   const localVector2 = new THREE.Vector3();
-  const localVector3 = new THREE.Vector3();
+  // const localVector3 = new THREE.Vector3();
 
   // raycast in front of the camera and check for a floor hit
   return (position, quaternion, depthFloatsRaw, floorPlaneLocation, floorPlaneJson) => {
@@ -3095,12 +3133,14 @@ export class PanelRenderer extends EventTarget {
       scenePhysicsMesh,
       floorNetMesh,
       edgeDepthMesh,
+      wallPlaneMeshes,
     } = this.zineRenderer;
     scene.add(this.zineRenderer.scene);
     this.camera.copy(this.zineRenderer.camera);
     this.sceneMesh = sceneMesh;
     this.scenePhysicsMesh = scenePhysicsMesh;
     this.floorNetMesh = floorNetMesh;
+    this.wallPlaneMeshes = wallPlaneMeshes;
     this.edgeDepthMesh = edgeDepthMesh;
     this.updateObjectTransforms();
 
@@ -3246,6 +3286,11 @@ export class PanelRenderer extends EventTarget {
     this.entranceExitMesh.updateVisibility();
 
     this.pathMesh.visible = this.tool === 'portal';
+
+    for (let i = 0; i < this.wallPlaneMeshes.length; i++) {
+      const wallPlaneMesh = this.wallPlaneMeshes[i];
+      wallPlaneMesh.visible = this.tool === 'portal';
+    }
 
     this.selector.setTool(this.tool);
     this.overlay.setTool(this.tool);
@@ -4479,7 +4524,7 @@ export async function compileVirtualScene(imageArrayBuffer) {
   const floorPlane = new THREE.Plane()
     .setFromNormalAndCoplanarPoint(
       localVector.set(0, 1, 0),
-      localVector2.set(0, 0, 0)
+      localVector2.set(0, -1.5, 0) // assume standing height
     );
   const firstFloorPlaneIndex = getFirstFloorPlaneIndex(planeLabels);
   if (firstFloorPlaneIndex !== -1) {
@@ -4826,6 +4871,7 @@ export async function compileVirtualScene(imageArrayBuffer) {
     candidateLocations,
     predictedHeight,
     edgeDepths,
+    wallPlanes,
     paths,
   };
 }
