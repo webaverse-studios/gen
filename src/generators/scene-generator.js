@@ -3611,41 +3611,33 @@ export class PanelRenderer extends EventTarget {
     let segmentMask;
     {
       const imageSegmentationSpec = await _getImageSegments(editedImgBlob, width, height);
-      const {segmentsBlob, boundingBoxLayers} = imageSegmentationSpec;
-
-      const segmentsImageBitmap = await createImageBitmap(segmentsBlob);
-      
-      {
-        const segmentsCanvasMono = segmentsImg2Canvas(segmentsImageBitmap);
-        const ctx = segmentsCanvasMono.getContext('2d');
-
-        const imageData = ctx.getImageData(0, 0, segmentsCanvasMono.width, segmentsCanvasMono.height);
-        const {data} = imageData;
-        segmentMask = new Int32Array(data.byteLength / Int32Array.BYTES_PER_ELEMENT);
-        for (let i = 0; i < segmentMask.length; i++) {
-          const r = data[i * 4 + 0];
-          segmentMask[i] = r;
-        }
-      }
+      segmentMask = imageSegmentationSpec.segmentMask;
+      const boundingBoxLayers = imageSegmentationSpec.boundingBoxLayers;
 
       {
-        const segmentsCanvasColor = segmentsImg2Canvas(segmentsImageBitmap, {
-          color: true,
-        });
-        segmentsCanvasColor.classList.add('imageSegmentationCanvas2');
+        const segmentsCanvasColor = document.createElement('canvas');
+        segmentsCanvasColor.width = width;
+        segmentsCanvasColor.height = height;
+        segmentsCanvasColor.classList.add('imageSegmentationCanvasOutmesh');
         segmentsCanvasColor.style.cssText = `\
           background-color: red;
         `;
         document.body.appendChild(segmentsCanvasColor);
         const ctx = segmentsCanvasColor.getContext('2d');
-
-        drawLabels(ctx, resizeBoundingBoxLayers(
-          boundingBoxLayers,
-          segmentsImageBitmap.width,
-          segmentsImageBitmap.height,
-          segmentsCanvasColor.width,
-          segmentsCanvasColor.height
-        ));
+  
+        const segmentImageData = ctx.createImageData(width, height);
+        for (let i = 0; i < segmentMask.length; i++) {
+          const segmentIndex = segmentMask[i];
+  
+          const c = localColor.setHex(colors[segmentIndex % colors.length]);
+          segmentImageData.data[i * 4 + 0] = c.r * 255;
+          segmentImageData.data[i * 4 + 1] = c.g * 255;
+          segmentImageData.data[i * 4 + 2] = c.b * 255;
+          segmentImageData.data[i * 4 + 3] = 255;
+        }
+        ctx.putImageData(segmentImageData, 0, 0);
+  
+        drawLabels(ctx, boundingBoxLayers);
       }
     }
     console.timeEnd('imageSegmentation');
@@ -3689,6 +3681,30 @@ export class PanelRenderer extends EventTarget {
       portalMask,
     } = await getSemanticPlanes(editedImg, editCamera.fov, newDepthFloatImageData, segmentMask);
     console.timeEnd('planeDetection');
+
+    // compute the segment mask for the new geometry
+    let segmentLabels;
+    let segmentLabelIndices;
+    let planeLabels;
+    let planeLabelIndices;
+    let portalLabels;
+    {
+      const geometry = pointCloudArrayBufferToGeometry(pointCloudArrayBuffer, width, height);
+      const semanticSpecs = getSemanticSpecs({
+        geometry,
+        segmentMask,
+        planesMask,
+        planesJson,
+        portalJson,
+        width,
+        height,
+      });
+      segmentLabels = semanticSpecs.segmentLabels;
+      segmentLabelIndices = semanticSpecs.segmentLabelIndices;
+      planeLabels = semanticSpecs.planeLabels;
+      planeLabelIndices = semanticSpecs.planeLabelIndices;
+      portalLabels = semanticSpecs.portalLabels;
+    }
 
     // depth reconstruction
     const {
@@ -3990,27 +4006,6 @@ export class PanelRenderer extends EventTarget {
         editCamera,
       );
       _mergeMask(geometry, depthFloatImageData, distanceNearestPositions);
-
-      // compute the segment mask for the new geometry
-      const semanticSpecs = getSemanticSpecs({
-        geometry,
-        segmentMask,
-        planesMask,
-        planesJson,
-        portalJson,
-        width: this.renderer.domElement.width, // XXX should this be the original image width as well?
-        height: this.renderer.domElement.height,
-      });
-      const {
-        segmentLabels,
-        segmentLabelIndices,
-        planeLabels,
-        planeLabelIndices,
-        portalLabels,
-        // segmentSpecs,
-        // planeSpecs,
-        // portalSpecs,
-      } = semanticSpecs;
       geometry.computeVertexNormals();
 
       const editedImgTex = new THREE.Texture();
@@ -4064,7 +4059,6 @@ export class PanelRenderer extends EventTarget {
       backgroundMesh = new THREE.Mesh(geometry, material);
       backgroundMesh.name = 'backgroundMesh';
       backgroundMesh.frustumCulled = false;
-      // XXX reconstruct segmentArray from segmentSpecs and latch it here
       backgroundMesh.segmentLabels = segmentLabels;
       backgroundMesh.segmentLabelIndices = segmentLabelIndices;
       backgroundMesh.planeLabels = planeLabels;
