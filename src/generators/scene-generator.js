@@ -3560,18 +3560,14 @@ export class PanelRenderer extends EventTarget {
     maskBlob,
     editCameraJson,
   }) {
-    const layer0 = this.panel.getLayer(1);
-    const resolution = layer0.getData('resolution');
+    // const layer0 = this.panel.getLayer(1);
+    // const resolution = layer0.getData('resolution');
     const layer1 = this.panel.getLayer(1);
     const originalCameraJson = layer1.getData('cameraJson');
     const oldDepthField = layer1.getData('depthField');
     const floorPlaneJson = layer1.getData('floorPlaneJson');
 
     // reify objects
-    const [
-      width,
-      height,
-    ] = resolution;
     const originalCamera = setPerspectiveCameraFromJson(localCamera, originalCameraJson).clone();
     const editCamera = setPerspectiveCameraFromJson(localCamera, editCameraJson).clone();
     const floorPlane = new THREE.Plane(localVector.fromArray(floorPlaneJson.normal), floorPlaneJson.constant);
@@ -3584,18 +3580,25 @@ export class PanelRenderer extends EventTarget {
 
     let editedImgArrayBuffer;
     let editedImg;
+    let width, height;
     {
       editedImgArrayBuffer = await editedImgBlob.arrayBuffer();
       editedImg = await blob2img(editedImgBlob);
+      width = editedImg.width;
+      height = editedImg.height;
       editedImg.classList.add('editImg');
       document.body.appendChild(editedImg);
     }
+    const resolution = [
+      width,
+      height,
+    ];
 
     // image segmentation
     console.time('imageSegmentation');
     let segmentMask;
     {
-      const imageSegmentationSpec = await _getImageSegments(editedImgBlob);
+      const imageSegmentationSpec = await _getImageSegments(editedImgBlob, width, height);
       const {segmentsBlob, boundingBoxLayers} = imageSegmentationSpec;
 
       const segmentsImageBitmap = await createImageBitmap(segmentsBlob);
