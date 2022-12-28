@@ -151,8 +151,8 @@ export function clipGeometryZ(geometry, width, height, depthFloats32Array) {
 //
 
 // add clipping attributes to geometry, for detecting clipped regions in a shader
-export const clipRenderSpecs = renderSpecs => renderSpecs.map(renderSpec => {
-  let {geometry, width, height, clipZ} = renderSpec;
+export const clipRenderSpecs = (renderSpecs, width, height) => renderSpecs.map(renderSpec => {
+  let {geometry, clipZ} = renderSpec;
   if (clipZ) {
     // geometry = geometry.clone();
     const depthFloats32Array = getDepthFloatsFromIndexedGeometry(geometry);
@@ -165,8 +165,6 @@ export const clipRenderSpecs = renderSpecs => renderSpecs.map(renderSpec => {
   decorateGeometryTriangleIds(geometry);
   return {
     geometry,
-    width,
-    height,
     clipZ,
   };
 });
@@ -285,7 +283,7 @@ export const mergeOperator = ({
   renderSpecs,
 }) => {
   // clipZ
-  renderSpecs = clipRenderSpecs(renderSpecs);
+  renderSpecs = clipRenderSpecs(renderSpecs, width, height);
 
   // canvas
   const canvas = document.createElement('canvas');
