@@ -753,7 +753,6 @@ const hitScan = (() => {
       const numScanSteps = Math.ceil(cameraScanWidth / cameraScanStep);
       for (let dx = -numScanSteps / 2; dx <= numScanSteps / 2; dx++) {
         const dx2 = dx * cameraScanStep;
-        console.log('check dx2', dx2, cameraDistance);
         const targetPosition = getFloorHit(
           position,
           quaternion,
