@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {OBB} from 'three/examples/jsm/math/OBB.js';
 import alea from 'alea';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 import {Text} from 'troika-three-text';
@@ -923,6 +924,93 @@ function shuffle(array, seed = '') {
   }
   return array;
 }
+function* subsets(array, offset = 0) {
+  while (offset < array.length) {
+    let first = array[offset++];
+    for (let subset of subsets(array, offset)) {
+      subset.push(first);
+      yield subset;
+    }
+  }
+  yield [];
+}
+/* const allSubsets = inputArray => {
+  const result = [];
+  for (let subset of subsets(inputArray)) {
+    result.push(subset);
+  }
+  return result;
+}; */
+function isSetSelfIntersecting(candidateLocations) {
+  for (let i = 0; i < candidateLocations.length; i++) {
+    for (let j = i + 1; j < candidateLocations.length; j++) {
+      const candidateLocation1 = candidateLocations[i];
+      const candidateLocation2 = candidateLocations[j];
+      if (entranceExitIntersects(candidateLocation1, candidateLocation2)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+const entranceExitIntersects = (() => {
+  const localVector = new THREE.Vector3();
+  const localQuaternion = new THREE.Quaternion();
+  return (box1, box2) => {
+    const box1Position = localVector.fromArray(box1.position);
+    const box1Quaternion = localQuaternion.fromArray(box1.quaternion);
+    // const box1Scale = localVector2.fromArray(box1.scale);
+    const scale = new THREE.Vector3(entranceExitWidth, entranceExitHeight, entranceExitDepth);
+    const obb1 = new OBB().set(
+      new THREE.Vector3(), // center
+      new THREE.Vector3().setScalar(0.5), // halfSize
+      new THREE.Matrix3(), // rotation
+    ).applyMatrix4(new THREE.Matrix4().compose(
+      box1Position.clone()
+        .sub(
+          new THREE.Vector3(0, entranceExitHeight / 2, entranceExitDepth / 2)
+            .applyQuaternion(box1Quaternion)
+        ),
+      box1Quaternion,
+      scale
+    ));
+
+    const box2Position = localVector3.fromArray(box2.position);
+    const box2Quaternion = localQuaternion2.fromArray(box2.quaternion);
+    // const box2Scale = localVector4.fromArray(box2.scale);
+    const obb2 = new OBB().set(
+      new THREE.Vector3(), // center
+      new THREE.Vector3().setScalar(0.5), // halfSize
+      new THREE.Matrix3(), // rotation
+    ).applyMatrix4(new THREE.Matrix4().compose(
+      box2Position.clone()
+        .sub(
+          new THREE.Vector3(0, entranceExitHeight / 2, entranceExitDepth / 2)
+            .applyQuaternion(box2Quaternion)
+        ),
+      box2Quaternion,
+      scale
+    ));
+    
+    return obb1.intersectsOBB(obb2);
+  };
+})();
+function getSetDistanceSq(candidateLocations) {
+  let sum = 0;
+  for (let i = 0; i < candidateLocations.length; i++) {
+    for (let j = i + 1; j < candidateLocations.length; j++) {
+      const candidateLocation1 = candidateLocations[i];
+      const candidateLocation2 = candidateLocations[j];
+      const d = localVector.fromArray(candidateLocation1.position)
+        .sub(
+          localVector2.fromArray(candidateLocation2.position)
+        )
+        .lengthSq();
+      sum += d;
+    }
+  }
+  return sum;
+}
 const sortLocations = (() => {
   const localVector = new THREE.Vector3();
   const localVector2 = new THREE.Vector3();
@@ -942,12 +1030,6 @@ const sortLocations = (() => {
   }) => {
     // collect candidate locations
     let candidateLocations = [];
-    // if (cameraEntranceLocation) {
-    //   candidateLocations.push(cameraEntranceLocation);
-    // }
-    // if (floorPlaneLocation) {
-    //   candidateLocations.push(floorPlaneLocation);
-    // }
     candidateLocations.push(...portalLocations);
     candidateLocations = structuredClone(candidateLocations); // do not scribble over original arrays
 
@@ -1023,6 +1105,37 @@ const sortLocations = (() => {
         ].sort((a, b) => a - b);
         candidateLocations.splice(portalLocationIndexes[1], 1);
         candidateLocations.splice(portalLocationIndexes[0], 1);
+      }
+    }
+
+    // if there are portals left, try to find a few more that would make good entrances/exits
+    {
+      const fixedCandidateLocations = entranceExitLocations;
+      let largestSetSize = 0;
+      let largestDistance = 0;
+      let largestDistanceSet = [];
+      for (const candidateLocationSubset of subsets(candidateLocations)) {
+        if (candidateLocationSubset.length > 0) {
+          const allCandidateEntrances = [...fixedCandidateLocations, ...candidateLocationSubset];
+
+          if (allCandidateEntrances.length > largestSetSize) {
+            const hasIntersections = isSetSelfIntersecting(allCandidateEntrances);
+            if (!hasIntersections) {
+              const distanceSq = getSetDistanceSq(allCandidateEntrances);
+              if (distanceSq > largestDistance) {
+                largestDistance = distanceSq;
+                largestDistanceSet = candidateLocationSubset;
+              }
+            }
+          }
+        }
+      }
+      const maxEntranceExits = 4;
+      while (largestDistanceSet.length > 0 && entranceExitLocations.length < maxEntranceExits) {
+        const candidateLocation = largestDistanceSet.shift();
+        entranceExitLocations.push(candidateLocation);
+        const candidateLocationIndex = candidateLocations.indexOf(candidateLocation);
+        candidateLocations.splice(candidateLocationIndex, 1);
       }
     }
 
