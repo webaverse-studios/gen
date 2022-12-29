@@ -63,8 +63,16 @@ export function reconstructFloor({
             localRay.origin.z = (y / height - 0.5) * floorNetWorldSize;
             localRay.direction.set(0, 0, -1)
               .applyQuaternion(camera.quaternion);
-            const point = localRay.intersectPlane(floorPlane, localVector);
-            sum += -(point.y - camera.position.y) * weight;
+            let point = localRay.intersectPlane(floorPlane, localVector);
+            // if the point missed, the floor plane is probably at a weird angle,
+            // so just assume a zero depth
+            if (!point) {
+              // try the reverse direction
+              // localRay.direction.negate();
+              // point = localRay.intersectPlane(floorPlane, localVector);
+            } else {
+              sum += -(point.y - camera.position.y) * weight;
+            }
           };
 
           const x = i % width + dx;
