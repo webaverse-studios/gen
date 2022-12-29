@@ -200,7 +200,7 @@ const forwardizeQuaternion = (() => {
 const depthRenderSkipRatio = 8;
 const makeDepthCubesMesh = (depthFloats, width, height, camera) => {
   // render an instanced cubes mesh to show the depth
-  const depthCubesGeometry = new THREE.BoxBufferGeometry(0.01, 0.01, 0.01);
+  const depthCubesGeometry = new THREE.BoxGeometry(0.01, 0.01, 0.01);
   const depthCubesMaterial = new THREE.MeshPhongMaterial({
     vertexColors: true,
   });
@@ -2576,9 +2576,9 @@ class OutmeshToolMesh extends THREE.Object3D {
 
     const targetGeometry = (() => {
       const topLeftCornerGeometry = BufferGeometryUtils.mergeBufferGeometries([
-        new THREE.BoxBufferGeometry(3, 1, 1)
+        new THREE.BoxGeometry(3, 1, 1)
           .translate(3 / 2 - 0.5, 0, 0),
-        new THREE.BoxBufferGeometry(1, 3 - 0.5, 1)
+        new THREE.BoxGeometry(1, 3 - 0.5, 1)
           .translate(0, -(3 - 0.5) / 2 - 0.5, 0),
       ]);
       const bottomLeftCornerGeometry = topLeftCornerGeometry.clone()
@@ -2605,11 +2605,11 @@ class OutmeshToolMesh extends THREE.Object3D {
 
     const rectangleGeometry = (() => {
       const s2 = 1 / s;
-      const topGeometry = new THREE.BoxBufferGeometry(s2, 1, 1)
+      const topGeometry = new THREE.BoxGeometry(s2, 1, 1)
         .translate(0, s2 / 2, 0);
       const bottomGeometry = topGeometry.clone()
         .translate(0, -s2, 0);
-      const leftGeometry = new THREE.BoxBufferGeometry(1, s2, 1)
+      const leftGeometry = new THREE.BoxGeometry(1, s2, 1)
         .translate(-s2 / 2, 0, 0);
       const rightGeometry = leftGeometry.clone()
         .translate(s2, 0, 0);
@@ -2734,7 +2734,7 @@ class OutmeshToolMesh extends THREE.Object3D {
 
     //
 
-    const frustumGeometry = new THREE.BoxBufferGeometry(1, 1, 1)
+    const frustumGeometry = new THREE.BoxGeometry(1, 1, 1)
       // .translate(0, 0, -0.5);
 
     const frustumMaterial = new THREE.ShaderMaterial({
@@ -3211,7 +3211,7 @@ export class PanelRenderer extends EventTarget {
 
     // outmesh
     const outmeshMesh = new OutmeshToolMesh(sceneMesh.geometry);
-    this.zineRenderer.transformScene.add(outmeshMesh);
+    this.zineRenderer.scene.add(outmeshMesh);
     outmeshMesh.updateMatrixWorld();
     this.outmeshMesh = outmeshMesh;
 
