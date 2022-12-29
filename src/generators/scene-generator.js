@@ -4621,23 +4621,26 @@ export async function compileVirtualScene(imageArrayBuffer) {
   } = semanticSpecs;
 
   console.time('floorPlane');
-  const floorPlane = new THREE.Plane()
-    .setFromNormalAndCoplanarPoint(
-      localVector.set(0, 1, 0),
-      localVector2.set(0, -1.5, 0) // assume standing height
-    );
+  const floorPlane = new THREE.Plane();
+  floorPlane.center = new THREE.Vector3(0, -1.5, 0); // assume standing height
+  floorPlane.setFromNormalAndCoplanarPoint(
+    localVector.set(0, 1, 0),
+    floorPlane.center
+  );
   const firstFloorPlaneIndex = getFirstFloorPlaneIndex(planeLabels);
   if (firstFloorPlaneIndex !== -1) {
     const labelSpec = planeLabels[firstFloorPlaneIndex];
     const {normal, center} = labelSpec;
+    floorPlane.center.fromArray(center);
     floorPlane.setFromNormalAndCoplanarPoint(
       localVector.fromArray(normal),
-      localVector2.fromArray(center)
+      floorPlane.center
     );
   }
   const floorPlaneJson = {
     normal: floorPlane.normal.toArray(),
     constant: floorPlane.constant,
+    center: floorPlane.center.toArray(),
   };
   console.timeEnd('floorPlane');
 
@@ -4680,15 +4683,15 @@ export async function compileVirtualScene(imageArrayBuffer) {
     floorNetCamera,
   );
 
-  const floorPlaneLabelSpec = firstFloorPlaneIndex !== -1 ?
-    planeLabels[firstFloorPlaneIndex]
-  :
-    null;
-  const floorPlaneCenter = floorPlaneLabelSpec && localVector.fromArray(floorPlaneLabelSpec.center);
-  const floorPlaneNormal = floorPlaneLabelSpec && localVector2.fromArray(floorPlaneLabelSpec.normal);
+  // const floorPlaneLabelSpec = firstFloorPlaneIndex !== -1 ?
+  //   planeLabels[firstFloorPlaneIndex]
+  // :
+  //   null;
+  // const floorPlaneCenter = floorPlaneLabelSpec && localVector.fromArray(floorPlaneLabelSpec.center);
+  // const floorPlaneNormal = floorPlaneLabelSpec && localVector2.fromArray(floorPlaneLabelSpec.normal);
   const floorPlaneLocation = getFloorPlaneLocation({
-    floorPlaneCenter,
-    floorPlaneNormal,
+    floorPlaneCenter: floorPlane.center,
+    floorPlaneNormal: floorPlane.normal,
   });
 
   const cameraEntranceLocation = getRaycastedCameraEntranceLocation(
