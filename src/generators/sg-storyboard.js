@@ -38,10 +38,10 @@ export class Storyboard extends EventTarget {
       const panels = this.zs.getPanels();
       const id = keyPath[keyPath.length - 1];
       const zp = panels.find(zp => zp.id === id);
-      if (!zp) {
-        console.log('could not find added panel', panels, id, keyPath);
-        debugger;
-      }
+      // if (!zp) {
+      //   console.log('could not find added panel', panels, id, keyPath);
+      //   debugger;
+      // }
       const panel = new Panel(zp);
       this.panels.push(panel);
 
