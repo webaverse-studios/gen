@@ -2,6 +2,7 @@ import {useState} from 'react';
 import classnames from 'classnames';
 
 import SceneGeneratorComponent from '../src/components/generators/SceneGeneratorComponent.jsx';
+import MetasceneGeneratorComponent from '../src/components/generators/MetasceneGeneratorComponent.jsx';
 import AvatarGeneratorComponent from '../src/components/generators/AvatarGeneratorComponent.jsx';
 import MobGeneratorComponent from '../src/components/generators/MobGeneratorComponent.jsx';
 import CharacterGeneratorComponent from '../src/components/generators/CharacterGeneratorComponent.jsx';
@@ -27,6 +28,10 @@ const Gen = () => {
         )} onClick={_setTab('sceneGenerator')}>Scene</div>
         <div className={classnames(
           styles.tab,
+          tab === 'metasceneGenerator' ? styles.selected : '',
+        )} onClick={_setTab('metasceneGenerator')}>Metascene</div>
+        <div className={classnames(
+          styles.tab,
           tab === 'avatarGenerator' ? styles.selected : '',
         )} onClick={_setTab('avatarGenerator')}>Avatar</div>
         <div className={classnames(
@@ -47,6 +52,9 @@ const Gen = () => {
           switch (tab) {
             case 'sceneGenerator': {
               return <SceneGeneratorComponent />
+            }
+            case 'metasceneGenerator': {
+              return <MetasceneGeneratorComponent />
             }
             case 'avatarGenerator': {
               return <AvatarGeneratorComponent />
