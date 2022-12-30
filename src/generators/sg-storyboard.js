@@ -91,7 +91,12 @@ export class Storyboard extends EventTarget {
     const panel = this.addPanel();
     panel.task(async ({signal}) => {
       const blob = await imageAiClient.createImageBlob(prompt, {signal});
-      await panel.setFile(blob, prompt);
+      try {
+        await panel.setFile(blob, prompt);
+      } catch(err) {
+        console.warn('error setting file', err);
+        this.removePanel(panel);
+      }
     }, 'generating image');
     // this.#addPanelInternal(panel);
     return panel;
@@ -99,7 +104,12 @@ export class Storyboard extends EventTarget {
   addPanelFromFile(file) {
     const panel = this.addPanel();
     panel.task(async ({signal}) => {
-      await panel.setFile(file);
+      try {
+        await panel.setFile(file);
+      } catch(err) {
+        console.warn('error setting file', err);
+        this.removePanel(panel);
+      }
     }, 'adding image');
     // this.#addPanelInternal(panel);
     return panel;
