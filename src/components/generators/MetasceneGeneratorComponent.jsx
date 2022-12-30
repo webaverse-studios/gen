@@ -5,16 +5,29 @@ import {useState, useRef, useEffect} from 'react';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 // import {Text} from 'troika-three-text';
 // import * as passes from './sg-passes.js';
-// import {
-//   setPerspectiveCameraFromJson,
-//   getPerspectiveCameraJson,
-//   setOrthographicCameraFromJson,
-//   getOrthographicCameraJson,
-// } from '../zine/zine-camera-utils.js';
-// import {
-//   getDepthFloat32ArrayViewPositionPx,
-//   bilinearInterpolate,
-// } from '../zine/zine-geometry-utils.js';
+import {
+  setPerspectiveCameraFromJson,
+  getPerspectiveCameraJson,
+  setOrthographicCameraFromJson,
+  getOrthographicCameraJson,
+} from '../../zine/zine-camera-utils.js';
+import * as passes from '../../generators/ms-passes.js';
+import {
+  reconstructPointCloudFromDepthField,
+  pointCloudArrayBufferToPositionAttributeArray,
+  pointCloudArrayBufferToGeometry,
+  reinterpretFloatImageData,
+  depthFloat32ArrayToPositionAttributeArray,
+  depthFloat32ArrayToGeometry,
+  depthFloat32ArrayToOrthographicPositionAttributeArray,
+  depthFloat32ArrayToOrthographicGeometry,
+  depthFloat32ArrayToHeightfield,
+  getDepthFloatsFromPointCloud,
+  getDepthFloatsFromIndexedGeometry,
+  setCameraViewPositionFromViewZ,
+  getDoubleSidedGeometry,
+  getGeometryHeights,
+} from '../../zine/zine-geometry-utils.js';
 import {
   panelSize,
   floorNetWorldSize,
@@ -34,6 +47,7 @@ import {
   makeGltfLoader,
   makeDefaultCamera,
   makeFloorNetCamera,
+  makeMapIndexCamera,
   normalToQuaternion,
 } from '../../zine/zine-utils.js';
 import {
@@ -45,6 +59,7 @@ import {
 import {
   ZineRenderer,
 } from '../../zine/zine-renderer.js';
+import {colors} from '../../zine/zine-colors.js';
 // import {
 //   ZineStoryboardCompressor,
 // } from '../../zine/zine-compression.js'
@@ -54,6 +69,10 @@ import {
 } from '../drop-target/DropTarget.jsx';
 
 import styles from '../../../styles/MetasceneGenerator.module.css';
+
+//
+
+const localColor = new THREE.Color();
 
 //
 
@@ -70,43 +89,80 @@ const blockEvent = e => {
 
 //
 
-/* const MetazinePlaceholderComponent = ({
-  storyboard,
-  onPanelSelect,
-}) => {
-  const onNew = e => {
-    e.preventDefault();
-    e.stopPropagation();
-    // const panel = storyboard.addPanel();
-    // onPanelSelect(panel);
-  };
-  const dragover = e => {
-    e.preventDefault();
-    e.stopPropagation();
-  };
-  const drop = async e => {
-    e.preventDefault();
-    e.stopPropagation();
-    const files = e.dataTransfer.files;
-    const file = files[0];
-    if (file) {
-      const panel = storyboard.addPanelFromFile(file);
-      onPanelSelect(panel);
+class MapIndexMesh extends THREE.Mesh {
+  constructor({
+    mapIndex,
+    mapIndexResolution,
+  }) {
+    const geometry = new THREE.PlaneGeometry(floorNetWorldSize, floorNetWorldSize)
+      .rotateX(-Math.PI / 2);
+  
+    const mapIndexUnpacked = new Uint8Array(mapIndex.length * 4);
+    for (let i = 0; i < mapIndex.length; i++) {
+      const indexValue = mapIndex[i];
+      const c = localColor.setHex(colors[indexValue % colors.length]);
+      mapIndexUnpacked[i * 4] = c.r * 255;
+      mapIndexUnpacked[i * 4 + 1] = c.g * 255;
+      mapIndexUnpacked[i * 4 + 2] = c.b * 255;
+      mapIndexUnpacked[i * 4 + 3] = 255;
     }
-  };
 
-  return (
-    <DropTarget
-      className={styles.panelPlaceholder}
-      newLabel='Create New Board'
-      onNew={onNew}
-      onDragOver={dragover}
-      onDrop={drop}
-    />
-  );
-}; */
+    const [
+      width,
+      height,
+    ] = mapIndexResolution;
+    const map = new THREE.DataTexture(
+      mapIndexUnpacked,
+      width,
+      height,
+      THREE.RGBAFormat,
+      THREE.UnsignedByteType,
+    );
+    map.minFilter = THREE.NearestFilter;
+    map.magFilter = THREE.NearestFilter;
+    map.needsUpdate = true;
+    const material = new THREE.ShaderMaterial({
+      uniforms: {
+        map: {
+          value: map,
+          needsUpdate: true,
+        },
+      },
+      vertexShader: `\
+        varying vec2 vUv;
+        
+        void main() {
+          vUv = uv;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `\
+        uniform sampler2D map;
+        varying vec2 vUv;
+
+        void main() {
+          gl_FragColor = texture2D(map, vUv);
+          
+          if (gl_FragColor.a < 0.5) {
+            gl_FragColor.rgb = vec3(0.1);
+            gl_FragColor.a = 1.;
+          }
+        }
+      `,
+      // color: 0xFF0000,
+      // transparent: true,
+      // opacity: 0.7,
+      // side: THREE.BackSide,
+    });
+
+    super(geometry, material);
+
+    this.frustumCulled = false;
+  }
+}
 
 //
+
 export class Metazine extends EventTarget {
   constructor() {
     super();
@@ -143,12 +199,9 @@ export class Metazine extends EventTarget {
       zinefile = zinefile.slice(zineMagicBytes.length);
 
       const storyboard = new ZineStoryboard();
-      // storyboard.clear();
       await storyboard.loadAsync(zinefile);
 
       const panels = storyboard.getPanels();
-      // console.log('got panels', panels);
-      // debugger;
       const panel0 = panels[0];
       this.addPanel(panel0);
     }
@@ -165,6 +218,8 @@ export class Metazine extends EventTarget {
     return this.zs.toUint8Array();
   }
 }
+
+//
 
 export class MetazineRenderer extends EventTarget {
   constructor(canvas, metazine, {
@@ -221,8 +276,10 @@ export class MetazineRenderer extends EventTarget {
     // bootstrap
     this.listen();
     this.animate();
-
-    // initialize initial panels
+    this.#init();
+  }
+  #init() {
+    console.time('panelLoad');
     const panels = this.metazine.getPanels();
     for (const panel of panels) {
       this.addPanel(panel);
@@ -231,6 +288,70 @@ export class MetazineRenderer extends EventTarget {
       const {panel} = e.data;
       this.addPanel(panel);
     });
+    console.timeEnd('panelLoad');
+
+    console.time('mapIndex');
+    let mapIndex; // no clipping or portal optimization
+    let mapIndexResolution;
+    {
+      const mapIndexCamera = makeMapIndexCamera();
+      
+      const renderSpecs = this.zineRenderers.map((zineRenderer, index) => {
+        const {panel} = zineRenderer;
+        const layers = panel.getLayers();
+        
+        // const layer0 = layers[0];
+        const layer1 = layers[1];
+        const depthFieldArrayBuffer = layer1.getData('depthField');
+        const cameraJson = layer1.getData('cameraJson');
+        const camera = setPerspectiveCameraFromJson(new THREE.PerspectiveCamera(), cameraJson);
+        const resolution = layer1.getData('resolution');
+        const [
+          width,
+          height,
+        ] = resolution;
+        
+        let pointCloudArrayBuffer;
+        {
+          const pointCloudFloat32Array = reconstructPointCloudFromDepthField(
+            depthFieldArrayBuffer,
+            width,
+            height,
+            camera.fov,
+          );
+          pointCloudArrayBuffer = pointCloudFloat32Array.buffer;
+        }
+
+        const geometry = pointCloudArrayBufferToGeometry(pointCloudArrayBuffer, width, height);
+        const panelIndex = new Uint8Array(geometry.attributes.position.count)
+          .fill(index + 1);
+        geometry.setAttribute('panelIndex', new THREE.BufferAttribute(panelIndex, 1, true));
+        
+        const matrixWorld = zineRenderer.transformScene.matrixWorld.clone();
+        
+        return {
+          geometry,
+          matrixWorld,
+        };
+      });
+      const mapIndexSpec = passes.renderMapIndex({
+        renderSpecs,
+        camera: mapIndexCamera,
+      });
+      mapIndex = mapIndexSpec.mapIndex;
+      mapIndexResolution = mapIndexSpec.mapIndexResolution;
+    }
+    console.timeEnd('mapIndex');
+
+    // console.log('set map index mesh 1', mapIndex);
+    const mapIndexMesh = new MapIndexMesh({
+      mapIndex,
+      mapIndexResolution,
+    });
+    mapIndexMesh.position.y = -5;
+    // console.log('set map index mesh 2');
+    this.scene.add(mapIndexMesh);
+    mapIndexMesh.updateMatrixWorld();
   }
   addPanel(panel) {
     // load the panel

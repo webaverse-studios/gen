@@ -168,7 +168,7 @@ export const clipRenderSpecs = (renderSpecs, width, height) => renderSpecs.map(r
     clipZ,
   };
 });
-export const getRenderSpecsMeshes = (renderSpecs, camera) => {
+export const getDepthRenderSpecsMeshes = (renderSpecs, camera) => {
   const meshes = [];
 
   for (const renderSpec of renderSpecs) {
@@ -228,7 +228,7 @@ export const getRenderSpecsMeshes = (renderSpecs, camera) => {
 
 //
 
-export const getRenderSpecsMeshesDepth = (meshes, width, height, camera) => {
+export const renderMeshesDepth = (meshes, width, height, camera) => {
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
@@ -275,6 +275,134 @@ export const getRenderSpecsMeshesDepth = (meshes, width, height, camera) => {
 
   return oldDepthFloatImageData;
 };
+
+//
+
+export const getMapIndexSpecsMeshes = (renderSpecs) => {
+  const meshes = [];
+
+  // let vertexShader = depthVertexShader;
+  // let fragmentShader = depthFragmentShader;
+  const material = new THREE.ShaderMaterial({
+    uniforms: {
+      // cameraNear: {
+      //   value: camera.near,
+      //   needsUpdate: true,
+      // },
+      // cameraFar: {
+      //   value: camera.far,
+      //   needsUpdate: true,
+      // },
+      // isPerspective: {
+      //   value: +camera.isPerspectiveCamera,
+      //   needsUpdate: true,
+      // },
+    },
+    vertexShader: `\
+      attribute float panelIndex;
+      flat varying float vPanelIndex;
+
+      void main() {
+        vPanelIndex = panelIndex;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.);
+      }
+    `,
+    fragmentShader: `\
+      flat varying float vPanelIndex;
+
+      void main() {
+        gl_FragColor = vec4(vPanelIndex, 0., 0., 1.);
+      }
+    `,
+    side: THREE.BackSide,
+  });
+
+  for (const renderSpec of renderSpecs) {
+    const {geometry, matrixWorld} = renderSpec;
+    
+    const mapIndexMesh = new THREE.Mesh(geometry, material);
+    mapIndexMesh.name = 'mapIndexMesh';
+    mapIndexMesh.frustumCulled = false;
+    mapIndexMesh.matrix.copy(matrixWorld)
+      .decompose(mapIndexMesh.position, mapIndexMesh.quaternion, mapIndexMesh.scale);
+    mapIndexMesh.matrixWorld.copy(mapIndexMesh.matrix);
+    meshes.push(mapIndexMesh);
+  }
+
+  return meshes;
+};
+
+//
+
+export const renderMeshesMapIndex = (meshes, width, height, camera) => {
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  canvas.classList.add('mapIndexCanvas');
+  const renderer = makeRenderer(canvas);
+  // document.body.appendChild(canvas);
+
+  const mapIndexScene = new THREE.Scene();
+  mapIndexScene.autoUpdate = false;
+  for (const mapIndexMesh of meshes) {
+    mapIndexScene.add(mapIndexMesh);
+  }
+
+  // render target
+  const mapIndexRenderTarget = new THREE.WebGLRenderTarget(
+    width,
+    height,
+    {
+      type: THREE.UnsignedByteType,
+      format: THREE.RGBAFormat,
+    }
+  );
+
+  // render
+  // XXX render to the canvas, for debugging
+  // renderer.render(mapIndexScene, camera);
+
+  // real render to the render target
+  renderer.setRenderTarget(mapIndexRenderTarget);
+  // renderer.clear();
+  renderer.render(mapIndexScene, camera);
+  renderer.setRenderTarget(null);
+  
+  // read back image data
+  const imageData = {
+    data: new Uint8Array(mapIndexRenderTarget.width * mapIndexRenderTarget.height * 4),
+    width,
+    height,
+  };
+  renderer.readRenderTargetPixels(mapIndexRenderTarget, 0, 0, mapIndexRenderTarget.width, mapIndexRenderTarget.height, imageData.data);
+
+  // latch rendered map index data
+  // note: we flip in the x direction,
+  // since we render from the bottom but we want the image right side up when sampling from the top
+  const mapIndex = new Uint8Array(imageData.data.length / 4);
+  for (let dx = 0; dx < mapIndexRenderTarget.width; dx++) {
+    for (let dy = 0; dy < mapIndexRenderTarget.height; dy++) {
+      const x = mapIndexRenderTarget.width - 1 - dx;
+      const y = dy;
+      const dstIndex = x + y * mapIndexRenderTarget.width;
+      const srcIndex = dx + dy * mapIndexRenderTarget.width;
+      mapIndex[dstIndex] = imageData.data[srcIndex * 4]; // r
+    }
+  }
+  const mapIndexResolution = [
+    mapIndexRenderTarget.width,
+    mapIndexRenderTarget.height,
+  ];
+
+  // return result
+  return {
+    mapIndex,
+    mapIndexResolution,
+  };
+};
+
+//
+
 export const mergeOperator = ({
   newDepthFloatImageData,
   width,
@@ -297,8 +425,8 @@ export const mergeOperator = ({
 
   // render depth
   console.time('renderDepth');
-  const meshes = getRenderSpecsMeshes(renderSpecs, camera);
-  const oldDepthFloatImageData = getRenderSpecsMeshesDepth(meshes, width, height, camera);
+  const meshes = getDepthRenderSpecsMeshes(renderSpecs, camera);
+  const oldDepthFloatImageData = getDepthRenderSpecsMeshes(meshes, width, height, camera);
   console.timeEnd('renderDepth');
 
   // render mask index

@@ -6,8 +6,8 @@ import {
   getGeometryClipZMask,
   mergeOperator,
   clipRenderSpecs,
-  getRenderSpecsMeshes,
-  getRenderSpecsMeshesDepth,
+  getDepthRenderSpecsMeshes,
+  renderMeshesDepth,
 } from '../clients/reconstruction-client.js';
 import {
   depthVertexShader,
@@ -19,10 +19,10 @@ import {
   floorNetResolution,
   floorNetPixelSize,
 } from '../zine/zine-constants.js';
-import {makeRenderer} from '../zine/zine-utils.js';
-import {
-  maskIndex2Canvas,
-} from './sg-debug.js';
+// import {makeRenderer} from '../zine/zine-utils.js';
+// import {
+//   maskIndex2Canvas,
+// } from './sg-debug.js';
 
 //
 
@@ -40,9 +40,9 @@ export function reconstructFloor({
   renderSpecs = clipRenderSpecs(renderSpecs);
   const width = floorNetPixelSize;
   const height = floorNetPixelSize;
-  const meshes = getRenderSpecsMeshes(renderSpecs, camera);
+  const meshes = getDepthRenderSpecsMeshes(renderSpecs, camera);
 
-  const floorNetDepthsRaw = getRenderSpecsMeshesDepth(meshes, width, height, camera);
+  const floorNetDepthsRaw = renderMeshesDepth(meshes, width, height, camera);
   const floorNetDepths = new Float32Array(floorNetDepthsRaw.length);
   // const offset = 0.1 / 2;
   const offset = 0;
