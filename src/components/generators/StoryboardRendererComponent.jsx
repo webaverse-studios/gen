@@ -6,6 +6,7 @@ import {Storyboard2DRendererComponent} from  './Storyboard2DRendererComponent.js
 import {Storyboard3DRendererComponent} from  './Storyboard3DRendererComponent.jsx';
 // import {BlobRenderer} from '../renderers/BlobRenderer.jsx';
 import {ArrayBufferRenderer} from '../renderers/ArrayBufferRenderer.jsx';
+import {DropTarget} from '../drop-target/DropTarget.jsx';
 
 import {
   mainImageKey,
@@ -48,7 +49,12 @@ const StoryboardPlaceholderComponent = ({
   storyboard,
   onPanelSelect,
 }) => {
-  // drag and drop
+  const onNew = e => {
+    e.preventDefault();
+    e.stopPropagation();
+    const panel = storyboard.addPanel();
+    onPanelSelect(panel);
+  };
   const dragover = e => {
     e.preventDefault();
     e.stopPropagation();
@@ -65,30 +71,14 @@ const StoryboardPlaceholderComponent = ({
   };
 
   return (
-    <div
+    <DropTarget
       className={styles.panelPlaceholder}
+      newLabel='Create New Panel'
+      onNew={onNew}
       onDragOver={dragover}
       onDrop={drop}
-    >
-      <div><a onClick={e => {
-        e.preventDefault();
-        e.stopPropagation();
-        const panel = storyboard.addPanel();
-        onPanelSelect(panel);
-      }}><b>Create New Panel</b></a></div>
-      <div>or, <a className={styles.fileUpload}><input type="file" onChange={e => {
-        const file = e.target.files[0];
-        if (file) {
-          (async () => {
-            const panel = await storyboard.addPanelFromFile(file);
-            onPanelSelect(panel);
-          })();
-        }
-        e.target.value = null;
-      }} />Upload File</a></div>
-      <div>or, <i>Drag and Drop</i></div>
-    </div>
-    );
+    />
+  );
 }
 
 //
