@@ -428,7 +428,7 @@ const getMaskSpecsByValue = (geometry, mask, width, height) => {
   const positions = geometry.attributes.position.array;
 
   const labels = new Map();
-  const labelIndices = new Uint8Array(width * height);
+  const labelIndices = new Uint8Array(width * height).fill(255);
 
   const seenIndices = new Set();
   for (let y = 0; y < height; y++) {
