@@ -4,6 +4,7 @@
 import {
   mainImageKey,
   promptKey,
+  compressedKey,
   layer0Specs,
   layer1Specs,
   layer2Specs,
@@ -163,38 +164,13 @@ export class Panel extends EventTarget {
     return !layer0;
   }
   getDimension() {
-    // return this.hasDataMatch(/^layer1/) ? 3 : 2;
-    // if (!this.zp?.getLayers) {
-    //   console.log('got bad zp', this.zp);
-    //   debugger;
-    // }
-
-    // const layer = this.zp.getLayer(1);
-    // const keys = layer?.getKeys() ?? [];
-    // const candidateLayer1Specs = layer1Specs.filter(spec => !keys.includes(spec));
-    // console.log('layer matches', !!this.zp.getLayer(1), !!this.zp.getLayer(1)?.matchesSpecs(layer1Specs), {
-    //   layer,
-    //   keys,
-    //   candidateLayer1Specs,
-    // });
-
-    // const hasLayer0 = !!this.zp.getLayer(0)?.matchesSpecs(layer0Specs);
-    const hasLayer1 = !!this.zp.getLayer(1)?.matchesSpecs(layer1Specs);
-    // const hasLayer2 = !!this.zp.getLayer(2)?.matchesSpec(layer2Specs);
-
-    // if (hasLayer0) {
-      if (hasLayer1) {
-        return 3;
-      } else {
-        return 2;
-      }
-    // } else {
-    //   return 0;
-    // }
-
-    // const numLayers = this.zp.getLayers().length;
-    // // return numLayers >= 1 ? 3 : 2;
-    // return Math.min(numLayers + 1, 3);
+    const isCompressed = !!this.zp.getLayer(0)?.getData('compressed');
+    const hasFullLayer1 = !!this.zp.getLayer(1)?.matchesSpecs(layer1Specs);
+    if (!isCompressed && hasFullLayer1) {
+      return 3;
+    } else {
+      return 2;
+    }
   }
   isBusy() {
     return this.runningTasks.length > 0;
@@ -212,16 +188,15 @@ export class Panel extends EventTarget {
     const layer = this.zp.addLayer();
     (async () => {
       const arrayBuffer = await file.arrayBuffer();
-      // console.log('set file');
       layer.setData(mainImageKey, arrayBuffer);
     })();
     (async () => {
       if (!prompt) {
         prompt = await vqaClient.getImageCaption(file);
       }
-      // console.log('set prompt', promptKey, prompt);
       layer.setData(promptKey, prompt);
     })();
+    layer.setData(compressedKey, false);
   }
   async setFromPrompt(prompt) {
     await this.task(async ({signal}) => {
