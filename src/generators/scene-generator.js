@@ -1001,6 +1001,7 @@ const sortLocations = (() => {
     let candidateLocations = [];
     candidateLocations.push(...portalLocations);
     candidateLocations = structuredClone(candidateLocations); // do not scribble over original arrays
+    const allCandidateLocations = candidateLocations.slice();
 
     // remove candidate locations that are too close to each other
     const minSeparationDistance = 1;
@@ -1118,12 +1119,12 @@ const sortLocations = (() => {
         const candidateLocation = candidateLocations[i];
         // const candidatePosition = localVector.fromArray(candidateLocation.position);
         
-        const lookCandidateLocations = candidateLocations.filter((lookCandidateLocation, j) => {
-          return j !== i;
+        const lookCandidateLocations = allCandidateLocations.filter(lookCandidateLocation => {
+          return lookCandidateLocation !== candidateLocation;
         });
 
         let quaternion;
-        if (lookCandidateLocations.length > 0) {
+        if (lookCandidateLocations.length > 0) { // if there is something to look at
           const position = localVector2.fromArray(candidateLocation.position);
 
           const lookCandidateLocation = lookCandidateLocations[
@@ -1154,8 +1155,8 @@ const sortLocations = (() => {
             floorQuaternion,
             targetQuaternion,
           );
-        } else {
-          quaternion = localQuaternion.identity();
+        } else { // else if there is nothing to look at, keep the quaternion
+          quaternion = localQuaternion.fromArray(candidateLocation.quaternion);
         }
         quaternion.toArray(candidateLocation.quaternion);
       }
