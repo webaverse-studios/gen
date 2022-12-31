@@ -1263,17 +1263,26 @@ const getSemanticPlanes = async (img, fov, newDepthFloatImageData, segmentMask) 
   await Promise.all([
     // floor planes
     (async () => {
-      const newDepthFloatImageData2 = newDepthFloatImageData.map((n, index) => {
+      let hadValue = false;
+      let newDepthFloatImageData1 = newDepthFloatImageData.map((n, index) => {
         const index2 = segmentMask[index];
-        return categoryClassIndices.floor.includes(index2) ? n : Infinity;
+        if (categoryClassIndices.floor.includes(index2)) {
+          hadValue = true;
+          return n;
+        } else {
+          return Infinity;
+        }
       });
+      if (!hadValue) { // if the mask was empty, use the original data
+        newDepthFloatImageData1 = newDepthFloatImageData;
+      }
       
       const {width, height} = img;
       const planesSpec = await getPlanesRgbd(
         width,
         height,
         focalLength,
-        newDepthFloatImageData2,
+        newDepthFloatImageData1,
         10000,
       );
       planesJson = planesSpec.planesJson;
@@ -1290,10 +1299,19 @@ const getSemanticPlanes = async (img, fov, newDepthFloatImageData, segmentMask) 
     })(),
     // portal planes
     (async () => {
-      const newDepthFloatImageData2 = newDepthFloatImageData.map((n, index) => {
+      let hadValue = false;
+      let newDepthFloatImageData2 = newDepthFloatImageData.map((n, index) => {
         const index2 = segmentMask[index];
-        return categoryClassIndices.portal.includes(index2) ? n : Infinity;
+        if (categoryClassIndices.portal.includes(index2)) {
+          hadValue = true;
+          return n;
+        } else {
+          return Infinity;
+        }
       });
+      if (!hadValue) { // if the mask was empty, use the original data
+        newDepthFloatImageData2 = newDepthFloatImageData;
+      }
 
       const {width, height} = img;
       const portalSpec = await getPlanesRgbd(
