@@ -109,7 +109,7 @@ export const StoryboardRendererComponent = ({
         setEmpty(_getEmpty());
         setDimension(panel.getDimension());
       };
-      panel.addEventListener('update', onupdate);
+      panel.addEventListener('layerupdate', onupdate);
 
       setEmpty(_getEmpty());
       setBusy(panel.isBusy());
@@ -118,7 +118,7 @@ export const StoryboardRendererComponent = ({
 
       return () => {
         panel.removeEventListener('busyupdate', onbusyupdate);
-        panel.removeEventListener('update', onupdate);
+        panel.removeEventListener('layerupdate', onupdate);
       };
     }
   }, [panel]);
