@@ -3,9 +3,9 @@
 
 import { useState } from "react";
 import styles from "../styles/Map.module.css";
-import { MapCanvas } from "../src/components/MapCanvas.js";
-import { MapSidebar } from "../src/components/MapSidebar.js";
-import { UserBox } from "../src/components/user-box/UserBox";
+import { MapCanvas } from "../src/components/MapCanvas.jsx";
+import { MapSidebar } from "../src/components/MapSidebar.jsx";
+import { UserBox } from "../src/components/user-box/UserBox.jsx";
 
 //
 
@@ -24,7 +24,7 @@ const arrayEquals = (a, b) => {
 
 //
 
-const Map = () => {
+export const Map = () => {
     const [minMax, setMinMax] = useState([0, 0, 0, 0]);
 
     return (
@@ -49,4 +49,3 @@ const Map = () => {
         </div>
     );
 };
-export default Map;

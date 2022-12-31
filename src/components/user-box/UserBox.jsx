@@ -2,7 +2,6 @@ import React, { useState, useEffect, useContext } from "react";
 import classnames from "classnames";
 import styles from "./UserBox.module.css";
 import CustomButton from "../custom-button";
-import Link from "next/link";
 
 export const UserBox = ({ className }) => {
     const loggedIn = false;

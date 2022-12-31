@@ -12,7 +12,7 @@ import styles from '../styles/Gen.module.css';
 
 //
 
-const Gen = () => {
+export const Gen = () => {
   const [tab, setTab] = useState('sceneGenerator');
 
   const _setTab = newTab => () => {
@@ -76,4 +76,3 @@ const Gen = () => {
     </div>
   );
 };
-export default Gen;

@@ -1,7 +1,5 @@
 import * as THREE from 'three';
 import {
-  pointCloudArrayBufferToGeometry,
-  reinterpretFloatImageData,
   clipGeometryZ,
   getGeometryClipZMask,
   mergeOperator,

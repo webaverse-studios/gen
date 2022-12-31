@@ -3,7 +3,6 @@ import classnames from 'classnames';
 
 import {
   PanelRenderer,
-  panelSize,
   tools,
 } from '../../generators/scene-generator.js';
 
@@ -16,6 +15,9 @@ import {
   layer1Specs,
   layer2Specs,
 } from '../../zine/zine-data-specs.js';
+import {
+  panelSize,
+} from '../../zine/zine-constants.js';
 
 //
 

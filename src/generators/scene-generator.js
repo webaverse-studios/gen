@@ -61,7 +61,6 @@ import {
 } from '../clients/reconstruction-client.js';
 import {
   reconstructPointCloudFromDepthField,
-  pointCloudArrayBufferToPositionAttributeArray,
   pointCloudArrayBufferToGeometry,
   reinterpretFloatImageData,
   depthFloat32ArrayToPositionAttributeArray,
