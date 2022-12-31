@@ -682,24 +682,24 @@ class MetazineLoader {
     this.semaphoreValue = defaultMaxWorkers;
     this.queue = [];
   }
-  async load(zineFileUrl, index) {
+  async loadFile(zineFile, index) {
     if (this.semaphoreValue > 0) {
       this.semaphoreValue--;
       try {
-        const result = await this.#loadZineFileAsync(zineFileUrl, index);
+        const result = await this.#loadZineFileAsync(zineFile, index);
         return result;
       } finally {
         this.semaphoreValue++;
         if (this.queue.length > 0) {
-          const {zineFileUrl, index, accept, reject} = this.queue.shift();
-          this.load(zineFileUrl, index)
+          const {zineFile, index, accept, reject} = this.queue.shift();
+          this.loadFile(zineFile, index)
             .then(accept, reject);
         }
       }
     } else {
       const result = await new Promise((accept, reject) => {
         this.queue.push({
-          zineFileUrl,
+          zineFile,
           index,
           accept,
           reject,
@@ -708,16 +708,16 @@ class MetazineLoader {
       return result;
     }
   }
-  async #loadZineFileAsync(zineFileUrl, index) {
-    console.log(`loading [${index + 1}/${this.total}] ${zineFileUrl}...`);
+  async #loadZineFileAsync(zineFile, index) {
+    console.log(`loading [${index + 1}/${this.total}] ${zineFile.name}...`);
 
     // load zine file data
-    let zinefile = await loadFileUint8Array(zineFileUrl);
-    zinefile = zinefile.slice(zineMagicBytes.length);
+    const zinefileArrayBuffer = await zineFile.arrayBuffer();
+    const zinefileUint8Array = new Uint8Array(zinefileArrayBuffer, zineMagicBytes.length);
 
     // load storyboard
     const storyboard = new ZineStoryboard();
-    await storyboard.loadAsync(zinefile, {
+    await storyboard.loadAsync(zinefileUint8Array, {
       decompressKeys: [
         'depthField',
       ],
@@ -763,34 +763,36 @@ export class Metazine extends EventTarget {
   clear() {
     this.zs.clear();
   }
-  async loadAsync(uint8Array) {
-    const s = new TextDecoder().decode(uint8Array);
-    let j = JSON.parse(s);
+  async loadFiles(zineFiles) {
+    // const s = new TextDecoder().decode(uint8Array);
+    // let j = JSON.parse(s);
     
     // collect zine file urls
-    let zineFileUrls = j
-      .filter(fileName => !/dall/i.test(fileName))
-      .map(fileName => `https://local.webaverse.com/zine-build/${fileName}`);
+    // let zineFileUrls = j
+    //   .filter(fileName => !/dall/i.test(fileName))
+    //   .map(fileName => `https://local.webaverse.com/zine-build/${fileName}`);
     // zineFileUrls = zineFileUrls.slice(0, 10);
-    
-    const metazineLoader = new MetazineLoader({
-      total: zineFileUrls.length,
-    });
 
     console.time('loadPanels');
-    const panelSpecsArray = await Promise.all(
-      zineFileUrls.map((zineFileUrl, index) =>
-        metazineLoader.load(zineFileUrl, index)
-      )
-    );
-    const panelSpecs = panelSpecsArray.flat();
+    let panelSpecs;
+    {
+      const metazineLoader = new MetazineLoader({
+        total: zineFiles.length,
+      });
+
+      const panelSpecsArray = await Promise.all(
+        zineFiles.map((zineFile, index) =>
+          metazineLoader.loadFile(zineFile, index)
+        )
+      );
+      panelSpecs = panelSpecsArray.flat();
+    }
     console.timeEnd('loadPanels');
     console.log('got panel specs', panelSpecs);
 
     debugger;
 
     const mapGenRenderer = new MapGenRenderer();
-
     const maxNumPanels = 3;
     const rng = alea('lol');
     for (let i = 0; i < maxNumPanels && zineFileUrls.length > 0; i++) {
@@ -1110,24 +1112,26 @@ const MetasceneGeneratorComponent = () => {
     e.preventDefault();
     e.stopPropagation();
 
-    const files = e.dataTransfer.files;
-    const file = files[0];
-    if (file) {
+    const files = Array.from(e.dataTransfer.files)
+      .sort((a, b) => a.name.localeCompare(b.name));
+    if (files.length > 0) {
       initCompressor({
         numWorkers: defaultMaxWorkers,
       });
 
-      const arrayBuffer = await new Promise((accept, reject) => {
-        const reader = new FileReader();
-        reader.onload = e => {
-          accept(e.target.result);
-        };
-        reader.onerror = reject;
-        reader.readAsArrayBuffer(file);
-      });
+      // const arrayBuffer = await new Promise((accept, reject) => {
+      //   const reader = new FileReader();
+      //   reader.onload = e => {
+      //     accept(e.target.result);
+      //   };
+      //   reader.onerror = reject;
+      //   reader.readAsArrayBuffer(file);
+      // });
 
-      const uint8Array = new Uint8Array(arrayBuffer);
-      await metazine.loadAsync(uint8Array);
+      // const uint8Array = new Uint8Array(arrayBuffer);
+      // await metazine.loadAsync(uint8Array);
+
+      await metazine.loadFiles(files);
 
       setLoaded(true);
     }
