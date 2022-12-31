@@ -1,20 +1,18 @@
 import * as THREE from 'three';
 // import {OBB} from 'three/examples/jsm/math/OBB.js';
 import {useState, useRef, useEffect} from 'react';
-// import alea from 'alea';
+import alea from 'alea';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 // import {Text} from 'troika-three-text';
-// import * as passes from './sg-passes.js';
+// import * as passes from '../../generators/ms-passes.js';
 import {
   setPerspectiveCameraFromJson,
   getPerspectiveCameraJson,
   setOrthographicCameraFromJson,
   getOrthographicCameraJson,
 } from '../../zine/zine-camera-utils.js';
-import * as passes from '../../generators/ms-passes.js';
 import {
   reconstructPointCloudFromDepthField,
-  pointCloudArrayBufferToPositionAttributeArray,
   pointCloudArrayBufferToGeometry,
   reinterpretFloatImageData,
   depthFloat32ArrayToPositionAttributeArray,
@@ -61,9 +59,10 @@ import {
 } from '../../zine/zine-renderer.js';
 import {colors} from '../../zine/zine-colors.js';
 // import {
-//   ZineStoryboardCompressor,
-// } from '../../zine/zine-compression.js'
-// import physicsManager from '../../../physics-manager.js';
+//   // getMapIndexSpecsMeshes,
+//   // renderMeshesMapIndexFull,
+//   // flipUint8ArrayX,
+// } from '../../clients/reconstruction-client.js';
 import {
   DropTarget,
 } from '../drop-target/DropTarget.jsx';
