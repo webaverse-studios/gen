@@ -6,7 +6,6 @@ import {prompts} from '../constants/prompts.js';
 import {ColorScheme} from '../utils/color-scheme.js';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 import {
-  txt2img,
   img2img,
 } from '../clients/image-client.js';
 import {img2canvas} from '../utils/convert-utils.js';
