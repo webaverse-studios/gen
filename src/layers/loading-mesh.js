@@ -13,11 +13,7 @@ import * as THREE from 'three';
 //
 
 export class LoadingMesh extends THREE.InstancedMesh {
-  constructor({
-    // instance,
-    // gpuTaskManager,
-    // renderer,
-  }) {
+  constructor() {
     const size = 128;
     const maxCount = 512;
 
