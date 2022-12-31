@@ -5,16 +5,19 @@ import {
 import {
   ZineStoryboard,
 } from '../src/zine/zine-format.js';
-import {zbencode} from '../src/zine/encoding.js';
+// import {zbencode} from '../src/zine/encoding.js';
 import {
   mainImageKey,
   promptKey,
   layer0Specs,
   layer1Specs,
 } from '../src/zine/zine-data-specs.js';
+import physx from '../physx.js';
 
 offscreenEngineApi(async (funcName, args, opts) => {
   if (funcName === 'compileScene') {
+    await physx.waitForLoad();
+
     const {imageArrayBuffer, prompt = ''} = args;
 
     const storyboard = new ZineStoryboard();
@@ -41,9 +44,8 @@ offscreenEngineApi(async (funcName, args, opts) => {
 
 //
 
-const Engine = () => {
+export const Engine = () => {
   return (
     <div className='engine-fake-node' />
   );
 };
-export default Engine;
