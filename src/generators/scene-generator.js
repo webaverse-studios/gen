@@ -62,6 +62,7 @@ import {
 import {
   reconstructPointCloudFromDepthField,
   pointCloudArrayBufferToGeometry,
+  getBoundingBoxFromPointCloud,
   reinterpretFloatImageData,
   depthFloat32ArrayToPositionAttributeArray,
   depthFloat32ArrayToGeometry,
@@ -995,6 +996,7 @@ const sortLocations = (() => {
     cameraEntranceLocation,
     floorPlaneLocation,
     portalLocations,
+    boundingBox,
     seed = 'avatars',
   }) => {
     // collect candidate locations
@@ -4577,6 +4579,10 @@ export async function compileVirtualScene(imageArrayBuffer) {
   }
   console.timeEnd('pointCloud');
 
+  console.time('boundingBox');
+  const boundingBox = getBoundingBoxFromPointCloud(pointCloudArrayBuffer, width, height);
+  console.timeEnd('boundingBox');
+
   // plane detection
   console.time('planeDetection');
   const depthFloats32Array = getDepthFloatsFromPointCloud(pointCloudArrayBuffer, width, height);
@@ -4716,6 +4722,7 @@ export async function compileVirtualScene(imageArrayBuffer) {
     floorPlaneLocation,
     cameraEntranceLocation,
     portalLocations,
+    boundingBox,
   });
 
   /* // bump the floor heightfield to underpin the the entrance/exit locations w/ gaussian blur
@@ -5108,6 +5115,7 @@ export async function compileVirtualScene(imageArrayBuffer) {
     quaternion,
     scale,
     cameraJson,
+    boundingBox,
     depthFieldHeaders,
     depthField: depthFieldArrayBuffer,
     planesJson,
