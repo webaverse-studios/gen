@@ -662,26 +662,25 @@ class MapIndexMaterial extends THREE.ShaderMaterial {
 
           if (mode == ${MapIndexRenderer.MODE_KEEP}) { // keep mode
             if (oldMapIndex == 0. || oldMapIndex == lastPanelIndex) { // keepable value
-              discard;
-            } else { // non-keepable value; draw the old value and pass the sample test
-              gl_FragColor = oldMapIndexSample;
-              gl_FragDepth = oldDepth;
+            // if (oldMapIndex == 0.) {
+              gl_FragColor = vec4(0., 0., 0., 1.);
+            } else { // non-keepable value
+              gl_FragColor = vec4(1., 0., 0., 1.);
             }
           } else if (mode == ${MapIndexRenderer.MODE_REPLACE}) { // replace mode
             float newMapIndex = newPanelIndex / 255.0;
             float newDepth = newMapIndex;
             gl_FragColor = vec4(newMapIndex, newDepth, 0.0, 1.);
-            gl_FragDepth = oldDepth;
           } else {
             gl_FragColor = vec4(0., 0., 0., 1.);
           }
         }
       `,
-      depthFunc: THREE.GreaterEqualDepth,
+      // depthFunc: THREE.GreaterEqualDepth,
       side: THREE.BackSide,
-      extensions: {
-        fragDepth: true,
-      },
+      // extensions: {
+      //   fragDepth: true,
+      // },
     });
   }
 }
