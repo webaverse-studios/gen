@@ -736,17 +736,24 @@ class MapIndexRenderer {
       _makeRenderTarget(), // read
       _makeRenderTarget(), // write
     ];
-    // clear depth
-    {
-      this.renderer.state.buffers.depth.setClear(0);
-      for (let i = 0; i < this.renderTargets.length; i++) {
-        const renderTarget = this.renderTargets[i];
-        this.renderer.setRenderTarget(renderTarget);
-        this.renderer.clear();
-        this.renderer.setRenderTarget(null);
-      }
-      this.renderer.state.buffers.depth.setClear(1);
-    }
+    // // clear depth
+    // {
+    //   this.renderer.state.buffers.depth.setClear(0);
+    //   for (let i = 0; i < this.renderTargets.length; i++) {
+    //     const renderTarget = this.renderTargets[i];
+    //     this.renderer.setRenderTarget(renderTarget);
+    //     this.renderer.clear();
+    //     this.renderer.setRenderTarget(null);
+    //   }
+    //   this.renderer.state.buffers.depth.setClear(1);
+    // }
+
+    // draw scene
+    this.drawScene = new THREE.Scene();
+    this.drawScene.autoUpdate = false;
+    const drawOverrideMaterial = new MapIndexMaterial();
+    this.drawOverrideMaterial = drawOverrideMaterial;
+    this.drawScene.overrideMaterial = drawOverrideMaterial;
 
     // intersect scene
     this.intersectScene = new THREE.Scene();
@@ -754,127 +761,202 @@ class MapIndexRenderer {
     const intersectOverrideMaterial = new MapIndexMaterial();
     this.intersectOverrideMaterial = intersectOverrideMaterial;
     this.intersectScene.overrideMaterial = intersectOverrideMaterial;
+  
+    // check scene
+    this.checkScene = new THREE.Scene();
+    this.checkScene.autoUpdate = false;
+    // check mesh
+    const checkMesh = (() => {
+      // full screen quad pane
+      const planeGeometry = new THREE.PlaneGeometry(2, 2);
+      const instanceCount = width * height;
+      // const geometry = new THREE.InstancedBufferGeometry()
+      //   .copy(planeGeometry);
+      // geometry.instanceCount = instanceCount;
+      const geometry = planeGeometry;
+      // add instanced uvs
+      const uvs = new Float32Array(instanceCount * 2);
+      for (let dy = 0; dy < height; dy++) {
+        for (let dx = 0; dx < width; dx++) {
+          const i = dy * width + dx;
+          const u = (dx + 0.5) / width;
+          const v = (dy + 0.5) / height;
+          uvs[i * 2 + 0] = u;
+          uvs[i * 2 + 1] = v;
+        }
+      }
+      geometry.setAttribute('uv', new THREE.InstancedBufferAttribute(uvs, 2));
+
+      const material = new THREE.ShaderMaterial({
+        uniforms: {
+          map: {
+            value: null,
+            needsUpdate: false,
+          },
+        },
+        vertexShader: `\
+          uniform sampler2D map;
+  
+          void main() {
+            vec4 value = texture2D(map, uv);
+            if (value.r > 0.) {
+              gl_Position = vec4(position.xy, 0., 1.0);
+            } else {
+              gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
+            }
+          }
+        `,
+        fragmentShader: `\  
+          void main() {
+            gl_FragColor = vec4(1., 0., 0., 1.);
+          }
+        `,
+      });
+
+      const mesh = new THREE.InstancedMesh(geometry, material, instanceCount);
+      mesh.frustumCulled = false;
+      return mesh;
+    })();
+    this.checkScene.add(checkMesh);
+    this.checkScene.checkMesh = checkMesh;
+    checkMesh.updateMatrixWorld();
+
+    // check render target
+    this.checkRenderTarget = new THREE.WebGLRenderTarget(
+      1, 1,
+      {
+        type: THREE.UnsignedByteType,
+        format: THREE.RGBAFormat,
+      }
+    );
+    this.checkResultUint8Array = new Uint8Array(
+      this.checkRenderTarget.width * this.checkRenderTarget.height * 4
+    );
   }
   #swapRenderTargets() {
     const temp = this.renderTargets[0];
     this.renderTargets[0] = this.renderTargets[1];
     this.renderTargets[1] = temp;
   }
-  // tryDraw(attachPanelIndex, newPanelIndex, zineRenderer) {
   draw(panelSpec, mode, attachPanelIndex, newPanelIndex) {
-    // // collect meshes
-    // const renderSpecs = getRenderSpecsFromZineRenderers([
-    //   zineRenderer,
-    // ]);
-    // const meshes = getMapIndexSpecsMeshes(renderSpecs);
-
     const meshes = [panelSpec];
 
+    console.log('draw panel spec', {
+      attachPanelIndex,
+      newPanelIndex,
+    });
+
     // push
-    const pushMeshes = () => {
-      const parents = meshes.map(mesh => {
-        const {parent} = mesh;
-        this.intersectScene.add(mesh);
-        return parent;
-      });
-      return () => {
-        for (let i = 0; i < meshes.length; i++) {
-          const mesh = meshes[i];
-          const parent = parents[i];
-          if (parent) {
-            parent.add(mesh);
-          } else {
-            mesh.parent.remove(mesh);
-          }
-        }
-      };
-    };
-    const popMeshes = pushMeshes();
+    const popMeshes = pushMeshes(this.drawScene, meshes);
 
-    // compute intersect
-    let intersect;
-    /* {
-      const gl = this.renderer.getContext();
-
+    // render
+    {
       // uniforms
-      this.intersectOverrideMaterial.uniforms.mode.value = 0; // keep mode
-      this.intersectOverrideMaterial.uniforms.mode.needsUpdate = true;
+      this.drawOverrideMaterial.uniforms.mode.value = mode;
+      this.drawOverrideMaterial.uniforms.mode.needsUpdate = true;
 
-      this.intersectOverrideMaterial.uniforms.mapIndexMap.value = this.renderTargets[0].texture;
-      this.intersectOverrideMaterial.uniforms.mapIndexMap.needsUpdate = true;
+      // this.drawOverrideMaterial.uniforms.mapIndexMap.value = this.renderTargets[0].texture;
+      // this.drawOverrideMaterial.uniforms.mapIndexMap.needsUpdate = true;
 
-      this.intersectOverrideMaterial.uniforms.lastPanelIndex.value = attachPanelIndex;
-      this.intersectOverrideMaterial.uniforms.lastPanelIndex.needsUpdate = true;
+      this.drawOverrideMaterial.uniforms.lastPanelIndex.value = attachPanelIndex;
+      this.drawOverrideMaterial.uniforms.lastPanelIndex.needsUpdate = true;
 
-      this.intersectOverrideMaterial.uniforms.newPanelIndex.value = newPanelIndex;
-      this.intersectOverrideMaterial.uniforms.newPanelIndex.needsUpdate = true;
+      this.drawOverrideMaterial.uniforms.newPanelIndex.value = newPanelIndex;
+      this.drawOverrideMaterial.uniforms.newPanelIndex.needsUpdate = true;
 
-      // start any samples passed query
-      const anySamplesPassedQuery = gl.createQuery();
-      gl.beginQuery(gl.ANY_SAMPLES_PASSED, anySamplesPassedQuery);
-
-      // render
-      this.renderer.setRenderTarget(this.renderTargets[1]);
-      this.renderer.render(this.scene, this.camera);
-      this.renderer.setRenderTarget(null);
-
-      // get sync
-      const sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
-      // wait for sync
-      {
-        const status = gl.clientWaitSync(sync, gl.SYNC_FLUSH_COMMANDS_BIT, 0);
-        if (status === gl.ALREADY_SIGNALED || status === gl.CONDITION_SATISFIED) { // ok
-          // nothing
-        } else {
-          throw new Error('failed to wait for sync');
-        }
-      }
-      // delete sync
-      gl.deleteSync(sync);
-
-      // get the samples passed query result
-      const queryResultAvailable = gl.getQueryParameter(anySamplesPassedQuery, gl.QUERY_RESULT_AVAILABLE);
-      if (!queryResultAvailable) {
-        throw new Error('failed to get query result: ' + queryResultAvailable);
-      }
-      const samplesPassed = gl.getQueryParameter(anySamplesPassedQuery, gl.QUERY_RESULT);
-      intersect = samplesPassed > 0;
-
-      // delete query
-      gl.deleteQuery(anySamplesPassedQuery);
-    } */
-
-    // if we did not intersect, perform the full draw
-    if (!intersect) {
-      // uniforms
-      // console.log('uniform 1');
-      this.intersectOverrideMaterial.uniforms.mode.value = mode;
-      this.intersectOverrideMaterial.uniforms.mode.needsUpdate = true;
-
-      // console.log('uniform 2');
-      this.intersectOverrideMaterial.uniforms.mapIndexMap.value = this.renderTargets[0].texture;
-      this.intersectOverrideMaterial.uniforms.mapIndexMap.needsUpdate = true;
-
-      // console.log('uniform 3');
-      this.intersectOverrideMaterial.uniforms.lastPanelIndex.value = attachPanelIndex;
-      this.intersectOverrideMaterial.uniforms.lastPanelIndex.needsUpdate = true;
-
-      // console.log('uniform 4');
-      this.intersectOverrideMaterial.uniforms.newPanelIndex.value = newPanelIndex;
-      this.intersectOverrideMaterial.uniforms.newPanelIndex.needsUpdate = true;
-
-      // console.log('render');
       // render to the intersect target
-      this.renderer.setRenderTarget(this.renderTargets[1]);
-      this.renderer.render(this.intersectScene, this.camera);
+      this.renderer.setRenderTarget(this.renderTargets[0]);
+      // note: no clear; drawing on top of existing map
+      this.renderer.render(this.drawScene, this.camera);
       this.renderer.setRenderTarget(null);
 
       // swap render targets
-      this.#swapRenderTargets();
+      // this.#swapRenderTargets();
     }
 
     // pop
     popMeshes();
+  }
+  intersect(panelSpec, attachPanelIndex, newPanelIndex) {
+    const meshes = [panelSpec];
+
+    // push
+    const popMeshes = pushMeshes(this.intersectScene, meshes);
+
+    // compute intersect
+    let intersect;
+    {
+      // const gl = this.renderer.getContext();
+
+      // uniforms
+      this.intersectOverrideMaterial.uniforms.mode.value = MapIndexRenderer.MODE_KEEP;
+      this.intersectOverrideMaterial.uniforms.mode.needsUpdate = true;
+
+      this.intersectOverrideMaterial.uniforms.mapIndexMap.value = this.renderTargets[0].texture;
+      this.intersectOverrideMaterial.uniforms.mapIndexMap.needsUpdate = true;
+
+      this.intersectOverrideMaterial.uniforms.lastPanelIndex.value = attachPanelIndex;
+      this.intersectOverrideMaterial.uniforms.lastPanelIndex.needsUpdate = true;
+
+      this.intersectOverrideMaterial.uniforms.newPanelIndex.value = newPanelIndex;
+      this.intersectOverrideMaterial.uniforms.newPanelIndex.needsUpdate = true;
+
+      // render intersect scene
+      this.renderer.setRenderTarget(this.renderTargets[1]);
+      this.renderer.clear(); // clear previous result
+      this.renderer.render(this.intersectScene, this.camera);
+      this.renderer.setRenderTarget(null);
+      
+      // XXX read intermediate result for debugging
+      let debugUint8Array;
+      let debugUint8Array2;
+      {
+        debugUint8Array = new Uint8Array(
+          this.renderTargets[1].width * this.renderTargets[1].height * 4
+        );
+        this.renderer.readRenderTargetPixels(
+          this.renderTargets[1],
+          0, 0,
+          this.renderTargets[1].width, this.renderTargets[1].height,
+          debugUint8Array
+        );
+        // get red only
+        debugUint8Array2 = new Uint8Array(
+          this.renderTargets[1].width * this.renderTargets[1].height
+        );
+        for (let i = 0; i < debugUint8Array2.length; i++) {
+          debugUint8Array2[i] = debugUint8Array[i * 4];
+        }
+      }
+
+      // set up check scene
+      this.checkScene.checkMesh.material.uniforms.map.value = this.renderTargets[1].texture;
+      this.checkScene.checkMesh.material.uniforms.map.needsUpdate = true;
+      // render check scene
+      this.renderer.setRenderTarget(this.checkRenderTarget);
+      this.renderer.clear(); // clear previous result
+      this.renderer.render(this.checkScene, this.camera);
+      this.renderer.setRenderTarget(null);
+      // read the check result
+      this.renderer.readRenderTargetPixels(
+        this.checkRenderTarget,
+        0, 0,
+        this.checkRenderTarget.width, this.checkRenderTarget.height,
+        this.checkResultUint8Array
+      );
+      intersect = this.checkResultUint8Array[0] > 0;
+
+      // XXX debug logging
+      console.log('check intermediate result', debugUint8Array2.filter(n => n !== 0).length, intersect, {
+        attachPanelIndex,
+        newPanelIndex,
+        debugUint8Array2,
+      });
+    }
+
+    popMeshes();
+
+    return intersect;
   }
   getMapIndex() {
     // read back image data
@@ -1115,9 +1197,6 @@ function connect({
   //     targetZineRenderer.camera.scale
   //   );
   // targetZineRenderer.camera.updateMatrixWorld();
-
-  // XXX return success
-  return true;
 }
 export class Metazine extends EventTarget {
   constructor() {
@@ -1204,8 +1283,8 @@ export class Metazine extends EventTarget {
     const mapIndexRenderer = new MapIndexRenderer();
     // draw first panel
     {
-      const newPanelIndex = this.renderPanelSpecs.length;
-      const attachPanelIndex = newPanelIndex - 1;
+      const attachPanelIndex = 0;
+      const newPanelIndex = 1;
       mapIndexRenderer.draw(
         firstPanelSpec,
         MapIndexRenderer.MODE_REPLACE,
@@ -1214,7 +1293,7 @@ export class Metazine extends EventTarget {
       );
     }
 
-    const maxNumPanels = 32;
+    const maxNumPanels = 2;
     while(
       this.renderPanelSpecs.length < maxNumPanels &&
       candidateExitSpecs.length > 0 &&
@@ -1252,18 +1331,27 @@ export class Metazine extends EventTarget {
       // latch entrance panel spec as the transform target
       const target = entrancePanelSpec;
 
-      const connected = connect({
+      connect({
         exitLocation,
         entranceLocation,
         exitParentMatrixWorld,
         entranceParentMatrixWorld,
         target,
       });
-      if (connected) {
+      const attachPanelIndex = this.renderPanelSpecs.length;
+      const newPanelIndex = attachPanelIndex + 1;
+      let intersect;
+      {
+        intersect = mapIndexRenderer.intersect(
+          entrancePanelSpec,
+          attachPanelIndex,
+          newPanelIndex
+        );
+        console.log('check intersect', intersect);
+      }
+      // if (intersect) {
         // draw the map index
         {
-          const newPanelIndex = this.renderPanelSpecs.length;
-          const attachPanelIndex = newPanelIndex - 1;
           mapIndexRenderer.draw(
             entrancePanelSpec,
             MapIndexRenderer.MODE_REPLACE,
@@ -1290,17 +1378,17 @@ export class Metazine extends EventTarget {
           };
         });
         candidateExitSpecs.push(...newCandidateExitSpecs);
-      } else {
-        console.warn('connection failed; need to try again!');
-        // debugger;
-        continue;
-      }
+      // } else {
+      //   console.warn('connection failed due to intersect; need to try again!');
+      //   // debugger;
+      //   continue;
+      // }
     }
     
     this.mapIndex = mapIndexRenderer.getMapIndex();
     this.mapIndexResolution = mapIndexRenderer.getMapIndexResolution();
 
-    console.log('rendered', this.mapIndex.filter(n => n !== 0).length, this.renderPanelSpecs.slice(), this.mapIndex, this.mapIndexResolution);
+    // console.log('rendered', this.mapIndex.filter(n => n !== 0).length, this.renderPanelSpecs.slice(), this.mapIndex, this.mapIndexResolution);
   
     /* const mapGenRenderer = new MapGenRenderer();
     const maxNumPanels = 3;
