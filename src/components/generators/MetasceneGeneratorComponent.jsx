@@ -86,6 +86,10 @@ const oneVector = new THREE.Vector3(1, 1, 1);
 // const y180Quaternion = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI);
 const y180Matrix = new THREE.Matrix4().makeRotationY(Math.PI);
 
+const fakeMaterial = new THREE.MeshBasicMaterial({
+  color: 0xFF0000,
+});
+
 //
 
 const loadFileUint8Array = async fileName => {
@@ -151,6 +155,57 @@ class EntranceExitMesh extends THREE.Mesh { // XXX needs to be unified with the 
     entranceExitMesh.updateVisibility = () => {
       entranceExitMesh.visible = entranceExitMesh.enabled && hasGeometry;
     };
+  }
+}
+
+//
+
+class SceneBatchedMesh extends THREE.Mesh {
+  constructor({
+    panelSpecs = [],
+    textureImage,
+  }) {
+    const geometry = BufferGeometryUtils.mergeBufferGeometries(
+      panelSpecs.map(panelSpec => {
+        const {sceneChunkMesh} = panelSpec;
+        const g = sceneChunkMesh.geometry.clone()
+          .applyMatrix4(
+            sceneChunkMesh.matrixWorld
+          );
+        return g;
+      })
+    );
+
+    const map = new THREE.Texture(); // XXX set this from the textureImage
+    const material = new THREE.ShaderMaterial({
+      uniforms: {
+        map: {
+          value: map,
+          needsUpdate: true,
+        },
+      },
+      vertexShader: `\
+        varying vec2 vUv;
+        varying vec3 vNormal;
+
+        void main() {
+          vUv = uv;
+          vNormal = normal;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `\
+        varying vec2 vUv;
+        varying vec3 vNormal;
+
+        void main() {
+          gl_FragColor = vec4(vNormal, 1.0);
+        }
+      `,
+    });
+
+    super(geometry, material);
+    this.frustumCulled = false;
   }
 }
 
@@ -740,6 +795,7 @@ class MapGenRenderer {
 //
 
 const defaultMaxWorkers = globalThis?.navigator?.hardwareConcurrency ?? 4;
+const panelSpecGeometrySize = 256;
 class MetazineLoader {
   constructor({
     total = 1,
@@ -793,20 +849,29 @@ class MetazineLoader {
     // instantiate panel specs
     const panels = storyboard.getPanels();
     const panelSpecs = panels.map(panel => {
+      // latch data
       const layer1 = panel.getLayer(1);
       const positionArray = layer1.getData('position');
       const quaternionArray = layer1.getData('quaternion');
       const scaleArray = layer1.getData('scale');
-      const depthField = layer1.getData('depthField')
-        .slice();
+      const resolution = layer1.getData('resolution');
+      const [
+        width,
+        height,
+      ] = resolution;
+      const cameraJson = layer1.getData('cameraJson');
+      const camera = setPerspectiveCameraFromJson(new THREE.PerspectiveCamera(), cameraJson);
+      const depthFieldArrayBuffer = layer1.getData('depthField');
       const entranceExitLocations = layer1.getData('entranceExitLocations');
       const floorPlaneLocation = layer1.getData('floorPlaneLocation');
       
-      const panelSpec = new THREE.Object3D();
-      panelSpec.depthField = depthField;
+      // mesh
+      const panelSpec = new THREE.Object3D()
+      panelSpec.depthField = depthFieldArrayBuffer;
       panelSpec.entranceExitLocations = entranceExitLocations;
       panelSpec.floorPlaneLocation = floorPlaneLocation;
       
+      // transform scene
       const transformScene = new THREE.Object3D();
       transformScene.position.fromArray(positionArray);
       transformScene.quaternion.fromArray(quaternionArray);
@@ -814,6 +879,30 @@ class MetazineLoader {
       panelSpec.add(transformScene);
       panelSpec.transformScene = transformScene;
       transformScene.updateMatrixWorld();
+
+      // scene mesh
+      let pointCloudArrayBuffer;
+      {
+        const pointCloudFloat32Array = reconstructPointCloudFromDepthField(
+          depthFieldArrayBuffer,
+          width,
+          height,
+          camera.fov,
+        );
+        pointCloudArrayBuffer = pointCloudFloat32Array.buffer;
+      }
+      const geometry = pointCloudArrayBufferToGeometry(
+        pointCloudArrayBuffer,
+        width,
+        height,
+        panelSpecGeometrySize,
+        panelSpecGeometrySize,
+      );
+      geometry.computeVertexNormals();
+      const sceneChunkMesh = new THREE.Mesh(geometry, fakeMaterial); // fake mesh; this uses batch rendering
+      transformScene.add(sceneChunkMesh);
+      sceneChunkMesh.updateMatrixWorld();
+      panelSpec.sceneChunkMesh = sceneChunkMesh;
 
       return panelSpec;
     });
@@ -1192,6 +1281,14 @@ export class MetazineRenderer extends EventTarget {
       entranceExitLocations.push(...localEntranceExitLocations);
     }
 
+    // scene batched mesh
+    const sceneBatchedMesh = new SceneBatchedMesh({
+      panelSpecs: this.metazine.renderPanelSpecs,
+    });
+    this.scene.add(sceneBatchedMesh);
+    sceneBatchedMesh.updateMatrixWorld();
+
+    // entrance exit mesh
     const entranceExitMesh = new EntranceExitMesh({
       entranceExitLocations,
     });
@@ -1200,6 +1297,7 @@ export class MetazineRenderer extends EventTarget {
     this.scene.add(entranceExitMesh);
     entranceExitMesh.updateMatrixWorld();
 
+    // XXX debug cube mesh
     const cubeMesh = new THREE.Mesh(
       new THREE.BoxGeometry(1, 1, 1),
       new THREE.MeshPhongMaterial({
