@@ -2,7 +2,8 @@ import * as THREE from 'three';
 import materialColors from '../constants/material-colors.js';
 import {
   renderMaskIndex,
-  renderJfa,
+  renderJfaDistance,
+  getDistanceNearestPositions,
   renderDepthReconstruction,
 } from '../utils/jfaOutline.js';
 import {
@@ -366,13 +367,16 @@ export const mergeOperator = ({
 
   // render outline
   console.time('outline');
-  const {
-    distanceFloatImageData,
-    distanceNearestPositions,
-  } = renderJfa({
+  const distanceFloatImageData = renderJfaDistance({
     renderer,
     meshes,
     camera,
+  });
+  const distanceNearestPositions = getDistanceNearestPositions({
+    distanceFloatImageData,
+    width: renderer.domElement.width,
+    height: renderer.domElement.height,
+    meshes,
     maskIndex,
   });
   console.timeEnd('outline');
