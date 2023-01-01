@@ -1022,13 +1022,32 @@ const sortLocations = (() => {
       return true;
     });
 
+    // filter for good candidate entrance exit locations
+    const meshCenter = localBox.set(
+      localVector.fromArray(boundingBox.min),
+      localVector2.fromArray(boundingBox.max)
+    ).getCenter(localVector);
+    const forwardDirection = localVector.set(0, 0, -1)
+      .applyQuaternion(localQuaternion.fromArray(cameraEntranceLocation.quaternion));
+    const candidateEntranceExitLocations = candidateLocations.filter(candidateLocation => {
+      // check whether the entrance exit candidate location is facing the scene mesh bounding box center
+      // (angle within Math.PI / 2)
+      const direction = localVector3.copy(meshCenter)
+        .sub(
+          localVector4.fromArray(candidateLocation.position)
+        )
+        .normalize();
+      const angle = direction.angleTo(forwardDirection);
+      return angle < Math.PI / 2;
+    });
+
     // entrances + exits
     const entranceExitLocations = [];
     if (cameraEntranceLocation) {
       entranceExitLocations.push(cameraEntranceLocation);
 
       // find the furthest portal from the camera entrance
-      let furthestPortalIndex = -1;
+      let furthestPortal = null;
       let furthestPortalDistance = 0;
       for (let i = 0; i < candidateLocations.length; i++) {
         const portalLocation = candidateLocations[i];
@@ -1037,18 +1056,20 @@ const sortLocations = (() => {
             localVector2.fromArray(portalLocation.position)
           );
         if (d > furthestPortalDistance) {
+          furthestPortal = portalLocation;
           furthestPortalDistance = d;
-          furthestPortalIndex = i;
         }
       }
-      if (furthestPortalIndex !== -1) {
-        entranceExitLocations.push(candidateLocations[furthestPortalIndex]);
-        candidateLocations.splice(furthestPortalIndex, 1);
+      if (furthestPortal !== null) {
+        entranceExitLocations.push(furthestPortal);
+
+        candidateEntranceExitLocations.splice(candidateEntranceExitLocations.indexOf(furthestPortal), 1);
+        candidateLocations.splice(candidateLocations.indexOf(furthestPortal), 1);
       }
     } else {
       // find the two furthest portals from each other
-      let furthestPortalIndex1 = -1;
-      let furthestPortalIndex2 = -1;
+      let furthestPortal1 = null;
+      let furthestPortal2 = null;
       let furthestPortalDistance = 0;
       for (let i = 0; i < candidateLocations.length; i++) {
         const portalLocation1 = candidateLocations[i];
@@ -1059,25 +1080,20 @@ const sortLocations = (() => {
               localVector2.fromArray(portalLocation2.position)
             );
           if (d > furthestPortalDistance) {
+            furthestPortal1 = portalLocation1;
+            furthestPortal2 = portalLocation2;
             furthestPortalDistance = d;
-            furthestPortalIndex1 = i;
-            furthestPortalIndex2 = j;
           }
         }
       }
-      if (furthestPortalIndex1 !== -1 && furthestPortalIndex2 !== -1) {
-        const portal1 = candidateLocations[furthestPortalIndex1];
-        const portal2 = candidateLocations[furthestPortalIndex2];
+      if (furthestPortal1 !== null && furthestPortal2 !== null) {
+        entranceExitLocations.push(furthestPortal1);
+        entranceExitLocations.push(furthestPortal2);
 
-        entranceExitLocations.push(portal1);
-        entranceExitLocations.push(portal2);
-
-        const portalLocationIndexes = [
-          furthestPortalIndex1,
-          furthestPortalIndex2,
-        ].sort((a, b) => a - b);
-        candidateLocations.splice(portalLocationIndexes[1], 1);
-        candidateLocations.splice(portalLocationIndexes[0], 1);
+        candidateEntranceExitLocations.splice(candidateEntranceExitLocations.indexOf(furthestPortal1), 1);
+        candidateEntranceExitLocations.splice(candidateEntranceExitLocations.indexOf(furthestPortal2), 1);
+        candidateLocations.splice(candidateLocations.indexOf(furthestPortal1), 1);
+        candidateLocations.splice(candidateLocations.indexOf(furthestPortal2), 1);
       }
     }
 
