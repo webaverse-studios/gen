@@ -9,7 +9,7 @@ import {
   getDepthRenderSpecsMeshes,
   getMapIndexSpecsMeshes,
   renderMeshesDepth,
-  renderMeshesMapIndex,
+  renderMeshesMapIndexFull,
 } from '../clients/reconstruction-client.js';
 import {
   depthVertexShader,
@@ -22,27 +22,30 @@ import {
   floorNetPixelSize,
 } from '../zine/zine-constants.js';
 // import {makeRenderer} from '../zine/zine-utils.js';
-// import {
-//   maskIndex2Canvas,
-// } from './sg-debug.js';
 
 //
 
-// const localVector = new THREE.Vector3();
-// const localQuaternion = new THREE.Quaternion();
-// const localRay = new THREE.Ray();
-
-//
-
-export function renderMapIndex({
+export function renderMapIndexFull({
   renderSpecs,
   camera,
-  // floorPlane,
 }) {
-  // renderSpecs = clipRenderSpecs(renderSpecs);
   const width = floorNetPixelSize;
   const height = floorNetPixelSize;
   const meshes = getMapIndexSpecsMeshes(renderSpecs);
-  const mapIndexSpec = renderMeshesMapIndex(meshes, width, height, camera);
+  const mapIndexSpec = renderMeshesMapIndexFull(meshes, width, height, camera);
   return mapIndexSpec;
+}
+
+//
+
+export function renderMapIndexAdd({
+  oldMapIndex,
+  newRenderSpecs,
+  attachPanelIndex,
+  camera,
+}) {
+  const width = floorNetPixelSize;
+  const height = floorNetPixelSize;
+  debugger;
+  const meshes = getMapIndexSpecsMeshes(newRenderSpecs);
 }
