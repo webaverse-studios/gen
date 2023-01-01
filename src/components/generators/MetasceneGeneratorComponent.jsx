@@ -28,6 +28,9 @@ import {
   getGeometryHeights,
 } from '../../zine/zine-geometry-utils.js';
 import {
+  mainImageKey,
+} from '../../zine/zine-data-specs.js';
+import {
   panelSize,
   floorNetWorldSize,
   floorNetWorldDepth,
@@ -89,6 +92,14 @@ const y180Matrix = new THREE.Matrix4().makeRotationY(Math.PI);
 const fakeMaterial = new THREE.MeshBasicMaterial({
   color: 0xFF0000,
 });
+
+//
+
+const defaultMaxWorkers = globalThis?.navigator?.hardwareConcurrency ?? 4;
+const panelSpecGeometrySize = 256;
+const panelSpecTextureSize = 256;
+const metazineAtlasTextureSize = 4096;
+const metazineAtlasTextureRowSize = Math.floor(metazineAtlasTextureSize / panelSpecTextureSize);
 
 //
 
@@ -794,8 +805,6 @@ class MapGenRenderer {
 
 //
 
-const defaultMaxWorkers = globalThis?.navigator?.hardwareConcurrency ?? 4;
-const panelSpecGeometrySize = 256;
 class MetazineLoader {
   constructor({
     total = 1,
