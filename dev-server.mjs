@@ -6,6 +6,8 @@ import fs from 'fs';
 import express from 'express';
 import * as vite from 'vite';
 
+import {ImageAiServer} from './src/clients/image-client.js';
+
 //
 
 const isProduction = process.env.NODE_ENV === 'production';
@@ -21,6 +23,8 @@ const port = parseInt(process.env.PORT, 10) || 9999;
 // const RENDERER_PORT = parseInt(process.env.RENDERER_PORT, 10) || 5555;
 
 //
+
+const imageAiServer = new ImageAiServer();
 
 //
 
@@ -79,6 +83,8 @@ const _proxyFile = (req, res, u) => {
     // req.headers.host = '127.0.0.1';
     // delete req.headers.host;
 
+    if (req.url.startsWith('/api/ai/image-ai/')) {
+      await imageAiServer.handleRequest(req, res);
     // if (req.headers.host === COMPILER_NAME) {
     //   const u = `http://127.0.0.1:${COMPILER_PORT}${req.url}`;
     //   _proxyUrl(req, res, u);
@@ -88,9 +94,9 @@ const _proxyFile = (req, res, u) => {
     //   _proxyUrl(req, res, u);
     // } else if (serveDirectories.some(d => req.url.startsWith(d))) {
     //   _proxyFile(req, res, req.url);
-    // } else {
+    } else {
       next();
-    // }
+    }
   });
 
   const isHttps = !process.env.HTTP_ONLY && (!!certs.key && !!certs.cert);
