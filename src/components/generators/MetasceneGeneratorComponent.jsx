@@ -171,6 +171,53 @@ class EntranceExitMesh extends THREE.Mesh { // XXX needs to be unified with the 
 
 //
 
+const getPanelSpecsGeometry = panelSpecs => {
+  const geometries = panelSpecs.map((panelSpec, i) => {
+    const {sceneChunkMesh} = panelSpec;
+    // apply transform
+    const g = sceneChunkMesh.geometry.clone()
+      .applyMatrix4(
+        sceneChunkMesh.matrixWorld
+      );
+    // set uvs
+    const uvs = g.attributes.uv.array;
+    const px = (i % metazineAtlasTextureRowSize) / metazineAtlasTextureRowSize;
+    const py = Math.floor(i / metazineAtlasTextureRowSize) / metazineAtlasTextureRowSize;
+    for (let i = 0; i < uvs.length; i += 2) {
+      uvs[i + 0] = uvs[i + 0] * panelSpecTextureSize / metazineAtlasTextureSize + px;
+      uvs[i + 1] = uvs[i + 1] * panelSpecTextureSize / metazineAtlasTextureSize + py;
+    }
+    g.attributes.uv.needsUpdate = true;
+    return g;
+  });
+  return BufferGeometryUtils.mergeBufferGeometries(geometries);
+};
+const getPanelSpecsAtlasTextureImageAsync = async panelSpecs => {
+  const atlasCanvas = document.createElement('canvas');
+  atlasCanvas.width = metazineAtlasTextureSize;
+  atlasCanvas.height = metazineAtlasTextureSize;
+  const ctx = atlasCanvas.getContext('2d');
+
+  for (let i = 0; i < panelSpecs.length; i++) {
+    const panelSpec = panelSpecs[i];
+    
+    const {imageArrayBuffer} = panelSpec;
+    const blob = new Blob([imageArrayBuffer]);
+    const imageBitmap = await createImageBitmap(blob);
+    
+    const x = (i % metazineAtlasTextureRowSize) * panelSpecTextureSize;
+    let y = Math.floor(i / metazineAtlasTextureRowSize) * panelSpecTextureSize;
+    y = metazineAtlasTextureSize - y - panelSpecTextureSize;
+
+    ctx.drawImage(
+      imageBitmap,
+      x, y,
+      panelSpecTextureSize, panelSpecTextureSize
+    );
+  }
+
+  return atlasCanvas;
+};
 class SceneBatchedMesh extends THREE.Mesh {
   constructor({
     panelSpecs = [],
