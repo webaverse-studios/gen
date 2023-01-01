@@ -394,13 +394,13 @@ const getMapIndexSpecsMeshes = (renderSpecs) => {
   for (const renderSpec of renderSpecs) {
     const {geometry, matrixWorld} = renderSpec;
     
-    const mapIndexMesh = new THREE.Mesh(geometry, material);
-    mapIndexMesh.name = 'mapIndexMesh';
-    mapIndexMesh.frustumCulled = false;
-    mapIndexMesh.matrix.copy(matrixWorld)
-      .decompose(mapIndexMesh.position, mapIndexMesh.quaternion, mapIndexMesh.scale);
-    mapIndexMesh.matrixWorld.copy(mapIndexMesh.matrix);
-    meshes.push(mapIndexMesh);
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.name = 'mapIndexMesh';
+    mesh.frustumCulled = false;
+    mesh.matrix.copy(matrixWorld)
+      .decompose(mesh.position, mesh.quaternion, mesh.scale);
+      mesh.matrixWorld.copy(mesh.matrix);
+    meshes.push(mesh);
   }
 
   return meshes;
