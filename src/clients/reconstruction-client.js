@@ -389,13 +389,9 @@ export const mergeOperator = ({
     oldDepthFloatImageData,
     newDepthFloatImageData
   );
-  // globalThis.distanceFloatImageData = distanceFloatImageData;
-  // globalThis.oldDepthFloatImageData = oldDepthFloatImageData;
-  // globalThis.newDepthFloatImageData = newDepthFloatImageData;
-  // globalThis.reconstructedDepthFloats = reconstructedDepthFloats;
   console.timeEnd('depthReconstruction');
 
-  // debug canvases
+  // XXX debug canvases
   {
     const maskIndexCanvas = maskIndex2Canvas(
       maskIndex,
