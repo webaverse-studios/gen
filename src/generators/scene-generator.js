@@ -3708,13 +3708,11 @@ export class PanelRenderer extends EventTarget {
     // edit the image
     console.time('editImg');
     let editedImgBlob;
-    let editedImg;
+    // let editedImg;
     {
       editedImgBlob = await imageAiClient.editImgBlob(blob, maskBlob, prompt);
-      editedImg = await blob2img(editedImgBlob);
-      editedImg.classList.add('editImg');
-      // this.element.appendChild(editedImg);
-      document.body.appendChild(editedImg);
+      // editedImg = await blob2img(editedImgBlob);
+      // editedImg.classList.add('editImg');
     }
     console.timeEnd('editImg');
 
@@ -3763,10 +3761,10 @@ export class PanelRenderer extends EventTarget {
       editedImg.classList.add('editImg');
       document.body.appendChild(editedImg);
     }
-    const resolution = [
-      width,
-      height,
-    ];
+    // const resolution = [
+    //   width,
+    //   height,
+    // ];
 
     // image segmentation
     console.time('imageSegmentation');
