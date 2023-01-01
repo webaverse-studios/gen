@@ -378,8 +378,6 @@ export function renderDepthReconstruction(
   oldNewDepthTexture.flipY = true;
   oldNewDepthTexture.needsUpdate = true;
 
-  globalThis.oldNewDepthTexture = oldNewDepthTexture;
-
   const _render = () => {
     const readTarget = targets[0];
     const writeTarget = targets[1];
