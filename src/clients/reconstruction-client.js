@@ -278,6 +278,53 @@ export const renderMeshesDepth = (meshes, width, height, camera) => {
 
 //
 
+export const getRenderSpecsMeshesDepth = (meshes, width, height, camera) => {
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const renderer = makeRenderer(canvas);
+
+  let oldDepthFloatImageData;
+
+  const depthScene = new THREE.Scene();
+  depthScene.autoUpdate = false;
+  for (const depthMesh of meshes) {
+    depthScene.add(depthMesh);
+  }
+
+  // render target
+  const depthRenderTarget = new THREE.WebGLRenderTarget(
+    width,
+    height,
+    {
+      type: THREE.UnsignedByteType,
+      format: THREE.RGBAFormat,
+    }
+  );
+
+  // render
+  // render to the canvas, for debugging
+  renderer.render(depthScene, camera);
+
+  // real render to the render target
+  renderer.setRenderTarget(depthRenderTarget);
+  // renderer.clear();
+  renderer.render(depthScene, camera);
+  renderer.setRenderTarget(null);
+  
+  // read back image data
+  const imageData = {
+    data: new Uint8Array(depthRenderTarget.width * depthRenderTarget.height * 4),
+    width,
+    height,
+  };
+  renderer.readRenderTargetPixels(depthRenderTarget, 0, 0, depthRenderTarget.width, depthRenderTarget.height, imageData.data);
+
+  // latch rendered depth data
+  oldDepthFloatImageData = reinterpretFloatImageData(imageData); // viewZ
+
+  return oldDepthFloatImageData;
+};
 export const mergeOperator = ({
   newDepthFloatImageData,
   width,
@@ -301,7 +348,7 @@ export const mergeOperator = ({
   // render depth
   console.time('renderDepth');
   const meshes = getDepthRenderSpecsMeshes(renderSpecs, camera);
-  const oldDepthFloatImageData = getDepthRenderSpecsMeshes(meshes, width, height, camera);
+  const oldDepthFloatImageData = getRenderSpecsMeshesDepth(meshes, width, height, camera);
   console.timeEnd('renderDepth');
 
   // render mask index
