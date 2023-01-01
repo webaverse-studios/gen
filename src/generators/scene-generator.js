@@ -699,10 +699,10 @@ const getRangeHit = (() => {
       floorPlaneJson,
       targetPosition
     );
-    if (targetPosition2 === null) {
-      console.warn('no floor hit 3', targetPosition2);
-      debugger;
-    }
+    // if (targetPosition2 === null) {
+    //   console.warn('no floor hit 3', targetPosition2);
+    //   debugger;
+    // }
     return targetPosition2;
   };
 })();
