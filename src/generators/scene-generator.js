@@ -1,9 +1,22 @@
 import * as THREE from 'three';
+import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import {OBB} from 'three/examples/jsm/math/OBB.js';
 import alea from 'alea';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 import {Text} from 'troika-three-text';
-import * as passes from './sg-passes.js';
+import physicsManager from '../../physics-manager.js';
+import {makePromise} from '../../utils.js';
+import {
+  frameSize,
+  canvasSize,
+  numFramesPerRow,
+  numFrames,
+  
+  arrowUpBrightUrl,
+  arrowUpDimUrl,
+  arrowsUpUrl,
+} from '../utils/light-arrow.js';
+
 import {
   setPerspectiveCameraFromJson,
   getPerspectiveCameraJson,
@@ -24,9 +37,6 @@ import {
   portalExtrusion,
   entranceExitEmptyDiameter,
 } from '../zine/zine-constants.js';
-import {
-  LensMaterial,
-} from './sg-materials.js';
 // import {
 //   depthVertexShader,
 //   depthFragmentShader,
@@ -49,16 +59,6 @@ import {
 // import {
 //   ZineStoryboardCompressor,
 // } from '../zine/zine-compression.js'
-
-//
-
-import {ImageAiClient} from '../clients/image-client.js';
-import {
-  getDepthField,
-  // getPointCloud,
-  clipGeometryZ,
-  mergeOperator,
-} from '../clients/reconstruction-client.js';
 import {
   reconstructPointCloudFromDepthField,
   pointCloudArrayBufferToGeometry,
@@ -79,14 +79,6 @@ import {
   getFloorNetPhysicsMesh,
 } from '../zine/zine-mesh-utils.js';
 import {
-  depthFloats2Canvas,
-  distanceFloats2Canvas,
-  segmentsImg2Canvas,
-  planesMask2Canvas,
-  maskIndex2Canvas,
-} from './sg-debug.js';
-
-import {
   blob2img,
   img2ImageData,
   resizeImage,
@@ -95,18 +87,6 @@ import {classes, categories, categoryClassIndices} from '../../constants/classes
 import {heightfieldScale} from '../../constants/physics-constants.js';
 import {colors, rainbowColors, detectronColors} from '../constants/detectron-colors.js';
 import {mobUrls} from '../constants/urls.js';
-import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import {
-  frameSize,
-  canvasSize,
-  numFramesPerRow,
-  numFrames,
-  
-  arrowUpBrightUrl,
-  arrowUpDimUrl,
-  arrowsUpUrl,
-} from '../utils/light-arrow.js';
-import {makePromise} from '../../utils.js';
 import {
   VQAClient,
 } from '../clients/vqa-client.js';
@@ -121,6 +101,27 @@ import {
   entranceExitDepth,
 } from '../zine/zine-constants.js';
 
+import * as passes from './sg-passes.js';
+import {
+  LensMaterial,
+} from './sg-materials.js';
+import {
+  depthFloats2Canvas,
+  distanceFloats2Canvas,
+  segmentsImg2Canvas,
+  planesMask2Canvas,
+  maskIndex2Canvas,
+} from './sg-debug.js';
+
+//
+
+import {ImageAiClient} from '../clients/image-client.js';
+import {
+  getDepthField,
+  // getPointCloud,
+  clipGeometryZ,
+  mergeOperator,
+} from '../clients/reconstruction-client.js';
 import {PathMesh} from '../zine-aux/meshes/path-mesh.js';
 
 //
