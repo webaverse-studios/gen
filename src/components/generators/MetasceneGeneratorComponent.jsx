@@ -1136,7 +1136,7 @@ export class Metazine extends EventTarget {
     });
     // console.log('initial candidate exit specs', candidateExitSpecs.slice());
     
-    const maxNumPanels = 3;
+    const maxNumPanels = 32;
     while(
       this.renderPanelSpecs.length < maxNumPanels &&
       candidateExitSpecs.length > 0 &&
