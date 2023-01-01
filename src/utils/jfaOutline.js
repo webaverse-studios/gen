@@ -513,17 +513,11 @@ export function renderMaskIndex({
 
 //
 
-export function renderJfa({
+export function renderJfaDistance({
   renderer,
   meshes,
   camera,
-  maskIndex,
 }) {
-  // if (meshes.length !== 1) { // supporting more would require per-mesh indexing
-  //   console.warn('renderJfa currently only supports one mesh');
-  //   debugger;
-  // }
-
   const iResolution = new three_1.Vector2(renderer.domElement.width, renderer.domElement.height);
   
   const tempScene = new three_1.Scene();
@@ -539,12 +533,24 @@ export function renderJfa({
   const outlineUniforms = undefined;
   const distanceIndex = jfaOutline.renderDistanceTex(renderer, targets, iResolution, outlineUniforms);
   const distanceRenderTarget = targets[distanceIndex];
+
   // get the image data back out of the render target, as a Float32Array
   const distanceFloatImageData = new Float32Array(distanceRenderTarget.width * distanceRenderTarget.height * 4);
   renderer.readRenderTargetPixels(distanceRenderTarget, 0, 0, distanceRenderTarget.width, distanceRenderTarget.height, distanceFloatImageData);
-
+  
+  popMeshes();
+  
+  return distanceFloatImageData;
+}
+export function getDistanceNearestPositions({
+  distanceFloatImageData,
+  width,
+  height,
+  meshes,
+  maskIndex,
+}) {
   // accumulate distance nearest positions
-  const distanceNearestPositions = new Float32Array(distanceRenderTarget.width * distanceRenderTarget.height * 3);
+  const distanceNearestPositions = new Float32Array(width * height * 3);
   // if (distanceNearestPositions.length / 3 * 4 !== distanceFloatImageData.length) {
   //   console.warn('distance positions length mismatch', distanceNearestPositions.length, distanceFloatImageData.length);
   //   debugger;
@@ -556,15 +562,15 @@ export function renderJfa({
     // const a = distanceFloatImageData[i+3];
 
     const j = i / 4;
-    // const x = j % distanceRenderTarget.width;
-    // const y = Math.floor(j / distanceRenderTarget.width);
+    // const x = j % width;
+    // const y = Math.floor(j / width);
 
     let ax = Math.floor(r);
     let ay = Math.floor(g);
-    ax = Math.min(Math.max(ax, 0), distanceRenderTarget.width - 1);
-    ay = Math.min(Math.max(ay, 0), distanceRenderTarget.height - 1);
-    ay = distanceRenderTarget.height - 1 - ay;
-    const i3 = ax + ay * distanceRenderTarget.width;
+    ax = Math.min(Math.max(ax, 0), width - 1);
+    ay = Math.min(Math.max(ay, 0), height - 1);
+    ay = height - 1 - ay;
+    const i3 = ax + ay * width;
 
     const triangleId = maskIndex[i3];
     const triangleStartIndex = triangleId * 3;
@@ -586,12 +592,12 @@ export function renderJfa({
       .applyMatrix4(editCamera.matrixWorldInverse)
       .applyMatrix4(editCamera.projectionMatrix);
 
-    aScreen.x = (aScreen.x + 1) / 2 * distanceRenderTarget.width;
-    aScreen.y = (aScreen.y + 1) / 2 * distanceRenderTarget.height;
-    bScreen.x = (bScreen.x + 1) / 2 * distanceRenderTarget.width;
-    bScreen.y = (bScreen.y + 1) / 2 * distanceRenderTarget.height;
-    cScreen.x = (cScreen.x + 1) / 2 * distanceRenderTarget.width;
-    cScreen.y = (cScreen.y + 1) / 2 * distanceRenderTarget.height;
+    aScreen.x = (aScreen.x + 1) / 2 * width;
+    aScreen.y = (aScreen.y + 1) / 2 * height;
+    bScreen.x = (bScreen.x + 1) / 2 * width;
+    bScreen.y = (bScreen.y + 1) / 2 * height;
+    cScreen.x = (cScreen.x + 1) / 2 * width;
+    cScreen.y = (cScreen.y + 1) / 2 * height;
 
     const aDistance = Math.hypot(aScreen.x - x, aScreen.y - y);
     const bDistance = Math.hypot(bScreen.x - x, bScreen.y - y);
@@ -618,10 +624,5 @@ export function renderJfa({
     distanceNearestPositions[j * 3 + 2] = nearestPoint.z;
   }
 
-  popMeshes();
-
-  return {
-    distanceFloatImageData,
-    distanceNearestPositions,
-  };
+  return distanceNearestPositions;
 }
