@@ -341,7 +341,7 @@ export const mergeOperator = ({
   canvas.width = width;
   canvas.height = height;
   canvas.classList.add('mergeCanvas');
-  document.body.appendChild(canvas);
+  // document.body.appendChild(canvas);
 
   // renderer
   const renderer = makeRenderer(canvas);
