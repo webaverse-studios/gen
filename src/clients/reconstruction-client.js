@@ -352,12 +352,12 @@ export const mergeOperator = ({
   console.timeEnd('renderDepth');
 
   // render mask index
-  console.log('render mask index', {
-    renderer,
-    renderSpecs,
-    meshes,
-    camera,
-  });
+  // console.log('render mask index', {
+  //   renderer,
+  //   renderSpecs,
+  //   meshes,
+  //   camera,
+  // });
   const maskIndex = renderMaskIndex({
     renderer,
     meshes,
