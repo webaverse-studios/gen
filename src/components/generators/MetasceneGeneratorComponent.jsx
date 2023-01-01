@@ -684,6 +684,24 @@ class MapIndexMaterial extends THREE.ShaderMaterial {
     });
   }
 }
+const pushMeshes = (scene, meshes) => {
+  const parents = meshes.map(mesh => {
+    const {parent} = mesh;
+    scene.add(mesh);
+    return parent;
+  });
+  return () => {
+    for (let i = 0; i < meshes.length; i++) {
+      const mesh = meshes[i];
+      const parent = parents[i];
+      if (parent) {
+        parent.add(mesh);
+      } else {
+        mesh.parent.remove(mesh);
+      }
+    }
+  };
+};
 class MapIndexRenderer {
   static MODE_KEEP = 0;
   static MODE_REPLACE = 1;
