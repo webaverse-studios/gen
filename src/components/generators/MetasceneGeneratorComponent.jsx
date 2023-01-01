@@ -912,8 +912,10 @@ class MetazineLoader {
 
     // instantiate panel specs
     const panels = storyboard.getPanels();
-    const panelSpecs = panels.map(panel => {
+    const loadPanel = panel => {
       // latch data
+      const layer0 = panel.getLayer(0);
+      const imageArrayBuffer = layer0.getData(mainImageKey);
       const layer1 = panel.getLayer(1);
       const positionArray = layer1.getData('position');
       const quaternionArray = layer1.getData('quaternion');
@@ -928,10 +930,11 @@ class MetazineLoader {
       const depthFieldArrayBuffer = layer1.getData('depthField');
       const entranceExitLocations = layer1.getData('entranceExitLocations');
       const floorPlaneLocation = layer1.getData('floorPlaneLocation');
-      
+
       // mesh
       const panelSpec = new THREE.Object3D()
-      panelSpec.depthField = depthFieldArrayBuffer;
+      panelSpec.imageArrayBuffer = imageArrayBuffer;
+      // panelSpec.depthField = depthFieldArrayBuffer;
       panelSpec.entranceExitLocations = entranceExitLocations;
       panelSpec.floorPlaneLocation = floorPlaneLocation;
       
@@ -969,7 +972,8 @@ class MetazineLoader {
       panelSpec.sceneChunkMesh = sceneChunkMesh;
 
       return panelSpec;
-    });
+    };
+    const panelSpecs = panels.map(panel => loadPanel(panel));
     return panelSpecs;
   }
 }
