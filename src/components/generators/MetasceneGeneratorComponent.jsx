@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 // import {OBB} from 'three/examples/jsm/math/OBB.js';
 import {useState, useRef, useEffect} from 'react';
 import alea from 'alea';
@@ -35,6 +36,9 @@ import {
   physicsPixelStride,
   portalExtrusion,
   entranceExitEmptyDiameter,
+  entranceExitHeight,
+  entranceExitWidth,
+  entranceExitDepth,
 } from '../../zine/zine-constants.js';
 // import {
 //   depthVertexShader,
@@ -72,7 +76,15 @@ import styles from '../../../styles/MetasceneGenerator.module.css';
 
 //
 
+const localVector = new THREE.Vector3();
+const localVector2 = new THREE.Vector3();
+const localQuaternion = new THREE.Quaternion();
+const localMatrix = new THREE.Matrix4();
 const localColor = new THREE.Color();
+
+const oneVector = new THREE.Vector3(1, 1, 1);
+// const y180Quaternion = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI);
+const y180Matrix = new THREE.Matrix4().makeRotationY(Math.PI);
 
 //
 
@@ -86,6 +98,61 @@ const blockEvent = e => {
   e.preventDefault();
   e.stopPropagation();
 };
+
+//
+
+class EntranceExitMesh extends THREE.Mesh { // XXX needs to be unified with the one in scene-generator.js
+  constructor({
+    entranceExitLocations,
+  }) {
+    const baseGeometry = new THREE.BoxGeometry(entranceExitWidth, entranceExitHeight, entranceExitDepth)
+      .translate(0, entranceExitHeight / 2, entranceExitDepth / 2);
+    const geometries = entranceExitLocations.map(portalLocation => {
+      const g = baseGeometry.clone();
+      g.applyMatrix4(
+        localMatrix.compose(
+          localVector.fromArray(portalLocation.position),
+          localQuaternion.fromArray(portalLocation.quaternion),
+          localVector2.setScalar(1)
+        )
+      );
+      return g;
+    });
+    const geometry = geometries.length > 0 ? BufferGeometryUtils.mergeBufferGeometries(geometries) : new THREE.BufferGeometry();
+
+    const material = new THREE.ShaderMaterial({
+      vertexShader: `\
+        varying vec2 vUv;
+
+        void main() {
+          vUv = uv;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `\
+        varying vec2 vUv;
+
+        void main() {
+          vec3 c = vec3(1., 0., 1.);
+          gl_FragColor = vec4(c, 0.5);
+          gl_FragColor.rg += vUv * 0.2;
+        }
+      `,
+      transparent: true,
+    });
+    super(geometry, material);
+
+    const hasGeometry = geometries.length > 0;
+
+    const entranceExitMesh = this;
+    entranceExitMesh.frustumCulled = false;
+    entranceExitMesh.enabled = false;
+    entranceExitMesh.visible = false;
+    entranceExitMesh.updateVisibility = () => {
+      entranceExitMesh.visible = entranceExitMesh.enabled && hasGeometry;
+    };
+  }
+}
 
 //
 
@@ -723,20 +790,32 @@ class MetazineLoader {
       ],
     });
 
-    // latch panel specs
+    // instantiate panel specs
     const panels = storyboard.getPanels();
     const panelSpecs = panels.map(panel => {
       const layer1 = panel.getLayer(1);
+      const positionArray = layer1.getData('position');
+      const quaternionArray = layer1.getData('quaternion');
+      const scaleArray = layer1.getData('scale');
       const depthField = layer1.getData('depthField')
         .slice();
       const entranceExitLocations = layer1.getData('entranceExitLocations');
       const floorPlaneLocation = layer1.getData('floorPlaneLocation');
       
-      return {
-        depthField,
-        entranceExitLocations,
-        floorPlaneLocation,
-      };
+      const panelSpec = new THREE.Object3D();
+      panelSpec.depthField = depthField;
+      panelSpec.entranceExitLocations = entranceExitLocations;
+      panelSpec.floorPlaneLocation = floorPlaneLocation;
+      
+      const transformScene = new THREE.Object3D();
+      transformScene.position.fromArray(positionArray);
+      transformScene.quaternion.fromArray(quaternionArray);
+      transformScene.scale.fromArray(scaleArray);
+      panelSpec.add(transformScene);
+      panelSpec.transformScene = transformScene;
+      transformScene.updateMatrixWorld();
+
+      return panelSpec;
     });
     return panelSpecs;
   }
@@ -744,6 +823,80 @@ class MetazineLoader {
 
 //
 
+function connect({
+  exitLocation, // targetZineRenderer.metadata.entranceExitLocations[entranceIndex];
+  entranceLocation, // this.metadata.entranceExitLocations[exitIndex];
+  exitParentMatrixWorld, // this.transformScene.matrixWorld
+  entranceParentMatrixWorld, // targetZineRenderer.transformScene.matrixWorld
+  target, // targetZineRenderer.scene
+}) {
+  // const exitLocation = this.metadata.entranceExitLocations[exitIndex];
+  const exitMatrix = new THREE.Matrix4().compose(
+    new THREE.Vector3().fromArray(exitLocation.position),
+    new THREE.Quaternion().fromArray(exitLocation.quaternion),
+    oneVector
+  );
+  const exitMatrixWorld = exitMatrix.clone()
+    .premultiply(exitParentMatrixWorld);
+  exitMatrixWorld.decompose(
+    localVector,
+    localQuaternion,
+    localVector2
+  );
+  exitMatrixWorld.compose(
+    localVector,
+    localQuaternion,
+    oneVector
+  );
+
+  // const entranceLocation = targetZineRenderer.metadata.entranceExitLocations[entranceIndex];
+  const entranceMatrix = new THREE.Matrix4().compose(
+    localVector.fromArray(entranceLocation.position),
+    localQuaternion.fromArray(entranceLocation.quaternion),
+    oneVector
+  );
+  const entranceMatrixWorld = entranceMatrix.clone()
+    .premultiply(entranceParentMatrixWorld);
+  entranceMatrixWorld.decompose(
+      localVector,
+      localQuaternion,
+      localVector2
+    );
+  entranceMatrixWorld.compose(
+    localVector,
+    localQuaternion,
+    oneVector
+  );
+  const entranceMatrixWorldInverse = entranceMatrixWorld.clone()
+    .invert();
+
+  // undo the target entrance transform
+  // then, apply the exit transform
+  const transformMatrix = new THREE.Matrix4()
+    .copy(entranceMatrixWorldInverse)
+    .premultiply(y180Matrix)
+    .premultiply(exitMatrixWorld)
+  target.matrix
+    .premultiply(transformMatrix)
+    .decompose(
+      target.position,
+      target.quaternion,
+      target.scale
+    );
+  target.updateMatrixWorld();
+
+  // targetZineRenderer.camera.matrix
+  //   .premultiply(transformMatrix)
+  //   .decompose(
+  //     targetZineRenderer.camera.position,
+  //     targetZineRenderer.camera.quaternion,
+  //     targetZineRenderer.camera.scale
+  //   );
+  // targetZineRenderer.camera.updateMatrixWorld();
+
+  // XXX return success
+  return true;
+}
 export class Metazine extends EventTarget {
   constructor() {
     super();
@@ -751,7 +904,7 @@ export class Metazine extends EventTarget {
     // this.zd = new ZineData();
     
     // load result
-    this.panelSpecs = [];
+    this.renderPanelSpecs = [];
     this.mapIndex = null;
     this.mapIndexResolution = null;
   }
@@ -763,7 +916,7 @@ export class Metazine extends EventTarget {
   clear() {
     this.zs.clear();
   }
-  async loadFiles(zineFiles) {
+  async compileZineFiles(zineFiles) {
     // const s = new TextDecoder().decode(uint8Array);
     // let j = JSON.parse(s);
     
@@ -788,11 +941,134 @@ export class Metazine extends EventTarget {
       panelSpecs = panelSpecsArray.flat();
     }
     console.timeEnd('loadPanels');
-    console.log('got panel specs', panelSpecs);
+    // console.log('got panel specs', panelSpecs);
 
-    debugger;
+    const rng = alea('lol');
+    const getConditionPanelSpecIndex = (panelSpecs, condition) => {
+      const maxTries = 100;
+      for (let i = 0; i < maxTries; i++) {
+        const panelSpecIndex = Math.floor(rng() * panelSpecs.length);
+        const panelSpec = panelSpecs[panelSpecIndex];
+        if (condition(panelSpec)) {
+          return panelSpecIndex;
+        }
+      }
+      console.warn('failed to find panel spec', panelSpecs, condition);
+      return -1;
+    };
 
-    const mapGenRenderer = new MapGenRenderer();
+    // get the render panel specs
+    this.renderPanelSpecs = [];
+    // first panel
+    // console.log('initial panel specs', panelSpecs.slice());
+    const candidateEntrancePanelSpecs = panelSpecs.slice();
+    const firstPanelSpecIndex = getConditionPanelSpecIndex(
+      candidateEntrancePanelSpecs,
+      panelSpec => panelSpec.entranceExitLocations.length >= 2
+    );
+    const firstPanelSpec = candidateEntrancePanelSpecs.splice(firstPanelSpecIndex, 1)[0];
+    firstPanelSpec.quaternion.fromArray(firstPanelSpec.floorPlaneLocation.quaternion)
+      .invert();
+    firstPanelSpec.updateMatrixWorld();
+    this.renderPanelSpecs.push(firstPanelSpec);
+    const candidateExitSpecs = firstPanelSpec.entranceExitLocations.map(eel => {
+      return {
+        panelSpec: firstPanelSpec,
+        entranceExitLocation: eel,
+      };
+    });
+    // console.log('initial candidate exit specs', candidateExitSpecs.slice());
+    
+    const maxNumPanels = 3;
+    while(
+      this.renderPanelSpecs.length < maxNumPanels &&
+      candidateExitSpecs.length > 0 &&
+      candidateEntrancePanelSpecs.length > 0
+    ) {
+      // exit location
+      const exitSpecIndex = Math.floor(rng() * candidateExitSpecs.length);
+      const exitSpec = candidateExitSpecs[exitSpecIndex];
+      const {
+        panelSpec: exitPanelSpec,
+        entranceExitLocation: exitLocation,
+      } = exitSpec;
+
+      // entrance location
+      const entrancePanelSpecIndex = getConditionPanelSpecIndex(
+        candidateEntrancePanelSpecs,
+        panelSpec => panelSpec.entranceExitLocations.length >= 2
+      );
+      // Math.floor(rng() * candidateEntrancePanelSpecs.length);
+      const entrancePanelSpec = candidateEntrancePanelSpecs[entrancePanelSpecIndex];
+      const candidateEntranceLocations = entrancePanelSpec.entranceExitLocations.slice();
+      const entranceLocationIndex = Math.floor(rng() * candidateEntranceLocations.length);
+      const entranceLocation = candidateEntranceLocations[entranceLocationIndex];
+
+      // latch fixed exit location
+      const exitParentMatrixWorld = exitPanelSpec.transformScene.matrixWorld;
+
+      // reset entrance transform
+      entrancePanelSpec.position.setScalar(0);
+      entrancePanelSpec.quaternion.identity();
+      entrancePanelSpec.scale.setScalar(1);
+      entrancePanelSpec.updateMatrixWorld();
+      // latch new entrance location
+      const entranceParentMatrixWorld = entrancePanelSpec.transformScene.matrixWorld;
+
+      // latch entrance panel spec as the transform target
+      const target = entrancePanelSpec;
+
+      const connected = connect({
+        exitLocation,
+        entranceLocation,
+        exitParentMatrixWorld,
+        entranceParentMatrixWorld,
+        target,
+      });
+      if (connected) {
+        // log the new panel spec
+        this.renderPanelSpecs.push(entrancePanelSpec);
+
+        // splice exit spec from candidates
+        candidateExitSpecs.splice(exitSpecIndex, 1);
+        // splice entrance panel spec from candidates
+        candidateEntrancePanelSpecs.splice(entrancePanelSpecIndex, 1);
+
+        // splice the used entrance location from entrance panel spec's enter exit location candidates
+        candidateEntranceLocations.splice(entranceLocationIndex, 1);
+        // push the remaining unused entrances to candidate exit specs
+        const newCandidateExitSpecs = candidateEntranceLocations.map(eel => {
+          return {
+            panelSpec: entrancePanelSpec,
+            entranceExitLocation: eel,
+          };
+        });
+        candidateExitSpecs.push(...newCandidateExitSpecs);
+        // console.log('push new candidate exit specs', {
+        //   candidateEntranceLocations: candidateEntranceLocations.slice(),
+        //   newCandidateExitSpecs: newCandidateExitSpecs.slice(),
+        //   candidateEntranceLocationsLength: candidateEntranceLocations.length,
+        // });
+      } else {
+        console.warn('connection failed; need to try again!');
+        // debugger;
+        continue;
+      }
+
+      // const j = i + 1;
+      // const ok1 = j < maxNumPanels;
+      // const ok2 = candidateExitSpecs.length;
+      // const ok3 = candidateEntrancePanelSpecs.length;
+      // console.log('loop next', {
+      //   j,
+      //   ok1,
+      //   ok2,
+      //   ok3,
+      // });
+    }
+    console.log('got render panel specs', this.renderPanelSpecs.slice());
+
+    /* const mapGenRenderer = new MapGenRenderer();
     const maxNumPanels = 3;
     const rng = alea('lol');
     for (let i = 0; i < maxNumPanels && zineFileUrls.length > 0; i++) {
@@ -833,7 +1109,7 @@ export class Metazine extends EventTarget {
     }
 
     this.mapIndex = mapGenRenderer.getMapIndex();
-    this.mapIndexResolution = mapGenRenderer.getMapIndexResolution();
+    this.mapIndexResolution = mapGenRenderer.getMapIndexResolution(); */
   }
 }
 
@@ -894,7 +1170,52 @@ export class MetazineRenderer extends EventTarget {
     this.#init();
   }
   async #init() {
-    for (let i = 0; i < this.metazine.panelSpecs.length; i++) {
+    const entranceExitLocations = [];
+    for (let i = 0; i < this.metazine.renderPanelSpecs.length; i++) {
+      const panelSpec = this.metazine.renderPanelSpecs[i];
+      const localEntranceExitLocations = await panelSpec.entranceExitLocations.map(eel => {
+        const position = localVector.fromArray(eel.position);
+        const quaternion = localQuaternion.fromArray(eel.quaternion);
+        const scale = localVector2.copy(oneVector);
+        localMatrix.compose(
+          position,
+          quaternion,
+          scale
+        )
+          .premultiply(panelSpec.matrixWorld)
+          .decompose(position, quaternion, scale);
+        return {
+          position: position.toArray(),
+          quaternion: quaternion.toArray(),
+        };
+      });
+      entranceExitLocations.push(...localEntranceExitLocations);
+    }
+
+    const entranceExitMesh = new EntranceExitMesh({
+      entranceExitLocations,
+    });
+    entranceExitMesh.enabled = true;
+    entranceExitMesh.updateVisibility();
+    this.scene.add(entranceExitMesh);
+    entranceExitMesh.updateMatrixWorld();
+
+    const cubeMesh = new THREE.Mesh(
+      new THREE.BoxGeometry(1, 1, 1),
+      new THREE.MeshPhongMaterial({
+        color: 0xff0000,
+      })
+    );
+    cubeMesh.position.set(0, 0, -3);
+    this.scene.add(cubeMesh);
+    cubeMesh.updateMatrixWorld();
+
+    console.log('metazine renderer meshes', {
+      entranceExitLocations,
+      entranceExitMesh,
+    });
+
+    /* for (let i = 0; i < this.metazine.panelSpecs.length; i++) {
       const panelSpec = this.metazine.panelSpecs[i];
       const {zineFileUrl} = panelSpec;
       
@@ -927,34 +1248,8 @@ export class MetazineRenderer extends EventTarget {
     });
     mapIndexMesh.position.y = -5;
     this.scene.add(mapIndexMesh);
-    mapIndexMesh.updateMatrixWorld();
+    mapIndexMesh.updateMatrixWorld(); */
   }
-  // addPanel(panel) {
-  //   // load the panel
-  //   const zineRenderer = new ZineRenderer({
-  //     panel,
-  //   });
-  //   const {
-  //     sceneMesh,
-  //     scenePhysicsMesh,
-  //   } = zineRenderer;
-  //   this.scene.add(zineRenderer.scene);
-  //   if (this.zineRenderers.length === 0) {
-  //     this.camera.copy(zineRenderer.camera);
-  //   }
-
-  //   // connect the previous panel to this one
-  //   const previousZineRenderer = this.zineRenderers.length > 0 ?
-  //     this.zineRenderers[this.zineRenderers.length - 1]
-  //   :
-  //     null;    
-  //   if (previousZineRenderer) {
-  //     previousZineRenderer.connect(zineRenderer);
-  //   }
-
-  //   // bookkeeping
-  //   this.zineRenderers.push(zineRenderer);
-  // }
   listen() {
     const keydown = e => {
       if (!e.repeat && !e.ctrlKey) {
@@ -1131,7 +1426,7 @@ const MetasceneGeneratorComponent = () => {
       // const uint8Array = new Uint8Array(arrayBuffer);
       // await metazine.loadAsync(uint8Array);
 
-      await metazine.loadFiles(files);
+      await metazine.compileZineFiles(files);
 
       setLoaded(true);
     }
