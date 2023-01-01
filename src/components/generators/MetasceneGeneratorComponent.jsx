@@ -341,6 +341,7 @@ class MapIndexMesh extends THREE.Mesh {
       // transparent: true,
       // opacity: 0.7,
       // side: THREE.BackSide,
+      side: THREE.DoubleSide,
     });
 
     super(geometry, material);
