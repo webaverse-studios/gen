@@ -606,52 +606,25 @@ const getMapIndexFromZineRenderersAdd = ({
 
 //
 
-class MapGenRenderer {
+class MapIndexMaterial extends THREE.ShaderMaterial {
   constructor() {
-    // canvas
-    const canvas = document.createElement('canvas');
-    canvas.width = floorNetPixelSize;
-    canvas.height = floorNetPixelSize;
-
-    // renderer
-    this.renderer = makeRenderer(canvas);
-
-    // camera
-    this.camera = makeMapIndexCamera();
-
-    // render target
-    const _makeRenderTarget = () => {
-      return new THREE.WebGLRenderTarget(
-        width,
-        height,
-        {
-          type: THREE.UnsignedByteType,
-          format: THREE.RGBAFormat,
-          stencilBuffer: false,
-        }
-      );
-    };
-    this.renderTargets = [
-      _makeRenderTarget(), // read
-      _makeRenderTarget(), // write
-    ];
-
-    // intersect scene
-    this.intersectScene = new THREE.Scene();
-    this.intersectScene.autoUpdate = false;
-    const intersectOverrideMaterial = new THREE.ShaderMaterial({
+    super({
       uniforms: {
         mode: {
           value: 0, // 0 = keep, 1 = replace
-          needsUpdate: true,
+          needsUpdate: false,
         },
         mapIndexMap: {
-          value: this.render[0].texture,
-          needsUpdate: true,
+          value: null,
+          needsUpdate: false,
         },
         lastPanelIndex: {
           value: 0,
-          needsUpdate: true,
+          needsUpdate: false,
+        },
+        newPanelIndex: {
+          value: 0,
+          needsUpdate: false,
         },
       },
       vertexShader: `\
@@ -687,18 +660,20 @@ class MapGenRenderer {
           float oldMapIndex = oldMapIndexSample.r * 255.0;
           float oldDepth = oldMapIndex / 255.0;
 
-          if (mode == 0) { // keep mode
+          if (mode == ${MapIndexRenderer.MODE_KEEP}) { // keep mode
             if (oldMapIndex == 0. || oldMapIndex == lastPanelIndex) { // keepable value
               discard;
             } else { // non-keepable value; draw the old value and pass the sample test
               gl_FragColor = oldMapIndexSample;
               gl_FragDepth = oldDepth;
             }
-          } else { // replace mode
-            float newMapIndex = newPanelIndex;
-            float newDepth = newMapIndex / 255.0;
+          } else if (mode == ${MapIndexRenderer.MODE_REPLACE}) { // replace mode
+            float newMapIndex = newPanelIndex / 255.0;
+            float newDepth = newMapIndex;
             gl_FragColor = vec4(newMapIndex, newDepth, 0.0, 1.);
             gl_FragDepth = oldDepth;
+          } else {
+            gl_FragColor = vec4(0., 0., 0., 1.);
           }
         }
       `,
@@ -708,6 +683,58 @@ class MapGenRenderer {
         fragDepth: true,
       },
     });
+  }
+}
+class MapIndexRenderer {
+  static MODE_KEEP = 0;
+  static MODE_REPLACE = 1;
+  constructor() {
+    // canvas
+    const width = floorNetPixelSize;
+    const height = floorNetPixelSize;
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+
+    // renderer
+    this.renderer = makeRenderer(canvas);
+    this.renderer.autoClear = false;
+
+    // camera
+    this.camera = makeMapIndexCamera();
+
+    // render target
+    const _makeRenderTarget = () => {
+      return new THREE.WebGLRenderTarget(
+        width,
+        height,
+        {
+          type: THREE.UnsignedByteType,
+          format: THREE.RGBAFormat,
+          // stencilBuffer: false,
+        }
+      );
+    };
+    this.renderTargets = [
+      _makeRenderTarget(), // read
+      _makeRenderTarget(), // write
+    ];
+    // clear depth
+    {
+      this.renderer.state.buffers.depth.setClear(0);
+      for (let i = 0; i < this.renderTargets.length; i++) {
+        const renderTarget = this.renderTargets[i];
+        this.renderer.setRenderTarget(renderTarget);
+        this.renderer.clear();
+        this.renderer.setRenderTarget(null);
+      }
+      this.renderer.state.buffers.depth.setClear(1);
+    }
+
+    // intersect scene
+    this.intersectScene = new THREE.Scene();
+    this.intersectScene.autoUpdate = false;
+    const intersectOverrideMaterial = new MapIndexMaterial();
     this.intersectOverrideMaterial = intersectOverrideMaterial;
     this.intersectScene.overrideMaterial = intersectOverrideMaterial;
   }
@@ -716,27 +743,32 @@ class MapGenRenderer {
     this.renderTargets[0] = this.renderTargets[1];
     this.renderTargets[1] = temp;
   }
-  tryDraw(attachPanelIndex, newPanelIndex, zineRenderer) {
-    const gl = this.renderer.getContext();
+  // tryDraw(attachPanelIndex, newPanelIndex, zineRenderer) {
+  draw(panelSpec, mode, attachPanelIndex, newPanelIndex) {
+    // // collect meshes
+    // const renderSpecs = getRenderSpecsFromZineRenderers([
+    //   zineRenderer,
+    // ]);
+    // const meshes = getMapIndexSpecsMeshes(renderSpecs);
 
-    // collect meshes
-    const renderSpecs = getRenderSpecsFromZineRenderers([
-      zineRenderer,
-    ]);
-    const meshes = getMapIndexSpecsMeshes(renderSpecs);
+    const meshes = [panelSpec];
 
     // push
     const pushMeshes = () => {
       const parents = meshes.map(mesh => {
         const {parent} = mesh;
-        parent.remove(mesh);
+        this.intersectScene.add(mesh);
         return parent;
       });
       return () => {
         for (let i = 0; i < meshes.length; i++) {
           const mesh = meshes[i];
           const parent = parents[i];
-          parent.add(mesh);
+          if (parent) {
+            parent.add(mesh);
+          } else {
+            mesh.parent.remove(mesh);
+          }
         }
       };
     };
@@ -744,7 +776,9 @@ class MapGenRenderer {
 
     // compute intersect
     let intersect;
-    {
+    /* {
+      const gl = this.renderer.getContext();
+
       // uniforms
       this.intersectOverrideMaterial.uniforms.mode.value = 0; // keep mode
       this.intersectOverrideMaterial.uniforms.mode.needsUpdate = true;
@@ -791,26 +825,31 @@ class MapGenRenderer {
 
       // delete query
       gl.deleteQuery(anySamplesPassedQuery);
-    }
+    } */
 
     // if we did not intersect, perform the full draw
     if (!intersect) {
       // uniforms
-      this.intersectOverrideMaterial.uniforms.mode.value = 1; // replace mode
+      // console.log('uniform 1');
+      this.intersectOverrideMaterial.uniforms.mode.value = mode;
       this.intersectOverrideMaterial.uniforms.mode.needsUpdate = true;
 
+      // console.log('uniform 2');
       this.intersectOverrideMaterial.uniforms.mapIndexMap.value = this.renderTargets[0].texture;
       this.intersectOverrideMaterial.uniforms.mapIndexMap.needsUpdate = true;
 
+      // console.log('uniform 3');
       this.intersectOverrideMaterial.uniforms.lastPanelIndex.value = attachPanelIndex;
       this.intersectOverrideMaterial.uniforms.lastPanelIndex.needsUpdate = true;
 
+      // console.log('uniform 4');
       this.intersectOverrideMaterial.uniforms.newPanelIndex.value = newPanelIndex;
       this.intersectOverrideMaterial.uniforms.newPanelIndex.needsUpdate = true;
 
+      // console.log('render');
       // render to the intersect target
       this.renderer.setRenderTarget(this.renderTargets[1]);
-      this.renderer.render(this.scene, this.camera);
+      this.renderer.render(this.intersectScene, this.camera);
       this.renderer.setRenderTarget(null);
 
       // swap render targets
@@ -822,15 +861,16 @@ class MapGenRenderer {
   }
   getMapIndex() {
     // read back image data
+    const readRenderTarget = this.renderTargets[0];
     const uint8Array = new Uint8Array(
-      this.renderTargets[0].width * this.renderTargets[0].height * 4
+      readRenderTarget.width * readRenderTarget.height * 4
     );
     const {
       width,
       height,
-    } = this.renderTargets[0];
+    } = readRenderTarget;
     this.renderer.readRenderTargetPixels(
-      this.renderTargets[0],
+      readRenderTarget,
       0, 0,
       width, height,
       uint8Array
@@ -848,10 +888,11 @@ class MapGenRenderer {
     return mapIndex;
   }
   getMapIndexResolution() {
+    const readRenderTarget = this.renderTargets[0];
     const {
       width,
       height,
-    } = this.renderTargets[0]
+    } = readRenderTarget;
     return [
       width,
       height,
@@ -933,7 +974,7 @@ class MetazineLoader {
       const floorPlaneLocation = layer1.getData('floorPlaneLocation');
 
       // mesh
-      const panelSpec = new THREE.Object3D()
+      const panelSpec = new THREE.Object3D();
       panelSpec.imageArrayBuffer = imageArrayBuffer;
       // panelSpec.depthField = depthFieldArrayBuffer;
       panelSpec.entranceExitLocations = entranceExitLocations;
@@ -948,7 +989,7 @@ class MetazineLoader {
       panelSpec.transformScene = transformScene;
       transformScene.updateMatrixWorld();
 
-      // scene mesh
+      // scene chunk mesh
       let pointCloudArrayBuffer;
       {
         const pointCloudFloat32Array = reconstructPointCloudFromDepthField(
@@ -967,9 +1008,15 @@ class MetazineLoader {
         panelSpecGeometrySize,
       );
       geometry.computeVertexNormals();
-      const sceneChunkMesh = new THREE.Mesh(geometry, fakeMaterial); // fake mesh; this uses batch rendering
+      // index material for index map drawing;
+      // screen rendering uses batching using this geometry and a different material
+      const sceneChunkMesh = new THREE.Mesh(geometry, fakeMaterial);
+      sceneChunkMesh.frustumCulled = false;
       transformScene.add(sceneChunkMesh);
       sceneChunkMesh.updateMatrixWorld();
+      // sceneChunkMesh.onBeforeRender = () => {
+      //   console.log('on before render');
+      // };
       panelSpec.sceneChunkMesh = sceneChunkMesh;
 
       return panelSpec;
@@ -1118,7 +1165,6 @@ export class Metazine extends EventTarget {
     // get the render panel specs
     this.renderPanelSpecs = [];
     // first panel
-    // console.log('initial panel specs', panelSpecs.slice());
     const candidateEntrancePanelSpecs = panelSpecs.slice();
     const firstPanelSpecIndex = getConditionPanelSpecIndex(
       candidateEntrancePanelSpecs,
@@ -1135,8 +1181,22 @@ export class Metazine extends EventTarget {
         entranceExitLocation: eel,
       };
     });
-    // console.log('initial candidate exit specs', candidateExitSpecs.slice());
-    
+
+
+    // map index renderer
+    const mapIndexRenderer = new MapIndexRenderer();
+    // draw first panel
+    {
+      const newPanelIndex = this.renderPanelSpecs.length;
+      const attachPanelIndex = newPanelIndex - 1;
+      mapIndexRenderer.draw(
+        firstPanelSpec,
+        MapIndexRenderer.MODE_REPLACE,
+        attachPanelIndex,
+        newPanelIndex
+      );
+    }
+
     const maxNumPanels = 32;
     while(
       this.renderPanelSpecs.length < maxNumPanels &&
@@ -1156,7 +1216,6 @@ export class Metazine extends EventTarget {
         candidateEntrancePanelSpecs,
         panelSpec => panelSpec.entranceExitLocations.length >= 2
       );
-      // Math.floor(rng() * candidateEntrancePanelSpecs.length);
       const entrancePanelSpec = candidateEntrancePanelSpecs[entrancePanelSpecIndex];
       const candidateEntranceLocations = entrancePanelSpec.entranceExitLocations.slice();
       const entranceLocationIndex = Math.floor(rng() * candidateEntranceLocations.length);
@@ -1184,6 +1243,18 @@ export class Metazine extends EventTarget {
         target,
       });
       if (connected) {
+        // draw the map index
+        {
+          const newPanelIndex = this.renderPanelSpecs.length;
+          const attachPanelIndex = newPanelIndex - 1;
+          mapIndexRenderer.draw(
+            entrancePanelSpec,
+            MapIndexRenderer.MODE_REPLACE,
+            attachPanelIndex,
+            newPanelIndex
+          );
+        }
+
         // log the new panel spec
         this.renderPanelSpecs.push(entrancePanelSpec);
 
@@ -1202,30 +1273,18 @@ export class Metazine extends EventTarget {
           };
         });
         candidateExitSpecs.push(...newCandidateExitSpecs);
-        // console.log('push new candidate exit specs', {
-        //   candidateEntranceLocations: candidateEntranceLocations.slice(),
-        //   newCandidateExitSpecs: newCandidateExitSpecs.slice(),
-        //   candidateEntranceLocationsLength: candidateEntranceLocations.length,
-        // });
       } else {
         console.warn('connection failed; need to try again!');
         // debugger;
         continue;
       }
-
-      // const j = i + 1;
-      // const ok1 = j < maxNumPanels;
-      // const ok2 = candidateExitSpecs.length;
-      // const ok3 = candidateEntrancePanelSpecs.length;
-      // console.log('loop next', {
-      //   j,
-      //   ok1,
-      //   ok2,
-      //   ok3,
-      // });
     }
-    console.log('got render panel specs', this.renderPanelSpecs.slice());
+    
+    this.mapIndex = mapIndexRenderer.getMapIndex();
+    this.mapIndexResolution = mapIndexRenderer.getMapIndexResolution();
 
+    console.log('rendered', this.mapIndex.filter(n => n !== 0).length, this.renderPanelSpecs.slice(), this.mapIndex, this.mapIndexResolution);
+  
     /* const mapGenRenderer = new MapGenRenderer();
     const maxNumPanels = 3;
     const rng = alea('lol');
@@ -1328,6 +1387,14 @@ export class MetazineRenderer extends EventTarget {
     this.#init();
   }
   async #init() {
+    // scene batched mesh
+    const sceneBatchedMesh = new SceneBatchedMesh({
+      panelSpecs: this.metazine.renderPanelSpecs,
+    });
+    this.scene.add(sceneBatchedMesh);
+    sceneBatchedMesh.updateMatrixWorld();
+
+    // entrance exit locations
     const entranceExitLocations = [];
     for (let i = 0; i < this.metazine.renderPanelSpecs.length; i++) {
       const panelSpec = this.metazine.renderPanelSpecs[i];
@@ -1350,13 +1417,6 @@ export class MetazineRenderer extends EventTarget {
       entranceExitLocations.push(...localEntranceExitLocations);
     }
 
-    // scene batched mesh
-    const sceneBatchedMesh = new SceneBatchedMesh({
-      panelSpecs: this.metazine.renderPanelSpecs,
-    });
-    this.scene.add(sceneBatchedMesh);
-    sceneBatchedMesh.updateMatrixWorld();
-
     // entrance exit mesh
     const entranceExitMesh = new EntranceExitMesh({
       entranceExitLocations,
@@ -1365,6 +1425,19 @@ export class MetazineRenderer extends EventTarget {
     entranceExitMesh.updateVisibility();
     this.scene.add(entranceExitMesh);
     entranceExitMesh.updateMatrixWorld();
+
+    // map index mesh
+    const {
+      mapIndex,
+      mapIndexResolution,
+    } = this.metazine;
+    const mapIndexMesh = new MapIndexMesh({
+      mapIndex,
+      mapIndexResolution,
+    });
+    mapIndexMesh.position.y = -5;
+    this.scene.add(mapIndexMesh);
+    mapIndexMesh.updateMatrixWorld();
 
     // XXX debug cube mesh
     const cubeMesh = new THREE.Mesh(
@@ -1377,10 +1450,10 @@ export class MetazineRenderer extends EventTarget {
     this.scene.add(cubeMesh);
     cubeMesh.updateMatrixWorld();
 
-    console.log('metazine renderer meshes', {
-      entranceExitLocations,
-      entranceExitMesh,
-    });
+    // console.log('metazine renderer meshes', {
+    //   entranceExitLocations,
+    //   entranceExitMesh,
+    // });
 
     /* for (let i = 0; i < this.metazine.panelSpecs.length; i++) {
       const panelSpec = this.metazine.panelSpecs[i];
