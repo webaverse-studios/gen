@@ -56,7 +56,7 @@ export const distanceFloats2Canvas = (distanceFloatImageData, width, height) => 
     const r = distanceFloatImageData[i];
     const g = distanceFloatImageData[i+1];
     const b = distanceFloatImageData[i+2];
-    const a = distanceFloatImageData[i+3];
+    // const a = distanceFloatImageData[i+3];
 
     const j = i / 4;
     const x = j % canvas.width;
