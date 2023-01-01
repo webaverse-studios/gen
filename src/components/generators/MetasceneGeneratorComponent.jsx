@@ -221,20 +221,24 @@ const getPanelSpecsAtlasTextureImageAsync = async panelSpecs => {
 class SceneBatchedMesh extends THREE.Mesh {
   constructor({
     panelSpecs = [],
-    textureImage,
   }) {
-    const geometry = BufferGeometryUtils.mergeBufferGeometries(
-      panelSpecs.map(panelSpec => {
-        const {sceneChunkMesh} = panelSpec;
-        const g = sceneChunkMesh.geometry.clone()
-          .applyMatrix4(
-            sceneChunkMesh.matrixWorld
-          );
-        return g;
-      })
-    );
+    const geometry = getPanelSpecsGeometry(panelSpecs);
+    
+    const map = new THREE.Texture();
+    (async () => {
+      const atlasTextureImage = await getPanelSpecsAtlasTextureImageAsync(panelSpecs);
+      atlasTextureImage.style.cssText = `\
+        position: relative;
+        max-width: 1024px;
+        max-height: 1024px;
+        background: red;
+      `;
+      atlasTextureImage.classList.add('atlasTextureImage');
+      document.body.appendChild(atlasTextureImage);
 
-    const map = new THREE.Texture(); // XXX set this from the textureImage
+      map.image = atlasTextureImage;
+      map.needsUpdate = true;
+    })();
     const material = new THREE.ShaderMaterial({
       uniforms: {
         map: {
@@ -253,11 +257,15 @@ class SceneBatchedMesh extends THREE.Mesh {
         }
       `,
       fragmentShader: `\
+        uniform sampler2D map;
         varying vec2 vUv;
         varying vec3 vNormal;
 
         void main() {
-          gl_FragColor = vec4(vNormal, 1.0);
+          // gl_FragColor = vec4(vNormal, 1.0);
+          gl_FragColor = texture2D(map, vUv);
+          // gl_FragColor = vec4(vUv, 0.0, 1.0);
+          // gl_FragColor.rg + vUv;
         }
       `,
     });
