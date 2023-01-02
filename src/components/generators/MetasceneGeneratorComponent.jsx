@@ -1623,15 +1623,6 @@ class ChunkEdgeMesh extends THREE.Object3D {
 
     this.add(positionCubesMesh);
     positionCubesMesh.updateMatrixWorld();
-
-    // const geometry = new THREE.PlaneGeometry(1, 1, 1, 1);
-    // const material = new THREE.MeshBasicMaterial({
-    //   color: 0x000000,
-    //   // side: THREE.DoubleSide,
-    // });
-    // super(geometry, material);
-    // this.frustumCulled = false;
-    // this.visible = false;
   }
 }
 
