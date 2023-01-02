@@ -3937,10 +3937,12 @@ export class PanelRenderer extends EventTarget {
         {
           geometry: oldFloorNetDepthRenderGeometry,
           clipZ: true,
+          side: THREE.BackSide,
         },
         {
           geometry: newFloorNetDepthRenderGeometry,
           clipZ: true,
+          side: THREE.BackSide,
         },
       ],
       camera: floorNetCamera,
@@ -4690,6 +4692,7 @@ export async function compileVirtualScene(imageArrayBuffer) {
         {
           geometry: floorNetDepthRenderGeometry,
           clipZ: true,
+          side: THREE.BackSide,
         },
       ],
       camera: floorNetCamera,

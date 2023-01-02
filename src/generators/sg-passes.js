@@ -35,6 +35,7 @@ export function reconstructFloor({
   camera,
   floorPlane,
 }) {
+  // add clipZ attributes
   renderSpecs = clipRenderSpecs(renderSpecs);
   const width = floorNetPixelSize;
   const height = floorNetPixelSize;

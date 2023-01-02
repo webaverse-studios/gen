@@ -173,11 +173,15 @@ export const getDepthRenderSpecsMeshes = (renderSpecs, camera) => {
   const meshes = [];
 
   for (const renderSpec of renderSpecs) {
-    const {geometry, matrixWorld, clipZ} = renderSpec;
+    const {
+      geometry,
+      matrixWorld,
+      clipZ,
+      side = THREE.FrontSide,
+    } = renderSpec;
     
     let vertexShader = depthVertexShader;
     let fragmentShader = depthFragmentShader;
-    let side = THREE.FrontSide;
     if (clipZ) {
       vertexShader = vertexShader.replace('// HEADER', `\
         // HEADER
@@ -196,7 +200,6 @@ export const getDepthRenderSpecsMeshes = (renderSpecs, camera) => {
           gl_FragColor = vec4(0., 0., 0., 0.);
         }
       `);
-      side = THREE.BackSide;
     }
     const material = new THREE.ShaderMaterial({
       uniforms: {
@@ -391,7 +394,7 @@ export const mergeOperator = ({
   camera,
   renderSpecs,
 }) => {
-  // clipZ
+  // add clipZ attributes
   renderSpecs = clipRenderSpecs(renderSpecs, width, height);
 
   // canvas
