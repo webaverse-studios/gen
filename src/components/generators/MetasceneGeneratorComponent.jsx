@@ -627,10 +627,14 @@ class MapIndexMaterial extends THREE.ShaderMaterial {
           value: null,
           needsUpdate: false,
         },
-        lastPanelIndex: {
-          value: 0,
+        resolution: {
+          value: new THREE.Vector2(),
           needsUpdate: false,
         },
+        // lastPanelIndex: {
+        //   value: 0,
+        //   needsUpdate: false,
+        // },
         newPanelIndex: {
           value: 0,
           needsUpdate: false,
@@ -849,9 +853,12 @@ class MapIndexRenderer {
       // this.drawOverrideMaterial.uniforms.mapIndexMap.value = this.renderTargets[0].texture;
       // this.drawOverrideMaterial.uniforms.mapIndexMap.needsUpdate = true;
 
-      this.drawOverrideMaterial.uniforms.lastPanelIndex.value = attachPanelIndex;
-      this.drawOverrideMaterial.uniforms.lastPanelIndex.needsUpdate = true;
+      // this.drawOverrideMaterial.uniforms.lastPanelIndex.value = attachPanelIndex;
+      // this.drawOverrideMaterial.uniforms.lastPanelIndex.needsUpdate = true;
 
+      this.drawOverrideMaterial.uniforms.resolution.value.set(floorNetPixelSize, floorNetPixelSize);
+      this.drawOverrideMaterial.uniforms.resolution.needsUpdate = true;
+      
       this.drawOverrideMaterial.uniforms.newPanelIndex.value = newPanelIndex;
       this.drawOverrideMaterial.uniforms.newPanelIndex.needsUpdate = true;
 
@@ -886,8 +893,11 @@ class MapIndexRenderer {
       this.intersectOverrideMaterial.uniforms.mapIndexMap.value = this.renderTargets[0].texture;
       this.intersectOverrideMaterial.uniforms.mapIndexMap.needsUpdate = true;
 
-      this.intersectOverrideMaterial.uniforms.lastPanelIndex.value = attachPanelIndex;
-      this.intersectOverrideMaterial.uniforms.lastPanelIndex.needsUpdate = true;
+      this.intersectOverrideMaterial.uniforms.resolution.value.set(floorNetPixelSize, floorNetPixelSize);
+      this.intersectOverrideMaterial.uniforms.resolution.needsUpdate = true;
+
+      // this.intersectOverrideMaterial.uniforms.lastPanelIndex.value = attachPanelIndex;
+      // this.intersectOverrideMaterial.uniforms.lastPanelIndex.needsUpdate = true;
 
       this.intersectOverrideMaterial.uniforms.newPanelIndex.value = newPanelIndex;
       this.intersectOverrideMaterial.uniforms.newPanelIndex.needsUpdate = true;
