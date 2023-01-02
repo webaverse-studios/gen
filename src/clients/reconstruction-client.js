@@ -281,6 +281,97 @@ export const renderMeshesDepth = (meshes, width, height, camera) => {
 
 //
 
+export const getCoverageRenderSpecsMeshes = (renderSpecs) => {
+  const meshes = [];
+
+  for (const renderSpec of renderSpecs) {
+    const {sceneChunkMesh} = renderSpec;
+    const {geometry, matrixWorld} = sceneChunkMesh;
+    
+    const material = new THREE.ShaderMaterial({
+      uniforms: {
+        // cameraNear: {
+        //   value: camera.near,
+        //   needsUpdate: true,
+        // },
+        // cameraFar: {
+        //   value: camera.far,
+        //   needsUpdate: true,
+        // },
+        // isPerspective: {
+        //   value: +camera.isPerspectiveCamera,
+        //   needsUpdate: true,
+        // },
+      },
+      vertexShader: `\
+        void main() {
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.);
+        }
+      `,
+      fragmentShader: `\
+        void main() {
+          gl_FragColor = vec4(1., 0., 0., 1.);
+        }
+      `,
+      side: THREE.BackSide,
+    });
+    
+    const coverageMesh = new THREE.Mesh(geometry, material);
+    coverageMesh.name = 'coverageMesh';
+    if (matrixWorld) {
+      coverageMesh.matrixWorld.copy(matrixWorld);
+      coverageMesh.matrix.copy(matrixWorld)
+        .decompose(coverageMesh.position, coverageMesh.quaternion, coverageMesh.scale);
+    }
+    coverageMesh.frustumCulled = false;
+    meshes.push(coverageMesh);
+  }
+
+  return meshes;
+};
+export const renderMeshesCoverage = (meshes, width, height, camera) => {
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  canvas.classList.add('coverageCanvas');
+  const renderer = makeRenderer(canvas);
+
+  // let oldDepthFloatImageData;
+
+  const coverageScene = new THREE.Scene();
+  coverageScene.autoUpdate = false;
+  for (const coverageMesh of meshes) {
+    coverageScene.add(coverageMesh);
+  }
+
+  // render
+  // render to the canvas, for debugging
+  // renderer.render(coverageScene, camera);
+
+  // real render to the render target
+  // renderer.setRenderTarget(depthRenderTarget);
+  // renderer.clear();
+  renderer.render(coverageScene, camera);
+  // renderer.setRenderTarget(null);
+  
+  // // read back image data
+  // const imageData = {
+  //   data: new Uint8Array(depthRenderTarget.width * depthRenderTarget.height * 4),
+  //   width,
+  //   height,
+  // };
+  // renderer.readRenderTargetPixels(depthRenderTarget, 0, 0, depthRenderTarget.width, depthRenderTarget.height, imageData.data);
+
+  // // latch rendered depth data
+  // oldDepthFloatImageData = reinterpretFloatImageData(imageData); // viewZ
+
+  // return oldDepthFloatImageData;
+
+  return canvas;
+};
+
+//
+
 export const getRenderSpecsMeshesDepth = (meshes, width, height, camera) => {
   const canvas = document.createElement('canvas');
   canvas.width = width;
