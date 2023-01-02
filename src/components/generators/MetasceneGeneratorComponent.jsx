@@ -969,12 +969,12 @@ class MapIndexRenderer {
       );
       intersect = this.checkResultUint8Array[0] > 0;
 
-      // XXX debug logging
-      console.log('check intermediate result', debugUint8Array2.filter(n => n !== 0).length, intersect, {
-        attachPanelIndex,
-        newPanelIndex,
-        debugUint8Array2,
-      });
+      // // XXX debug logging
+      // console.log('check intermediate result', debugUint8Array2.filter(n => n !== 0).length, intersect, {
+      //   attachPanelIndex,
+      //   newPanelIndex,
+      //   debugUint8Array2,
+      // });
     }
 
     popMeshes();
