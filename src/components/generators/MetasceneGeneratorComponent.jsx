@@ -742,6 +742,8 @@ class MapIndexRenderer {
           type: THREE.UnsignedByteType,
           format: THREE.RGBAFormat,
           // stencilBuffer: false,
+          minFilter: THREE.NearestFilter,
+          magFilter: THREE.NearestFilter,
         }
       );
     };
@@ -840,6 +842,8 @@ class MapIndexRenderer {
       {
         type: THREE.UnsignedByteType,
         format: THREE.RGBAFormat,
+        minFilter: THREE.NearestFilter,
+        magFilter: THREE.NearestFilter,
       }
     );
     this.checkResultUint8Array = new Uint8Array(
