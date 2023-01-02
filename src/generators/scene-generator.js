@@ -1013,7 +1013,7 @@ const sortLocations = (() => {
     candidateLocations = structuredClone(candidateLocations); // do not scribble over original arrays
     const allCandidateLocations = candidateLocations.slice();
 
-    // remove candidate locations that are too close to each other
+    /* // remove candidate locations that are too close to each other
     const minSeparationDistance = 1;
     candidateLocations = candidateLocations.filter((candidateLocation, i) => {
       for (let j = i + 1; j < candidateLocations.length; j++) {
@@ -1027,7 +1027,7 @@ const sortLocations = (() => {
         }
       }
       return true;
-    });
+    }); */
 
     // filter for good candidate entrance exit locations
     const meshCenter = localBox.set(
