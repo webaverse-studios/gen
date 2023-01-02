@@ -66,11 +66,17 @@ import {
   ZineRenderer,
 } from '../../zine/zine-renderer.js';
 import {colors} from '../../zine/zine-colors.js';
-// import {
-//   // getMapIndexSpecsMeshes,
-//   // renderMeshesMapIndexFull,
-//   // flipUint8ArrayX,
-// } from '../../clients/reconstruction-client.js';
+import {
+  // getMapIndexSpecsMeshes,
+  // renderMeshesMapIndexFull,
+  // flipUint8ArrayX,
+  // getDepthRenderSpecsMeshes,
+  getCoverageRenderSpecsMeshes,
+  renderMeshesCoverage,
+} from '../../clients/reconstruction-client.js';
+import {
+  pushMeshes,
+} from '../../zine/zine-utils.js';
 import {
   DropTarget,
 } from '../drop-target/DropTarget.jsx';
@@ -684,24 +690,6 @@ class MapIndexMaterial extends THREE.ShaderMaterial {
     });
   }
 }
-const pushMeshes = (scene, meshes) => {
-  const parents = meshes.map(mesh => {
-    const {parent} = mesh;
-    scene.add(mesh);
-    return parent;
-  });
-  return () => {
-    for (let i = 0; i < meshes.length; i++) {
-      const mesh = meshes[i];
-      const parent = parents[i];
-      if (parent) {
-        parent.add(mesh);
-      } else {
-        mesh.parent.remove(mesh);
-      }
-    }
-  };
-};
 class MapIndexRenderer {
   static MODE_KEEP = 0;
   static MODE_REPLACE = 1;
