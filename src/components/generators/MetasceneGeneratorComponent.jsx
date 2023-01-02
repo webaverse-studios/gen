@@ -1211,15 +1211,6 @@ export class Metazine extends EventTarget {
     this.zs.clear();
   }
   async compileZineFiles(zineFiles) {
-    // const s = new TextDecoder().decode(uint8Array);
-    // let j = JSON.parse(s);
-    
-    // collect zine file urls
-    // let zineFileUrls = j
-    //   .filter(fileName => !/dall/i.test(fileName))
-    //   .map(fileName => `https://local.webaverse.com/zine-build/${fileName}`);
-    // zineFileUrls = zineFileUrls.slice(0, 10);
-
     console.time('loadPanels');
     let panelSpecs;
     {
@@ -1235,7 +1226,6 @@ export class Metazine extends EventTarget {
       panelSpecs = panelSpecsArray.flat();
     }
     console.timeEnd('loadPanels');
-    // console.log('got panel specs', panelSpecs);
 
     const rng = alea('lol');
     const getConditionPanelSpecIndex = (panelSpecs, condition) => {
