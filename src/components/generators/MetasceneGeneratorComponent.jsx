@@ -1420,6 +1420,81 @@ export class Metazine extends EventTarget {
 
 //
 
+class ChunkEdgeMesh extends THREE.Mesh {
+  constructor({
+    panelSpec,
+  }) {
+    // camera
+    const chunkEdgeCamera = makeFloorNetCamera();
+
+    // compute camera spec
+    const {floorBoundingBox} = panelSpec;
+    const box3 = new THREE.Box3(
+      new THREE.Vector3().fromArray(floorBoundingBox.min),
+      new THREE.Vector3().fromArray(floorBoundingBox.max)
+    );
+    const center = box3.getCenter(new THREE.Vector3());
+    const size = box3.getSize(new THREE.Vector3());
+    // move to the camera plane
+    center.y = chunkEdgeCamera.position.y;
+    // find camera range; scan and snap outward
+    const centerBackLeft = center.clone()
+      .add(new THREE.Vector3(-size.x / 2, 0, -size.z / 2));
+    // snap to grid
+    centerBackLeft.x = Math.floor(centerBackLeft.x / floorNetResolution) * floorNetResolution;
+    centerBackLeft.z = Math.floor(centerBackLeft.z / floorNetResolution) * floorNetResolution;
+    const centerFrontRight = center.clone()
+      .add(new THREE.Vector3(size.x / 2, 0, size.z / 2));
+    // snap to grid
+    centerFrontRight.x = Math.ceil(centerFrontRight.x / floorNetResolution) * floorNetResolution;
+    centerFrontRight.z = Math.ceil(centerFrontRight.z / floorNetResolution) * floorNetResolution;
+    // compute the new center
+    center.copy(centerBackLeft)
+      .add(centerFrontRight)
+      .multiplyScalar(0.5);
+    // compute the new size
+    size.copy(centerFrontRight)
+      .sub(centerBackLeft);
+
+    // set the orthographic camera
+    chunkEdgeCamera.position.copy(center);
+    chunkEdgeCamera.updateMatrixWorld();
+    chunkEdgeCamera.left = centerBackLeft.x - center.x;
+    chunkEdgeCamera.right = centerFrontRight.x - center.x;
+    chunkEdgeCamera.top = centerFrontRight.z - center.z;
+    chunkEdgeCamera.bottom = centerBackLeft.z - center.z;
+    chunkEdgeCamera.updateProjectionMatrix();
+
+    // compute the pixel resolution to use
+    const width = Math.floor(size.x / floorNetResolution);
+    const height = Math.floor(size.z / floorNetResolution);
+
+    // render the coverage map
+    const meshes = getCoverageRenderSpecsMeshes([
+      panelSpec,
+    ]);
+    const coverageCanvas = renderMeshesCoverage(meshes, width, height, chunkEdgeCamera);
+    coverageCanvas.style.cssText = `\
+      background: blue;
+    `;
+    document.body.appendChild(coverageCanvas);
+
+    // detect edges
+    // concaveman();
+
+    const geometry = new THREE.PlaneGeometry(1, 1, 1, 1);
+    const material = new THREE.MeshBasicMaterial({
+      color: 0x000000,
+      // side: THREE.DoubleSide,
+    });
+    super(geometry, material);
+    this.frustumCulled = false;
+    this.visible = false;
+  }
+}
+
+//
+
 export class MetazineRenderer extends EventTarget {
   constructor(canvas, metazine) {
     super();
@@ -1526,6 +1601,15 @@ export class MetazineRenderer extends EventTarget {
     mapIndexMesh.position.y = -5;
     this.scene.add(mapIndexMesh);
     mapIndexMesh.updateMatrixWorld();
+
+    // chunk edge mesh
+    const firstRenderPanelSpec = this.metazine.renderPanelSpecs[0];
+    const chunkEdgeMesh = new ChunkEdgeMesh({
+      panelSpec: firstRenderPanelSpec,
+    });
+    this.scene.add(chunkEdgeMesh);
+    chunkEdgeMesh.updateMatrixWorld();
+      
 
     // XXX debug cube mesh
     const cubeMesh = new THREE.Mesh(
