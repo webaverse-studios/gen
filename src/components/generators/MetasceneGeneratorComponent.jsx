@@ -1421,7 +1421,93 @@ export class Metazine extends EventTarget {
 
 //
 
-class ChunkEdgeMesh extends THREE.Mesh {
+const getOutlinePoints = srcCanvas => {
+  const {width, height} = srcCanvas;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(srcCanvas, 0, 0);
+
+  const getIndex = (x, y) => y * width + x;
+
+  const imageData = ctx.getImageData(0, 0, width, height);
+  const data = imageData.data;
+  const seenIndices = new Map();
+  const queue = [
+    [0, 0],
+  ];
+  seenIndices.set(
+    getIndex(
+      queue[0][0],
+      queue[0][1]
+    ),
+    true
+  );
+  const outlinePoints = [];
+  while (queue.length > 0) {
+    const [x, y] = queue.shift();
+    
+    // XXX debug check
+    {
+      const index = getIndex(x, y);
+      const r = data[index * 4];
+      if (r > 0) {
+        console.warn('found filled pixel in queue', x, y);
+        debugger;
+      }
+    }
+
+    let hasFilledNeighbor = false;
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        const ax = x + dx;
+        const ay = y + dy;
+        if (ax >= 0 && ax < width && ay >= 0 && ay < height) { // if in bounds
+          const index2 = getIndex(ax, ay);
+          const r2 = data[index2 * 4];
+          if (r2 > 0) {
+            hasFilledNeighbor = true;
+          } else {
+            if (!seenIndices.has(index2)) {
+              seenIndices.set(index2, true);
+              queue.push([ax, ay]);
+            }
+          }
+        }
+      }
+    }
+    if (hasFilledNeighbor) {
+      outlinePoints.push([x, y]);
+    }
+  }
+  return outlinePoints;
+};
+// XXX debugging
+const makePositionCubesMesh = (positions) => {
+  // render an instanced cubes mesh to show the depth
+  const positionCubesGeometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
+  const positionCubesMaterial = new THREE.MeshPhongMaterial({
+    // vertexColors: true,
+    color: 0x0000FF,
+  });
+  const positionCubesMesh = new THREE.InstancedMesh(positionCubesGeometry, positionCubesMaterial, positions.length / 3);
+  positionCubesMesh.name = 'positionCubesMesh';
+  positionCubesMesh.frustumCulled = false;
+
+  // set the matrices by projecting the depth from the perspective camera
+  positionCubesMesh.count = 0;
+  for (let i = 0; i < positions.length; i += 3) {
+    const target = localVector.fromArray(positions, i);
+    localMatrix.makeTranslation(target.x, target.y, target.z);
+    positionCubesMesh.setMatrixAt(i / 3, localMatrix);
+    positionCubesMesh.count++;
+  }
+  positionCubesMesh.instanceMatrix.needsUpdate = true;
+  return positionCubesMesh;
+};
+class ChunkEdgeMesh extends THREE.Object3D {
   constructor({
     panelSpec,
   }) {
@@ -1439,16 +1525,23 @@ class ChunkEdgeMesh extends THREE.Mesh {
     // move to the camera plane
     center.y = chunkEdgeCamera.position.y;
     // find camera range; scan and snap outward
+    
+    // back left
     const centerBackLeft = center.clone()
-      .add(new THREE.Vector3(-size.x / 2, 0, -size.z / 2));
+      .add(new THREE.Vector3(-size.x / 2, 0, -size.z / 2))
+      .add(new THREE.Vector3(-floorNetResolution, 0, -floorNetResolution)); // 1 px border
     // snap to grid
     centerBackLeft.x = Math.floor(centerBackLeft.x / floorNetResolution) * floorNetResolution;
     centerBackLeft.z = Math.floor(centerBackLeft.z / floorNetResolution) * floorNetResolution;
+    
+    // front right
     const centerFrontRight = center.clone()
-      .add(new THREE.Vector3(size.x / 2, 0, size.z / 2));
+      .add(new THREE.Vector3(size.x / 2, 0, size.z / 2))
+      .add(new THREE.Vector3(floorNetResolution, 0, floorNetResolution)); // 1 px border
     // snap to grid
     centerFrontRight.x = Math.ceil(centerFrontRight.x / floorNetResolution) * floorNetResolution;
     centerFrontRight.z = Math.ceil(centerFrontRight.z / floorNetResolution) * floorNetResolution;
+    
     // compute the new center
     center.copy(centerBackLeft)
       .add(centerFrontRight)
@@ -1480,17 +1573,40 @@ class ChunkEdgeMesh extends THREE.Mesh {
     `;
     document.body.appendChild(coverageCanvas);
 
-    // detect edges
-    // concaveman();
+    // get outline points
+    const outlinePoints = getOutlinePoints(coverageCanvas);
+    console.log('got outline points', outlinePoints);
 
-    const geometry = new THREE.PlaneGeometry(1, 1, 1, 1);
-    const material = new THREE.MeshBasicMaterial({
-      color: 0x000000,
-      // side: THREE.DoubleSide,
-    });
-    super(geometry, material);
-    this.frustumCulled = false;
-    this.visible = false;
+    // detect edges
+    const edges = concaveman(outlinePoints, 5);
+    // const edges = outlinePoints;
+    console.log('got edges', edges);
+
+    // position cubes mesh
+    const positions = new Float32Array(edges.length * 3);
+    for (let i = 0; i < edges.length; i++) {
+      const edge = edges[i];
+      const [x, y] = edge;
+      const index = i * 3;
+      positions[index + 0] = -x * floorNetResolution + centerFrontRight.x;
+      positions[index + 1] = 0;
+      positions[index + 2] = y * floorNetResolution + centerBackLeft.z;
+    }
+    const positionCubesMesh = makePositionCubesMesh(positions);
+
+    super();
+
+    this.add(positionCubesMesh);
+    positionCubesMesh.updateMatrixWorld();
+
+    // const geometry = new THREE.PlaneGeometry(1, 1, 1, 1);
+    // const material = new THREE.MeshBasicMaterial({
+    //   color: 0x000000,
+    //   // side: THREE.DoubleSide,
+    // });
+    // super(geometry, material);
+    // this.frustumCulled = false;
+    // this.visible = false;
   }
 }
 
@@ -1610,7 +1726,6 @@ export class MetazineRenderer extends EventTarget {
     });
     this.scene.add(chunkEdgeMesh);
     chunkEdgeMesh.updateMatrixWorld();
-      
 
     // XXX debug cube mesh
     const cubeMesh = new THREE.Mesh(
