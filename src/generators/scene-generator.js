@@ -3938,11 +3938,17 @@ export class PanelRenderer extends EventTarget {
           geometry: oldFloorNetDepthRenderGeometry,
           clipZ: true,
           side: THREE.BackSide,
+          // side: THREE.DoubleSide,
+          width: oldWidth,
+          height: oldHeight,
         },
         {
           geometry: newFloorNetDepthRenderGeometry,
           clipZ: true,
           side: THREE.BackSide,
+          // side: THREE.DoubleSide,
+          width,
+          height,
         },
       ],
       camera: floorNetCamera,
@@ -4004,7 +4010,13 @@ export class PanelRenderer extends EventTarget {
   clip() {
     const {geometry, indexedGeometry} = this.sceneMesh;
     const depthFloats32Array = getDepthFloatsFromIndexedGeometry(indexedGeometry);
-    const {width, height} = this.renderer.domElement;
+    
+    const layer1 = this.panel.getLayer(1);
+    const resolution = layer1.getData('resolution');
+    const [
+      width,
+      height,
+    ] = resolution;
     clipGeometryZ(geometry, width, height, depthFloats32Array);
   }
   scale(f) {
@@ -4693,6 +4705,9 @@ export async function compileVirtualScene(imageArrayBuffer) {
           geometry: floorNetDepthRenderGeometry,
           clipZ: true,
           side: THREE.BackSide,
+          // side: THREE.DoubleSide,
+          width,
+          height,
         },
       ],
       camera: floorNetCamera,
