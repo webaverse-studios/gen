@@ -153,7 +153,7 @@ export function clipGeometryZ(geometry, width, height, depthFloats32Array) {
 
 // add clipping attributes to geometry, for detecting clipped regions in a shader
 export const clipRenderSpecs = (renderSpecs, width, height) => renderSpecs.map(renderSpec => {
-  let {geometry, clipZ} = renderSpec;
+  let {clipZ} = renderSpec;
   if (clipZ) {
     // geometry = geometry.clone();
     const depthFloats32Array = getDepthFloatsFromIndexedGeometry(geometry);
@@ -165,7 +165,7 @@ export const clipRenderSpecs = (renderSpecs, width, height) => renderSpecs.map(r
   }
   decorateGeometryTriangleIds(geometry);
   return {
-    geometry,
+    ...renderSpec,
     clipZ,
   };
 });
