@@ -4610,10 +4610,6 @@ export async function compileVirtualScene(imageArrayBuffer) {
   }
   console.timeEnd('pointCloud');
 
-  console.time('boundingBox');
-  const boundingBox = getBoundingBoxFromPointCloud(pointCloudArrayBuffer, width, height);
-  console.timeEnd('boundingBox');
-
   // plane detection
   console.time('planeDetection');
   const depthFloats32Array = getDepthFloatsFromPointCloud(pointCloudArrayBuffer, width, height);
@@ -4720,12 +4716,6 @@ export async function compileVirtualScene(imageArrayBuffer) {
     floorNetCamera,
   );
 
-  // const floorPlaneLabelSpec = firstFloorPlaneIndex !== -1 ?
-  //   planeLabels[firstFloorPlaneIndex]
-  // :
-  //   null;
-  // const floorPlaneCenter = floorPlaneLabelSpec && localVector.fromArray(floorPlaneLabelSpec.center);
-  // const floorPlaneNormal = floorPlaneLabelSpec && localVector2.fromArray(floorPlaneLabelSpec.normal);
   const floorPlaneLocation = getFloorPlaneLocation({
     floorPlaneCenter: floorPlane.center,
     floorPlaneNormal: floorPlane.normal,
@@ -4745,6 +4735,27 @@ export async function compileVirtualScene(imageArrayBuffer) {
     floorPlaneLocation,
     floorPlaneJson
   );
+
+  console.time('boundingBox');
+  const boundingBox = getBoundingBoxFromPointCloud(
+    pointCloudArrayBuffer,
+    width,
+    height,
+  );
+  const floorInverseMatrix = new THREE.Matrix4()
+    .compose(
+      new THREE.Vector3(0, 0, 0),
+      new THREE.Quaternion().fromArray(floorPlaneLocation.quaternion)
+        .invert(),
+      new THREE.Vector3(1, 1, 1),
+    );
+  const floorBoundingBox = getBoundingBoxFromPointCloud(
+    pointCloudArrayBuffer,
+    width,
+    height,
+    floorInverseMatrix,
+  );
+  console.timeEnd('boundingBox');
 
   const {
     entranceExitLocations,
@@ -5147,6 +5158,7 @@ export async function compileVirtualScene(imageArrayBuffer) {
     scale,
     cameraJson,
     boundingBox,
+    floorBoundingBox,
     depthFieldHeaders,
     depthField: depthFieldArrayBuffer,
     planesJson,
