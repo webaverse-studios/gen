@@ -173,7 +173,7 @@ export const getDepthRenderSpecsMeshes = (renderSpecs, camera) => {
   const meshes = [];
 
   for (const renderSpec of renderSpecs) {
-    const {geometry, clipZ} = renderSpec;
+    const {geometry, matrixWorld, clipZ} = renderSpec;
     
     let vertexShader = depthVertexShader;
     let fragmentShader = depthFragmentShader;
@@ -220,15 +220,17 @@ export const getDepthRenderSpecsMeshes = (renderSpecs, camera) => {
     
     const depthMesh = new THREE.Mesh(geometry, material);
     depthMesh.name = 'depthMesh';
+    if (matrixWorld) {
+      depthMesh.matrixWorld.copy(matrixWorld);
+      depthMesh.matrix.copy(matrixWorld)
+        .decompose(depthMesh.position, depthMesh.quaternion, depthMesh.scale);
+    }
     depthMesh.frustumCulled = false;
     meshes.push(depthMesh);
   }
 
   return meshes;
 };
-
-//
-
 export const renderMeshesDepth = (meshes, width, height, camera) => {
   const canvas = document.createElement('canvas');
   canvas.width = width;
