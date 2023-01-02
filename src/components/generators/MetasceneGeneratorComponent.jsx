@@ -663,7 +663,8 @@ class MapIndexMaterial extends THREE.ShaderMaterial {
       `,
       fragmentShader: `\
         uniform sampler2D mapIndexMap;
-        uniform float lastPanelIndex;
+        // uniform float lastPanelIndex;
+        uniform vec2 resolution;
         uniform float newPanelIndex;
         uniform int mode;
         varying vec2 vUv;
@@ -674,8 +675,23 @@ class MapIndexMaterial extends THREE.ShaderMaterial {
           float oldDepth = oldMapIndex / 255.0;
 
           if (mode == ${MapIndexRenderer.MODE_KEEP}) { // keep mode
-            if (oldMapIndex == 0. || oldMapIndex == lastPanelIndex) { // keepable value
-            // if (oldMapIndex == 0.) {
+            // get the uv distance to the nearest edge
+            vec2 uvDistance;
+            uvDistance.x = min(vUv.x, 1.0 - vUv.x);
+            uvDistance.y = min(vUv.y, 1.0 - vUv.y);
+
+            vec2 pixelUvSize = 1.0 / resolution;
+
+            float panelIndexDelta = newPanelIndex - oldMapIndex;
+            if (
+              (
+                oldMapIndex == 0. || panelIndexDelta <= 2.
+              ) &&
+              (
+                uvDistance.x > pixelUvSize.x &&
+                uvDistance.y > pixelUvSize.y
+              )
+            ) { // keepable value
               gl_FragColor = vec4(0., 0., 0., 1.);
             } else { // non-keepable value
               gl_FragColor = vec4(1., 0., 0., 1.);
