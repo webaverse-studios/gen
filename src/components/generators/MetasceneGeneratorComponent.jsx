@@ -3,6 +3,7 @@ import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUti
 // import {OBB} from 'three/examples/jsm/math/OBB.js';
 import {useState, useRef, useEffect} from 'react';
 import alea from 'alea';
+import concaveman from 'concaveman';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 // import {Text} from 'troika-three-text';
 // import * as passes from '../../generators/ms-passes.js';
