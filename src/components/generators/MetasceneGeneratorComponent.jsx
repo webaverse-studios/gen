@@ -1251,7 +1251,7 @@ export class Metazine extends EventTarget {
     );
     const firstPanelSpec = candidateEntrancePanelSpecs.splice(firstPanelSpecIndex, 1)[0];
     firstPanelSpec.quaternion.fromArray(firstPanelSpec.floorPlaneLocation.quaternion)
-      .invert();
+      .invert(); // level the floor
     firstPanelSpec.updateMatrixWorld();
     this.renderPanelSpecs.push(firstPanelSpec);
     const candidateExitSpecs = firstPanelSpec.entranceExitLocations.map(eel => {
