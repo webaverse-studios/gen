@@ -706,6 +706,8 @@ class MapIndexMaterial extends THREE.ShaderMaterial {
         }
       `,
       // depthFunc: THREE.GreaterEqualDepth,
+      depthTest: false,
+      depthWrite: false,
       side: THREE.BackSide,
       // extensions: {
       //   fragDepth: true,
