@@ -1109,9 +1109,6 @@ class MetazineLoader {
       sceneChunkMesh.frustumCulled = false;
       transformScene.add(sceneChunkMesh);
       sceneChunkMesh.updateMatrixWorld();
-      // sceneChunkMesh.onBeforeRender = () => {
-      //   console.log('on before render');
-      // };
       panelSpec.sceneChunkMesh = sceneChunkMesh;
 
       return panelSpec;
@@ -1567,9 +1564,6 @@ class ChunkEdgeMesh extends THREE.Object3D {
     const height = Math.floor(size.z / floorNetResolution);
 
     // render the coverage map
-    // const meshes = getCoverageRenderSpecsMeshes([
-    //   panelSpec,
-    // ]);
     const panelSpecToMeshSpec = panelSpec => {
       const {geometry, matrixWorld} = panelSpec.sceneChunkMesh;
       const side = THREE.DoubleSide;
