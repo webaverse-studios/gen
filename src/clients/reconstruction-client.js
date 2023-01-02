@@ -257,7 +257,7 @@ export const renderMeshesDepth = (meshes, width, height, camera) => {
 
   // render
   // render to the canvas, for debugging
-  renderer.render(depthScene, camera);
+  // renderer.render(depthScene, camera);
 
   // real render to the render target
   renderer.setRenderTarget(depthRenderTarget);
