@@ -926,7 +926,11 @@ function isSetSelfIntersecting(candidateLocations) {
 }
 const entranceExitIntersects = (() => {
   const localVector = new THREE.Vector3();
+  // const localVector2 = new THREE.Vector3();
+  const localVector3 = new THREE.Vector3();
   const localQuaternion = new THREE.Quaternion();
+  const localQuaternion2 = new THREE.Quaternion();
+
   return (box1, box2) => {
     const box1Position = localVector.fromArray(box1.position);
     const box1Quaternion = localQuaternion.fromArray(box1.quaternion);
