@@ -1565,11 +1565,18 @@ class ChunkEdgeMesh extends THREE.Object3D {
 
     // render the coverage map
     const panelSpecToMeshSpec = panelSpec => {
-      const {geometry, matrixWorld} = panelSpec.sceneChunkMesh;
+      const {resolution, sceneChunkMesh} = panelSpec;
+      const {geometry, matrixWorld} = sceneChunkMesh;
+      const [
+        width,
+        height,
+      ] = resolution;
       const side = THREE.DoubleSide;
       return {
         geometry,
         matrixWorld,
+        width,
+        height,
         side,
       };
     };
