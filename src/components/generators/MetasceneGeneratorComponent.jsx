@@ -49,6 +49,9 @@ import {
 //   depthFragmentShader,
 // } from '../../utils/sg-shaders.js';
 import {
+  depthFloats2Canvas,
+} from '../../generators/sg-debug.js';
+import {
   makeRenderer,
   makeGltfLoader,
   makeDefaultCamera,
@@ -63,17 +66,15 @@ import {
   // ZineData,
   initCompressor,
 } from '../../zine/zine-format.js';
-import {
-  ZineRenderer,
-} from '../../zine/zine-renderer.js';
+// import {
+//   ZineRenderer,
+// } from '../../zine/zine-renderer.js';
 import {colors} from '../../zine/zine-colors.js';
 import {
-  // getMapIndexSpecsMeshes,
-  // renderMeshesMapIndexFull,
-  // flipUint8ArrayX,
-  // getDepthRenderSpecsMeshes,
-  getCoverageRenderSpecsMeshes,
-  renderMeshesCoverage,
+  // getCoverageRenderSpecsMeshes,
+  // renderMeshesCoverage,
+  getDepthRenderSpecsMeshes,
+  renderMeshesDepth,
 } from '../../clients/reconstruction-client.js';
 import {
   pushMeshes,
@@ -1421,19 +1422,8 @@ export class Metazine extends EventTarget {
 
 //
 
-const getOutlinePoints = srcCanvas => {
-  const {width, height} = srcCanvas;
-
-  const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext('2d');
-  ctx.drawImage(srcCanvas, 0, 0);
-
-  const getIndex = (x, y) => y * width + x;
-
-  const imageData = ctx.getImageData(0, 0, width, height);
-  const data = imageData.data;
+const getIndex = (x, y, width, height) => y * width + x;
+const getOutlinePoints = (depthFloat32Array, width, height, camera) => {
   const seenIndices = new Map();
   const queue = [
     [0, 0],
@@ -1441,7 +1431,9 @@ const getOutlinePoints = srcCanvas => {
   seenIndices.set(
     getIndex(
       queue[0][0],
-      queue[0][1]
+      queue[0][1],
+      width,
+      height
     ),
     true
   );
@@ -1451,25 +1443,33 @@ const getOutlinePoints = srcCanvas => {
     
     // XXX debug check
     {
-      const index = getIndex(x, y);
-      const r = data[index * 4];
-      if (r > 0) {
+      const index = getIndex(x, y, width, height);
+      const r = depthFloat32Array[index];
+      if (r !== 0) {
         console.warn('found filled pixel in queue', x, y);
         debugger;
       }
     }
 
-    let hasFilledNeighbor = false;
+    let zSum = 0;
+    let weightSum = 0;
     for (let dy = -1; dy <= 1; dy++) {
       for (let dx = -1; dx <= 1; dx++) {
         const ax = x + dx;
         const ay = y + dy;
         if (ax >= 0 && ax < width && ay >= 0 && ay < height) { // if in bounds
-          const index2 = getIndex(ax, ay);
-          const r2 = data[index2 * 4];
-          if (r2 > 0) {
-            hasFilledNeighbor = true;
-          } else {
+          const index2 = getIndex(ax, ay, width, height);
+          const r2 = depthFloat32Array[index2];
+          if (r2 !== 0) { // filled
+            const outlineDepth = depthFloat32Array[index2];
+            const z = camera.position.y - outlineDepth;
+
+            const d = Math.sqrt(dx*dx + dy*dy);
+            const weight = 1 / (d*d + 1);
+
+            zSum += z * weight;
+            weightSum += weight;
+          } else { // clear
             if (!seenIndices.has(index2)) {
               seenIndices.set(index2, true);
               queue.push([ax, ay]);
@@ -1478,8 +1478,10 @@ const getOutlinePoints = srcCanvas => {
         }
       }
     }
-    if (hasFilledNeighbor) {
-      outlinePoints.push([x, y]);
+    if (weightSum > 0) {
+      const outlinePoint = [x, y];
+      outlinePoint.z = zSum / weightSum;
+      outlinePoints.push(outlinePoint);
     }
   }
   return outlinePoints;
@@ -1564,32 +1566,53 @@ class ChunkEdgeMesh extends THREE.Object3D {
     const height = Math.floor(size.z / floorNetResolution);
 
     // render the coverage map
-    const meshes = getCoverageRenderSpecsMeshes([
+    // const meshes = getCoverageRenderSpecsMeshes([
+    //   panelSpec,
+    // ]);
+    const panelSpecToMeshSpec = panelSpec => {
+      const {geometry, matrixWorld} = panelSpec.sceneChunkMesh;
+      const side = THREE.DoubleSide;
+      return {
+        geometry,
+        matrixWorld,
+        side,
+      };
+    };
+    const meshSpecs = [
       panelSpec,
-    ]);
-    const coverageCanvas = renderMeshesCoverage(meshes, width, height, chunkEdgeCamera);
+    ].map(panelSpec => panelSpecToMeshSpec(panelSpec));
+    const meshes = getDepthRenderSpecsMeshes(meshSpecs, chunkEdgeCamera);
+    const depthFloat32Array = renderMeshesDepth(meshes, width, height, chunkEdgeCamera);
+    // const coverageCanvas = renderMeshesCoverage(meshes, width, height, chunkEdgeCamera);
+    const coverageCanvas = depthFloats2Canvas(depthFloat32Array, width, height, chunkEdgeCamera);
     coverageCanvas.style.cssText = `\
       background: blue;
     `;
     document.body.appendChild(coverageCanvas);
 
     // get outline points
-    const outlinePoints = getOutlinePoints(coverageCanvas);
-    console.log('got outline points', outlinePoints);
+    const outlinePoints = getOutlinePoints(depthFloat32Array, width, height, chunkEdgeCamera);
+    // console.log('got outline points', {
+    //   depthFloat32Array,
+    //   depthFloat32ArraySetSize: depthFloat32Array.filter(n => n !== 0),
+    //   outlinePoints,
+    // });
 
     // detect edges
     const edges = concaveman(outlinePoints, 5);
     // const edges = outlinePoints;
-    console.log('got edges', edges);
 
     // position cubes mesh
     const positions = new Float32Array(edges.length * 3);
     for (let i = 0; i < edges.length; i++) {
       const edge = edges[i];
       const [x, y] = edge;
+      const {z} = edge;
+
       const index = i * 3;
       positions[index + 0] = -x * floorNetResolution + centerFrontRight.x;
-      positions[index + 1] = 0;
+      positions[index + 1] = z;
+      // positions[index + 1] = 0;
       positions[index + 2] = y * floorNetResolution + centerBackLeft.z;
     }
     const positionCubesMesh = makePositionCubesMesh(positions);
