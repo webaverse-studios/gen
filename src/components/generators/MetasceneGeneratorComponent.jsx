@@ -1228,8 +1228,8 @@ export class Metazine extends EventTarget {
     console.timeEnd('loadPanels');
 
     const rng = alea('lol');
-    const getConditionPanelSpecIndex = (panelSpecs, condition) => {
-      const maxTries = 100;
+    // randomly choose a panel spec index that satisfies a condition
+    const getConditionPanelSpecIndex = (panelSpecs, condition, maxTries = 100) => {
       for (let i = 0; i < maxTries; i++) {
         const panelSpecIndex = Math.floor(rng() * panelSpecs.length);
         const panelSpec = panelSpecs[panelSpecIndex];
