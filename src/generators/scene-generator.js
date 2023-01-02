@@ -1030,11 +1030,12 @@ const sortLocations = (() => {
     }); */
 
     // filter for good candidate entrance exit locations
-    const meshCenter = localBox.set(
-      localVector.fromArray(boundingBox.min),
-      localVector2.fromArray(boundingBox.max)
-    ).getCenter(localVector);
-    const candidateEntranceExitLocations = candidateLocations.filter(candidateLocation => {
+    // const meshCenter = localBox.set(
+    //   localVector.fromArray(boundingBox.min),
+    //   localVector2.fromArray(boundingBox.max)
+    // ).getCenter(localVector);
+    /* const candidateEntranceExitLocations = candidateLocations.filter(candidateLocation => {
+      return true; // XXXX
       // check whether the entrance exit candidate location is facing the scene mesh bounding box center
       // (angle within Math.PI / 2)
       const forwardLookDirection = localVector2.set(0, 0, -1)
@@ -1043,15 +1044,54 @@ const sortLocations = (() => {
         .sub(localVector4.fromArray(candidateLocation.position))
         .normalize();
       const angle = forwardLookDirection.angleTo(centerLookDirection);
-      return angle < Math.PI / 2;
-    });
+      return angle <= Math.PI / 2;
+    }); */
+
+    const candidateLocationsCenter = (() => {
+      const acc = new THREE.Vector3();
+      for (let i = 0; i < candidateLocations.length; i++) {
+        const candidateLocation = candidateLocations[i];
+        acc.x += candidateLocation.position[0];
+        acc.y += candidateLocation.position[1];
+        acc.z += candidateLocation.position[2];
+        // acc.add(localVector.fromArray(candidateLocation.position));
+      }
+      return acc.divideScalar(candidateLocations.length);
+    })();
+    const less = center => (a, b) => {
+      if (a.x - center.x >= 0 && b.x - center.x < 0)
+          return true;
+      if (a.x - center.x < 0 && b.x - center.x >= 0)
+          return false;
+      if (a.x - center.x == 0 && b.x - center.x == 0) {
+          if (a.z - center.z >= 0 || b.z - center.z >= 0)
+              return a.z > b.z;
+          return b.z > a.z;
+      }
+
+      // compute the cross product of vectors (center -> a) x (center -> b)
+      const det = (a.x - center.x) * (b.z - center.z) - (b.x - center.x) * (a.z - center.z);
+      if (det < 0)
+          return true;
+      if (det > 0)
+          return false;
+
+      // points a and b are on the same line from the center
+      // check which point is closer to the center
+      const d1 = (a.x - center.x) * (a.x - center.x) + (a.z - center.z) * (a.z - center.z);
+      const d2 = (b.x - center.x) * (b.x - center.x) + (b.z - center.z) * (b.z - center.z);
+      return d1 > d2;
+    };
+
+    // sort the candidate locations by angle
+    candidateLocations.sort(less(candidateLocationsCenter));
 
     // entrances + exits
     const entranceExitLocations = [];
     if (cameraEntranceLocation) {
       entranceExitLocations.push(cameraEntranceLocation);
 
-      // find the furthest portal from the camera entrance
+      /* // find the furthest portal from the camera entrance
       let furthestPortal = null;
       let furthestPortalDistance = 0;
       for (let i = 0; i < candidateLocations.length; i++) {
@@ -1070,8 +1110,8 @@ const sortLocations = (() => {
 
         candidateEntranceExitLocations.splice(candidateEntranceExitLocations.indexOf(furthestPortal), 1);
         candidateLocations.splice(candidateLocations.indexOf(furthestPortal), 1);
-      }
-    } else {
+      } */
+    } /* else {
       // find the two furthest portals from each other
       let furthestPortal1 = null;
       let furthestPortal2 = null;
@@ -1100,7 +1140,7 @@ const sortLocations = (() => {
         candidateLocations.splice(candidateLocations.indexOf(furthestPortal1), 1);
         candidateLocations.splice(candidateLocations.indexOf(furthestPortal2), 1);
       }
-    }
+    } */
 
     // if there are portals left, try to find a few more that would make good entrances/exits
     {
@@ -1108,7 +1148,50 @@ const sortLocations = (() => {
       let largestSetSize = 0;
       let largestDistance = 0;
       let largestDistanceSet = [];
-      for (const candidateLocationSubset of subsets(candidateLocations)) {
+      for (let startCandidateIndex = 0; startCandidateIndex < candidateLocations.length; startCandidateIndex++) {
+        const startCandidateLocation = candidateLocations[startCandidateIndex];
+        // scan by step size 1/2..1/4
+        for (let stepFactor = 2; stepFactor <= 4; stepFactor++) {
+          const stepSize = Math.floor(candidateLocations.length / stepFactor);
+          const stepCandidateLocations = [];
+          for (let indexOffset = 0; indexOffset < candidateLocations.length; indexOffset += stepSize) {
+            const candidateIndex = (startCandidateIndex + indexOffset) % candidateLocations.length;
+            const candidateLocation = candidateLocations[candidateIndex];
+            if (
+              candidateLocation !== startCandidateLocation &&
+              !stepCandidateLocations.includes(candidateLocation)
+            ) {
+              stepCandidateLocations.push(candidateLocation);
+            }
+          }
+          const extraCandidateLocations = [
+            startCandidateLocation,
+            ...stepCandidateLocations,
+          ];
+          const allCandidateEntrances = [
+            ...fixedCandidateLocations,
+            ...extraCandidateLocations,
+          ];
+          if (allCandidateEntrances.length > largestSetSize) {
+            const hasIntersections = isSetSelfIntersecting(allCandidateEntrances);
+            if (!hasIntersections) {
+              const distanceSq = getSetDistanceSq(allCandidateEntrances);
+              if (distanceSq > largestDistance) {
+                largestDistance = distanceSq;
+                largestDistanceSet = extraCandidateLocations;
+              }
+            }
+          }
+        }
+      }
+      for (let i = 0; i < largestDistanceSet.length; i++) {
+        const candidateLocation = largestDistanceSet[i];
+        entranceExitLocations.push(candidateLocation);
+        const candidateLocationIndex = candidateLocations.indexOf(candidateLocation);
+        candidateLocations.splice(candidateLocationIndex, 1);
+      }
+
+      /* for (const candidateLocationSubset of subsets(candidateLocations)) {
         if (candidateLocationSubset.length > 0) {
           const allCandidateEntrances = [...fixedCandidateLocations, ...candidateLocationSubset];
 
@@ -1130,7 +1213,7 @@ const sortLocations = (() => {
         entranceExitLocations.push(candidateLocation);
         const candidateLocationIndex = candidateLocations.indexOf(candidateLocation);
         candidateLocations.splice(candidateLocationIndex, 1);
-      }
+      } */
     }
 
     // randomize remaining candidate locations
