@@ -284,7 +284,7 @@ export const renderMeshesDepth = (meshes, width, height, camera) => {
 
 //
 
-export const getCoverageRenderSpecsMeshes = (renderSpecs) => {
+/* export const getCoverageRenderSpecsMeshes = (renderSpecs) => {
   const meshes = [];
 
   for (const renderSpec of renderSpecs) {
@@ -336,7 +336,7 @@ export const renderMeshesCoverage = (meshes, width, height, camera) => {
   renderer.render(coverageScene, camera);
 
   return canvas;
-};
+}; */
 
 //
 
