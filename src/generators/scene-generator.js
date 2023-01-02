@@ -1027,17 +1027,15 @@ const sortLocations = (() => {
       localVector.fromArray(boundingBox.min),
       localVector2.fromArray(boundingBox.max)
     ).getCenter(localVector);
-    const forwardDirection = localVector.set(0, 0, -1)
-      .applyQuaternion(localQuaternion.fromArray(cameraEntranceLocation.quaternion));
     const candidateEntranceExitLocations = candidateLocations.filter(candidateLocation => {
       // check whether the entrance exit candidate location is facing the scene mesh bounding box center
       // (angle within Math.PI / 2)
-      const direction = localVector3.copy(meshCenter)
-        .sub(
-          localVector4.fromArray(candidateLocation.position)
-        )
+      const forwardLookDirection = localVector2.set(0, 0, -1)
+        .applyQuaternion(localQuaternion.fromArray(candidateLocation.quaternion));
+      const centerLookDirection = localVector3.copy(meshCenter)
+        .sub(localVector4.fromArray(candidateLocation.position))
         .normalize();
-      const angle = direction.angleTo(forwardDirection);
+      const angle = forwardLookDirection.angleTo(centerLookDirection);
       return angle < Math.PI / 2;
     });
 
