@@ -895,7 +895,7 @@ function shuffle(array, seed = '') {
   }
   return array;
 }
-function* subsets(array, offset = 0) {
+/* function* subsets(array, offset = 0) {
   while (offset < array.length) {
     let first = array[offset++];
     for (let subset of subsets(array, offset)) {
@@ -904,7 +904,7 @@ function* subsets(array, offset = 0) {
     }
   }
   yield [];
-}
+} */
 /* const allSubsets = inputArray => {
   const result = [];
   for (let subset of subsets(inputArray)) {
