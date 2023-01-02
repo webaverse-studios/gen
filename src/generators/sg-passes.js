@@ -1,16 +1,13 @@
 import * as THREE from 'three';
 import {
-  clipGeometryZ,
-  getGeometryClipZMask,
-  mergeOperator,
   clipRenderSpecs,
   getDepthRenderSpecsMeshes,
   renderMeshesDepth,
 } from '../clients/reconstruction-client.js';
-import {
-  depthVertexShader,
-  depthFragmentShader,
-} from '../utils/sg-shaders.js';
+// import {
+//   depthVertexShader,
+//   depthFragmentShader,
+// } from '../utils/sg-shaders.js';
 import {
   floorNetWorldSize,
   floorNetWorldDepth,
@@ -37,11 +34,11 @@ export function reconstructFloor({
 }) {
   // add clipZ attributes
   renderSpecs = clipRenderSpecs(renderSpecs);
-  const width = floorNetPixelSize;
-  const height = floorNetPixelSize;
   const meshes = getDepthRenderSpecsMeshes(renderSpecs, camera);
 
-  const floorNetDepthsRaw = renderMeshesDepth(meshes, width, height, camera);
+  const floorWidth = floorNetPixelSize;
+  const floorHeight = floorNetPixelSize;
+  const floorNetDepthsRaw = renderMeshesDepth(meshes, floorWidth, floorHeight, camera);
   const floorNetDepths = new Float32Array(floorNetDepthsRaw.length);
   // const offset = 0.1 / 2;
   const offset = 0;
@@ -58,8 +55,8 @@ export function reconstructFloor({
         for (let dx = -range; dx <= range; dx++) {
           const _planeHit = () => {
             localRay.origin.copy(camera.position);
-            localRay.origin.x = (x / width - 0.5) * floorNetWorldSize;
-            localRay.origin.z = (y / height - 0.5) * floorNetWorldSize;
+            localRay.origin.x = (x / floorWidth - 0.5) * floorNetWorldSize;
+            localRay.origin.z = (y / floorHeight - 0.5) * floorNetWorldSize;
             localRay.direction.set(0, 0, -1)
               .applyQuaternion(camera.quaternion);
             let point = localRay.intersectPlane(floorPlane, localVector);
@@ -74,12 +71,12 @@ export function reconstructFloor({
             }
           };
 
-          const x = i % width + dx;
-          const y = Math.floor(i / width) + dy;
-          const index = y * width + x;
+          const x = i % floorWidth + dx;
+          const y = Math.floor(i / floorWidth) + dy;
+          const index = y * floorWidth + x;
           const distance = Math.sqrt(dx*dx + dy*dy);
           const weight = 1 / (1 + distance);
-          if (x >= 0 && x < width && y >= 0 && y < height) {
+          if (x >= 0 && x < floorWidth && y >= 0 && y < floorHeight) {
             const value2 = floorNetDepthsRaw[index];
             if (value2 !== 0) { // real hit
               sum += value2 * weight;
@@ -99,7 +96,7 @@ export function reconstructFloor({
     }
     floorNetDepths[i] = value;
   }
-  const floorResolution = [width, height];
+  const floorResolution = [floorWidth, floorHeight];
   return {
     floorNetDepthsRaw,
     floorNetDepths,
