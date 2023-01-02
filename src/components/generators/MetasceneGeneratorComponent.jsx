@@ -89,6 +89,7 @@ const localVector = new THREE.Vector3();
 const localVector2 = new THREE.Vector3();
 const localQuaternion = new THREE.Quaternion();
 const localMatrix = new THREE.Matrix4();
+const localBox = new THREE.Box3();
 const localColor = new THREE.Color();
 
 const oneVector = new THREE.Vector3(1, 1, 1);
@@ -1056,6 +1057,8 @@ class MetazineLoader {
       ] = resolution;
       const cameraJson = layer1.getData('cameraJson');
       const camera = setPerspectiveCameraFromJson(new THREE.PerspectiveCamera(), cameraJson);
+      // const boundingBox = layer1.getData('boundingBox');
+      const floorBoundingBox = layer1.getData('floorBoundingBox');
       const depthFieldArrayBuffer = layer1.getData('depthField');
       const entranceExitLocations = layer1.getData('entranceExitLocations');
       const floorPlaneLocation = layer1.getData('floorPlaneLocation');
@@ -1063,6 +1066,8 @@ class MetazineLoader {
       // mesh
       const panelSpec = new THREE.Object3D();
       panelSpec.imageArrayBuffer = imageArrayBuffer;
+      // panelSpec.boundingBox = boundingBox;
+      panelSpec.floorBoundingBox = floorBoundingBox;
       // panelSpec.depthField = depthFieldArrayBuffer;
       panelSpec.entranceExitLocations = entranceExitLocations;
       panelSpec.floorPlaneLocation = floorPlaneLocation;
