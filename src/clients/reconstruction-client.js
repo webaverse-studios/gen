@@ -289,20 +289,8 @@ export const getCoverageRenderSpecsMeshes = (renderSpecs) => {
     const {geometry, matrixWorld} = sceneChunkMesh;
     
     const material = new THREE.ShaderMaterial({
-      uniforms: {
-        // cameraNear: {
-        //   value: camera.near,
-        //   needsUpdate: true,
-        // },
-        // cameraFar: {
-        //   value: camera.far,
-        //   needsUpdate: true,
-        // },
-        // isPerspective: {
-        //   value: +camera.isPerspectiveCamera,
-        //   needsUpdate: true,
-        // },
-      },
+      // uniforms: {
+      // },
       vertexShader: `\
         void main() {
           gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.);
@@ -336,36 +324,13 @@ export const renderMeshesCoverage = (meshes, width, height, camera) => {
   canvas.classList.add('coverageCanvas');
   const renderer = makeRenderer(canvas);
 
-  // let oldDepthFloatImageData;
-
   const coverageScene = new THREE.Scene();
   coverageScene.autoUpdate = false;
   for (const coverageMesh of meshes) {
     coverageScene.add(coverageMesh);
   }
 
-  // render
-  // render to the canvas, for debugging
-  // renderer.render(coverageScene, camera);
-
-  // real render to the render target
-  // renderer.setRenderTarget(depthRenderTarget);
-  // renderer.clear();
   renderer.render(coverageScene, camera);
-  // renderer.setRenderTarget(null);
-  
-  // // read back image data
-  // const imageData = {
-  //   data: new Uint8Array(depthRenderTarget.width * depthRenderTarget.height * 4),
-  //   width,
-  //   height,
-  // };
-  // renderer.readRenderTargetPixels(depthRenderTarget, 0, 0, depthRenderTarget.width, depthRenderTarget.height, imageData.data);
-
-  // // latch rendered depth data
-  // oldDepthFloatImageData = reinterpretFloatImageData(imageData); // viewZ
-
-  // return oldDepthFloatImageData;
 
   return canvas;
 };
