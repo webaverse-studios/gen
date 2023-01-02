@@ -1404,8 +1404,8 @@ const getSemanticPlanes = async (img, fov, newDepthFloatImageData, segmentMask) 
     })(),
     // portal planes
     (async () => {
-      let hadValue = false;
-      let newDepthFloatImageData2 = newDepthFloatImageData.map((n, index) => {
+      // let hadValue = false;
+      let newDepthFloatImageData2 /*= newDepthFloatImageData.map((n, index) => {
         const index2 = segmentMask[index];
         if (categoryClassIndices.portal.includes(index2)) {
           hadValue = true;
@@ -1414,9 +1414,9 @@ const getSemanticPlanes = async (img, fov, newDepthFloatImageData, segmentMask) 
           return Infinity;
         }
       });
-      if (!hadValue) { // if the mask was empty, use the original data
+      if (!hadValue) { // if the mask was empty, use the original data */
         newDepthFloatImageData2 = newDepthFloatImageData;
-      }
+      // }
 
       const {width, height} = img;
       const portalSpec = await getPlanesRgbd(
