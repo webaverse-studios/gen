@@ -1308,7 +1308,9 @@ export class Metazine extends EventTarget {
       );
     }
 
-    const maxNumPanels = 2;
+    const maxNumPanels = 5; // XXX extend this
+    // let numIntersects = 0;
+    // const maxNumIntersects = 5;
     while(
       this.renderPanelSpecs.length < maxNumPanels &&
       candidateExitSpecs.length > 0 &&
@@ -1362,8 +1364,21 @@ export class Metazine extends EventTarget {
           attachPanelIndex,
           newPanelIndex
         );
-        console.log('check intersect', intersect);
       }
+
+      /* if (intersect) {
+        if (++numIntersects < maxNumIntersects) {
+          console.log('intersect', {
+            intersect,
+            attachPanelIndex,
+            newPanelIndex,
+          });
+          continue;
+        } else {
+          debugger;
+        }
+      } */
+
       // if (intersect) {
         // draw the map index
         {
