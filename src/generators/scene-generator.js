@@ -935,14 +935,16 @@ const entranceExitIntersects = (() => {
     const box1Position = localVector.fromArray(box1.position);
     const box1Quaternion = localQuaternion.fromArray(box1.quaternion);
     // const box1Scale = localVector2.fromArray(box1.scale);
-    const scale = new THREE.Vector3(entranceExitWidth, entranceExitHeight, entranceExitDepth);
+    // const scale = new THREE.Vector3(entranceExitWidth, entranceExitHeight, entranceExitDepth);
+    const scale = new THREE.Vector3(1, 1, 1);
     const obb1 = new OBB().set(
       new THREE.Vector3(), // center
-      new THREE.Vector3().setScalar(0.5), // halfSize
+      new THREE.Vector3(entranceExitWidth, entranceExitHeight, entranceExitDepth)
+        .multiplyScalar(0.5), // halfSize
       new THREE.Matrix3(), // rotation
     ).applyMatrix4(new THREE.Matrix4().compose(
       box1Position.clone()
-        .sub(
+        .add(
           new THREE.Vector3(0, entranceExitHeight / 2, entranceExitDepth / 2)
             .applyQuaternion(box1Quaternion)
         ),
@@ -955,11 +957,12 @@ const entranceExitIntersects = (() => {
     // const box2Scale = localVector4.fromArray(box2.scale);
     const obb2 = new OBB().set(
       new THREE.Vector3(), // center
-      new THREE.Vector3().setScalar(0.5), // halfSize
+      new THREE.Vector3(entranceExitWidth, entranceExitHeight, entranceExitDepth)
+        .multiplyScalar(0.5), // halfSize
       new THREE.Matrix3(), // rotation
     ).applyMatrix4(new THREE.Matrix4().compose(
       box2Position.clone()
-        .sub(
+        .add(
           new THREE.Vector3(0, entranceExitHeight / 2, entranceExitDepth / 2)
             .applyQuaternion(box2Quaternion)
         ),
