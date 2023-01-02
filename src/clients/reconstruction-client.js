@@ -72,7 +72,13 @@ export const skyboxScaleFactor = 5;
 
 //
 
-export function getGeometryClipZMask(geometry, width, height, depthFloats32Array, clipDistance = 0.2) {
+export function getGeometryClipZMask(
+  geometry,
+  width,
+  height,
+  depthFloats32Array,
+  clipDistance = 0.2,
+) {
   // XXX do not clip floor-type segment classes/categories,
   // XXX because floors should be solid for physics and a reliable ground truth for outmeshing
 
@@ -152,8 +158,8 @@ export function clipGeometryZ(geometry, width, height, depthFloats32Array) {
 //
 
 // add clipping attributes to geometry, for detecting clipped regions in a shader
-export const clipRenderSpecs = (renderSpecs, width, height) => renderSpecs.map(renderSpec => {
-  let {geometry, clipZ} = renderSpec;
+export const clipRenderSpecs = (renderSpecs) => renderSpecs.map(renderSpec => {
+  let {geometry, width, height, clipZ} = renderSpec;
   if (clipZ) {
     // geometry = geometry.clone();
     const depthFloats32Array = getDepthFloatsFromIndexedGeometry(geometry);
