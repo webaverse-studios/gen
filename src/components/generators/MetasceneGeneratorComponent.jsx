@@ -1778,7 +1778,7 @@ export class MetazineRenderer extends EventTarget {
       mapIndex,
       mapIndexResolution,
     });
-    mapIndexMesh.position.y = -5;
+    mapIndexMesh.position.y = -10;
     this.scene.add(mapIndexMesh);
     mapIndexMesh.updateMatrixWorld();
 
