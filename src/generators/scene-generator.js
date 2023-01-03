@@ -116,7 +116,9 @@ import {
 
 //
 
-import {ImageAiClient} from '../clients/image-client.js';
+import {
+  ImageAiClient,
+} from '../clients/image-client.js';
 import {
   getDepthField,
   // getPointCloud,
