@@ -1106,7 +1106,7 @@ class MetazineLoader {
       ] = resolution;
       const cameraJson = layer1.getData('cameraJson');
       const camera = setPerspectiveCameraFromJson(new THREE.PerspectiveCamera(), cameraJson);
-      // const boundingBox = layer1.getData('boundingBox');
+      const boundingBox = layer1.getData('boundingBox');
       const floorBoundingBox = layer1.getData('floorBoundingBox');
       const depthFieldArrayBuffer = layer1.getData('depthField');
       const entranceExitLocations = layer1.getData('entranceExitLocations');
@@ -1117,7 +1117,7 @@ class MetazineLoader {
       panelSpec.name = fileName;
       panelSpec.imageArrayBuffer = imageArrayBuffer;
       panelSpec.resolution = resolution;
-      // panelSpec.boundingBox = boundingBox;
+      panelSpec.boundingBox = boundingBox;
       panelSpec.floorBoundingBox = floorBoundingBox;
       // panelSpec.depthField = depthFieldArrayBuffer;
       panelSpec.entranceExitLocations = entranceExitLocations;
