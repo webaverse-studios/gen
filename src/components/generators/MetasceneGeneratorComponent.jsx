@@ -1061,7 +1061,8 @@ class MetazineLoader {
     }
   }
   async #loadZineFileAsync(zineFile, index) {
-    console.log(`loading [${index + 1}/${this.total}] ${zineFile.name}...`);
+    const fileName = zineFile.name;
+    console.log(`loading [${index + 1}/${this.total}] ${fileName}...`);
 
     // load zine file data
     const zinefileArrayBuffer = await zineFile.arrayBuffer();
