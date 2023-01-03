@@ -126,12 +126,12 @@ const orbitControlsDistance = 10;
 
 //
 
-const loadFileUint8Array = async fileName => {
+/* const loadFileUint8Array = async fileName => {
   const res = await fetch(fileName);
   const arrayBuffer = await res.arrayBuffer();
   const uint8Array = new Uint8Array(arrayBuffer);
   return uint8Array;
-};
+}; */
 const blockEvent = e => {
   e.preventDefault();
   e.stopPropagation();
