@@ -105,6 +105,7 @@ const localMatrix = new THREE.Matrix4();
 const localColor = new THREE.Color();
 
 const oneVector = new THREE.Vector3(1, 1, 1);
+const upVector = new THREE.Vector3(0, 1, 0);
 const y180Quaternion = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI);
 const y180Matrix = new THREE.Matrix4().makeRotationY(Math.PI);
 
