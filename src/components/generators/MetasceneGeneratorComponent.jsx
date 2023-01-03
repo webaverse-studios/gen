@@ -1404,19 +1404,20 @@ export class Metazine extends EventTarget {
       const candidateEntranceLocations = entrancePanelSpec.entranceExitLocations.slice();
       // choose the location which has the closest angle to the exit location
       const exitDirection = localVector.set(0, 0, -1)
-        .applyQuaternion(localQuaternion.fromArray(exitLocation.quaternion));
+        .applyQuaternion(y180Quaternion)
+        .applyQuaternion(localQuaternion.fromArray(exitLocation.quaternion))
       candidateEntranceLocations.sort((a, b) => {
         const aDirection = localVector2.set(0, 0, -1)
           .applyQuaternion(localQuaternion.fromArray(a.quaternion));
         let aDotExitDirection = aDirection.dot(exitDirection);
-        aDotExitDirection = Math.abs(aDotExitDirection); // treat forward/backward the same
+        // aDotExitDirection = Math.abs(aDotExitDirection); // treat forward/backward the same
 
         const bDirection = localVector3.set(0, 0, -1)
           .applyQuaternion(localQuaternion.fromArray(b.quaternion));
         let bDotExitDirection = bDirection.dot(exitDirection);
-        bDotExitDirection = Math.abs(bDotExitDirection); // treat forward/backward the same
+        // bDotExitDirection = Math.abs(bDotExitDirection); // treat forward/backward the same
         
-        return aDotExitDirection - bDotExitDirection; // sort by smallest angle delta
+        return bDotExitDirection - aDotExitDirection; // sort by largest dot product
       });
       const entranceLocationIndex = 0;
       const entranceLocation = candidateEntranceLocations[entranceLocationIndex];
