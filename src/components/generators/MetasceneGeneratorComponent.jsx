@@ -1853,6 +1853,7 @@ export class MetazineRenderer extends EventTarget {
     controls.minDistance = 1;
     controls.maxDistance = 100;
     controls.target.set(0, 0, -orbitControlsDistance);
+    controls.locked = false;
     controls.update();
     this.controls = controls;
 
@@ -2048,7 +2049,7 @@ export class MetazineRenderer extends EventTarget {
   }
   render() {
     // update
-    this.controls.update();
+    !this.controls.locked && this.controls.update();
 
     this.storyTargetMesh.position.copy(this.controls.target);
     this.storyTargetMesh.updateMatrixWorld();
@@ -2143,6 +2144,12 @@ export class MetazineRenderer extends EventTarget {
 
       // set controls
       this.controls.target.copy(worldCenter);
+      this.controls.addEventListener('change', e => {
+        if (this.controls.locked) {
+          this.controls.locked = false;
+          this.controls.update();
+        }
+      });
 
       // set underfloor
       const underfloorPosition = worldCenter.clone();
@@ -2151,6 +2158,24 @@ export class MetazineRenderer extends EventTarget {
       const underfloorScale = floorWorldScale;
       this.underfloorMesh.setTransform(underfloorPosition, underfloorQuaternion, underfloorScale);
       this.underfloorMesh.updateMatrixWorld();
+    }
+  }
+  snapCameraToPanelSpec() {
+    if (this.selectedPanelSpec) {
+      this.camera.copy(this.selectedPanelSpec.camera)
+      this.camera.matrix.premultiply(this.selectedPanelSpec.matrixWorld)
+        .decompose(this.camera.position, this.camera.quaternion, this.camera.scale);
+      this.camera.updateMatrixWorld();
+
+      this.controls.target.copy(this.camera.position)
+        .add(
+          new THREE.Vector3(0, 0, -orbitControlsDistance)
+            .applyQuaternion(this.camera.quaternion)
+        );
+      // this.controls.update();
+      this.controls.locked = true;
+    } else {
+      console.warn('no panel spec selected');
     }
   }
   snapshotMap({
@@ -2308,6 +2333,10 @@ const Metazine3DCanvas = ({
           }
           case 'd': {
             _direction(1, 0);
+            break;
+          }
+          case 'g': {
+            renderer.snapCameraToPanelSpec();
             break;
           }
           case 'm': {
