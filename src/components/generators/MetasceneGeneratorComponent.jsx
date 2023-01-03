@@ -1155,77 +1155,122 @@ class MetazineLoader {
 
 //
 
-function connect({
-  exitLocation, // targetZineRenderer.metadata.entranceExitLocations[entranceIndex];
-  entranceLocation, // this.metadata.entranceExitLocations[exitIndex];
-  exitParentMatrixWorld, // this.transformScene.matrixWorld
-  entranceParentMatrixWorld, // targetZineRenderer.transformScene.matrixWorld
-  target, // targetZineRenderer.scene
-}) {
-  // const exitLocation = this.metadata.entranceExitLocations[exitIndex];
-  const exitMatrix = new THREE.Matrix4().compose(
-    new THREE.Vector3().fromArray(exitLocation.position),
-    new THREE.Quaternion().fromArray(exitLocation.quaternion),
-    oneVector
-  );
-  const exitMatrixWorld = exitMatrix.clone()
-    .premultiply(exitParentMatrixWorld);
-  exitMatrixWorld.decompose(
-    localVector,
-    localQuaternion,
-    localVector2
-  );
-  exitMatrixWorld.compose(
-    localVector,
-    localQuaternion,
-    oneVector
-  );
+const connect = (() => {
+  const localVector = new THREE.Vector3();
+  const localVector2 = new THREE.Vector3();
+  const localQuaternion = new THREE.Quaternion();
+  return ({
+    exitLocation, // targetZineRenderer.metadata.entranceExitLocations[entranceIndex];
+    entranceLocation, // this.metadata.entranceExitLocations[exitIndex];
+    exitParentMatrixWorld, // this.transformScene.matrixWorld
+    entranceParentMatrixWorld, // targetZineRenderer.transformScene.matrixWorld
+    target, // targetZineRenderer.scene
+  }) => {
+    const exitMatrixWorld = new THREE.Matrix4().compose(
+      localVector.fromArray(exitLocation.position),
+      localQuaternion.fromArray(exitLocation.quaternion),
+      oneVector
+    )
+      .premultiply(exitParentMatrixWorld)
+      .decompose(
+        localVector,
+        localQuaternion,
+        localVector2
+      ).compose(
+        localVector,
+        localQuaternion,
+        oneVector
+      );
 
-  // const entranceLocation = targetZineRenderer.metadata.entranceExitLocations[entranceIndex];
-  const entranceMatrix = new THREE.Matrix4().compose(
-    localVector.fromArray(entranceLocation.position),
-    localQuaternion.fromArray(entranceLocation.quaternion),
-    oneVector
-  );
-  const entranceMatrixWorld = entranceMatrix.clone()
-    .premultiply(entranceParentMatrixWorld);
-  entranceMatrixWorld.decompose(
+    const entranceMatrixWorld = new THREE.Matrix4().compose(
+      localVector.fromArray(entranceLocation.position),
+      localQuaternion.fromArray(entranceLocation.quaternion)
+        .multiply(y180Quaternion),
+      oneVector
+    )
+      .premultiply(entranceParentMatrixWorld)
+      .decompose(
+        localVector,
+        localQuaternion,
+        localVector2
+      ).compose(
+        localVector,
+        localQuaternion,
+        oneVector
+      );
+    const entranceMatrixWorldInverse = entranceMatrixWorld.clone().invert();
+
+    // const matrixWorld = exitMatrixWorld;
+    const matrixWorld = entranceMatrixWorldInverse.clone()
+      .premultiply(exitMatrixWorld);
+
+    // target.matrixWorld.copy(matrixWorld);
+    target.matrix.copy(matrixWorld)
+      .decompose(
+        target.position,
+        target.quaternion,
+        target.scale
+      );
+    target.updateMatrixWorld();
+    console.log('target parent', target.parent);
+
+
+    /* // const exitLocation = this.metadata.entranceExitLocations[exitIndex];
+    const exitMatrix = new THREE.Matrix4().compose(
+      new THREE.Vector3().fromArray(exitLocation.position),
+      new THREE.Quaternion().fromArray(exitLocation.quaternion),
+      oneVector
+    );
+    const exitMatrixWorld = exitMatrix.clone()
+      .premultiply(exitParentMatrixWorld);
+    exitMatrixWorld.decompose(
       localVector,
       localQuaternion,
       localVector2
     );
-  entranceMatrixWorld.compose(
-    localVector,
-    localQuaternion,
-    oneVector
-  );
-  const entranceMatrixWorldInverse = entranceMatrixWorld.clone()
-    .invert();
-
-  // undo the target entrance transform
-  // then, apply the exit transform
-  const transformMatrix = new THREE.Matrix4()
-    .copy(entranceMatrixWorldInverse)
-    .premultiply(y180Matrix)
-    .premultiply(exitMatrixWorld)
-  target.matrix
-    .premultiply(transformMatrix)
-    .decompose(
-      target.position,
-      target.quaternion,
-      target.scale
+    exitMatrixWorld.compose(
+      localVector,
+      localQuaternion,
+      oneVector
     );
-  target.updateMatrixWorld();
 
-  // targetZineRenderer.camera.matrix
-  //   .premultiply(transformMatrix)
-  //   .decompose(
-  //     targetZineRenderer.camera.position,
-  //     targetZineRenderer.camera.quaternion,
-  //     targetZineRenderer.camera.scale
-  //   );
-  // targetZineRenderer.camera.updateMatrixWorld();
-}
+    // const entranceLocation = targetZineRenderer.metadata.entranceExitLocations[entranceIndex];
+    const entranceMatrix = new THREE.Matrix4().compose(
+      localVector.fromArray(entranceLocation.position),
+      localQuaternion.fromArray(entranceLocation.quaternion),
+      oneVector
+    );
+    const entranceMatrixWorld = entranceMatrix.clone()
+      .premultiply(entranceParentMatrixWorld);
+    entranceMatrixWorld.decompose(
+        localVector,
+        localQuaternion,
+        localVector2
+      );
+    entranceMatrixWorld.compose(
+      localVector,
+      localQuaternion,
+      oneVector
+    );
+    const entranceMatrixWorldInverse = entranceMatrixWorld.clone()
+      .invert();
+
+    // undo the target entrance transform
+    // then, apply the exit transform
+    const transformMatrix = new THREE.Matrix4()
+      .copy(entranceMatrixWorldInverse)
+      .premultiply(y180Matrix)
+      .premultiply(exitMatrixWorld)
+    target.matrix
+      .premultiply(transformMatrix)
+      .decompose(
+        target.position,
+        target.quaternion,
+        target.scale
+      );
+    target.updateMatrixWorld(); */
+  }
+})();
 export class Metazine extends EventTarget {
   constructor() {
     super();
@@ -1311,21 +1356,44 @@ export class Metazine extends EventTarget {
       );
     }
 
-    const maxNumPanels = 5; // XXX extend this
-    // let numIntersects = 0;
-    // const maxNumIntersects = 5;
+    const maxNumPanels = 16; // XXX extend this
+    let numIntersects = 0;
+    const maxNumIntersects = 100;
     while(
       this.renderPanelSpecs.length < maxNumPanels &&
       candidateExitSpecs.length > 0 &&
       candidateEntrancePanelSpecs.length > 0
     ) {
       // exit location
-      const exitSpecIndex = Math.floor(rng() * candidateExitSpecs.length);
-      const exitSpec = candidateExitSpecs[exitSpecIndex];
+      const outerExitSpecs = candidateExitSpecs.map(exitSpec => {
+        const {panelSpec, entranceExitLocation} = exitSpec;
+        localMatrix.compose(
+          localVector.fromArray(entranceExitLocation.position),
+          localQuaternion.fromArray(entranceExitLocation.quaternion),
+          oneVector
+        ).premultiply(panelSpec.transformScene.matrixWorld)
+        .decompose(
+          localVector,
+          localQuaternion,
+          localVector2
+        );
+        const outerExitSpec = [
+          localVector.x,
+          localVector.z,
+        ];
+        outerExitSpec.exitSpec = exitSpec;
+        return outerExitSpec;
+      });
+      const outerExitSpecsConcave = concaveman(outerExitSpecs, 3)
+        .map(o => o.exitSpec);
+      console.log('got outer specs concave', outerExitSpecsConcave);
+      const outerExitSpecIndex = Math.floor(rng() * outerExitSpecsConcave.length);
+      const exitSpec = outerExitSpecsConcave[outerExitSpecIndex];
       const {
         panelSpec: exitPanelSpec,
         entranceExitLocation: exitLocation,
       } = exitSpec;
+      const exitSpecIndex = candidateExitSpecs.indexOf(exitSpec);
 
       // entrance location
       const entrancePanelSpecIndex = getConditionPanelSpecIndex(
@@ -1334,7 +1402,23 @@ export class Metazine extends EventTarget {
       );
       const entrancePanelSpec = candidateEntrancePanelSpecs[entrancePanelSpecIndex];
       const candidateEntranceLocations = entrancePanelSpec.entranceExitLocations.slice();
-      const entranceLocationIndex = Math.floor(rng() * candidateEntranceLocations.length);
+      // choose the location which has the closest angle to the exit location
+      const exitDirection = localVector.set(0, 0, -1)
+        .applyQuaternion(localQuaternion.fromArray(exitLocation.quaternion));
+      candidateEntranceLocations.sort((a, b) => {
+        const aDirection = localVector2.set(0, 0, -1)
+          .applyQuaternion(localQuaternion.fromArray(a.quaternion));
+        let aDotExitDirection = aDirection.dot(exitDirection);
+        aDotExitDirection = Math.abs(aDotExitDirection); // treat forward/backward the same
+
+        const bDirection = localVector3.set(0, 0, -1)
+          .applyQuaternion(localQuaternion.fromArray(b.quaternion));
+        let bDotExitDirection = bDirection.dot(exitDirection);
+        bDotExitDirection = Math.abs(bDotExitDirection); // treat forward/backward the same
+        
+        return aDotExitDirection - bDotExitDirection; // sort by smallest angle delta
+      });
+      const entranceLocationIndex = 0;
       const entranceLocation = candidateEntranceLocations[entranceLocationIndex];
 
       // latch fixed exit location
@@ -1369,7 +1453,14 @@ export class Metazine extends EventTarget {
         );
       }
 
-      /* if (intersect) {
+      if (intersect) {
+        console.log('intersect');
+      } else {
+        console.log('no intersect');
+      }
+
+      intersect = false; // XXX hack
+      if (intersect) {
         if (++numIntersects < maxNumIntersects) {
           console.log('intersect', {
             intersect,
@@ -1378,11 +1469,10 @@ export class Metazine extends EventTarget {
           });
           continue;
         } else {
+          console.warn('too many intersects');
           debugger;
         }
-      } */
-
-      // if (intersect) {
+      } else {
         // draw the map index
         {
           mapIndexRenderer.draw(
@@ -1411,11 +1501,7 @@ export class Metazine extends EventTarget {
           };
         });
         candidateExitSpecs.push(...newCandidateExitSpecs);
-      // } else {
-      //   console.warn('connection failed due to intersect; need to try again!');
-      //   // debugger;
-      //   continue;
-      // }
+      }
     }
     
     this.mapIndex = mapIndexRenderer.getMapIndex();
