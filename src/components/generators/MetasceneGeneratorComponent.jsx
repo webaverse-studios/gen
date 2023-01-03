@@ -1124,6 +1124,7 @@ class MetazineLoader {
       panelSpec.name = fileName;
       panelSpec.imageArrayBuffer = imageArrayBuffer;
       panelSpec.resolution = resolution;
+      panelSpec.camera = camera;
       panelSpec.boundingBox = boundingBox;
       panelSpec.floorBoundingBox = floorBoundingBox;
       // panelSpec.depthField = depthFieldArrayBuffer;
