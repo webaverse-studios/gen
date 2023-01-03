@@ -1803,7 +1803,8 @@ export class MetazineRenderer extends EventTarget {
     const controls = new OrbitControls(this.camera, canvas);
     controls.minDistance = 1;
     controls.maxDistance = 100;
-    controls.target.set(0, 0, -3);
+    controls.target.set(0, 0, -orbitControlsDistance);
+    controls.update();
     this.controls = controls;
 
     // mouse
