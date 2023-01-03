@@ -1778,6 +1778,47 @@ class ChunkEdgeMesh extends THREE.Object3D {
 
 //
 
+class UnderfloorMesh extends THREE.Object3D {
+  constructor() {
+    super();
+
+    const floorTargetMesh = new FloorTargetMesh();
+    this.add(floorTargetMesh);
+    this.floorTargetMesh = floorTargetMesh;
+
+    const flashMesh = new FlashMesh();
+    this.add(flashMesh);
+    this.flashMesh = flashMesh;
+  }
+  setTransform(position, quaternion, scale) {
+    [
+      this.floorTargetMesh,
+      this.flashMesh,
+    ].forEach(mesh => {
+      mesh.position.copy(position);
+      mesh.quaternion.copy(quaternion);
+      // mesh.scale.copy(scale);
+      mesh.updateMatrixWorld();
+
+      mesh.material.uniforms.scale.value.copy(scale);
+      mesh.material.uniforms.scale.needsUpdate = true;
+    });
+  }
+  update() {
+    const now = performance.now();
+
+    [
+      this.floorTargetMesh,
+      this.flashMesh,
+    ].forEach(mesh => {
+      mesh.material.uniforms.uTime.value = now / 1000;
+      mesh.material.uniforms.uTime.needsUpdate = true;
+    });
+  }
+}
+
+//
+
 export class MetazineRenderer extends EventTarget {
   constructor(canvas, metazine) {
     super();
