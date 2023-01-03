@@ -1939,6 +1939,14 @@ export class MetazineRenderer extends EventTarget {
     this.scene.add(chunkEdgeMesh);
     chunkEdgeMesh.updateMatrixWorld();
 
+    // underfloor mesh
+    const underfloorMesh = new UnderfloorMesh();
+    underfloorMesh.visible = false;
+    this.scene.add(underfloorMesh);
+    underfloorMesh.updateMatrixWorld();
+    this.underfloorMesh = underfloorMesh;
+
+    // story target mesh
     const storyTargetMesh = new StoryTargetMesh();
     storyTargetMesh.visible = true;
     storyTargetMesh.frustumCulled = false;
@@ -2044,6 +2052,8 @@ export class MetazineRenderer extends EventTarget {
     this.storyTargetMesh.position.copy(this.controls.target);
     this.storyTargetMesh.updateMatrixWorld();
 
+    this.underfloorMesh.update();
+
     // render
     this.renderer.render(this.scene, this.camera);
   }
@@ -2067,10 +2077,12 @@ export class MetazineRenderer extends EventTarget {
     // console.log('select panel spec', panelSpec);
 
     this.selectedPanelSpec = panelSpec;
+    this.underfloorMesh.visible = panelSpec !== null;
     
     if (panelSpec) {
       const backOffsetVector = new THREE.Vector3(0, 1, 1);
 
+      // bounding box
       const boundingBox = new THREE.Box3(
         new THREE.Vector3().fromArray(panelSpec.boundingBox.min),
         new THREE.Vector3().fromArray(panelSpec.boundingBox.max)
@@ -2079,6 +2091,20 @@ export class MetazineRenderer extends EventTarget {
       const worldCenter = center.clone()
         .applyMatrix4(panelSpec.transformScene.matrixWorld);
 
+      // floor bounding box
+      const floorBoundingBox = new THREE.Box3(
+        new THREE.Vector3().fromArray(panelSpec.floorBoundingBox.min),
+        new THREE.Vector3().fromArray(panelSpec.floorBoundingBox.max)
+      );
+      const floorWorldPosition = new THREE.Vector3();
+      const floorWorldQuaternion = new THREE.Quaternion();
+      const floorWorldScale = floorBoundingBox.getSize(new THREE.Vector3());
+      new THREE.Matrix4()
+        .compose(floorWorldPosition, floorWorldQuaternion, floorWorldScale)
+        .premultiply(panelSpec.transformScene.matrixWorld)
+        .decompose(floorWorldPosition, floorWorldQuaternion, floorWorldScale);
+
+      // panel spec transform
       const transformPosition = new THREE.Vector3();
       const transformQuaternion = new THREE.Quaternion();
       const transformScale = new THREE.Vector3();
@@ -2095,6 +2121,7 @@ export class MetazineRenderer extends EventTarget {
       const targetCameraDistance = this.controls.target
         .distanceTo(this.camera.position);
 
+      // set camera
       this.camera.position.copy(worldCenter);
       this.camera.quaternion.copy(transformQuaternion);
       this.camera.position
@@ -2113,7 +2140,16 @@ export class MetazineRenderer extends EventTarget {
       );
       this.camera.updateMatrixWorld();
 
+      // set controls
       this.controls.target.copy(worldCenter);
+
+      // set underfloor
+      const underfloorPosition = worldCenter.clone();
+      underfloorPosition.y -= 10;
+      const underfloorQuaternion = transformQuaternionFlat;
+      const underfloorScale = floorWorldScale;
+      this.underfloorMesh.setTransform(underfloorPosition, underfloorQuaternion, underfloorScale);
+      this.underfloorMesh.updateMatrixWorld();
     }
   }
   snapshotMap({
@@ -2194,6 +2230,7 @@ const Metazine3DCanvas = ({
       const renderer = new MetazineRenderer(canvas, metazine);
 
       const _direction = (x, z) => {
+        // get candidate panel specs
         const selectablePanelSpecs = renderer.metazine.renderPanelSpecs
           .filter(panelSpec => panelSpec !== renderer.selectedPanelSpec);
         const panelSpecCenters = selectablePanelSpecs
@@ -2212,18 +2249,16 @@ const Metazine3DCanvas = ({
             };
           });
 
-        // XXX this should be the target position floor
-        // XXX can be marked with a target rect
+        // target position
         const targetPositionFloor = renderer.controls.target.clone();
         targetPositionFloor.y = 0;
+        // target direction
         const cameraDirection = new THREE.Vector3(x, 0, z)
           .applyQuaternion(renderer.camera.quaternion);
         cameraDirection.y = 0;
         cameraDirection.normalize();
 
-        // console.log('camera direction', cameraDirection.toArray());
-
-        // check for panelSpecCenters that are within Math.PI / 2 of cameraDirection
+        // find best candidate
         const getAngle = panelSpecCenter => {
           return panelSpecCenter.center.clone()
             .sub(targetPositionFloor)
@@ -2249,15 +2284,11 @@ const Metazine3DCanvas = ({
             const bAngle = getAngle(b);
             return aAngle - bAngle;
           });
-        // // find the closest one
-        // panelSpecCentersSweep.sort((a, b) => {
-        //   return a.center.distanceTo(targetPositionFloor) - b.center.distanceTo(targetPositionFloor);
-        // });
         if (panelSpecCentersSweep.length > 0) {
           const closestPanelSpec = panelSpecCentersSweep[0].panelSpec;
           renderer.selectPanelSpec(closestPanelSpec);
-        } else {
-          renderer.selectPanelSpec(null);
+        // } else {
+          // renderer.selectPanelSpec(null);
         }
       };
       const keydown = async e => {
