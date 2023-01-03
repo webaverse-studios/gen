@@ -122,6 +122,7 @@ const panelSpecGeometrySize = 256;
 const panelSpecTextureSize = 256;
 const metazineAtlasTextureSize = 4096;
 const metazineAtlasTextureRowSize = Math.floor(metazineAtlasTextureSize / panelSpecTextureSize);
+const orbitControlsDistance = 10;
 
 //
 
