@@ -1380,7 +1380,7 @@ export class Metazine extends EventTarget {
       );
     }
 
-    const maxNumPanels = 16; // XXX extend this
+    const maxNumPanels = 32; // XXX extend this
     let numIntersects = 0;
     const maxNumIntersects = 100;
     while(
