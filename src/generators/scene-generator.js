@@ -26,6 +26,7 @@ import {
 import {
   getDepthFloat32ArrayViewPositionPx,
   bilinearInterpolate,
+  bilinearInterpolateChecked,
 } from '../zine/zine-geometry-utils.js';
 import {
   panelSize,
@@ -636,15 +637,21 @@ const getFloorHit = (() => {
       .add(localVector2.set(-floorNetWorldSize / 2, 0, -floorNetWorldSize / 2));
     const px = (targetPosition.x - floorCornerBasePosition.x) / floorNetWorldSize;
     const pz = (targetPosition.z - floorCornerBasePosition.z) / floorNetWorldSize;
-    targetPosition.y = bilinearInterpolate(
-      depthFloatsRaw,
-      floorNetPixelSize,
-      floorNetPixelSize,
-      px,
-      pz,
-    );
+    const ix = Math.floor(px * floorNetPixelSize);
+    const iz = Math.floor(pz * floorNetPixelSize);
+    const index = iz * floorNetPixelSize + ix;
+    targetPosition.y = depthFloatsRaw[index];
 
-    if (targetPosition.y > -floorNetWorldDepth * 0.4) { // mesh hit
+    const checkFn = y => y > -floorNetWorldDepth * 0.49;
+    if (checkFn(targetPosition.y)) { // mesh hit
+      targetPosition.y = bilinearInterpolateChecked(
+        depthFloatsRaw,
+        floorNetPixelSize,
+        floorNetPixelSize,
+        px,
+        pz,
+        checkFn
+      );
       return targetPosition;
     } else {
       return null;
@@ -671,11 +678,11 @@ const getRangeHit = (() => {
       cameraScanStep = floorNetResolution,
     } = {},
   ) => {
-    const radius = Math.max(size.x, size.z) / 2;
+    // const radius = Math.max(size.x, size.z) / 2;
     for (let dx = -size.x / 2; dx <= size.x / 2; dx += cameraScanStep) {
       for (let dz = -size.z / 2; dz <= size.z / 2; dz += cameraScanStep) {
-        const distance = Math.sqrt(dx * dx + dz * dz);
-        if (distance < radius) { // if we're inside the range circle
+        // const distance = Math.sqrt(dx * dx + dz * dz);
+        // if (distance < radius) { // if we're inside the range circle
           const targetPosition2 = getFloorHit(
             position,
             quaternion,
@@ -687,7 +694,7 @@ const getRangeHit = (() => {
           if (targetPosition2 === null) {
             return null;
           }
-        }
+        // }
       }
     }
     // return the middle floor hit
@@ -842,22 +849,27 @@ const getRaycastedPortalLocations = (() => {
       );
       if (cameraDistance !== null) {
         // portal center in front of the hit point in world space
-        const portalCenter = hitScanPosition.clone()
-          .add(
-            new THREE.Vector3(0, 0, -cameraDistance - portalExtrusion)
-              .applyQuaternion(hitScanQuaternion)
-          );
-        
         const portalQuaternion = projectQuaternionToFloor(
           hitScanQuaternion,
           floorQuaternion,
           localQuaternion3
         );
+        const portalCenter = hitScanPosition.clone()
+          .add(
+            new THREE.Vector3(0, 0, -cameraDistance)
+              .applyQuaternion(hitScanQuaternion)
+          )
+          .add(
+            new THREE.Vector3(0, 0, -portalExtrusion)
+              .applyQuaternion(portalQuaternion)
+          );
         
         // ensure there is space for the player to stand
         const targetPosition = getRangeHit(
           portalCenter,
-          portalQuaternion,
+          // XXX we can change to go along the portal once the floor net mesh is aligned with the floor
+          hitScanQuaternion,
+          // portalQuaternion,
           localVector4.setScalar(entranceExitEmptyDiameter),
           depthFloatsRaw,
           floorPlaneJson,
