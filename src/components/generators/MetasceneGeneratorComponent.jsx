@@ -1410,8 +1410,30 @@ export class Metazine extends EventTarget {
       });
       const outerExitSpecsConcave = concaveman(outerExitSpecs, 3)
         .map(o => o.exitSpec);
-      // console.log('got outer specs concave', outerExitSpecsConcave);
-      const outerExitSpecIndex = Math.floor(rng() * outerExitSpecsConcave.length);
+      // XXX sort probability by inverse distance
+      // const outerExitSpecIndex = Math.floor(rng() * outerExitSpecsConcave.length);
+      const outerExitSpecsConcaveDistances = outerExitSpecsConcave.map(exitSpec => {
+        const {panelSpec, entranceExitLocation} = exitSpec;
+        new THREE.Matrix4()
+          .compose(
+            localVector.fromArray(entranceExitLocation.position),
+            localQuaternion.fromArray(entranceExitLocation.quaternion),
+            oneVector
+          )
+          .premultiply(panelSpec.transformScene.matrixWorld)
+          .decompose(
+            localVector,
+            localQuaternion,
+            localVector2
+          );
+        const l = localVector.length();
+        if (l !== 0) {
+          return 1 / l;
+        } else {
+          return 0;
+        }
+      });
+      const outerExitSpecIndex = probabalisticIndexRng(outerExitSpecsConcaveDistances);
       const exitSpec = outerExitSpecsConcave[outerExitSpecIndex];
       const {
         panelSpec: exitPanelSpec,
