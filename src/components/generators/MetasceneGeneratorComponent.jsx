@@ -98,7 +98,7 @@ const localVector2 = new THREE.Vector3();
 const localVector3 = new THREE.Vector3();
 const localQuaternion = new THREE.Quaternion();
 const localMatrix = new THREE.Matrix4();
-const localBox = new THREE.Box3();
+// const localBox = new THREE.Box3();
 const localColor = new THREE.Color();
 
 const oneVector = new THREE.Vector3(1, 1, 1);
