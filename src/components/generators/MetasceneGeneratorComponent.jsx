@@ -1316,6 +1316,22 @@ export class Metazine extends EventTarget {
     console.timeEnd('loadPanels');
 
     const rng = alea('lol');
+    const probabalisticIndexRng = (weights) => {
+      let weightSum = 0;
+      for (let i = 0; i < weights.length; i++) {
+        weightSum += weights[i];
+      }
+      const randomValue = rng() * weightSum;
+      let weightSum2 = 0;
+      for (let i = 0; i < weights.length; i++) {
+        weightSum2 += weights[i];
+        if (randomValue < weightSum2) {
+          return i;
+        }
+      }
+      return weights.length - 1;
+    };
+
     // randomly choose a panel spec index that satisfies a condition
     const getConditionPanelSpecIndex = (panelSpecs, condition, maxTries = 100) => {
       for (let i = 0; i < maxTries; i++) {
