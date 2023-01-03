@@ -89,6 +89,10 @@ import {heightfieldScale} from '../../constants/physics-constants.js';
 import {colors, rainbowColors, detectronColors} from '../constants/detectron-colors.js';
 import {mobUrls} from '../constants/urls.js';
 import {
+  targetScale,
+  targetScaleInv,
+} from '../constants/generator-constants.js';
+import {
   VQAClient,
 } from '../clients/vqa-client.js';
 import {
@@ -106,6 +110,12 @@ import * as passes from './sg-passes.js';
 import {
   LensMaterial,
 } from './sg-materials.js';
+import {
+  TargetMesh,
+} from './target-mesh.js';
+import {
+  BlinkMesh,
+} from './blink-mesh.js';
 import {
   depthFloats2Canvas,
   distanceFloats2Canvas,
@@ -2786,172 +2796,13 @@ class OutmeshToolMesh extends THREE.Object3D {
   constructor() {
     super();
 
-    const s = 0.002; // grid visualization scale
-    const _decorateDirectionAttribute = (geometry, direction) => {
-      const directions = new Float32Array(geometry.attributes.position.array.length / 3 * 2);
-      for (let i = 0; i < directions.length; i += 2) {
-        direction.toArray(directions, i);
-      }
-      geometry.setAttribute('direction', new THREE.BufferAttribute(directions, 2));
-    };
-
-    const targetGeometry = (() => {
-      const topLeftCornerGeometry = BufferGeometryUtils.mergeBufferGeometries([
-        new THREE.BoxGeometry(3, 1, 1)
-          .translate(3 / 2 - 0.5, 0, 0),
-        new THREE.BoxGeometry(1, 3 - 0.5, 1)
-          .translate(0, -(3 - 0.5) / 2 - 0.5, 0),
-      ]);
-      const bottomLeftCornerGeometry = topLeftCornerGeometry.clone()
-        .rotateZ(Math.PI / 2);
-      const bottomRightCornerGeometry = topLeftCornerGeometry.clone()
-        .rotateZ(Math.PI);
-      const topRightCornerGeometry = topLeftCornerGeometry.clone()
-        .rotateZ(-Math.PI / 2);
-
-      _decorateDirectionAttribute(topLeftCornerGeometry, new THREE.Vector2(-1, 1));
-      _decorateDirectionAttribute(bottomLeftCornerGeometry, new THREE.Vector2(-1, -1));
-      _decorateDirectionAttribute(bottomRightCornerGeometry, new THREE.Vector2(1, -1));
-      _decorateDirectionAttribute(topRightCornerGeometry, new THREE.Vector2(1, 1));
-
-      const targetGeometry = BufferGeometryUtils.mergeBufferGeometries([
-        topLeftCornerGeometry,
-        bottomLeftCornerGeometry,
-        bottomRightCornerGeometry,
-        topRightCornerGeometry,
-      ]);
-      targetGeometry.scale(s, s, s);
-      return targetGeometry;
-    })();
-
-    const rectangleGeometry = (() => {
-      const s2 = 1 / s;
-      const topGeometry = new THREE.BoxGeometry(s2, 1, 1)
-        .translate(0, s2 / 2, 0);
-      const bottomGeometry = topGeometry.clone()
-        .translate(0, -s2, 0);
-      const leftGeometry = new THREE.BoxGeometry(1, s2, 1)
-        .translate(-s2 / 2, 0, 0);
-      const rightGeometry = leftGeometry.clone()
-        .translate(s2, 0, 0);
-
-      const rectangleGeometry = BufferGeometryUtils.mergeBufferGeometries([
-        topGeometry,
-        bottomGeometry,
-        leftGeometry,
-        rightGeometry,
-      ]);
-
-      // dummy directions because they are not used in this mesh material
-      const directions = new Float32Array(panelSize * panelSize * 2);
-      rectangleGeometry.setAttribute('direction', new THREE.BufferAttribute(directions, 2));
-
-      rectangleGeometry.scale(s, s, s);
-
-      return rectangleGeometry;
-    })();
-
-    const targetMaterial = new THREE.ShaderMaterial({
-      uniforms: {
-        uTime: {
-          value: 0,
-          needsUpdate: false,
-        },
-        uWorldViewport: {
-          value: new THREE.Vector3(),
-          needsUpdate: false,
-        },
-      },
-      vertexShader: `\
-        uniform float uTime;
-        uniform vec3 uWorldViewport;
-        attribute vec2 direction;
-        varying vec2 vUv;
-        varying vec2 vDirection;
-        
-        void main() {
-          vUv = uv;
-          vDirection = direction;
-
-          vec3 offset = vec3(direction, 1.) * uWorldViewport;
-          vec3 p = position + offset;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
-        }
-      `,
-      fragmentShader: `\
-        uniform float uTime;
-        uniform vec3 uWorldViewport;
-        varying vec2 vUv;
-        varying vec2 vDirection;
-        
-        void main() {
-          gl_FragColor = vec4(0., 0., 0., 1.);
-        }
-      `,
-      side: THREE.DoubleSide,
-    });
-
-    const targetMesh = new THREE.Mesh(targetGeometry, targetMaterial);
+    const targetMesh = new TargetMesh();
     targetMesh.frustumCulled = false;
     targetMesh.visible = true;
 
-    const rectangleMaterial = new THREE.ShaderMaterial({
-      uniforms: {
-        uTime: {
-          value: 0,
-          needsUpdate: false,
-        },
-        uWorldViewport: {
-          value: new THREE.Vector3(),
-          needsUpdate: false,
-        },
-        uRunning: {
-          value: 0,
-          needsUpdate: false,
-        },
-      },
-      vertexShader: `\
-        uniform float uTime;
-        uniform vec3 uWorldViewport;
-        uniform float uRunning;
-        attribute vec2 direction;
-        varying vec2 vUv;
-        varying vec2 vDirection;
-        
-        void main() {
-          vUv = uv;
-          vDirection = direction;
-
-          vec3 p = vec3(position.xy * uWorldViewport.xy * 2., position.z + uWorldViewport.z);
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
-        }
-      `,
-      fragmentShader: `\
-        uniform float uTime;
-        uniform vec3 uWorldViewport;
-        uniform float uRunning;
-        varying vec2 vUv;
-        varying vec2 vDirection;
-        
-        const vec3 color = vec3(1., 0.5, 0.5);
-
-        void main() {
-          if (uRunning > 0.5) {
-            float modTime = mod(uTime, 0.15) / 0.15;
-            float f = modTime < 0.5 ? 0. : 1.;
-            vec3 c = mix(color, vec3(0., 0., 0.), f);
-            gl_FragColor = vec4(c, 1.);
-          } else {
-            gl_FragColor = vec4(0., 0., 0., 1.);
-          }
-        }
-      `,
-      side: THREE.DoubleSide,
-    });
-
-    const rectangleMesh = new THREE.Mesh(rectangleGeometry, rectangleMaterial);
-    rectangleMesh.frustumCulled = false;
-    rectangleMesh.visible = false;
+    const blinkMesh = new BlinkMesh();
+    blinkMesh.frustumCulled = false;
+    blinkMesh.visible = false;
 
     //
 
@@ -3135,8 +2986,8 @@ class OutmeshToolMesh extends THREE.Object3D {
 
     outmeshMesh.add(targetMesh);
     outmeshMesh.targetMesh = targetMesh;
-    outmeshMesh.add(rectangleMesh);
-    outmeshMesh.rectangleMesh = rectangleMesh;
+    outmeshMesh.add(blinkMesh);
+    outmeshMesh.blinkMesh = blinkMesh;
     outmeshMesh.add(frustumMesh);
     outmeshMesh.frustumMesh = frustumMesh;
     outmeshMesh.add(imageMesh);
@@ -3146,13 +2997,13 @@ class OutmeshToolMesh extends THREE.Object3D {
 
     const meshes = [
       targetMesh,
-      rectangleMesh,
+      blinkMesh,
       frustumMesh,
       imageMesh,
     ];
     const worldViewportMeshes = [
       targetMesh,
-      rectangleMesh,
+      blinkMesh,
       imageMesh,
     ];
     const worldBoxMeshes = [
@@ -3209,19 +3060,19 @@ class OutmeshToolMesh extends THREE.Object3D {
       if (state === null) {
         targetMesh.visible = true;
       } else if (state === 'running') {
-        rectangleMesh.visible = true;
+        blinkMesh.visible = true;
         frustumMesh.visible = true;
       } else if (state === 'preview') {
-        rectangleMesh.visible = true;
+        blinkMesh.visible = true;
         frustumMesh.visible = true;
         imageMesh.visible = true;
       } else if (state === 'finished') {
-        rectangleMesh.visible = true;
+        blinkMesh.visible = true;
         imageMesh.visible = true;
       }
 
-      rectangleMesh.material.uniforms.uRunning.value = +(state === 'running');
-      rectangleMesh.material.uniforms.uRunning.needsUpdate = true;
+      blinkMesh.material.uniforms.uRunning.value = +(state === 'running');
+      blinkMesh.material.uniforms.uRunning.needsUpdate = true;
     };
   }
 }
