@@ -84,6 +84,12 @@ import {
 } from '../drop-target/DropTarget.jsx';
 
 import styles from '../../../styles/MetasceneGenerator.module.css';
+import {
+  blob2img,
+} from '../../utils/convert-utils.js';
+import {
+  ImageAiClient,
+} from '../../clients/image-client.js';
 
 //
 
@@ -102,6 +108,8 @@ const y180Matrix = new THREE.Matrix4().makeRotationY(Math.PI);
 const fakeMaterial = new THREE.MeshBasicMaterial({
   color: 0xFF0000,
 });
+
+const imageAiClient = new ImageAiClient();
 
 //
 
@@ -1386,7 +1394,7 @@ export class Metazine extends EventTarget {
       });
       const outerExitSpecsConcave = concaveman(outerExitSpecs, 3)
         .map(o => o.exitSpec);
-      console.log('got outer specs concave', outerExitSpecsConcave);
+      // console.log('got outer specs concave', outerExitSpecsConcave);
       const outerExitSpecIndex = Math.floor(rng() * outerExitSpecsConcave.length);
       const exitSpec = outerExitSpecsConcave[outerExitSpecIndex];
       const {
@@ -1507,51 +1515,6 @@ export class Metazine extends EventTarget {
     
     this.mapIndex = mapIndexRenderer.getMapIndex();
     this.mapIndexResolution = mapIndexRenderer.getMapIndexResolution();
-
-    // console.log('rendered', this.mapIndex.filter(n => n !== 0).length, this.renderPanelSpecs.slice(), this.mapIndex, this.mapIndexResolution);
-  
-    /* const mapGenRenderer = new MapGenRenderer();
-    const maxNumPanels = 3;
-    const rng = alea('lol');
-    for (let i = 0; i < maxNumPanels && zineFileUrls.length > 0; i++) {
-      // find a zine file
-      const zineFileUrlIndex = Math.floor(rng() * zineFileUrls.length);
-      const zineFileUrl = zineFileUrls[zineFileUrlIndex];
-      
-      // load zine file data
-      let zinefile = await loadFileUint8Array(zineFileUrl);
-      zinefile = zinefile.slice(zineMagicBytes.length);
-
-      // load storyboard
-      const storyboard = new ZineStoryboard();
-      await storyboard.loadAsync(zinefile);
-
-      // load zine renderer
-      const isFirstPanel = this.panelSpecs.length === 0;
-      const zineRenderer = new ZineRenderer({
-        panel,
-        alignFloor: isFirstPanel, // align floor for the first panel
-      });
-
-      // XXX try connecting a candidate entrance
-
-      const attachPanelIndex = this.panelSpecs.length;
-      const newPanelIndex = attachPanelIndex + 1;
-      const drew = mapGenRenderer.tryDraw(attachPanelIndex, newPanelIndex, zineRenderer);
-
-      const panelSpec = {
-        zineFileUrl,
-        // XXX add the transform here
-      };
-      if (drew) {
-        this.panelSpecs.push(panelSpec);
-      } else {
-        // XXX try another candidate entrance/zine renderer
-      }
-    }
-
-    this.mapIndex = mapGenRenderer.getMapIndex();
-    this.mapIndexResolution = mapGenRenderer.getMapIndexResolution(); */
   }
 }
 
@@ -1814,19 +1777,20 @@ export class MetazineRenderer extends EventTarget {
     directionalLight.updateMatrixWorld();
     scene.add(directionalLight);
 
+    // scene batched mesh
+    const sceneBatchedMesh = new SceneBatchedMesh({
+      panelSpecs: metazine.renderPanelSpecs,
+    });
+    scene.add(sceneBatchedMesh);
+    sceneBatchedMesh.updateMatrixWorld();
+    this.sceneBatchedMesh = sceneBatchedMesh;
+
     // bootstrap
     this.listen();
     this.animate();
-    this.#init();
+    this.#initAux();
   }
-  async #init() {
-    // scene batched mesh
-    const sceneBatchedMesh = new SceneBatchedMesh({
-      panelSpecs: this.metazine.renderPanelSpecs,
-    });
-    this.scene.add(sceneBatchedMesh);
-    sceneBatchedMesh.updateMatrixWorld();
-
+  async #initAux() {
     // entrance exit locations
     const entranceExitLocations = [];
     for (let i = 0; i < this.metazine.renderPanelSpecs.length; i++) {
@@ -1890,46 +1854,6 @@ export class MetazineRenderer extends EventTarget {
     // cubeMesh.position.set(0, 0, -3);
     this.scene.add(cubeMesh);
     cubeMesh.updateMatrixWorld();
-
-    // console.log('metazine renderer meshes', {
-    //   entranceExitLocations,
-    //   entranceExitMesh,
-    // });
-
-    /* for (let i = 0; i < this.metazine.panelSpecs.length; i++) {
-      const panelSpec = this.metazine.panelSpecs[i];
-      const {zineFileUrl} = panelSpec;
-      
-      // load zine file data
-      let zinefile = await loadFileUint8Array(zineFileUrl);
-      zinefile = zinefile.slice(zineMagicBytes.length);
-
-      // load storyboard
-      const storyboard = new ZineStoryboard();
-      await storyboard.loadAsync(zinefile);
-
-      // load zine renderer
-      const isFirstPanel = this.panelSpecs.length === 0;
-      const zineRenderer = new ZineRenderer({
-        panel,
-      });
-
-      // XXX set the zine transform from the panel spec
-
-      this.scene.add(zineRenderer.scene);
-    }
-
-    const {
-      mapIndex,
-      mapIndexResolution,
-    } = this.metazine;
-    const mapIndexMesh = new MapIndexMesh({
-      mapIndex,
-      mapIndexResolution,
-    });
-    mapIndexMesh.position.y = -5;
-    this.scene.add(mapIndexMesh);
-    mapIndexMesh.updateMatrixWorld(); */
   }
   listen() {
     const keydown = e => {
@@ -2034,9 +1958,67 @@ export class MetazineRenderer extends EventTarget {
     };
     _startLoop();
   }
+  snapshotMap({
+    width = 1024,
+    height = 1024,
+    // boundingBox = new THREE.Box3(
+    //   new THREE.Vector3(-1, -1, -1),
+    //   new THREE.Vector3(1, 1, 1)
+    // ),
+  } = {}) {
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+
+    const renderer = makeRenderer(canvas);
+
+    const scene = new THREE.Scene();
+    scene.autoClear = false;
+
+    this.sceneBatchedMesh.geometry.computeBoundingBox();
+    const {
+      boundingBox,
+    } = this.sceneBatchedMesh.geometry;
+    const worldWidth = boundingBox.max.x - boundingBox.min.x;
+    const worldHeight = boundingBox.max.z - boundingBox.min.z;
+    const center = boundingBox.getCenter(new THREE.Vector3());
+    // console.log('got bounding box', {
+    //   worldWidth,
+    //   worldHeight,
+    // });
+
+    const camera = makeFloorNetCamera();
+    camera.position.x = center.x;
+    camera.position.z = center.z;
+    camera.updateMatrixWorld();
+    camera.left = -worldWidth / 2;
+    camera.right = worldWidth / 2;
+    camera.top = worldHeight / 2;
+    camera.bottom = -worldHeight / 2;
+    camera.updateProjectionMatrix();
+
+    // push meshes
+    this.sceneBatchedMesh.material.side = THREE.BackSide;
+    this.sceneBatchedMesh.material.needsUpdate = true;
+    const popMeshes = pushMeshes(scene, [
+      this.sceneBatchedMesh,
+    ]);
+
+    // render
+    {
+      renderer.render(scene, camera);
+    }
+
+    // pop meshes
+    this.sceneBatchedMesh.material.side = THREE.FrontSide;
+    this.sceneBatchedMesh.material.needsUpdate = true;
+    popMeshes();
+
+    // return
+    return canvas;
+  }
   destroy() {
     console.log('destroy MetasceneRenderer');
-
     this.dispatchEvent(new MessageEvent('destroy'));
   }
 };
@@ -2053,8 +2035,48 @@ const Metazine3DCanvas = ({
     if (canvas) {
       const renderer = new MetazineRenderer(canvas, metazine);
 
+      const keydown = async e => {
+        switch (e.key) {
+          case 'm': {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const canvas = renderer.snapshotMap();
+            canvas.style.cssText = `\
+              background: red;
+            `;
+            document.body.appendChild(canvas);
+
+            // collect edit image properties
+            const blob = await new Promise((accept, reject) => {
+              canvas.toBlob(blob => {
+                accept(blob);
+              });
+            });
+            const maskBlob = blob; // same as blob
+            const prompt = 'map, top down aerial view, anime style';
+
+            // edit the image
+            console.log('edit map image started...');
+            console.time('editMapImage');
+            const editedImgBlob = await imageAiClient.editImgBlob(blob, maskBlob, prompt);
+            console.timeEnd('editMapImage');
+
+            const img = await blob2img(editedImgBlob);
+            img.style.cssText = `\
+              background: blue;
+            `;
+            document.body.appendChild(img);
+
+            break;
+          }
+        }
+      };
+      window.addEventListener('keydown', keydown);
+
       return () => {
         renderer.destroy();
+        window.removeEventListener('keydown', keydown);
       };
     }
   }, [metazine, canvasRef.current]);
@@ -2094,18 +2116,6 @@ const MetasceneGeneratorComponent = () => {
       initCompressor({
         numWorkers: defaultMaxWorkers,
       });
-
-      // const arrayBuffer = await new Promise((accept, reject) => {
-      //   const reader = new FileReader();
-      //   reader.onload = e => {
-      //     accept(e.target.result);
-      //   };
-      //   reader.onerror = reject;
-      //   reader.readAsArrayBuffer(file);
-      // });
-
-      // const uint8Array = new Uint8Array(arrayBuffer);
-      // await metazine.loadAsync(uint8Array);
 
       await metazine.compileZineFiles(files);
 
