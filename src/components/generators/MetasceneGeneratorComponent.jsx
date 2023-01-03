@@ -1099,6 +1099,7 @@ class MetazineLoader {
 
       // mesh
       const panelSpec = new THREE.Object3D();
+      panelSpec.name = fileName;
       panelSpec.imageArrayBuffer = imageArrayBuffer;
       panelSpec.resolution = resolution;
       // panelSpec.boundingBox = boundingBox;
