@@ -14,9 +14,6 @@ import {
   getOrthographicCameraJson,
 } from '../../zine/zine-camera-utils.js';
 import {
-  StoryTargetMesh, // XXX should be abstracted out and shared with app
-} from '../../generators/story-target-mesh.js';
-import {
   reconstructPointCloudFromDepthField,
   pointCloudArrayBufferToGeometry,
   reinterpretFloatImageData,
@@ -93,6 +90,16 @@ import {
 import {
   ImageAiClient,
 } from '../../clients/image-client.js';
+// XXX these should be abstracted out and shared with the engine app
+import {
+  StoryTargetMesh,
+} from '../../generators/story-target-mesh.js';
+import {
+  FloorTargetMesh,
+} from '../../generators/floor-target-mesh.js';
+import {
+  FlashMesh,
+} from '../../generators/flash-mesh.js';
 
 //
 
