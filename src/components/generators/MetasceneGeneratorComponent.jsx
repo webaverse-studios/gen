@@ -1886,7 +1886,7 @@ export class MetazineRenderer extends EventTarget {
         color: 0xff0000,
       })
     );
-    cubeMesh.position.set(0, 0, -3);
+    // cubeMesh.position.set(0, 0, -3);
     this.scene.add(cubeMesh);
     cubeMesh.updateMatrixWorld();
 
