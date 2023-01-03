@@ -14,6 +14,9 @@ import {
   getOrthographicCameraJson,
 } from '../../zine/zine-camera-utils.js';
 import {
+  StoryTargetMesh, // XXX should be abstracted out and shared with app
+} from '../../generators/story-target-mesh.js';
+import {
   reconstructPointCloudFromDepthField,
   pointCloudArrayBufferToGeometry,
   reinterpretFloatImageData,
