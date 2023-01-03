@@ -1829,17 +1829,20 @@ export class MetazineRenderer extends EventTarget {
     sceneBatchedMesh.updateMatrixWorld();
     this.sceneBatchedMesh = sceneBatchedMesh;
 
+    // select
+    this.selectedPanelSpec = null;
+
     // bootstrap
+    this.#initAux();
     this.listen();
     this.animate();
-    this.#initAux();
   }
-  async #initAux() {
+  #initAux() {
     // entrance exit locations
     const entranceExitLocations = [];
     for (let i = 0; i < this.metazine.renderPanelSpecs.length; i++) {
       const panelSpec = this.metazine.renderPanelSpecs[i];
-      const localEntranceExitLocations = await panelSpec.entranceExitLocations.map(eel => {
+      const localEntranceExitLocations = panelSpec.entranceExitLocations.map(eel => {
         const position = localVector.fromArray(eel.position);
         const quaternion = localQuaternion.fromArray(eel.quaternion);
         const scale = localVector2.copy(oneVector);
@@ -1887,6 +1890,14 @@ export class MetazineRenderer extends EventTarget {
     });
     this.scene.add(chunkEdgeMesh);
     chunkEdgeMesh.updateMatrixWorld();
+
+    const storyTargetMesh = new StoryTargetMesh();
+    storyTargetMesh.visible = true;
+    storyTargetMesh.frustumCulled = false;
+    storyTargetMesh.scale.setScalar(8);
+    this.scene.add(storyTargetMesh);
+    storyTargetMesh.updateMatrixWorld();
+    this.storyTargetMesh = storyTargetMesh;
 
     // XXX debug cube mesh
     const cubeMesh = new THREE.Mesh(
@@ -1979,9 +1990,11 @@ export class MetazineRenderer extends EventTarget {
     });
   }
   render() {
-    // update tools
+    // update
     this.controls.update();
-    this.camera.updateMatrixWorld();
+
+    this.storyTargetMesh.position.copy(this.controls.target);
+    this.storyTargetMesh.updateMatrixWorld();
 
     // render
     this.renderer.render(this.scene, this.camera);
@@ -2001,6 +2014,59 @@ export class MetazineRenderer extends EventTarget {
       });
     };
     _startLoop();
+  }
+  selectPanelSpec(panelSpec = null) {
+    // console.log('select panel spec', panelSpec);
+
+    this.selectedPanelSpec = panelSpec;
+    
+    if (panelSpec) {
+      const backOffsetVector = new THREE.Vector3(0, 1, 1);
+
+      const boundingBox = new THREE.Box3(
+        new THREE.Vector3().fromArray(panelSpec.boundingBox.min),
+        new THREE.Vector3().fromArray(panelSpec.boundingBox.max)
+      );
+      const center = boundingBox.getCenter(new THREE.Vector3());
+      const worldCenter = center.clone()
+        .applyMatrix4(panelSpec.transformScene.matrixWorld);
+
+      const transformPosition = new THREE.Vector3();
+      const transformQuaternion = new THREE.Quaternion();
+      const transformScale = new THREE.Vector3();
+      panelSpec.transformScene.matrixWorld
+        .decompose(transformPosition, transformQuaternion, transformScale);
+
+      const eulerFlat = new THREE.Euler()
+        .setFromQuaternion(transformQuaternion, 'YXZ');
+      eulerFlat.x = 0;
+      eulerFlat.z = 0;
+      const transformQuaternionFlat = new THREE.Quaternion()
+        .setFromEuler(eulerFlat);
+
+      const targetCameraDistance = this.controls.target
+        .distanceTo(this.camera.position);
+
+      this.camera.position.copy(worldCenter);
+      this.camera.quaternion.copy(transformQuaternion);
+      this.camera.position
+        .add(
+          backOffsetVector.clone()
+            .normalize()
+            .multiplyScalar(targetCameraDistance)
+            .applyQuaternion(transformQuaternionFlat)
+        );
+      this.camera.quaternion.setFromRotationMatrix(
+        new THREE.Matrix4().lookAt(
+          this.camera.position,
+          worldCenter,
+          upVector
+        )
+      );
+      this.camera.updateMatrixWorld();
+
+      this.controls.target.copy(worldCenter);
+    }
   }
   snapshotMap({
     width = 1024,
@@ -2079,8 +2145,91 @@ const Metazine3DCanvas = ({
     if (canvas) {
       const renderer = new MetazineRenderer(canvas, metazine);
 
+      const _direction = (x, z) => {
+        const selectablePanelSpecs = renderer.metazine.renderPanelSpecs
+          .filter(panelSpec => panelSpec !== renderer.selectedPanelSpec);
+        const panelSpecCenters = selectablePanelSpecs
+          .map(panelSpec => {
+            const boundingBox = new THREE.Box3(
+              new THREE.Vector3().fromArray(panelSpec.boundingBox.min),
+              new THREE.Vector3().fromArray(panelSpec.boundingBox.max)
+            );
+            const center = boundingBox.getCenter(new THREE.Vector3());
+            const worldCenter = center.clone()
+              .applyMatrix4(panelSpec.matrixWorld);
+            worldCenter.y = 0;
+            return {
+              panelSpec,
+              center: worldCenter,
+            };
+          });
+
+        // XXX this should be the target position floor
+        // XXX can be marked with a target rect
+        const targetPositionFloor = renderer.controls.target.clone();
+        targetPositionFloor.y = 0;
+        const cameraDirection = new THREE.Vector3(x, 0, z)
+          .applyQuaternion(renderer.camera.quaternion);
+        cameraDirection.y = 0;
+        cameraDirection.normalize();
+
+        // console.log('camera direction', cameraDirection.toArray());
+
+        // check for panelSpecCenters that are within Math.PI / 2 of cameraDirection
+        const getAngle = panelSpecCenter => {
+          return panelSpecCenter.center.clone()
+            .sub(targetPositionFloor)
+            .angleTo(cameraDirection);
+        };
+        const getDistance = panelSpecCenter => {
+          return panelSpecCenter.center.distanceTo(targetPositionFloor);
+        };
+        const maxSweepCandidates = 3;
+        const panelSpecCentersSweep = panelSpecCenters
+          .filter(panelSpecCenter => {
+            const angle = getAngle(panelSpecCenter);
+            return angle <= Math.PI / 6;
+          })
+          .sort((a, b) => {
+            const aDistance = getDistance(a);
+            const bDistance = getDistance(b);
+            return aDistance - bDistance;
+          })
+          .slice(0, maxSweepCandidates)
+          .sort((a, b) => {
+            const aAngle = getAngle(a);
+            const bAngle = getAngle(b);
+            return aAngle - bAngle;
+          });
+        // // find the closest one
+        // panelSpecCentersSweep.sort((a, b) => {
+        //   return a.center.distanceTo(targetPositionFloor) - b.center.distanceTo(targetPositionFloor);
+        // });
+        if (panelSpecCentersSweep.length > 0) {
+          const closestPanelSpec = panelSpecCentersSweep[0].panelSpec;
+          renderer.selectPanelSpec(closestPanelSpec);
+        } else {
+          renderer.selectPanelSpec(null);
+        }
+      };
       const keydown = async e => {
         switch (e.key) {
+          case 'w': {
+            _direction(0, -1);
+            break;
+          }
+          case 'a': {
+            _direction(-1, 0);
+            break;
+          }
+          case 's': {
+            _direction(0, 1);
+            break;
+          }
+          case 'd': {
+            _direction(1, 0);
+            break;
+          }
           case 'm': {
             e.preventDefault();
             e.stopPropagation();
