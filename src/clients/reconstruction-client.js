@@ -286,6 +286,10 @@ export const renderMeshesDepth = (meshes, width, height, camera) => {
   // latch rendered depth data
   oldDepthFloatImageData = reinterpretFloatImageData(imageData); // viewZ
 
+  // cleanup
+  renderer.dispose();
+  renderer.forceContextLoss();
+
   return oldDepthFloatImageData;
 };
 
@@ -440,6 +444,7 @@ export const mergeOperator = ({
 
   // cleanup
   renderer.dispose();
+  renderer.forceContextLoss();
 
   return {
     oldDepthFloatImageData,
