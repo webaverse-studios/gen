@@ -103,6 +103,9 @@ import {
 import {
   FlashMesh,
 } from '../../generators/flash-mesh.js';
+import {
+  ArrowMesh,
+} from '../../generators/arrow-mesh.js';
 
 //
 
@@ -1054,6 +1057,135 @@ class MapIndexRenderer {
 
 //
 
+const getPanelSpecEdges = panelSpec => {
+  // camera
+  const chunkEdgeCamera = makeFloorNetCamera();
+
+  // compute camera spec
+  const {floorBoundingBox} = panelSpec;
+  const box3 = new THREE.Box3(
+    new THREE.Vector3().fromArray(floorBoundingBox.min),
+    new THREE.Vector3().fromArray(floorBoundingBox.max)
+  );
+  const center = box3.getCenter(new THREE.Vector3());
+  const size = box3.getSize(new THREE.Vector3());
+  // console.log('got size', size);
+
+  // move to the camera plane
+  // center.y = chunkEdgeCamera.position.y;
+  // find camera range; scan and snap outward
+
+  const oldPosition = panelSpec.position.clone();
+  const oldQuaternion = panelSpec.quaternion.clone();
+  const oldScale = panelSpec.scale.clone();
+  panelSpec.resetToFloorTransform();
+  
+  // back left
+  const centerBackLeft = center.clone()
+    .add(new THREE.Vector3(-size.x / 2, 0, -size.z / 2))
+    .add(new THREE.Vector3(-floorNetResolution, 0, -floorNetResolution).multiplyScalar(2)); // 2 px border
+  // snap to grid
+  centerBackLeft.x = Math.floor(centerBackLeft.x / floorNetResolution) * floorNetResolution;
+  centerBackLeft.z = Math.floor(centerBackLeft.z / floorNetResolution) * floorNetResolution;
+  
+  // front right
+  const centerFrontRight = center.clone()
+    .add(new THREE.Vector3(size.x / 2, 0, size.z / 2))
+    .add(new THREE.Vector3(floorNetResolution, 0, floorNetResolution).multiplyScalar(2)); // 2 px border
+  // snap to grid
+  centerFrontRight.x = Math.ceil(centerFrontRight.x / floorNetResolution) * floorNetResolution;
+  centerFrontRight.z = Math.ceil(centerFrontRight.z / floorNetResolution) * floorNetResolution;
+  
+  // compute the new center
+  center.copy(centerBackLeft)
+    .add(centerFrontRight)
+    .multiplyScalar(0.5);
+  // compute the new size
+  size.copy(centerFrontRight)
+    .sub(centerBackLeft);
+
+  // set the orthographic camera
+  chunkEdgeCamera.position.copy(center);
+  chunkEdgeCamera.position.y -= floorNetWorldDepth / 2;
+  chunkEdgeCamera.updateMatrixWorld();
+  chunkEdgeCamera.left = centerBackLeft.x - center.x;
+  chunkEdgeCamera.right = centerFrontRight.x - center.x;
+  chunkEdgeCamera.top = centerFrontRight.z - center.z;
+  chunkEdgeCamera.bottom = centerBackLeft.z - center.z;
+  chunkEdgeCamera.updateProjectionMatrix();
+
+  // compute the pixel resolution to use
+  const width = Math.ceil(size.x / floorNetResolution); // padding
+  const height = Math.ceil(size.z / floorNetResolution); // padding
+
+  // render the coverage map
+  const panelSpecToMeshSpec = panelSpec => {
+    const {resolution, sceneChunkMesh} = panelSpec;
+    const {geometry, matrixWorld} = sceneChunkMesh;
+    const [
+      width,
+      height,
+    ] = resolution;
+    const side = THREE.DoubleSide;
+    return {
+      geometry,
+      matrixWorld,
+      width,
+      height,
+      side,
+    };
+  };
+  const meshSpecs = [
+    panelSpec,
+  ].map(panelSpec => panelSpecToMeshSpec(panelSpec));
+  const meshes = getDepthRenderSpecsMeshes(meshSpecs, chunkEdgeCamera);
+  const depthFloat32Array = renderMeshesDepth(meshes, width, height, chunkEdgeCamera);
+  // const coverageCanvas = renderMeshesCoverage(meshes, width, height, chunkEdgeCamera);
+  const coverageCanvas = depthFloats2Canvas(depthFloat32Array, width, height, chunkEdgeCamera);
+  coverageCanvas.style.cssText = `\
+    background: blue;
+  `;
+  document.body.appendChild(coverageCanvas);
+
+  // get outline points
+  const outlinePoints = getOutlinePoints(depthFloat32Array, width, height, chunkEdgeCamera);
+  // console.log('got outline points', {
+  //   depthFloat32Array,
+  //   depthFloat32ArraySetSize: depthFloat32Array.filter(n => n !== 0),
+  //   outlinePoints,
+  // });
+
+  panelSpec.position.copy(oldPosition);
+  panelSpec.quaternion.copy(oldQuaternion);
+  panelSpec.scale.copy(oldScale);
+  panelSpec.updateMatrixWorld();
+
+  console.log('get outlines 1', {
+    meshSpecs,
+    outlinePoints,
+  });
+  // detect edges
+  // XXX precompute this during panel spec creation time
+  const edges = concaveman(outlinePoints, 5);
+  // for (let i = 0; i < edges.length; i++) {
+  //   const edge = edges[i];
+  //   edge[0] += center.x;
+  //   edge[1] += center.z;
+  // }
+  console.log('get outlines 2', {
+    edges,
+  });
+  return {
+    edges,
+    centerBackLeft,
+    centerFrontRight,
+    center,
+    size,
+  };
+}
+
+//
+
 class MetazineLoader {
   constructor({
     total = 1,
@@ -1139,7 +1271,14 @@ class MetazineLoader {
       // panelSpec.depthField = depthFieldArrayBuffer;
       panelSpec.entranceExitLocations = entranceExitLocations;
       panelSpec.floorPlaneLocation = floorPlaneLocation;
-      
+      panelSpec.resetToFloorTransform = () => {
+        panelSpec.position.set(0, 0, 0);
+        panelSpec.quaternion.fromArray(floorPlaneLocation.quaternion)
+          .invert(); // level the floor
+        panelSpec.scale.set(1, 1, 1);
+        panelSpec.updateMatrixWorld();
+      };
+
       // transform scene
       const transformScene = new THREE.Object3D();
       transformScene.position.fromArray(positionArray);
@@ -1376,9 +1515,7 @@ export class Metazine extends EventTarget {
       panelSpec => panelSpec.entranceExitLocations.length >= 2
     );
     const firstPanelSpec = candidateEntrancePanelSpecs.splice(firstPanelSpecIndex, 1)[0];
-    firstPanelSpec.quaternion.fromArray(firstPanelSpec.floorPlaneLocation.quaternion)
-      .invert(); // level the floor
-    firstPanelSpec.updateMatrixWorld();
+    firstPanelSpec.resetToFloorTransform();
     this.renderPanelSpecs.push(firstPanelSpec);
     const candidateExitSpecs = firstPanelSpec.entranceExitLocations.map(eel => {
       return {
@@ -1596,6 +1733,7 @@ const getOutlinePoints = (depthFloat32Array, width, height, camera) => {
     true
   );
   const outlinePoints = [];
+  let i = 0;
   while (queue.length > 0) {
     const [x, y] = queue.shift();
     
@@ -1604,7 +1742,7 @@ const getOutlinePoints = (depthFloat32Array, width, height, camera) => {
       const index = getIndex(x, y, width, height);
       const r = depthFloat32Array[index];
       if (r !== 0) {
-        console.warn('found filled pixel in queue', x, y);
+        console.warn('found filled pixel in queue', i, x, y);
         debugger;
       }
     }
@@ -1641,6 +1779,8 @@ const getOutlinePoints = (depthFloat32Array, width, height, camera) => {
       outlinePoint.z = zSum / weightSum;
       outlinePoints.push(outlinePoint);
     }
+
+    i++;
   }
   return outlinePoints;
 };
@@ -1821,117 +1961,76 @@ const makeFloorPetalMesh = (geometry) => {
   return mesh;
 };
 class ChunkEdgeMesh extends THREE.Object3D {
-  constructor({
-    panelSpec,
-  }) {
+  constructor() {
     super();
+  }
+  setPanelSpec(panelSpec) {
+    // console.log('set panel spec 1', panelSpec);
+    // clear old children
+    {
+      this.traverse(o => {
+        if (o.isMesh) {
+          o.geometry.dispose();
+          o.material.dispose();
+        }
+      })
+      this.clear();
+    }
 
-    // camera
-    const chunkEdgeCamera = makeFloorNetCamera();
+    // edges
+    const {
+      edges,
+      centerBackLeft,
+      centerFrontRight,
+      center,
+      size,
+    } = getPanelSpecEdges(panelSpec);
+    // console.log('set panel spec 2', edges);
 
-    // compute camera spec
-    const {floorBoundingBox} = panelSpec;
-    const box3 = new THREE.Box3(
-      new THREE.Vector3().fromArray(floorBoundingBox.min),
-      new THREE.Vector3().fromArray(floorBoundingBox.max)
+    // transforms
+    const transformPosition = new THREE.Vector3();
+    const transformQuaternion = new THREE.Quaternion();
+    const transformScale = new THREE.Vector3();
+    panelSpec.matrixWorld.clone()
+      // .multiply(
+      //   new THREE.Matrix4().makeRotationFromQuaternion(
+      //     new THREE.Quaternion().fromArray(panelSpec.floorPlaneLocation.quaternion)
+      //   )
+      // )
+      .multiply(
+        new THREE.Matrix4().makeTranslation(
+          // center.x,
+          // -centerBackLeft.y,
+          0,
+          0,
+          0,
+          // -center.z,
+        )
+      )
+      .decompose(transformPosition, transformQuaternion, transformScale);
+    transformQuaternion.multiply(
+      new THREE.Quaternion().fromArray(panelSpec.floorPlaneLocation.quaternion)
     );
-    const center = box3.getCenter(new THREE.Vector3());
-    const size = box3.getSize(new THREE.Vector3());
-    // move to the camera plane
-    center.y = chunkEdgeCamera.position.y;
-    // find camera range; scan and snap outward
-    
-    // back left
-    const centerBackLeft = center.clone()
-      .add(new THREE.Vector3(-size.x / 2, 0, -size.z / 2))
-      .add(new THREE.Vector3(-floorNetResolution, 0, -floorNetResolution)); // 1 px border
-    // snap to grid
-    centerBackLeft.x = Math.floor(centerBackLeft.x / floorNetResolution) * floorNetResolution;
-    centerBackLeft.z = Math.floor(centerBackLeft.z / floorNetResolution) * floorNetResolution;
-    
-    // front right
-    const centerFrontRight = center.clone()
-      .add(new THREE.Vector3(size.x / 2, 0, size.z / 2))
-      .add(new THREE.Vector3(floorNetResolution, 0, floorNetResolution)); // 1 px border
-    // snap to grid
-    centerFrontRight.x = Math.ceil(centerFrontRight.x / floorNetResolution) * floorNetResolution;
-    centerFrontRight.z = Math.ceil(centerFrontRight.z / floorNetResolution) * floorNetResolution;
-    
-    // compute the new center
-    center.copy(centerBackLeft)
-      .add(centerFrontRight)
-      .multiplyScalar(0.5);
-    // compute the new size
-    size.copy(centerFrontRight)
-      .sub(centerBackLeft);
+    transformPosition.add(
+      new THREE.Vector3(center.x + size.x / 2, 0, center.z - size.z / 2)
+        .applyQuaternion(transformQuaternion)
+    );
 
-    // set the orthographic camera
-    chunkEdgeCamera.position.copy(center);
-    chunkEdgeCamera.updateMatrixWorld();
-    chunkEdgeCamera.left = centerBackLeft.x - center.x;
-    chunkEdgeCamera.right = centerFrontRight.x - center.x;
-    chunkEdgeCamera.top = centerFrontRight.z - center.z;
-    chunkEdgeCamera.bottom = centerBackLeft.z - center.z;
-    chunkEdgeCamera.updateProjectionMatrix();
-
-    // compute the pixel resolution to use
-    const width = Math.floor(size.x / floorNetResolution);
-    const height = Math.floor(size.z / floorNetResolution);
-
-    // render the coverage map
-    const panelSpecToMeshSpec = panelSpec => {
-      const {resolution, sceneChunkMesh} = panelSpec;
-      const {geometry, matrixWorld} = sceneChunkMesh;
-      const [
-        width,
-        height,
-      ] = resolution;
-      const side = THREE.DoubleSide;
-      return {
-        geometry,
-        matrixWorld,
-        width,
-        height,
-        side,
-      };
-    };
-    const meshSpecs = [
-      panelSpec,
-    ].map(panelSpec => panelSpecToMeshSpec(panelSpec));
-    const meshes = getDepthRenderSpecsMeshes(meshSpecs, chunkEdgeCamera);
-    const depthFloat32Array = renderMeshesDepth(meshes, width, height, chunkEdgeCamera);
-    // const coverageCanvas = renderMeshesCoverage(meshes, width, height, chunkEdgeCamera);
-    const coverageCanvas = depthFloats2Canvas(depthFloat32Array, width, height, chunkEdgeCamera);
-    coverageCanvas.style.cssText = `\
-      background: blue;
-    `;
-    document.body.appendChild(coverageCanvas);
-
-    // get outline points
-    const outlinePoints = getOutlinePoints(depthFloat32Array, width, height, chunkEdgeCamera);
-    // console.log('got outline points', {
-    //   depthFloat32Array,
-    //   depthFloat32ArraySetSize: depthFloat32Array.filter(n => n !== 0),
-    //   outlinePoints,
-    // });
-
-    // detect edges
-    const edges = concaveman(outlinePoints, 5);
-    // const edges = outlinePoints;
-
-    // position cubes mesh
+    // positions
     const positions = new Float32Array(edges.length * 3);
     for (let i = 0; i < edges.length; i++) {
       const edge = edges[i];
       const [x, y] = edge;
       const {z} = edge;
 
-      const index = i * 3;
-      positions[index + 0] = -x * floorNetResolution + centerFrontRight.x;
-      positions[index + 1] = z;
-      positions[index + 2] = y * floorNetResolution + centerBackLeft.z;
+      localVector.set(
+        -x * floorNetResolution,
+        z,
+        y * floorNetResolution
+      );
+      localVector.toArray(positions, i * 3);
     }
-    // center positions
+    /* // center positions
     const boundingBox = new THREE.Box3()
       .setFromBufferAttribute(new THREE.BufferAttribute(positions, 3));
     const positionCenter = boundingBox.getCenter(new THREE.Vector3());
@@ -1941,17 +2040,21 @@ class ChunkEdgeMesh extends THREE.Object3D {
       positionsCentered[index + 0] = positions[index + 0] - positionCenter.x;
       positionsCentered[index + 1] = positions[index + 1] - positionCenter.y;
       positionsCentered[index + 2] = positions[index + 2] - positionCenter.z;
-    }
+    } */
+    const flowerGeometry = makeFlowerGeometry(positions);
 
     // create flower geometry
-    const flowerGeometry = makeFlowerGeometry(positionsCentered);
     const floorFlowerMesh = makeFloorFlowerMesh(flowerGeometry);
-    floorFlowerMesh.position.copy(positionCenter);
+    floorFlowerMesh.position.copy(transformPosition);
+    floorFlowerMesh.quaternion.copy(transformQuaternion);
+    // floorFlowerMesh.scale.copy(transformScale);
     this.add(floorFlowerMesh);
     floorFlowerMesh.updateMatrixWorld();
 
     const floorPetalMesh = makeFloorPetalMesh(flowerGeometry);
-    floorPetalMesh.position.copy(positionCenter);
+    floorPetalMesh.position.copy(transformPosition);
+    floorPetalMesh.quaternion.copy(transformQuaternion);
+    // floorPetalMesh.scale.copy(transformScale);
     this.add(floorPetalMesh);
     floorPetalMesh.updateMatrixWorld();
   }
@@ -1965,25 +2068,56 @@ class UnderfloorMesh extends THREE.Object3D {
 
     const floorTargetMesh = new FloorTargetMesh();
     this.add(floorTargetMesh);
+    floorTargetMesh.updateMatrixWorld();
     this.floorTargetMesh = floorTargetMesh;
 
     const flashMesh = new FlashMesh();
     this.add(flashMesh);
+    flashMesh.updateMatrixWorld();
     this.flashMesh = flashMesh;
+
+    const arrowMesh = new ArrowMesh();
+    arrowMesh.geometry = arrowMesh.geometry.clone()
+      // .translate(0, 1, 0)
+      .rotateX(Math.PI)
+      // .scale(4, 4, 4)
+      .translate(0, 20, 0)
+    arrowMesh.frustumCulled = false;
+    this.add(arrowMesh);
+    arrowMesh.updateMatrixWorld();
+    this.arrowMesh = arrowMesh;
+
+    // chunk edge mesh
+    const chunkEdgeMesh = new ChunkEdgeMesh();
+    this.add(chunkEdgeMesh);
+    chunkEdgeMesh.updateMatrixWorld();
+    this.chunkEdgeMesh = chunkEdgeMesh;
   }
-  setTransform(position, quaternion, scale) {
-    [
+  setTransform(panelSpec, position, quaternion, scale) {
+    const transformables = [
       this.floorTargetMesh,
       this.flashMesh,
-    ].forEach(mesh => {
+    ];
+    transformables.forEach(mesh => {
       mesh.position.copy(position);
       mesh.quaternion.copy(quaternion);
       // mesh.scale.copy(scale);
       mesh.updateMatrixWorld();
 
-      mesh.material.uniforms.scale.value.copy(scale);
-      mesh.material.uniforms.scale.needsUpdate = true;
+      if (mesh.material?.uniforms?.scale) {
+        mesh.material.uniforms.scale.value.copy(scale);
+        mesh.material.uniforms.scale.needsUpdate = true;
+      }
     });
+    const translatables = [
+      this.arrowMesh,
+    ];
+    translatables.forEach(mesh => {
+      mesh.position.copy(position);
+      mesh.updateMatrixWorld();
+    });
+
+    this.chunkEdgeMesh.setPanelSpec(panelSpec);
   }
   update() {
     const now = performance.now();
@@ -2112,14 +2246,6 @@ export class MetazineRenderer extends EventTarget {
     mapIndexMesh.position.y = -15;
     this.scene.add(mapIndexMesh);
     mapIndexMesh.updateMatrixWorld();
-
-    // chunk edge mesh
-    const firstRenderPanelSpec = this.metazine.renderPanelSpecs[0];
-    const chunkEdgeMesh = new ChunkEdgeMesh({
-      panelSpec: firstRenderPanelSpec,
-    });
-    this.scene.add(chunkEdgeMesh);
-    chunkEdgeMesh.updateMatrixWorld();
 
     // underfloor mesh
     const underfloorMesh = new UnderfloorMesh();
@@ -2336,7 +2462,7 @@ export class MetazineRenderer extends EventTarget {
       underfloorPosition.y -= 10;
       const underfloorQuaternion = transformQuaternionFlat;
       const underfloorScale = floorWorldScale;
-      this.underfloorMesh.setTransform(underfloorPosition, underfloorQuaternion, underfloorScale);
+      this.underfloorMesh.setTransform(panelSpec, underfloorPosition, underfloorQuaternion, underfloorScale);
       this.underfloorMesh.updateMatrixWorld();
     }
   }

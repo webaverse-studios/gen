@@ -2528,6 +2528,10 @@ class Overlay {
 
         // arrow mesh
         const arrowMesh = new ArrowMesh();
+        arrowMesh.geometry = arrowMesh.geometry.clone();
+        arrowMesh.geometry.translate(0, 1, 0);
+        arrowMesh.geometry.rotateX(-Math.PI / 2);
+        arrowMesh.geometry.scale(0.1, 0.1, 0.1);
         arrowMesh.position.copy(center);
         normalToQuaternion(normal, arrowMesh.quaternion, backwardVector);
         arrowMesh.updateMatrixWorld();

@@ -11,10 +11,6 @@ const arrowGeometry = (() => {
     depth: 0.25,
     bevelEnabled: false,
   });
-  geometry.translate(0, 1, 0);
-  geometry.rotateX(-Math.PI / 2);
-  const s = 0.1;
-  geometry.scale(s, s, s);
 
   return geometry;
 })();
