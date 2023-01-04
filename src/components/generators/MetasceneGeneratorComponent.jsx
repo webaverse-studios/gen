@@ -1991,22 +1991,7 @@ class ChunkEdgeMesh extends THREE.Object3D {
     const transformPosition = new THREE.Vector3();
     const transformQuaternion = new THREE.Quaternion();
     const transformScale = new THREE.Vector3();
-    panelSpec.matrixWorld.clone()
-      // .multiply(
-      //   new THREE.Matrix4().makeRotationFromQuaternion(
-      //     new THREE.Quaternion().fromArray(panelSpec.floorPlaneLocation.quaternion)
-      //   )
-      // )
-      .multiply(
-        new THREE.Matrix4().makeTranslation(
-          // center.x,
-          // -centerBackLeft.y,
-          0,
-          0,
-          0,
-          // -center.z,
-        )
-      )
+    panelSpec.matrixWorld
       .decompose(transformPosition, transformQuaternion, transformScale);
     transformQuaternion.multiply(
       new THREE.Quaternion().fromArray(panelSpec.floorPlaneLocation.quaternion)
