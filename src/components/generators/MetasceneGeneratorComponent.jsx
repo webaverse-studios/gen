@@ -106,6 +106,9 @@ import {
 import {
   ArrowMesh,
 } from '../../generators/arrow-mesh.js';
+import {
+  KeyMesh,
+} from '../../generators/key-mesh.js';
 
 //
 
@@ -2057,11 +2060,26 @@ class UnderfloorMesh extends THREE.Object3D {
     this.add(chunkEdgeMesh);
     chunkEdgeMesh.updateMatrixWorld();
     this.chunkEdgeMesh = chunkEdgeMesh;
+
+    // key mesh
+    {
+      const keyMeshInner = new KeyMesh();
+      const keyMesh = new THREE.Object3D();
+      keyMesh.add(keyMeshInner);
+
+      keyMeshInner.position.y = 15;
+      keyMeshInner.scale.setScalar(5);
+      
+      this.add(keyMesh);
+      keyMesh.updateMatrixWorld();
+      this.keyMesh = keyMesh;
+    }
   }
   setTransform(panelSpec, position, quaternion, scale) {
     const transformables = [
       this.floorTargetMesh,
       this.flashMesh,
+      this.keyMesh,
     ];
     transformables.forEach(mesh => {
       mesh.position.copy(position);
