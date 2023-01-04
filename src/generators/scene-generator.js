@@ -117,6 +117,12 @@ import {
   BlinkMesh,
 } from './blink-mesh.js';
 import {
+  ArrowMesh,
+} from './arrow-mesh.js';
+import {
+  GridMesh,
+} from './grid-mesh.js';
+import {
   depthFloats2Canvas,
   distanceFloats2Canvas,
   segmentsImg2Canvas,
@@ -1473,85 +1479,6 @@ const getSemanticPlanes = async (img, fov, newDepthFloatImageData, segmentMask) 
 
 //
 
-const planeArrowGeometry = (() => {
-  const shape = new THREE.Shape();
-  shape.moveTo(0, 0);
-  shape.lineTo(1, -1);
-  shape.lineTo(0, 2);
-  shape.lineTo(-1, -1);
-
-  const geometry = new THREE.ExtrudeGeometry(shape, {
-    depth: 0.25,
-    bevelEnabled: false,
-  });
-  geometry.translate(0, 1, 0);
-  geometry.rotateX(-Math.PI / 2);
-  const s = 0.1;
-  geometry.scale(s, s, s);
-
-  return geometry;
-})();
-const makePlaneArrowMesh = () => {
-  const material = new THREE.MeshPhongMaterial({
-    color: 0xFF0000,
-  });
-
-  const arrowMesh = new THREE.Mesh(planeArrowGeometry, material);
-  return arrowMesh;
-};
-const gridGeometry = new THREE.PlaneGeometry(1, 1);
-const makeGridMesh = () => {
-  const material = new THREE.ShaderMaterial({
-    uniforms: {
-      uColor: {
-        value: new THREE.Color(0xFF0000),
-        needsUpdate: true,
-      },
-    },
-    vertexShader: `\
-      varying vec2 vUv;
-
-      void main() {
-        vUv = uv;
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-      }
-    `,
-    fragmentShader: `\
-      uniform vec3 uColor;
-      varying vec2 vUv;
-
-      const vec3 lineColor = vec3(${new THREE.Vector3(0x00BBCC).toArray().map(n => n.toFixed(8)).join(',')});
-
-      void main() {
-        vec2 uv = vUv;
-
-        // draw a grid based on uv
-        float b = 0.1;
-        float f = min(mod(uv.x, b), mod(uv.y, b));
-        f = min(f, mod(1.-uv.x, b));
-        f = min(f, mod(1.-uv.y, b));
-        f *= 200.;
-
-        float a = max(1. - f, 0.);
-        a = max(a, 0.5);
-
-        // vec3 c = lineColor;
-        vec3 c = uColor;
-
-        gl_FragColor = vec4(c, a);
-        // gl_FragColor.rg = uv;
-      }
-    `,
-    transparent: true,
-    side: THREE.DoubleSide,
-  });
-
-  const gridMesh = new THREE.Mesh(gridGeometry, material);
-  return gridMesh;
-};
-
-//
-
 class Selector {
   constructor({
     renderer,
@@ -2600,7 +2527,7 @@ class Overlay {
         const normal = localVector2.fromArray(label.normal);
 
         // arrow mesh
-        const arrowMesh = makePlaneArrowMesh();
+        const arrowMesh = new ArrowMesh();
         arrowMesh.position.copy(center);
         normalToQuaternion(normal, arrowMesh.quaternion, backwardVector);
         arrowMesh.updateMatrixWorld();
@@ -2609,7 +2536,7 @@ class Overlay {
         planeArrowMeshes.push(arrowMesh);
 
         // grid mesh
-        const gridMesh = makeGridMesh();
+        const gridMesh = new GridMesh();
         gridMesh.position.copy(arrowMesh.position);
         gridMesh.quaternion.copy(arrowMesh.quaternion);
         gridMesh.updateMatrixWorld();
