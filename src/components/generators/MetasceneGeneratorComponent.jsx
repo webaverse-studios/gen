@@ -1948,12 +1948,12 @@ class ChunkEdgeMesh extends THREE.Object3D {
     // console.log('set panel spec 1', panelSpec);
     // clear old children
     {
-      this.traverse(o => {
-        if (o.isMesh) {
-          o.geometry.dispose();
-          o.material.dispose();
-        }
-      })
+      // this.traverse(o => {
+      //   if (o.isMesh) {
+      //     o.geometry.dispose();
+      //     o.material.dispose();
+      //   }
+      // })
       this.clear();
     }
 
