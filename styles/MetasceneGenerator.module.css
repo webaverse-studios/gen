@@ -2,9 +2,58 @@
   display: flex;
   width: 100%;
 }
-.metasceneGenerator .panelPlaceholder {
+.metasceneGenerator .panelPlaceholder,
+.metasceneGenerator .metazineCanvas
+{
+  position: relative;
   display: flex;
   width: 1024px;
   height: 1024px;
   flex-direction: column;
+}
+
+.metasceneGenerator .metazineCanvas .overlay {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+}
+.metasceneGenerator .metazineCanvas .overlay .heroTag {
+  position: absolute;
+  top: 0;
+  left: 0;
+  /* background-color: #000; */
+}
+.metasceneGenerator .metazineCanvas .overlay .heroTag .h1,
+.metasceneGenerator .metazineCanvas .overlay .heroTag .h2
+{
+  position: relative;
+  padding: 15px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background-color: #000;
+  color: #FFF;
+}
+.metasceneGenerator .metazineCanvas .overlay .heroTag .h1 {
+  max-width: 400px;
+}
+.metasceneGenerator .metazineCanvas .overlay .heroTag .h2 {
+  max-width: 600px;
+}
+.metasceneGenerator .metazineCanvas .overlay .sidebar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  width: 200px;
+  /* background-color: #000; */
+}
+.metasceneGenerator .metazineCanvas .overlay .sidebar .img {
+  width: 100%;
+  object-fit: cover;
 }
