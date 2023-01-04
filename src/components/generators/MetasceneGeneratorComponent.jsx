@@ -1140,41 +1140,25 @@ const getPanelSpecEdges = panelSpec => {
   ].map(panelSpec => panelSpecToMeshSpec(panelSpec));
   const meshes = getDepthRenderSpecsMeshes(meshSpecs, chunkEdgeCamera);
   const depthFloat32Array = renderMeshesDepth(meshes, width, height, chunkEdgeCamera);
-  // const coverageCanvas = renderMeshesCoverage(meshes, width, height, chunkEdgeCamera);
-  const coverageCanvas = depthFloats2Canvas(depthFloat32Array, width, height, chunkEdgeCamera);
-  coverageCanvas.style.cssText = `\
-    background: blue;
-  `;
-  document.body.appendChild(coverageCanvas);
+  
+  // for debugging
+  // const coverageCanvas = depthFloats2Canvas(depthFloat32Array, width, height, chunkEdgeCamera);
+  // coverageCanvas.style.cssText = `\
+  //   background: blue;
+  // `;
+  // document.body.appendChild(coverageCanvas);
 
   // get outline points
   const outlinePoints = getOutlinePoints(depthFloat32Array, width, height, chunkEdgeCamera);
-  // console.log('got outline points', {
-  //   depthFloat32Array,
-  //   depthFloat32ArraySetSize: depthFloat32Array.filter(n => n !== 0),
-  //   outlinePoints,
-  // });
 
   panelSpec.position.copy(oldPosition);
   panelSpec.quaternion.copy(oldQuaternion);
   panelSpec.scale.copy(oldScale);
   panelSpec.updateMatrixWorld();
 
-  console.log('get outlines 1', {
-    meshSpecs,
-    outlinePoints,
-  });
   // detect edges
   // XXX precompute this during panel spec creation time
   const edges = concaveman(outlinePoints, 5);
-  // for (let i = 0; i < edges.length; i++) {
-  //   const edge = edges[i];
-  //   edge[0] += center.x;
-  //   edge[1] += center.z;
-  // }
-  console.log('get outlines 2', {
-    edges,
-  });
   return {
     edges,
     centerBackLeft,
