@@ -3765,9 +3765,12 @@ export class PanelRenderer extends EventTarget {
       renderSpecs: [
         this.sceneMesh,
       ].map(sceneMesh => {
-        const {indexedGeometry} = sceneMesh;
+        const {indexedGeometry, matrixWorld} = sceneMesh;
         return {
           geometry: indexedGeometry,
+          width,
+          height,
+          matrixWorld,
         };
       }),
     });
