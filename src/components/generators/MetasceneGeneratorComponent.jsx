@@ -219,20 +219,62 @@ class EntranceExitMesh extends THREE.Mesh { // XXX needs to be unified with the 
 const getPanelSpecsGeometry = panelSpecs => {
   const geometries = panelSpecs.map((panelSpec, i) => {
     const {sceneChunkMesh} = panelSpec;
-    // apply transform
+    // transform
     const g = sceneChunkMesh.geometry.clone()
       .applyMatrix4(
         sceneChunkMesh.matrixWorld
       );
-    // set uvs
+    // atlased uvs
     const uvs = g.attributes.uv.array;
     const px = (i % metazineAtlasTextureRowSize) / metazineAtlasTextureRowSize;
     const py = Math.floor(i / metazineAtlasTextureRowSize) / metazineAtlasTextureRowSize;
-    for (let i = 0; i < uvs.length; i += 2) {
-      uvs[i + 0] = uvs[i + 0] * panelSpecTextureSize / metazineAtlasTextureSize + px;
-      uvs[i + 1] = uvs[i + 1] * panelSpecTextureSize / metazineAtlasTextureSize + py;
+    for (let j = 0; j < uvs.length; j += 2) {
+      uvs[j + 0] = uvs[j + 0] * panelSpecTextureSize / metazineAtlasTextureSize + px;
+      uvs[j + 1] = uvs[j + 1] * panelSpecTextureSize / metazineAtlasTextureSize + py;
     }
     g.attributes.uv.needsUpdate = true;
+
+    // select index
+    const selectIndexes = new Uint16Array(g.attributes.position.count)
+      .fill(i);
+    g.setAttribute('selectIndex', new THREE.BufferAttribute(selectIndexes, 1, false));
+
+    // scale quaternion + offset vectors
+    const scaleQuaternions = new Float32Array(g.attributes.position.count * 4);
+    const scaleHeights = new Float32Array(g.attributes.position.count);
+    const scaleOffsets = new Float32Array(g.attributes.position.count);
+    
+    const {
+      floorPlaneLocation,
+      floorBoundingBox,
+    } = panelSpec;
+
+    const scaleQuaternion = new THREE.Quaternion()
+      .fromArray(floorPlaneLocation.quaternion)
+      .invert();
+    
+    const floorBoundingBox3 = new THREE.Box3(
+      new THREE.Vector3().fromArray(floorBoundingBox.min),
+      new THREE.Vector3().fromArray(floorBoundingBox.max)
+    );
+    const scaleHeight = floorBoundingBox3.max.y - floorBoundingBox3.min.y;
+
+    for (let j = 0; j < scaleHeights.length; j++) {
+      localVector.fromArray(g.attributes.position.array, j * 3)
+        .applyQuaternion(scaleQuaternion);
+      const dy = localVector.y - floorBoundingBox3.min.y;
+
+      scaleQuaternion.toArray(scaleQuaternions, j * 4);
+      scaleHeights[j] = scaleHeight;
+      // scaleOffsets[j] = dy;
+      scaleOffsets[j] = floorBoundingBox3.min.y;
+    }
+    g.setAttribute('scaleQuaternion', new THREE.BufferAttribute(scaleQuaternions, 4));
+    g.setAttribute('scaleHeight', new THREE.BufferAttribute(scaleHeights, 1));
+    g.setAttribute('scaleOffset', new THREE.BufferAttribute(scaleOffsets, 1));
+    globalThis.scaleQuaternions = scaleQuaternions;
+    globalThis.scaleHeights = scaleHeights;
+    globalThis.scaleOffsets = scaleOffsets;
     return g;
   });
   return BufferGeometryUtils.mergeBufferGeometries(geometries);
@@ -290,29 +332,71 @@ class SceneBatchedMesh extends THREE.Mesh {
           value: map,
           needsUpdate: true,
         },
+        uSelectIndex: {
+          value: -1,
+          needsUpdate: true,
+        },
       },
       vertexShader: `\
+        uniform float uSelectIndex;
+        attribute float selectIndex;
+        attribute vec4 scaleQuaternion;
+        attribute float scaleHeight;
+        attribute float scaleOffset;
         varying vec2 vUv;
         // varying vec3 vNormal;
+        flat varying float vSelected;
+
+        vec4 quaternion_inverse(vec4 q) {
+          return vec4(-q.xyz, q.w);
+        }
+        vec3 rotate_vertex_quaternion(vec3 position, vec4 q) {
+          vec3 u = q.xyz;
+          float s = q.w;
+          return position + 2.0 * cross(u, cross(u, position) + s * position);
+        }
 
         void main() {
           vUv = uv;
-          // vNormal = normal;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+
+          vec3 p = position;
+
+          if (uSelectIndex == -1. || selectIndex == uSelectIndex) {
+            vSelected = 1.;
+          } else {
+            vSelected = 0.;
+            // p = rotate_vertex_quaternion(p, scaleQuaternion);
+            p.y -= scaleOffset;
+            // p.y /= scaleHeight;
+            p.y *= 0.2;
+            p.y += scaleOffset;
+            // vec4 scaleQuaternionInverse = quaternion_inverse(scaleQuaternion);
+            // p = rotate_vertex_quaternion(p, scaleQuaternionInverse);
+          }
+
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
         }
       `,
       fragmentShader: `\
         uniform sampler2D map;
         varying vec2 vUv;
         // varying vec3 vNormal;
+        flat varying float vSelected;
 
         void main() {
           // gl_FragColor = vec4(vNormal, 1.0);
           gl_FragColor = texture2D(map, vUv);
           // gl_FragColor = vec4(vUv, 0.0, 1.0);
           // gl_FragColor.rg + vUv;
+
+          if (vSelected == 0.) {
+            // gl_FragColor.rgb += 0.2;
+            gl_FragColor.rgb *= 0.5;
+            gl_FragColor.a = 0.5;
+          }
         }
       `,
+      transparent: true,
     });
 
     super(geometry, material);
@@ -2363,11 +2447,20 @@ export class MetazineRenderer extends EventTarget {
     _startLoop();
   }
   selectPanelSpec(panelSpec = null) {
-    // console.log('select panel spec', panelSpec);
-
+    // updat member
     this.selectedPanelSpec = panelSpec;
-    this.underfloorMesh.visible = panelSpec !== null;
     
+    // update meshes
+    {
+      const selectIndex = this.metazine.renderPanelSpecs.indexOf(panelSpec);
+      this.sceneBatchedMesh.material.uniforms.uSelectIndex.value = selectIndex;
+      this.sceneBatchedMesh.material.uniforms.uSelectIndex.needsUpdate = true;
+      console.log('set select index', selectIndex);
+    }
+    {
+      this.underfloorMesh.visible = panelSpec !== null;
+    }
+
     if (panelSpec) {
       const backOffsetVector = new THREE.Vector3(0, 1, 1);
 
