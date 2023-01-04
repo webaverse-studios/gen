@@ -80,6 +80,9 @@ import {
   pushMeshes,
 } from '../../zine/zine-utils.js';
 import {
+  mod,
+} from '../../../utils.js';
+import {
   DropTarget,
 } from '../drop-target/DropTarget.jsx';
 
@@ -106,8 +109,14 @@ import {
 const localVector = new THREE.Vector3();
 const localVector2 = new THREE.Vector3();
 const localVector3 = new THREE.Vector3();
+const localVector4 = new THREE.Vector3();
+const localVector5 = new THREE.Vector3();
+const localVector6 = new THREE.Vector3();
+const localVector7 = new THREE.Vector3();
 const localQuaternion = new THREE.Quaternion();
 const localMatrix = new THREE.Matrix4();
+const localTriangle = new THREE.Triangle();
+const localTriangle2 = new THREE.Triangle();
 // const localBox = new THREE.Box3();
 const localColor = new THREE.Color();
 
@@ -1658,10 +1667,165 @@ const makePositionCubesMesh = (positions) => {
   positionCubesMesh.instanceMatrix.needsUpdate = true;
   return positionCubesMesh;
 };
+const makeFlowerGeometry = positionsArray => {
+  const geometry = new THREE.BufferGeometry();
+
+  // positions
+  const numPoints = positionsArray.length / 3;
+  const positions = new Float32Array(numPoints * 3 * 2);
+  for (let i = 0; i < numPoints; i++) {
+    localVector.fromArray(positionsArray, i * 3);
+
+    // bottom
+    localVector.toArray(positions, i * 3);
+    // top
+    localVector.y += 1;
+    localVector.toArray(positions, i * 3 + numPoints * 3);
+  }
+  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+  /* // directions
+  const directions = new Float32Array(numPoints * 3 * 2);
+  // NOTE: only iterating the top points; the bottom points have direction 0
+  for (let i = 0; i < numPoints; i++) {
+    const offsetI = numPoints + i;
+
+    localVector.fromArray(geometry.attributes.position.array, i * 3);
+    // localVector.sub(center);
+    localVector.y = 0;
+    localVector.normalize();
+    localVector.toArray(directions, offsetI * 3);
+  }
+  // globalThis.directions = directions.slice();
+  geometry.setAttribute('direction', new THREE.BufferAttribute(directions, 3)); */
+
+  // directions
+  const directions = new Float32Array(numPoints * 3 * 2);
+  // for (let i = 0; i < numPoints; i++) {
+  //   const nextI = (i + 1) % numPoints;
+  //   const a = localVector.fromArray(positionsArray, i * 3);
+  //   const b = localVector2.fromArray(positionsArray, nextI * 3);
+  //   // const c = localVector3.fromArray(positionsArray, (i + 2) % numPoints * 3);
+  // }
+  // NOTE: only iterating the top points; the bottom points have direction 0
+  for (let i = 0; i < numPoints; i++) {
+    const centerI = i;
+    const leftI = mod(i - 1, numPoints);
+    const rightI = mod(i + 1, numPoints);
+
+    const a = localVector.fromArray(positionsArray, leftI * 3);
+    const b = localVector2.fromArray(positionsArray, centerI * 3);
+    const c = localVector3.fromArray(positionsArray, rightI * 3);
+    const d = localVector4.copy(b);
+    d.y += 1;
+
+    const triangle = localTriangle.set(a, d, b);
+    const normal = triangle.getNormal(localVector5);
+    const triangle2 = localTriangle2.set(d, c, b);
+    const normal2 = triangle2.getNormal(localVector6);
+
+    const normalAvg = localVector7.copy(normal)
+      .add(normal2)
+      .multiplyScalar(0.5);
+    normalAvg.toArray(directions, i * 3 + numPoints * 3);
+  }
+  geometry.setAttribute('direction', new THREE.BufferAttribute(directions, 3));
+
+  // indices
+  const uint16Array = new Uint16Array(numPoints * 6);
+  for (let i = 0; i < numPoints; i++) {
+    // bottom, from the first half of the positions array
+    const a = i;
+    // neighbor point
+    const b = (i + 1) % numPoints;
+
+    // top, from the second half of the positions array
+    const c = i + numPoints;
+    // neighbor point
+    const d = b + numPoints;
+
+    // abc
+    uint16Array[i * 6 + 0] = a;
+    uint16Array[i * 6 + 1] = c;
+    uint16Array[i * 6 + 2] = d;
+    // bdc
+    uint16Array[i * 6 + 3] = a;
+    uint16Array[i * 6 + 4] = d;
+    uint16Array[i * 6 + 5] = b;
+  }
+  geometry.setIndex(new THREE.BufferAttribute(uint16Array, 1));
+  geometry.computeVertexNormals();
+
+  return geometry;
+}
+const makeFloorFlowerMesh = (geometry) => {
+  const material = new THREE.ShaderMaterial({
+    vertexShader: `\
+      attribute vec3 direction;
+      varying vec3 vNormal;
+
+      void main() {
+        vNormal = normal;
+
+        vec3 p = position;
+        if (direction != vec3(0.)) {
+          p.y += 9.;
+        }
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+      }
+    `,
+    fragmentShader: `\
+      varying vec3 vNormal;
+
+      void main() {
+        gl_FragColor = vec4(vNormal, 1.0);
+      }
+    `,
+    side: THREE.DoubleSide,
+  });
+
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.frustumCulled = false;
+  return mesh;
+};
+const makeFloorPetalMesh = (geometry) => {
+  const material = new THREE.ShaderMaterial({
+    vertexShader: `\
+      attribute vec3 direction;
+      varying vec3 vNormal;
+
+      void main() {
+        vNormal = normal;
+        
+        vec3 p = position;
+        vec4 worldPosition = modelMatrix * vec4(p, 1.0);
+        if (direction != vec3(0.)) {
+          worldPosition.xyz += direction * 2.;
+        }
+        gl_Position = projectionMatrix * viewMatrix * worldPosition;
+      }
+    `,
+    fragmentShader: `\
+      varying vec3 vNormal;
+
+      void main() {
+        // gl_FragColor = vec4(vNormal, 1.0);
+        gl_FragColor = vec4(0., 1., 0., 1.0);
+      }
+    `,
+    side: THREE.DoubleSide,
+  });
+
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.frustumCulled = false;
+  return mesh;
+};
 class ChunkEdgeMesh extends THREE.Object3D {
   constructor({
     panelSpec,
   }) {
+    super();
+
     // camera
     const chunkEdgeCamera = makeFloorNetCamera();
 
@@ -1765,15 +1929,31 @@ class ChunkEdgeMesh extends THREE.Object3D {
       const index = i * 3;
       positions[index + 0] = -x * floorNetResolution + centerFrontRight.x;
       positions[index + 1] = z;
-      // positions[index + 1] = 0;
       positions[index + 2] = y * floorNetResolution + centerBackLeft.z;
     }
-    const positionCubesMesh = makePositionCubesMesh(positions);
+    // center positions
+    const boundingBox = new THREE.Box3()
+      .setFromBufferAttribute(new THREE.BufferAttribute(positions, 3));
+    const positionCenter = boundingBox.getCenter(new THREE.Vector3());
+    const positionsCentered = new Float32Array(positions.length);
+    for (let i = 0; i < positions.length; i += 3) {
+      const index = i;
+      positionsCentered[index + 0] = positions[index + 0] - positionCenter.x;
+      positionsCentered[index + 1] = positions[index + 1] - positionCenter.y;
+      positionsCentered[index + 2] = positions[index + 2] - positionCenter.z;
+    }
 
-    super();
+    // create flower geometry
+    const flowerGeometry = makeFlowerGeometry(positionsCentered);
+    const floorFlowerMesh = makeFloorFlowerMesh(flowerGeometry);
+    floorFlowerMesh.position.copy(positionCenter);
+    this.add(floorFlowerMesh);
+    floorFlowerMesh.updateMatrixWorld();
 
-    this.add(positionCubesMesh);
-    positionCubesMesh.updateMatrixWorld();
+    const floorPetalMesh = makeFloorPetalMesh(flowerGeometry);
+    floorPetalMesh.position.copy(positionCenter);
+    this.add(floorPetalMesh);
+    floorPetalMesh.updateMatrixWorld();
   }
 }
 
