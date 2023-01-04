@@ -383,7 +383,7 @@ export const getRenderSpecsMeshesDepth = (meshes, width, height, camera) => {
   
   // read back image data
   const imageData = {
-    data: new Uint8Array(depthRenderTarget.width * depthRenderTarget.height * 4),
+    data: new Uint8Array(width * height * 4),
     width,
     height,
   };
@@ -391,6 +391,9 @@ export const getRenderSpecsMeshesDepth = (meshes, width, height, camera) => {
 
   // latch rendered depth data
   oldDepthFloatImageData = reinterpretFloatImageData(imageData); // viewZ
+
+  // cleanup
+  renderer.dispose();
 
   return oldDepthFloatImageData;
 };
@@ -402,7 +405,7 @@ export const mergeOperator = ({
   renderSpecs,
 }) => {
   // add clipZ attributes
-  renderSpecs = clipRenderSpecs(renderSpecs, width, height);
+  renderSpecs = clipRenderSpecs(renderSpecs);
 
   // canvas
   const canvas = document.createElement('canvas');
@@ -484,6 +487,9 @@ export const mergeOperator = ({
     );
     document.body.appendChild(reconstructionCanvas);
   }
+
+  // cleanup
+  renderer.dispose();
 
   return {
     oldDepthFloatImageData,
