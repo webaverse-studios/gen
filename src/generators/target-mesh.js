@@ -59,10 +59,6 @@ export class TargetMesh extends THREE.Mesh {
           value: new THREE.Vector3(),
           needsUpdate: false,
         },
-        uRunning: {
-          value: 0,
-          needsUpdate: false,
-        },
       },
       vertexShader: `\
         uniform float uTime;
@@ -83,19 +79,11 @@ export class TargetMesh extends THREE.Mesh {
       fragmentShader: `\
         uniform float uTime;
         uniform vec3 uWorldViewport;
-        uniform float uRunning;
         varying vec2 vUv;
         varying vec2 vDirection;
         
         void main() {
-          if (uRunning > 0.5) {
-            float modTime = mod(uTime, 0.15) / 0.15;
-            float f = modTime < 0.5 ? 0. : 1.;
-            vec3 c = mix(color, vec3(0., 0., 0.), f);
-            gl_FragColor = vec4(c, 1.);
-          } else {
-            gl_FragColor = vec4(0., 0., 0., 1.);
-          }
+          gl_FragColor = vec4(0., 0., 0., 1.);
         }
       `,
       side: THREE.DoubleSide,
