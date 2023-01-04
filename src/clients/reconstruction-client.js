@@ -551,7 +551,7 @@ export async function getDepthField(blob, {
 } = {}) {
   const u = new URL('https://depth.webaverse.com/depthfield');
   if (forceFov !== undefined) {
-    u.searchParams.set('fov', forceFov);
+    u.searchParams.set('forceFov', forceFov);
   }
   const res = await fetch(u, {
     method: 'POST',
