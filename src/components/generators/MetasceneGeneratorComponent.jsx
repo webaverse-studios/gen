@@ -1069,12 +1069,8 @@ const getPanelSpecEdges = panelSpec => {
   );
   const center = box3.getCenter(new THREE.Vector3());
   const size = box3.getSize(new THREE.Vector3());
-  // console.log('got size', size);
 
-  // move to the camera plane
-  // center.y = chunkEdgeCamera.position.y;
   // find camera range; scan and snap outward
-
   const oldPosition = panelSpec.position.clone();
   const oldQuaternion = panelSpec.quaternion.clone();
   const oldScale = panelSpec.scale.clone();
