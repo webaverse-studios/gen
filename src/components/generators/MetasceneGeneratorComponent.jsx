@@ -1733,11 +1733,11 @@ export class Metazine extends EventTarget {
         );
       }
 
-      if (intersect) {
-        console.log('intersect');
-      } else {
-        console.log('no intersect');
-      }
+      // if (intersect) {
+      //   console.log('intersect');
+      // } else {
+      //   console.log('no intersect');
+      // }
 
       intersect = false; // XXX hack
       if (intersect) {
@@ -2462,7 +2462,6 @@ export class MetazineRenderer extends EventTarget {
       const selectIndex = this.metazine.renderPanelSpecs.indexOf(panelSpec);
       this.sceneBatchedMesh.material.uniforms.uSelectIndex.value = selectIndex;
       this.sceneBatchedMesh.material.uniforms.uSelectIndex.needsUpdate = true;
-      console.log('set select index', selectIndex);
     }
     {
       this.underfloorMesh.visible = panelSpec !== null;
