@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 // import {OBB} from 'three/examples/jsm/math/OBB.js';
 import {useState, useRef, useEffect} from 'react';
+import React from 'react';
 import alea from 'alea';
 import concaveman from 'concaveman';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
@@ -30,6 +31,7 @@ import {
 } from '../../zine/zine-geometry-utils.js';
 import {
   mainImageKey,
+  promptKey,
 } from '../../zine/zine-data-specs.js';
 import {
   panelSize,
@@ -1310,6 +1312,7 @@ class MetazineLoader {
       // latch data
       const layer0 = panel.getLayer(0);
       const imageArrayBuffer = layer0.getData(mainImageKey);
+      const prompt = layer0.getData(promptKey);
       const layer1 = panel.getLayer(1);
       const positionArray = layer1.getData('position');
       const quaternionArray = layer1.getData('quaternion');
@@ -1330,7 +1333,11 @@ class MetazineLoader {
       // mesh
       const panelSpec = new THREE.Object3D();
       panelSpec.name = fileName;
+      panelSpec.description = prompt;
       panelSpec.imageArrayBuffer = imageArrayBuffer;
+      const imageBlob = new Blob([imageArrayBuffer]);
+      const imageBlobUrl = URL.createObjectURL(imageBlob);
+      panelSpec.imgSrc = imageBlobUrl;
       panelSpec.resolution = resolution;
       panelSpec.camera = camera;
       panelSpec.boundingBox = boundingBox;
@@ -2539,6 +2546,12 @@ export class MetazineRenderer extends EventTarget {
       this.underfloorMesh.setTransform(panelSpec, underfloorPosition, underfloorQuaternion, underfloorScale);
       this.underfloorMesh.updateMatrixWorld();
     }
+
+    this.dispatchEvent(new MessageEvent('panelspecchange', {
+      data: {
+        panelSpec,
+      },
+    }))
   }
   snapCameraToPanelSpec() {
     if (this.selectedPanelSpec) {
@@ -2627,6 +2640,7 @@ export class MetazineRenderer extends EventTarget {
 
 const Metazine3DCanvas = ({
   metazine,
+  onPanelSpecChange,
 }) => {
   const canvasRef = useRef();
   
@@ -2634,6 +2648,9 @@ const Metazine3DCanvas = ({
     const canvas = canvasRef.current;
     if (canvas) {
       const renderer = new MetazineRenderer(canvas, metazine);
+      renderer.addEventListener('panelspecchange', e => {
+        onPanelSpecChange(e.data.panelSpec);
+      });
 
       const _direction = (x, z) => {
         // get candidate panel specs
@@ -2772,6 +2789,36 @@ const Metazine3DCanvas = ({
     />
   );
 };
+const Metazine3DCanvasWrapper = React.memo(Metazine3DCanvas, (prevProps, nextProps) => {
+  return prevProps.metazine === nextProps.metazine;
+});
+const MetazineCanvas = ({
+  metazine,
+}) => {
+  const [panelSpec, setPanelSpec] = useState(null);
+
+  return (
+    <div className={styles.metazineCanvas}>
+      {panelSpec ? <div className={styles.overlay}>
+        <div className={styles.heroTag}>
+          <div className={styles.h1}>
+            {panelSpec.name}
+          </div>
+          <div className={styles.h2}>
+            {panelSpec.description}
+          </div>
+        </div>
+        <div className={styles.sidebar}>
+          <img src={panelSpec.imgSrc} className={styles.img} />
+        </div>
+      </div> : null}
+      <Metazine3DCanvasWrapper
+        metazine={metazine}
+        onPanelSpecChange={setPanelSpec}
+      />
+    </div>
+  );
+};
 
 //
 
@@ -2808,7 +2855,7 @@ const MetasceneGeneratorComponent = () => {
   return (
     <div className={styles.metasceneGenerator}>
       {loaded ? (
-        <Metazine3DCanvas
+        <MetazineCanvas
           width={panelSize}
           height={panelSize}
           metazine={metazine}
