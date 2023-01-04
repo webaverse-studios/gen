@@ -186,17 +186,19 @@ export class Panel extends EventTarget {
   async setFile(file, prompt) {
     file = await resizeBlob(file, panelSize, panelSize);
     const layer = this.zp.addLayer();
-    (async () => {
-      const arrayBuffer = await file.arrayBuffer();
-      layer.setData(mainImageKey, arrayBuffer);
-    })();
-    (async () => {
-      if (!prompt) {
-        prompt = await vqaClient.getImageCaption(file);
-      }
-      layer.setData(promptKey, prompt);
-    })();
     layer.setData(compressedKey, false);
+    await Promise.all([
+      (async () => {
+        const arrayBuffer = await file.arrayBuffer();
+        layer.setData(mainImageKey, arrayBuffer);
+      })(),
+      (async () => {
+        if (!prompt) {
+          prompt = await vqaClient.getImageCaption(file);
+        }
+        layer.setData(promptKey, prompt);
+      })(),
+    ]);
   }
   async setFromPrompt(prompt) {
     await this.task(async ({signal}) => {
