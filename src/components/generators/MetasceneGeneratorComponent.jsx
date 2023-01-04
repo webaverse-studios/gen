@@ -2046,9 +2046,7 @@ class UnderfloorMesh extends THREE.Object3D {
 
     const arrowMesh = new ArrowMesh();
     arrowMesh.geometry = arrowMesh.geometry.clone()
-      // .translate(0, 1, 0)
       .rotateX(Math.PI)
-      // .scale(4, 4, 4)
       .translate(0, 20, 0)
     arrowMesh.frustumCulled = false;
     this.add(arrowMesh);
