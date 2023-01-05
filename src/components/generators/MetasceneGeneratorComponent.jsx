@@ -1788,6 +1788,9 @@ export class Metazine extends EventTarget {
     this.mapIndex = mapIndexRenderer.getMapIndex();
     this.mapIndexResolution = mapIndexRenderer.getMapIndexResolution();
   }
+  async exportAsync() {
+    return new Uint8Array();
+  }
 }
 
 //
