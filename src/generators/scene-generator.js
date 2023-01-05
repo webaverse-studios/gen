@@ -123,6 +123,12 @@ import {
   GridMesh,
 } from './grid-mesh.js';
 import {
+  getPanelSpecOutlinePositionsDirections,
+  makeFlowerGeometry,
+  makeFloorFlowerMesh,
+  makeFloorPetalMesh,
+} from './flower-mesh.js';
+import {
   depthFloats2Canvas,
   distanceFloats2Canvas,
   segmentsImg2Canvas,
@@ -140,6 +146,10 @@ import {
   // getPointCloud,
   clipGeometryZ,
   mergeOperator,
+  // getCoverageRenderSpecsMeshes,
+  // renderMeshesCoverage,
+  getDepthRenderSpecsMeshes,
+  renderMeshesDepth,
 } from '../clients/reconstruction-client.js';
 import {PathMesh} from '../zine-aux/meshes/path-mesh.js';
 
@@ -193,6 +203,8 @@ const gltfLoader = makeGltfLoader();
 const imageAiClient = new ImageAiClient();
 const abortError = new Error();
 abortError.isAbortError = true;
+
+// const zSymbol = Symbol('z');
 
 //
 
@@ -2975,10 +2987,6 @@ class OutmeshToolMesh extends THREE.Object3D {
         mesh.material.uniforms.uWorldBoxMin.needsUpdate = true;
         mesh.material.uniforms.uWorldBoxMax.value.copy(worldBox.max);
         mesh.material.uniforms.uWorldBoxMax.needsUpdate = true;
-        // globalThis.box = [
-        //   worldBox.min.toArray(),
-        //   worldBox.max.toArray(),
-        // ];
       }
     };
     outmeshMesh.setState = newState => {
@@ -3171,6 +3179,48 @@ export class PanelRenderer extends EventTarget {
     this.zineRenderer.transformScene.add(pathMesh);
     pathMesh.updateMatrixWorld();
     this.pathMesh = pathMesh;
+
+    // floor flower meshes
+    {
+      const {
+        outlineJson,
+        floorPlaneLocation,
+      } = this.zineRenderer.metadata;
+
+      const {
+        positions: flowerPositions,
+        directions: flowerDirections,
+      } = getPanelSpecOutlinePositionsDirections({
+        outlineJson,
+        floorPlaneLocation,
+        directionMode: 'vertical',
+      });
+      const flowerGeometry = makeFlowerGeometry(flowerPositions, flowerDirections);
+      // const transformPosition = new THREE.Vector3();
+      // const transformQuaternion = new THREE.Quaternion();
+      // const transformScale = new THREE.Vector3();
+      // panelSpec.matrixWorld
+      //   .decompose(transformPosition, transformQuaternion, transformScale);
+      // create flower geometry
+      const floorFlowerMesh = makeFloorFlowerMesh(flowerGeometry);
+      this.zineRenderer.transformScene.add(floorFlowerMesh);
+      floorFlowerMesh.updateMatrixWorld();
+      this.floorFlowerMesh = floorFlowerMesh;
+
+      const {
+        positions: flowerPetalPositions,
+        directions: flowerPetalDirections,
+      } = getPanelSpecOutlinePositionsDirections({
+        outlineJson,
+        floorPlaneLocation,
+        directionMode: 'horizontal',
+      });
+      const flowerPetalGeometry = makeFlowerGeometry(flowerPetalPositions, flowerPetalDirections);
+      const floorFlowerPetalMesh = makeFloorPetalMesh(flowerPetalGeometry);
+      this.zineRenderer.transformScene.add(floorFlowerPetalMesh);
+      floorFlowerPetalMesh.updateMatrixWorld();
+      this.floorFlowerPetalMesh = floorFlowerPetalMesh;
+    }
 
     // selector
     {
@@ -4664,6 +4714,175 @@ export async function compileVirtualScene(imageArrayBuffer) {
   );
   console.timeEnd('boundingBox');
 
+  console.time('outline');
+  let outlineJson;
+  {
+    const getIndex = (x, y, width) => y * width + x;
+    const getOutlinePoints = (depthFloat32Array, width, height, camera) => {
+      const seenIndices = new Map();
+      const queue = [
+        [0, 0],
+      ];
+      seenIndices.set(
+        getIndex(
+          queue[0][0],
+          queue[0][1],
+          width
+        ),
+        true
+      );
+      const outlinePoints = [];
+      let i = 0;
+      while (queue.length > 0) {
+        const [x, y] = queue.shift();
+        
+        // XXX debug check
+        {
+          const index = getIndex(x, y, width);
+          const r = depthFloat32Array[index];
+          if (r !== 0) {
+            console.warn('found filled pixel in queue', i, x, y);
+            debugger;
+          }
+        }
+
+        let zSum = 0;
+        let weightSum = 0;
+        for (let dy = -1; dy <= 1; dy++) {
+          for (let dx = -1; dx <= 1; dx++) {
+            const ax = x + dx;
+            const ay = y + dy;
+            if (ax >= 0 && ax < width && ay >= 0 && ay < height) { // if in bounds
+              const index2 = getIndex(ax, ay, width);
+              const r2 = depthFloat32Array[index2];
+              if (r2 !== 0) { // filled
+                const outlineDepth = depthFloat32Array[index2];
+                const z = camera.position.y - outlineDepth;
+                // if (isNaN(z)) {
+                //   console.warn('illegal z 1', {z, outlineDepth, x, y});
+                //   debugger;
+                // }
+
+                const d = Math.sqrt(dx*dx + dy*dy);
+                const weight = 1 / (d*d + 1);
+
+                zSum += z * weight;
+                weightSum += weight;
+              } else { // clear
+                if (!seenIndices.has(index2)) {
+                  seenIndices.set(index2, true);
+                  queue.push([ax, ay]);
+                }
+              }
+            }
+          }
+        }
+        if (weightSum > 0) {
+          const z = zSum / weightSum;
+          // if (isNaN(z)) {
+          //   console.warn('illegal z 2', {z, zSum, weightSum, x, y});
+          //   debugger;
+          // }
+          const outlinePoint = [x, y, z];
+          // outlinePoint[zSymbol] = z;
+          outlinePoints.push(outlinePoint);
+        }
+
+        i++;
+      }
+      return outlinePoints;
+    };
+    const getOutlineJson = panelSpec => {
+      // camera
+      const chunkEdgeCamera = makeFloorNetCamera();
+    
+      // compute camera spec
+      const box3 = new THREE.Box3(
+        new THREE.Vector3().fromArray(floorBoundingBox.min),
+        new THREE.Vector3().fromArray(floorBoundingBox.max)
+      );
+      const center = box3.getCenter(new THREE.Vector3());
+      const size = box3.getSize(new THREE.Vector3());
+    
+      // back left
+      const centerBackLeft = center.clone()
+        .add(new THREE.Vector3(-size.x / 2, 0, -size.z / 2))
+        .add(new THREE.Vector3(-floorNetResolution, 0, -floorNetResolution).multiplyScalar(2)); // 2 px border
+      // snap to grid
+      centerBackLeft.x = Math.floor(centerBackLeft.x / floorNetResolution) * floorNetResolution;
+      centerBackLeft.z = Math.floor(centerBackLeft.z / floorNetResolution) * floorNetResolution;
+      
+      // front right
+      const centerFrontRight = center.clone()
+        .add(new THREE.Vector3(size.x / 2, 0, size.z / 2))
+        .add(new THREE.Vector3(floorNetResolution, 0, floorNetResolution).multiplyScalar(2)); // 2 px border
+      // snap to grid
+      centerFrontRight.x = Math.ceil(centerFrontRight.x / floorNetResolution) * floorNetResolution;
+      centerFrontRight.z = Math.ceil(centerFrontRight.z / floorNetResolution) * floorNetResolution;
+      
+      // compute the new center
+      center.copy(centerBackLeft)
+        .add(centerFrontRight)
+        .multiplyScalar(0.5);
+      // compute the new size
+      size.copy(centerFrontRight)
+        .sub(centerBackLeft);
+    
+      // set the orthographic camera
+      chunkEdgeCamera.position.copy(center);
+      chunkEdgeCamera.position.y -= floorNetWorldDepth / 2;
+      chunkEdgeCamera.updateMatrixWorld();
+      chunkEdgeCamera.left = centerBackLeft.x - center.x;
+      chunkEdgeCamera.right = centerFrontRight.x - center.x;
+      chunkEdgeCamera.top = centerFrontRight.z - center.z;
+      chunkEdgeCamera.bottom = centerBackLeft.z - center.z;
+      chunkEdgeCamera.updateProjectionMatrix();
+    
+      // compute the pixel resolution to use
+      const targetWidth = Math.ceil(size.x / floorNetResolution); // padding
+      const targetHeight = Math.ceil(size.z / floorNetResolution); // padding
+    
+      // render the coverage map
+      const meshSpecs = [
+        {
+          geometry,
+          matrixWorld: floorInverseMatrix,
+          width,
+          height,
+          side: THREE.DoubleSide,
+        },
+      ];
+      const meshes = getDepthRenderSpecsMeshes(meshSpecs, chunkEdgeCamera);
+      const depthFloat32Array = renderMeshesDepth(meshes, targetWidth, targetHeight, chunkEdgeCamera);
+      
+      // for debugging
+      // const coverageCanvas = depthFloats2Canvas(depthFloat32Array, width, height, chunkEdgeCamera);
+      // coverageCanvas.style.cssText = `\
+      //   background: blue;
+      // `;
+      // document.body.appendChild(coverageCanvas);
+    
+      // get outline points
+      const outlinePoints = getOutlinePoints(depthFloat32Array, targetWidth, targetHeight, chunkEdgeCamera);
+    
+      // detect edges
+      let edges = concaveman(outlinePoints, 5);
+      // edges = edges.map(edge => {
+      //   const [x, y] = edge;
+      //   const z = edge[zSymbol];
+      //   return [x, y, z];
+      // });
+
+      return {
+        edges,
+        center: center.toArray(),
+        size: size.toArray(),
+      };
+    };
+    outlineJson = getOutlineJson();
+  }
+  console.timeEnd('outline');
+
   const {
     entranceExitLocations,
     candidateLocations,
@@ -5066,6 +5285,7 @@ export async function compileVirtualScene(imageArrayBuffer) {
     cameraJson,
     boundingBox,
     floorBoundingBox,
+    outlineJson,
     depthFieldHeaders,
     depthField: depthFieldArrayBuffer,
     planesJson,
