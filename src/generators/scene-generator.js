@@ -5,7 +5,12 @@ import alea from 'alea';
 import concaveman from 'concaveman';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 import {Text} from 'troika-three-text';
-import {makePromise} from '../../utils.js';
+import {
+  makePromise,
+} from '../../utils.js';
+import {
+  shuffle,
+} from '../utils/rng-utils.js';
 import {
   frameSize,
   canvasSize,
@@ -929,14 +934,6 @@ const getRaycastedPortalLocations = (() => {
     return portalLocations;
   };
 })();
-function shuffle(array, seed = '') {
-  const rng = alea(seed);
-  for (let i = array.length - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1));
-    [array[i], array[j]] = [array[j], array[i]];
-  }
-  return array;
-}
 /* function* subsets(array, offset = 0) {
   while (offset < array.length) {
     let first = array[offset++];
