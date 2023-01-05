@@ -4874,10 +4874,30 @@ export async function compileVirtualScene(imageArrayBuffer) {
       //   return [x, y, z];
       // });
 
+      const transformQuaternion = new THREE.Quaternion()
+        .fromArray(floorPlaneLocation.quaternion);
+      const transformPosition = new THREE.Vector3(center.x + size.x / 2, 0, center.z - size.z / 2)
+        .applyQuaternion(transformQuaternion);
+
+      // positions
+      for (let i = 0; i < edges.length; i++) {
+        const edge = edges[i];
+        const [x, y, z] = edge;
+
+        localVector.set(
+          -x * floorNetResolution,
+          z,
+          y * floorNetResolution
+        )
+          .applyQuaternion(transformQuaternion)
+          .add(transformPosition);
+        localVector.toArray(edge);
+      }
+
       return {
         edges,
-        center: center.toArray(),
-        size: size.toArray(),
+        // center: center.toArray(),
+        // size: size.toArray(),
       };
     };
     outlineJson = getOutlineJson();

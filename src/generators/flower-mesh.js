@@ -28,33 +28,15 @@ export const getPanelSpecOutlinePositionsDirections = ({
   // edges
   const {
     edges,
-    center: centerArray,
-    size: sizeArray,
   } = outlineJson;
-
-  // transforms
-  const center = new THREE.Vector3().fromArray(centerArray);
-  const size = new THREE.Vector3().fromArray(sizeArray);
-  const transformQuaternion = new THREE.Quaternion()
-    .fromArray(floorPlaneLocation.quaternion);
-  const transformPosition = new THREE.Vector3(center.x + size.x / 2, 0, center.z - size.z / 2)
-    .applyQuaternion(transformQuaternion);
 
   // positions
   const numPoints = edges.length;
   const positions = new Float32Array(numPoints * 3);
   for (let i = 0; i < numPoints; i++) {
     const edge = edges[i];
-    const [x, y, z] = edge;
-
-    localVector.set(
-      -x * floorNetResolution,
-      z,
-      y * floorNetResolution
-    )
-      .applyQuaternion(transformQuaternion)
-      .add(transformPosition);
-    localVector.toArray(positions, i * 3);
+    localVector.fromArray(edge)
+      .toArray(positions, i * 3);
   }
 
   // directions
