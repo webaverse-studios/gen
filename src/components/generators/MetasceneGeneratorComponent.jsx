@@ -82,8 +82,8 @@ import {
   pushMeshes,
 } from '../../zine/zine-utils.js';
 import {
-  mod,
-} from '../../../utils.js';
+  shuffle,
+} from '../../utils/rng-utils.js';
 import {
   downloadFile,
 } from '../../utils/http-utils.js';
@@ -114,20 +114,26 @@ import {
 import {
   KeyMesh,
 } from '../../generators/key-mesh.js';
+import {
+  getPanelSpecOutlinePositionsDirections,
+  makeFlowerGeometry,
+  makeFloorFlowerMesh,
+  makeFloorPetalMesh,
+} from '../../generators/flower-mesh.js';
 
 //
 
 const localVector = new THREE.Vector3();
 const localVector2 = new THREE.Vector3();
 const localVector3 = new THREE.Vector3();
-const localVector4 = new THREE.Vector3();
-const localVector5 = new THREE.Vector3();
-const localVector6 = new THREE.Vector3();
-const localVector7 = new THREE.Vector3();
+// const localVector4 = new THREE.Vector3();
+// const localVector5 = new THREE.Vector3();
+// const localVector6 = new THREE.Vector3();
+// const localVector7 = new THREE.Vector3();
 const localQuaternion = new THREE.Quaternion();
 const localMatrix = new THREE.Matrix4();
-const localTriangle = new THREE.Triangle();
-const localTriangle2 = new THREE.Triangle();
+// const localTriangle = new THREE.Triangle();
+// const localTriangle2 = new THREE.Triangle();
 // const localBox = new THREE.Box3();
 const localColor = new THREE.Color();
 
@@ -2477,8 +2483,14 @@ const MetasceneGeneratorComponent = () => {
   const [metazine, setMetazine] = useState(() => new Metazine());
   const [compiling, setCompiling] = useState(false);
   const [loaded, setLoaded] = useState(false);
-  const [numPanels, setNumPanels] = useState(32);
-  const [files, setFiles] = useState([]);
+  const [seed, setSeed] = useState('lol');
+  const [numInPanels, setNumInPanels] = useState(300);
+  const [numOutPanels, setNumOutPanels] = useState(32);
+  const [files, _setFiles] = useState([]);
+
+  const setFiles = files => _setFiles(files.slice().sort((a, b) => {
+    a.name.localeCompare(b.name);
+  }));
 
   return (
     <div className={styles.metasceneGenerator}>
@@ -2514,9 +2526,21 @@ const MetasceneGeneratorComponent = () => {
               <div className={styles.header}>
                 <div className={styles.spacer} />
                 <label className={styles.label}>
-                  Num panels:
-                  <input type='number' value={numPanels} onChange={e => {
-                    setNumPanels(e.target.value);
+                  Seed:
+                  <input type='text' value={seed} onChange={e => {
+                    setSeed(e.target.value);
+                  }} />
+                </label>
+                <label className={styles.label}>
+                  Max panels:
+                  <input type='number' value={numInPanels} onChange={e => {
+                    setNumInPanels(e.target.value);
+                  }} />
+                </label>
+                <label className={styles.label}>
+                  Out panels:
+                  <input type='number' value={numOutPanels} onChange={e => {
+                    setNumOutPanels(e.target.value);
                   }} />
                 </label>
                 <input type='button' value='Generate' className={styles.submitButton} onClick={async () => {
@@ -2527,10 +2551,12 @@ const MetasceneGeneratorComponent = () => {
 
                     setCompiling(true);
                     try {
-                      const filesSorted = files.slice()
-                        .sort((a, b) => a.name.localeCompare(b.name));
+                      const filesSorted = shuffle(files.slice(), seed)
+                        .slice(0, numInPanels)
+                        // .sort((a, b) => a.name.localeCompare(b.name));
                       await metazine.compileZineFiles(filesSorted, {
-                        numPanels,
+                        seed,
+                        numPanels: numOutPanels,
                       });
                     } finally {
                       setCompiling(false);
