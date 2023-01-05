@@ -1197,7 +1197,8 @@ const sortLocations = (() => {
         const startCandidateLocation = candidateLocations[startCandidateIndex];
         // scan by step size 1/2..1/4
         for (let stepFactor = 2; stepFactor <= 4; stepFactor++) {
-          const stepSize = Math.floor(candidateLocations.length / stepFactor);
+          let stepSize = Math.floor(candidateLocations.length / stepFactor);
+          stepSize = Math.max(stepSize, 1);
           const stepCandidateLocations = [];
           for (let indexOffset = 0; indexOffset < candidateLocations.length; indexOffset += stepSize) {
             const candidateIndex = (startCandidateIndex + indexOffset) % candidateLocations.length;
