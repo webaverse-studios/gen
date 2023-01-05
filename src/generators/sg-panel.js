@@ -38,7 +38,9 @@ const imageAiClient = new ImageAiClient();
 
 const resizeBlob = async blob => {
   const img = await blob2img(blob);
-  const canvas = resizeImage(img, panelSize, panelSize);
+  const canvas = resizeImage(img, panelSize, panelSize, {
+    mode: 'contain',
+  });
   const blob2 = await canvas2blob(canvas);
   return blob2;
 }
