@@ -1221,6 +1221,7 @@ class MetazineLoader {
       const camera = setPerspectiveCameraFromJson(new THREE.PerspectiveCamera(), cameraJson);
       const boundingBox = layer1.getData('boundingBox');
       const floorBoundingBox = layer1.getData('floorBoundingBox');
+      const outlineJson = layer1.getData('outlineJson');
       const depthFieldArrayBuffer = layer1.getData('depthField');
       const entranceExitLocations = layer1.getData('entranceExitLocations');
       const floorPlaneLocation = layer1.getData('floorPlaneLocation');
@@ -1237,6 +1238,7 @@ class MetazineLoader {
       panelSpec.camera = camera;
       panelSpec.boundingBox = boundingBox;
       panelSpec.floorBoundingBox = floorBoundingBox;
+      panelSpec.outlineJson = outlineJson;
       // panelSpec.depthField = depthFieldArrayBuffer;
       panelSpec.entranceExitLocations = entranceExitLocations;
       panelSpec.floorPlaneLocation = floorPlaneLocation;
