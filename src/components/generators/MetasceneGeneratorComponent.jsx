@@ -284,9 +284,6 @@ const getPanelSpecsGeometry = panelSpecs => {
     g.setAttribute('scaleQuaternion', new THREE.BufferAttribute(scaleQuaternions, 4));
     g.setAttribute('scaleHeight', new THREE.BufferAttribute(scaleHeights, 1));
     g.setAttribute('scaleOffset', new THREE.BufferAttribute(scaleOffsets, 1));
-    globalThis.scaleQuaternions = scaleQuaternions;
-    globalThis.scaleHeights = scaleHeights;
-    globalThis.scaleOffsets = scaleOffsets;
     return g;
   });
   return BufferGeometryUtils.mergeBufferGeometries(geometries);
@@ -990,10 +987,10 @@ class MapIndexRenderer {
   draw(panelSpec, mode, attachPanelIndex, newPanelIndex) {
     const meshes = [panelSpec];
 
-    console.log('draw panel spec', {
-      attachPanelIndex,
-      newPanelIndex,
-    });
+    // console.log('draw panel spec', {
+    //   attachPanelIndex,
+    //   newPanelIndex,
+    // });
 
     // push
     const popMeshes = pushMeshes(this.drawScene, meshes);
@@ -2524,7 +2521,7 @@ const MetasceneGeneratorComponent = () => {
   return (
     <div className={styles.metasceneGenerator}>
       {loaded ? (
-        <div className={styles.metasceneRenderer}>
+        <>
           <div className={styles.header}>
             <button className={styles.button} onClick={async e => {
               e.preventDefault();
@@ -2540,12 +2537,14 @@ const MetasceneGeneratorComponent = () => {
               downloadFile(blob, 'metazine.zine');
             }}>Download zine</button>
           </div>
-          <MetazineCanvas
-            width={panelSize}
-            height={panelSize}
-            metazine={metazine}
-          />
-        </div>
+          <div className={styles.metasceneRenderer}>
+            <MetazineCanvas
+              width={panelSize}
+              height={panelSize}
+              metazine={metazine}
+            />
+          </div>
+        </>
       ) : (
         compiling ?
           <div>building...</div>
