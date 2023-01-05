@@ -85,7 +85,7 @@ export const DropTarget = ({
               </div>
             );
           })}
-          <input
+          {/* <input
             type='button'
             value='Submit'
             className={styles.submitButton}
@@ -93,7 +93,7 @@ export const DropTarget = ({
               const fakeSubmitEvent = makeFilesEvent(files);
               onSubmit(fakeSubmitEvent);
             }}
-          />
+          /> */}
         </div>
       }
     </div>
