@@ -4,7 +4,6 @@ import {OBB} from 'three/examples/jsm/math/OBB.js';
 import alea from 'alea';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 import {Text} from 'troika-three-text';
-import physicsManager from '../../physics-manager.js';
 import {makePromise} from '../../utils.js';
 import {
   frameSize,
