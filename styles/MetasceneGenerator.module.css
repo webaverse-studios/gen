@@ -1,16 +1,18 @@
 .metasceneGenerator {
   position: relative;
   display: flex;
-  width: 1024px;
-  height: 1024px;
   flex-direction: column;
 }
 
 .metasceneGenerator .panelPlaceholder,
 .metasceneGenerator .metasceneRenderer
 {
-  min-width: 100%;
-  min-height: 100%;
+  position: relative;
+  width: 1024px;
+  height: 1024px;
+}
+.metasceneGenerator .header {
+  width: 1024px;
 }
 
 .metasceneGenerator .metazineCanvas .overlay {
@@ -64,4 +66,23 @@
 }
 .metasceneGenerator .header .spacer {
   flex: 1;
+}
+
+/* */
+
+.metasceneGenerator .button {
+  display: inline-block;
+  font-size: 30px;
+  padding: 10px;
+  border: 3px solid currentColor;
+  cursor: pointer;
+}
+.metasceneGenerator .button:hover {
+  color: #FFF;
+  background-color: #000;
+  border-color: #000;
+}
+
+.metasceneGenerator .numberInput {
+  width: 50px;
 }

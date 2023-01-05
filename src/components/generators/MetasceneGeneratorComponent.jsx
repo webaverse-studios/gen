@@ -2574,13 +2574,13 @@ const MetasceneGeneratorComponent = () => {
                 </label>
                 <label className={styles.label}>
                   Max panels:
-                  <input type='number' value={numInPanels} onChange={e => {
+                  <input type='number' className={styles.numberInput} value={numInPanels} onChange={e => {
                     setNumInPanels(e.target.value);
                   }} />
                 </label>
                 <label className={styles.label}>
                   Out panels:
-                  <input type='number' value={numOutPanels} onChange={e => {
+                  <input type='number' className={styles.numberInput} value={numOutPanels} onChange={e => {
                     setNumOutPanels(e.target.value);
                   }} />
                 </label>
