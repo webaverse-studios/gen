@@ -979,11 +979,11 @@ class MapIndexRenderer {
       this.checkRenderTarget.width * this.checkRenderTarget.height * 4
     );
   }
-  #swapRenderTargets() {
+  /* #swapRenderTargets() {
     const temp = this.renderTargets[0];
     this.renderTargets[0] = this.renderTargets[1];
     this.renderTargets[1] = temp;
-  }
+  } */
   draw(panelSpec, mode, attachPanelIndex, newPanelIndex) {
     const meshes = [panelSpec];
 
