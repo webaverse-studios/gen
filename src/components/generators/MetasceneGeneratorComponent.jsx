@@ -1585,8 +1585,28 @@ export class Metazine extends EventTarget {
         
         return bDotExitDirection - aDotExitDirection; // sort by largest dot product
       });
-      const entranceLocationIndex = 0;
-      const entranceLocation = candidateEntranceLocations[entranceLocationIndex];
+      const candidateEntranceLocationIndex = 0;
+      const entranceLocation = candidateEntranceLocations[candidateEntranceLocationIndex];
+      
+      // remember indices on the exit panel spec
+      const entrancePanelIndex = panelSpecs.indexOf(entrancePanelSpec);
+      // if (entrancePanelIndex === -1) {
+      //   console.warn('no entrance panel index', {
+      //     panelSpecs: panelSpecs.slice(),
+      //     entrancePanelSpec,
+      //   });
+      //   debugger;
+      // }
+      const entranceLocationIndex = entrancePanelSpec.entranceExitLocations.indexOf(entranceLocation);
+      // if (entranceLocationIndex === -1) {
+      //   console.warn('no entrance location index', {
+      //     entranceExitLocations: entrancePanelSpec.entranceExitLocations.slice(),
+      //     entranceLocation,
+      //   });
+      //   debugger;
+      // }
+      exitLocation.panelIndex = entrancePanelIndex;
+      exitLocation.entranceIndex = entranceLocationIndex;
 
       // latch fixed exit location
       const exitParentMatrixWorld = exitPanelSpec.transformScene.matrixWorld;
@@ -1656,7 +1676,7 @@ export class Metazine extends EventTarget {
         candidateEntrancePanelSpecs.splice(entrancePanelSpecIndex, 1);
 
         // splice the used entrance location from entrance panel spec's enter exit location candidates
-        candidateEntranceLocations.splice(entranceLocationIndex, 1);
+        candidateEntranceLocations.splice(candidateEntranceLocationIndex, 1);
         // push the remaining unused entrances to candidate exit specs
         const newCandidateExitSpecs = candidateEntranceLocations.map(eel => {
           return {
