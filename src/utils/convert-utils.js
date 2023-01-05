@@ -69,18 +69,33 @@ export function img2ImageData(img) {
   return imageData;
 }
 
-export const resizeImage = (image, width, height) => {
+export const resizeImage = (image, width, height, {
+  mode = 'cover',
+} = {}) => {
   // if necessary, resize the image via contain mode
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
   const ctx = canvas.getContext('2d');
   if (image.width !== width || image.height !== height) {
-    const sx = Math.max(0, (image.width - image.height) / 2);
-    const sy = Math.max(0, (image.height - image.width) / 2);
-    const sw = Math.min(image.width, image.height);
-    const sh = Math.min(image.width, image.height);
-    ctx.drawImage(image, sx, sy, sw, sh, 0, 0, width, height);
+    if (mode === 'cover') {
+      const sx = Math.max(0, (image.width - image.height) / 2);
+      const sy = Math.max(0, (image.height - image.width) / 2);
+      const sw = Math.min(image.width, image.height);
+      const sh = Math.min(image.width, image.height);
+      ctx.drawImage(image, sx, sy, sw, sh, 0, 0, width, height);
+    } else if (mode === 'contain') {
+      // fill black background
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, width, height);
+      // draw image
+      const scale = Math.min(width / image.width, height / image.height);
+      const x = (width - image.width * scale) / 2;
+      const y = (height - image.height * scale) / 2;
+      ctx.drawImage(image, x, y, image.width * scale, image.height * scale);
+    } else {
+      throw new Error('invalid mode');
+    }
   } else {
     ctx.drawImage(image, 0, 0, width, height);
   }
