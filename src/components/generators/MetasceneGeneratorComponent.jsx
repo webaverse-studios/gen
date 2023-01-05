@@ -2829,23 +2829,6 @@ const MetasceneGeneratorComponent = () => {
   const [numPanels, setNumPanels] = useState(32);
   const [files, setFiles] = useState([]);
 
-  /* const submit = async e => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    const files = files.sort()
-      .sort((a, b) => a.name.localeCompare(b.name));
-    if (files.length > 0) {
-      initCompressor({
-        numWorkers: defaultMaxWorkers,
-      });
-
-      await metazine.compileZineFiles(files);
-
-      setLoaded(true);
-    }
-  }; */
-
   return (
     <div className={styles.metasceneGenerator}>
       {loaded ? (
