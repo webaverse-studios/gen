@@ -72,12 +72,12 @@ import {
 //   ZineRenderer,
 // } from '../../zine/zine-renderer.js';
 import {colors} from '../../zine/zine-colors.js';
-import {
-  // getCoverageRenderSpecsMeshes,
-  // renderMeshesCoverage,
-  getDepthRenderSpecsMeshes,
-  renderMeshesDepth,
-} from '../../clients/reconstruction-client.js';
+// import {
+//   // getCoverageRenderSpecsMeshes,
+//   // renderMeshesCoverage,
+//   getDepthRenderSpecsMeshes,
+//   renderMeshesDepth,
+// } from '../../clients/reconstruction-client.js';
 import {
   pushMeshes,
 } from '../../zine/zine-utils.js';
