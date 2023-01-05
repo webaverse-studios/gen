@@ -1046,14 +1046,17 @@ const sortLocations = (() => {
     cameraEntranceLocation,
     floorPlaneLocation,
     portalLocations,
-    boundingBox,
+    // boundingBox,
     seed = 'avatars',
   }) => {
     // collect candidate locations
     let candidateLocations = [];
     candidateLocations.push(...portalLocations);
-    candidateLocations = structuredClone(candidateLocations); // do not scribble over original arrays
     const allCandidateLocations = candidateLocations.slice();
+    
+    // do not scribble over original data
+    cameraEntranceLocation = structuredClone(cameraEntranceLocation);
+    candidateLocations = structuredClone(candidateLocations);
 
     /* // remove candidate locations that are too close to each other
     const minSeparationDistance = 1;
@@ -1310,6 +1313,15 @@ const sortLocations = (() => {
         quaternion.toArray(candidateLocation.quaternion);
       }
     }
+
+    // decorate entrance exit indices
+    entranceExitLocations = entranceExitLocations.map(eel => {
+      return {
+        ...eel,
+        panelIndex: -1,
+        entranceIndex: -1,
+      };
+    });
 
     return {
       entranceExitLocations,
@@ -4911,7 +4923,7 @@ export async function compileVirtualScene(imageArrayBuffer) {
     floorPlaneLocation,
     cameraEntranceLocation,
     portalLocations,
-    boundingBox,
+    // boundingBox,
   });
 
   /* // bump the floor heightfield to underpin the the entrance/exit locations w/ gaussian blur
