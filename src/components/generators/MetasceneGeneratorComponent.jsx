@@ -1358,8 +1358,7 @@ const connect = (() => {
         target.scale
       );
     target.updateMatrixWorld();
-    console.log('target parent', target.parent);
-
+    // console.log('target parent', target.parent);
 
     /* // const exitLocation = this.metadata.entranceExitLocations[exitIndex];
     const exitMatrix = new THREE.Matrix4().compose(
@@ -1718,7 +1717,18 @@ export class Metazine extends EventTarget {
     this.mapIndexResolution = mapIndexRenderer.getMapIndexResolution();
   }
   async exportAsync() {
-    return new Uint8Array();
+    const exportStoryboard = new ZineStoryboard();
+    for (let i = 0; i < this.renderPanelSpecs.length; i++) {
+      const panelSpec = this.renderPanelSpecs[i];
+      const {
+        file: zineFile,
+      } = panelSpec;
+      const zinefileArrayBuffer = await zineFile.arrayBuffer();
+      const zinefileUint8Array = new Uint8Array(zinefileArrayBuffer, zineMagicBytes.length);
+      exportStoryboard.mergeUint8Array(zinefileUint8Array);
+    }
+    const uint8Array = await exportStoryboard.exportAsync();
+    return uint8Array;
   }
 }
 
