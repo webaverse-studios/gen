@@ -142,6 +142,7 @@ const imageAiClient = new ImageAiClient();
 //
 
 const defaultMaxWorkers = globalThis?.navigator?.hardwareConcurrency ?? 4;
+const defaultNumPanels = 8;
 const panelSpecGeometrySize = 256;
 const panelSpecTextureSize = 256;
 const metazineAtlasTextureSize = 4096;
@@ -1533,7 +1534,9 @@ export class Metazine extends EventTarget {
   clear() {
     this.zs.clear();
   }
-  async compileZineFiles(zineFiles) {
+  async compileZineFiles(zineFiles, {
+    numPanels = defaultNumPanels,
+  } = {}) {
     console.time('loadPanels');
     let panelSpecs;
     {
@@ -1598,7 +1601,6 @@ export class Metazine extends EventTarget {
       };
     });
 
-
     // map index renderer
     const mapIndexRenderer = new MapIndexRenderer();
     // draw first panel
@@ -1613,11 +1615,10 @@ export class Metazine extends EventTarget {
       );
     }
 
-    const maxNumPanels = 32; // XXX extend this
     let numIntersects = 0;
     const maxNumIntersects = 100;
     while(
-      this.renderPanelSpecs.length < maxNumPanels &&
+      this.renderPanelSpecs.length < numPanels &&
       candidateExitSpecs.length > 0 &&
       candidateEntrancePanelSpecs.length > 0
     ) {
@@ -2877,7 +2878,9 @@ const MetasceneGeneratorComponent = () => {
                     try {
                       const filesSorted = files.slice()
                         .sort((a, b) => a.name.localeCompare(b.name));
-                      await metazine.compileZineFiles(filesSorted);
+                      await metazine.compileZineFiles(filesSorted, {
+                        numPanels,
+                      });
                     } finally {
                       setCompiling(false);
                     }
