@@ -1233,6 +1233,9 @@ class MetazineLoader {
       const panelSpec = new THREE.Object3D();
       panelSpec.name = fileName;
       panelSpec.description = prompt;
+      // NOTE: the file is needed during export
+      // the alternative is to keep the data in memory, but that seems worse
+      panelSpec.file = zineFile;
       panelSpec.imageArrayBuffer = imageArrayBuffer;
       const imageBlob = new Blob([imageArrayBuffer]);
       const imageBlobUrl = URL.createObjectURL(imageBlob);
