@@ -85,6 +85,9 @@ import {
   mod,
 } from '../../../utils.js';
 import {
+  downloadFile,
+} from '../../utils/http-utils.js';
+import {
   DropTarget,
 } from '../drop-target/DropTarget.jsx';
 
@@ -2835,7 +2838,7 @@ const MetasceneGeneratorComponent = () => {
   return (
     <div className={styles.metasceneGenerator}>
       {loaded ? (
-        <>
+        <div className={styles.metasceneRenderer}>
           <div className={styles.header}>
             <button className={styles.button} onClick={async e => {
               e.preventDefault();
@@ -2856,7 +2859,7 @@ const MetasceneGeneratorComponent = () => {
             height={panelSize}
             metazine={metazine}
           />
-        </>
+        </div>
       ) : (
         compiling ?
           <div>building...</div>
