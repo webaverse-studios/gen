@@ -3322,6 +3322,9 @@ export class PanelRenderer extends EventTarget {
 
     this.outmeshMesh.visible = tool === 'outmesh';
 
+    this.floorFlowerMesh.visible = tool === 'plane';
+    this.floorFlowerPetalMesh.visible = tool === 'plane';
+
     this.controls.enabled = [
       'camera',
       'outmesh',
