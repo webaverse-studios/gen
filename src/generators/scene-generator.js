@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import {OBB} from 'three/examples/jsm/math/OBB.js';
 import alea from 'alea';
+import concaveman from 'concaveman';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 import {Text} from 'troika-three-text';
 import {makePromise} from '../../utils.js';
