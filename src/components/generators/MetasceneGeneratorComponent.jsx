@@ -1504,20 +1504,7 @@ export class Metazine extends EventTarget {
       };
     });
 
-    // map index renderer
-    const mapIndexRenderer = new MapIndexRenderer();
-    // draw first panel
-    {
-      const attachPanelIndex = 0;
-      const newPanelIndex = 1;
-      mapIndexRenderer.draw(
-        firstPanelSpec,
-        MapIndexRenderer.MODE_REPLACE,
-        attachPanelIndex,
-        newPanelIndex
-      );
-    }
-
+    // connect panel exits to panel entrances
     let numIntersects = 0;
     const maxNumIntersects = 100;
     while(
@@ -1591,12 +1578,10 @@ export class Metazine extends EventTarget {
         const aDirection = localVector2.set(0, 0, -1)
           .applyQuaternion(localQuaternion.fromArray(a.quaternion));
         let aDotExitDirection = aDirection.dot(exitDirection);
-        // aDotExitDirection = Math.abs(aDotExitDirection); // treat forward/backward the same
 
         const bDirection = localVector3.set(0, 0, -1)
           .applyQuaternion(localQuaternion.fromArray(b.quaternion));
         let bDotExitDirection = bDirection.dot(exitDirection);
-        // bDotExitDirection = Math.abs(bDotExitDirection); // treat forward/backward the same
         
         return bDotExitDirection - aDotExitDirection; // sort by largest dot product
       });
@@ -1624,31 +1609,28 @@ export class Metazine extends EventTarget {
         entranceParentMatrixWorld,
         target,
       });
-      const attachPanelIndex = this.renderPanelSpecs.length;
-      const newPanelIndex = attachPanelIndex + 1;
-      let intersect;
-      {
-        intersect = mapIndexRenderer.intersect(
-          entrancePanelSpec,
-          attachPanelIndex,
-          newPanelIndex
-        );
-      }
-
+      // const attachPanelIndex = this.renderPanelSpecs.length;
+      // const newPanelIndex = attachPanelIndex + 1;
+      let intersect = false; // XXX hack
+      // {
+      //   intersect = mapIndexRenderer.intersect(
+      //     entrancePanelSpec,
+      //     attachPanelIndex,
+      //     newPanelIndex
+      //   );
+      // }
       // if (intersect) {
       //   console.log('intersect');
       // } else {
       //   console.log('no intersect');
       // }
-
-      intersect = false; // XXX hack
       if (intersect) {
         if (++numIntersects < maxNumIntersects) {
-          console.log('intersect', {
-            intersect,
-            attachPanelIndex,
-            newPanelIndex,
-          });
+          // console.log('intersect', {
+          //   intersect,
+          //   attachPanelIndex,
+          //   newPanelIndex,
+          // });
           continue;
         } else {
           console.warn('too many intersects');
@@ -1656,14 +1638,14 @@ export class Metazine extends EventTarget {
         }
       } else {
         // draw the map index
-        {
-          mapIndexRenderer.draw(
-            entrancePanelSpec,
-            MapIndexRenderer.MODE_REPLACE,
-            attachPanelIndex,
-            newPanelIndex
-          );
-        }
+        // {
+        //   mapIndexRenderer.draw(
+        //     entrancePanelSpec,
+        //     MapIndexRenderer.MODE_REPLACE,
+        //     attachPanelIndex,
+        //     newPanelIndex
+        //   );
+        // }
 
         // log the new panel spec
         this.renderPanelSpecs.push(entrancePanelSpec);
@@ -1684,6 +1666,32 @@ export class Metazine extends EventTarget {
         });
         candidateExitSpecs.push(...newCandidateExitSpecs);
       }
+    }
+
+    // map index renderer
+    const mapIndexRenderer = new MapIndexRenderer();
+    // draw first panel
+    // {
+    //   const attachPanelIndex = 0;
+    //   const newPanelIndex = 1;
+    //   mapIndexRenderer.draw(
+    //     firstPanelSpec,
+    //     MapIndexRenderer.MODE_REPLACE,
+    //     attachPanelIndex,
+    //     newPanelIndex
+    //   );
+    // }
+    // draw panels
+    for (let i = 0; i < this.renderPanelSpecs.length; i++) {
+      const panelSpec = this.renderPanelSpecs[i];
+      const attachPanelIndex = i;
+      const newPanelIndex = i + 1;
+      mapIndexRenderer.draw(
+        panelSpec,
+        MapIndexRenderer.MODE_REPLACE,
+        attachPanelIndex,
+        newPanelIndex
+      );
     }
     
     this.mapIndex = mapIndexRenderer.getMapIndex();
