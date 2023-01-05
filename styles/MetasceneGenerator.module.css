@@ -1,15 +1,16 @@
 .metasceneGenerator {
-  display: flex;
-  width: 100%;
-}
-.metasceneGenerator .panelPlaceholder,
-.metasceneGenerator .metazineCanvas
-{
   position: relative;
   display: flex;
   width: 1024px;
   height: 1024px;
   flex-direction: column;
+}
+
+.metasceneGenerator .panelPlaceholder,
+.metasceneGenerator .metazineCanvas
+{
+  min-width: 100%;
+  min-height: 100%;
 }
 
 .metasceneGenerator .metazineCanvas .overlay {
@@ -56,4 +57,11 @@
 .metasceneGenerator .metazineCanvas .overlay .sidebar .img {
   width: 100%;
   object-fit: cover;
+}
+
+.metasceneGenerator .header {
+  display: flex;
+}
+.metasceneGenerator .header .spacer {
+  flex: 1;
 }
