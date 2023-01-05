@@ -49,19 +49,15 @@ const StoryboardPlaceholderComponent = ({
   storyboard,
   onPanelSelect,
 }) => {
+  const [files, setFiles] = useState([]);
+
   const onNew = e => {
     e.preventDefault();
     e.stopPropagation();
     const panel = storyboard.addPanel();
     onPanelSelect(panel);
   };
-  const dragover = e => {
-    e.preventDefault();
-    e.stopPropagation();
-  };
   const drop = async e => {
-    e.preventDefault();
-    e.stopPropagation();
     const files = e.dataTransfer.files;
     const file = files[0];
     if (file) {
@@ -74,8 +70,9 @@ const StoryboardPlaceholderComponent = ({
     <DropTarget
       className={styles.panelPlaceholder}
       newLabel='Create New Panel'
+      files={files}
+      onFilesChange={setFiles}
       onNew={onNew}
-      onDragOver={dragover}
       onDrop={drop}
     />
   );

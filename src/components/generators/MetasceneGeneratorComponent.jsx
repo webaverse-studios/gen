@@ -2823,22 +2823,16 @@ const MetazineCanvas = ({
 
 const MetasceneGeneratorComponent = () => {
   const [metazine, setMetazine] = useState(() => new Metazine());
+  const [compiling, setCompiling] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [numPanels, setNumPanels] = useState(32);
+  const [files, setFiles] = useState([]);
 
-  const onNew = e => {
-    e.preventDefault();
-    e.stopPropagation();
-    console.warn('new not implemented');
-  };
-  const dragover = e => {
-    e.preventDefault();
-    e.stopPropagation();
-  };
-  const drop = async e => {
+  /* const submit = async e => {
     e.preventDefault();
     e.stopPropagation();
 
-    const files = Array.from(e.dataTransfer.files)
+    const files = files.sort()
       .sort((a, b) => a.name.localeCompare(b.name));
     if (files.length > 0) {
       initCompressor({
@@ -2849,7 +2843,7 @@ const MetasceneGeneratorComponent = () => {
 
       setLoaded(true);
     }
-  };
+  }; */
 
   return (
     <div className={styles.metasceneGenerator}>
@@ -2860,14 +2854,48 @@ const MetasceneGeneratorComponent = () => {
           metazine={metazine}
         />
       ) : (
-        <DropTarget
-          className={styles.panelPlaceholder}
-          newLabel='Create New Board'
-          onNew={onNew}
-          onDragOver={dragover}
-          onDrop={drop}
-        />
-      )}
+        compiling ?
+          <div>building...</div>
+        :
+          <>
+            {files.length > 0 ?
+              <div className={styles.header}>
+                <div className={styles.spacer} />
+                <label className={styles.label}>
+                  Num panels:
+                  <input type='number' value={numPanels} onChange={e => {
+                    setNumPanels(e.target.value);
+                  }} />
+                </label>
+                <input type='button' value='Generate' className={styles.submitButton} onClick={async () => {
+                  if (files.length > 0) {
+                    initCompressor({
+                      numWorkers: defaultMaxWorkers,
+                    });
+
+                    setCompiling(true);
+                    try {
+                      const filesSorted = files.slice()
+                        .sort((a, b) => a.name.localeCompare(b.name));
+                      await metazine.compileZineFiles(filesSorted);
+                    } finally {
+                      setCompiling(false);
+                    }
+
+                    setLoaded(true);
+                  }
+                }} />
+              </div>
+            : null}
+            <DropTarget
+              className={styles.panelPlaceholder}
+              files={files}
+              onFilesChange={setFiles}
+              multiple
+            />
+          </>
+        )
+      }
     </div>
   );
 };
