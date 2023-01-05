@@ -1431,6 +1431,7 @@ export class Metazine extends EventTarget {
     this.zs.clear();
   }
   async compileZineFiles(zineFiles, {
+    seed = '',
     numPanels = defaultNumPanels,
   } = {}) {
     console.time('loadPanels');
@@ -1449,7 +1450,7 @@ export class Metazine extends EventTarget {
     }
     console.timeEnd('loadPanels');
 
-    const rng = alea('lol');
+    const rng = alea(seed);
     const probabalisticIndexRng = (weights) => {
       let weightSum = 0;
       for (let i = 0; i < weights.length; i++) {
