@@ -1,4 +1,15 @@
-/* .dropTarget {
-  width: 1024px;
-  height: 1024px;
-} */
+.dropTarget {
+}
+.dropTarget .files {
+  display: flex;
+  flex-direction: column;
+  max-width: 640px;
+}
+.dropTarget .files .file {
+  display: flex;
+}
+.dropTarget .files .file .fileName {
+  margin-right: auto;
+}
+.dropTarget .files .file .closeX {
+}
