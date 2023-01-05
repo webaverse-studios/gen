@@ -1250,18 +1250,16 @@ const getPanelSpecEdges = panelSpec => {
   const edges = concaveman(outlinePoints, 5);
   return {
     edges,
-    centerBackLeft,
-    centerFrontRight,
     center,
     size,
   };
 };
-const getPanelSpecOutlinePositions = panelSpec => {
+const getPanelSpecOutlinePositionsDirections = (panelSpec, {
+  directionMode = 'vertical',
+} = {}) => {
   // edges
   const {
     edges,
-    centerBackLeft,
-    centerFrontRight,
     center,
     size,
   } = getPanelSpecEdges(panelSpec);
@@ -1273,8 +1271,9 @@ const getPanelSpecOutlinePositions = panelSpec => {
     .applyQuaternion(transformQuaternion);
 
   // positions
-  const positions = new Float32Array(edges.length * 3);
-  for (let i = 0; i < edges.length; i++) {
+  const numPoints = edges.length;
+  const positions = new Float32Array(numPoints * 3);
+  for (let i = 0; i < numPoints; i++) {
     const edge = edges[i];
     const [x, y] = edge;
     const {z} = edge;
@@ -1284,12 +1283,54 @@ const getPanelSpecOutlinePositions = panelSpec => {
       z,
       y * floorNetResolution
     )
-    .applyQuaternion(transformQuaternion)
-    .add(transformPosition);
+      .applyQuaternion(transformQuaternion)
+      .add(transformPosition);
     localVector.toArray(positions, i * 3);
   }
 
-  return positions;
+  // directions
+  const floorQuaternion = new THREE.Quaternion()
+    .fromArray(panelSpec.floorPlaneLocation.quaternion);
+  const directions = new Float32Array(numPoints * 3);
+  if (directionMode === 'vertical') {
+    for (let i = 0; i < numPoints; i++) {
+      localVector.set(0, 1, 0)
+        .applyQuaternion(floorQuaternion)
+        .toArray(directions, i * 3);
+    }
+  } else if (directionMode === 'horizontal') {
+    for (let i = 0; i < numPoints; i++) {
+      const centerI = i;
+      const leftI = mod(i - 1, numPoints);
+      const rightI = mod(i + 1, numPoints);
+
+      const a = localVector.fromArray(positions, leftI * 3);
+      const b = localVector2.fromArray(positions, centerI * 3);
+      const c = localVector3.fromArray(positions, rightI * 3);
+      const d = localVector4.copy(b)
+        .add(
+          localVector5.set(0, 1, 0)
+            .applyQuaternion(floorQuaternion)
+        );
+
+      const triangle = localTriangle.set(a, d, b);
+      const normal = triangle.getNormal(localVector5);
+      const triangle2 = localTriangle2.set(d, c, b);
+      const normal2 = triangle2.getNormal(localVector6);
+
+      const normalAvg = localVector7.copy(normal)
+        .add(normal2)
+        .multiplyScalar(0.5);
+      normalAvg.toArray(directions, i * 3);
+    }
+  } else {
+    throw new Error('unknown directionMode: ' + directionMode);
+  }
+
+  return {
+    positions,
+    directions,
+  };
 };
 
 //
@@ -1925,10 +1966,8 @@ const makePositionCubesMesh = (positions) => {
 };
 const makeFlowerGeometry = (
   positionsArray,
-  floorQuaternion,
-  {
-    directionMode = 'vertical',
-  } = {}) => {
+  directionsArray,
+) => {
   const geometry = new THREE.BufferGeometry();
 
   // positions
@@ -1936,14 +1975,12 @@ const makeFlowerGeometry = (
   const positions = new Float32Array(numPoints * 3 * 2);
   for (let i = 0; i < numPoints; i++) {
     localVector.fromArray(positionsArray, i * 3);
+    localVector2.fromArray(directionsArray, i * 3);
 
     // bottom
     localVector.toArray(positions, i * 3);
     // top
-    localVector.add(
-      localVector2.set(0, 1, 0)
-        .applyQuaternion(floorQuaternion)
-    );
+    localVector.add(localVector2);
     localVector.toArray(positions, i * 3 + numPoints * 3);
   }
   geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
@@ -1951,44 +1988,11 @@ const makeFlowerGeometry = (
   // directions
   const directions = new Float32Array(numPoints * 3 * 2);
   // NOTE: only iterating the top points; the bottom points have direction 0
-  if (directionMode === 'vertical') {
-    for (let i = 0; i < numPoints; i++) {
-      localVector.set(0, 1, 0)
-        .applyQuaternion(floorQuaternion)
-        .toArray(directions, i * 3 + numPoints * 3);
-    }
-  } else if (directionMode === 'horizontal') {
-    for (let i = 0; i < numPoints; i++) {
-      const centerI = i;
-      const leftI = mod(i - 1, numPoints);
-      const rightI = mod(i + 1, numPoints);
-
-      const a = localVector.fromArray(positionsArray, leftI * 3)
-        // .applyQuaternion(floorQuaternion);
-      const b = localVector2.fromArray(positionsArray, centerI * 3)
-        // .applyQuaternion(floorQuaternion);
-      const c = localVector3.fromArray(positionsArray, rightI * 3)
-        // .applyQuaternion(floorQuaternion);
-      const d = localVector4.copy(b)
-        .add(
-          localVector5.set(0, 1, 0)
-            .applyQuaternion(floorQuaternion)
-        );
-
-      const triangle = localTriangle.set(a, d, b);
-      const normal = triangle.getNormal(localVector5)
-        // .applyQuaternion(floorQuaternion);
-      const triangle2 = localTriangle2.set(d, c, b);
-      const normal2 = triangle2.getNormal(localVector6)
-        // .applyQuaternion(floorQuaternion);
-
-      const normalAvg = localVector7.copy(normal)
-        .add(normal2)
-        .multiplyScalar(0.5);
-      normalAvg.toArray(directions, i * 3 + numPoints * 3);
-    }
-  } else {
-    throw new Error('unknown directionMode: ' + directionMode);
+  for (let i = 0; i < numPoints; i++) {
+    const index = i * 3;
+    const indexTopOffset = numPoints * 3;
+    localVector.fromArray(directionsArray, index)
+      .toArray(directions, index + indexTopOffset);
   }
   geometry.setAttribute('direction', new THREE.BufferAttribute(directions, 3));
 
@@ -2089,15 +2093,22 @@ class ChunkEdgeMesh extends THREE.Object3D {
     this.clear();
 
     // positions
-    const positions = getPanelSpecOutlinePositions(panelSpec);
-    const floorQuaternion = new THREE.Quaternion()
-      .fromArray(panelSpec.floorPlaneLocation.quaternion);
-    const flowerGeometry = makeFlowerGeometry(positions, floorQuaternion, {
+    const {
+      positions: flowerPositions,
+      directions: flowerDirections,
+    } = getPanelSpecOutlinePositionsDirections(panelSpec, {
       directionMode: 'vertical',
     });
-    const flowerPetalGeometry = makeFlowerGeometry(positions, floorQuaternion, {
+    globalThis.flowerPositions = flowerPositions;
+    globalThis.flowerDirections = flowerDirections;
+    const flowerGeometry = makeFlowerGeometry(flowerPositions, flowerDirections);
+    const {
+      positions: flowerPetalPositions,
+      directions: flowerPetalDirections,
+    } = getPanelSpecOutlinePositionsDirections(panelSpec, {
       directionMode: 'horizontal',
     });
+    const flowerPetalGeometry = makeFlowerGeometry(flowerPetalPositions, flowerPetalDirections);
 
     // transforms
     const transformPosition = new THREE.Vector3();
