@@ -1725,16 +1725,24 @@ class ChunkEdgeMesh extends THREE.Object3D {
 
     // positions
     const {
+      outlineJson,
+      floorPlaneLocation,
+    } = panelSpec;
+    const {
       positions: flowerPositions,
       directions: flowerDirections,
-    } = getPanelSpecOutlinePositionsDirections(panelSpec, {
+    } = getPanelSpecOutlinePositionsDirections({
+      outlineJson,
+      floorPlaneLocation,
       directionMode: 'vertical',
     });
     const flowerGeometry = makeFlowerGeometry(flowerPositions, flowerDirections);
     const {
       positions: flowerPetalPositions,
       directions: flowerPetalDirections,
-    } = getPanelSpecOutlinePositionsDirections(panelSpec, {
+    } = getPanelSpecOutlinePositionsDirections({
+      outlineJson,
+      floorPlaneLocation,
       directionMode: 'horizontal',
     });
     const flowerPetalGeometry = makeFlowerGeometry(flowerPetalPositions, flowerPetalDirections);
