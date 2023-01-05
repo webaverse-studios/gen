@@ -3187,6 +3187,7 @@ export class PanelRenderer extends EventTarget {
         floorPlaneLocation,
       } = this.zineRenderer.metadata;
 
+      // flower geometry
       const {
         positions: flowerPositions,
         directions: flowerDirections,
@@ -3196,17 +3197,13 @@ export class PanelRenderer extends EventTarget {
         directionMode: 'vertical',
       });
       const flowerGeometry = makeFlowerGeometry(flowerPositions, flowerDirections);
-      // const transformPosition = new THREE.Vector3();
-      // const transformQuaternion = new THREE.Quaternion();
-      // const transformScale = new THREE.Vector3();
-      // panelSpec.matrixWorld
-      //   .decompose(transformPosition, transformQuaternion, transformScale);
-      // create flower geometry
       const floorFlowerMesh = makeFloorFlowerMesh(flowerGeometry);
+      floorFlowerMesh.visible = false;
       this.zineRenderer.transformScene.add(floorFlowerMesh);
       floorFlowerMesh.updateMatrixWorld();
       this.floorFlowerMesh = floorFlowerMesh;
 
+      // flower petal geometry
       const {
         positions: flowerPetalPositions,
         directions: flowerPetalDirections,
@@ -3217,6 +3214,7 @@ export class PanelRenderer extends EventTarget {
       });
       const flowerPetalGeometry = makeFlowerGeometry(flowerPetalPositions, flowerPetalDirections);
       const floorFlowerPetalMesh = makeFloorPetalMesh(flowerPetalGeometry);
+      floorFlowerPetalMesh.visible = false;
       this.zineRenderer.transformScene.add(floorFlowerPetalMesh);
       floorFlowerPetalMesh.updateMatrixWorld();
       this.floorFlowerPetalMesh = floorFlowerPetalMesh;
