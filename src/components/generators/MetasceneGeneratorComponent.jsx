@@ -2835,11 +2835,28 @@ const MetasceneGeneratorComponent = () => {
   return (
     <div className={styles.metasceneGenerator}>
       {loaded ? (
-        <MetazineCanvas
-          width={panelSize}
-          height={panelSize}
-          metazine={metazine}
-        />
+        <>
+          <div className={styles.header}>
+            <button className={styles.button} onClick={async e => {
+              e.preventDefault();
+              e.stopPropagation();
+    
+              const uint8Array = await metazine.exportAsync();
+              const blob = new Blob([
+                zineMagicBytes,
+                uint8Array,
+              ], {
+                type: 'application/octet-stream',
+              });
+              downloadFile(blob, 'metazine.zine');
+            }}>Download zine</button>
+          </div>
+          <MetazineCanvas
+            width={panelSize}
+            height={panelSize}
+            metazine={metazine}
+          />
+        </>
       ) : (
         compiling ?
           <div>building...</div>
