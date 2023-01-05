@@ -1132,7 +1132,7 @@ const sortLocations = (() => {
     candidateLocations.sort(less(candidateLocationsCenter));
 
     // entrances + exits
-    const entranceExitLocations = [];
+    let entranceExitLocations = [];
     if (cameraEntranceLocation) {
       entranceExitLocations.push(cameraEntranceLocation);
 
