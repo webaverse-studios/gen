@@ -156,9 +156,6 @@ export const StoryboardComponent = ({
           e.stopPropagation();
 
           const uint8Array = await storyboard.exportAsync();
-          // const firstBytes = uint8Array.slice(0, 4);
-          // const firstBytesString = textDecoder.decode(firstBytes);
-          // console.log('export decoded', {firstBytesString});
           const blob = new Blob([
             zineMagicBytes,
             uint8Array,
