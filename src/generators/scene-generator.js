@@ -200,7 +200,7 @@ const defaultCameraMatrix = new THREE.Matrix4();
 
 //
 
-const forwardizeQuaternion = (() => {
+/* const forwardizeQuaternion = (() => {
   const localVector = new THREE.Vector3();
   const localMatrix = new THREE.Matrix4();
   
@@ -217,7 +217,7 @@ const forwardizeQuaternion = (() => {
       )
     );
   };
-})();
+})(); */
 
 const depthRenderSkipRatio = 8;
 const makeDepthCubesMesh = (depthFloats, width, height, camera) => {
