@@ -1547,8 +1547,6 @@ export class Metazine extends EventTarget {
       });
       const outerExitSpecsConcave = concaveman(outerExitSpecs, 3)
         .map(o => o.exitSpec);
-      // XXX sort probability by inverse distance
-      // const outerExitSpecIndex = Math.floor(rng() * outerExitSpecsConcave.length);
       const outerExitSpecsConcaveDistances = outerExitSpecsConcave.map(exitSpec => {
         const {panelSpec, entranceExitLocation} = exitSpec;
         new THREE.Matrix4()
