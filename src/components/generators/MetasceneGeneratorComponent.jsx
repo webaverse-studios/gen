@@ -2494,9 +2494,12 @@ const MetasceneGeneratorComponent = () => {
   const [numOutPanels, setNumOutPanels] = useState(32);
   const [files, _setFiles] = useState([]);
 
-  const setFiles = files => _setFiles(files.slice().sort((a, b) => {
-    a.name.localeCompare(b.name);
-  }));
+  const setFiles = files => {
+    const sortedFiles = files.slice().sort((a, b) => {
+      return a.name.localeCompare(b.name);
+    });
+    _setFiles(sortedFiles);
+  };
 
   return (
     <div className={styles.metasceneGenerator}>
