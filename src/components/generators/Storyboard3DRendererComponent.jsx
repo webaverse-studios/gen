@@ -5,11 +5,11 @@ import {
   PanelRenderer,
   tools,
 } from '../../generators/scene-generator.js';
-
+import {
+  downloadFile,
+  openZineFile,
+} from '../../utils/http-utils.js';
 import styles from '../../../styles/Storyboard3DRenderer.module.css';
-
-//
-
 import {
   promptKey,
   layer1Specs,
@@ -18,6 +18,7 @@ import {
 import {
   panelSize,
 } from '../../zine/zine-constants.js';
+import {zineMagicBytes} from '../../zine/zine-format.js';
 
 //
 
@@ -93,14 +94,25 @@ export const Storyboard3DRendererComponent = ({
           setPrompt(e.target.value);
           panel.setData(promptKey, e.target.value);
         }} />
-        <div className={styles.text}>Status: Compiled</div>
+        {/* <div className={styles.text}>Status: Compiled</div> */}
         <button className={styles.button} onClick={async e => {
           await panel.compile();
         }}>Recompile</button>
         <button className={styles.button} onClick={async e => {
-          await panel.collectData();
-        }
-        }>Submit Scale</button>
+          // await panel.compile();
+          console.log('download', storyboard);
+          const uint8Array = await storyboard.zs.exportAsync();
+          const blob = new Blob([
+            zineMagicBytes,
+            uint8Array,
+          ], {
+            type: 'application/octet-stream',
+          });
+          openZineFile(blob);
+        }}>Zine2app</button>
+        <button className={styles.button} onClick={async e => {
+            await panel.collectData();
+        }}>Submit Scale</button>
       </div>
       <Panel3DCanvas
         panel={panel}
