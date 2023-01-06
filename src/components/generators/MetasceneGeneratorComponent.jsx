@@ -189,24 +189,52 @@ class EntranceExitMesh extends THREE.Mesh { // XXX needs to be unified with the 
           localVector2.setScalar(1)
         )
       );
+      const selectIndices = new Int16Array(2 * g.attributes.position.count);
+      for (let i = 0; i < g.attributes.position.count; i++) {
+        selectIndices[i * 2 + 0] = portalLocation.panelIndex;
+        selectIndices[i * 2 + 1] = portalLocation.entranceIndex;
+      }
+      // if (typeof portalLocation.panelIndex !== 'number' || typeof portalLocation.entranceIndex !== 'number') {
+      //   console.warn('invalid portal location', portalLocation);
+      //   debugger;
+      // }
+      // if (portalLocation.panelIndex !== -1) {
+      //   console.log('got new panel index', portalLocation.panelIndex, portalLocation.entranceIndex);
+      // }
+      g.setAttribute('selectIndex', new THREE.BufferAttribute(selectIndices, 2, false));
       return g;
     });
     const geometry = geometries.length > 0 ? BufferGeometryUtils.mergeBufferGeometries(geometries) : new THREE.BufferGeometry();
 
     const material = new THREE.ShaderMaterial({
+      uniforms: {
+        uSelectIndex: {
+          value: -1,
+          needsUpdate: true,
+        },
+      },
       vertexShader: `\
+        attribute vec2 selectIndex;
         varying vec2 vUv;
+        flat varying vec2 vSelectIndex;
 
         void main() {
           vUv = uv;
+          vSelectIndex = selectIndex;
           gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
         }
       `,
       fragmentShader: `\
         varying vec2 vUv;
+        flat varying vec2 vSelectIndex;
 
         void main() {
-          vec3 c = vec3(1., 0., 1.);
+          vec3 c;
+          if (vSelectIndex == vec2(-1.)) {
+            c = vec3(1., 0., 1.);
+          } else {
+            c = vec3(0.5, 1., 0.);
+          }
           gl_FragColor = vec4(c, 0.5);
           gl_FragColor.rg += vUv * 0.2;
         }
@@ -2087,6 +2115,7 @@ export class MetazineRenderer extends EventTarget {
           .premultiply(panelSpec.matrixWorld)
           .decompose(position, quaternion, scale);
         return {
+          ...eel,
           position: position.toArray(),
           quaternion: quaternion.toArray(),
         };
