@@ -1588,25 +1588,49 @@ export class Metazine extends EventTarget {
       const candidateEntranceLocationIndex = 0;
       const entranceLocation = candidateEntranceLocations[candidateEntranceLocationIndex];
       
-      // remember indices on the exit panel spec
-      const entrancePanelIndex = panelSpecs.indexOf(entrancePanelSpec);
-      // if (entrancePanelIndex === -1) {
-      //   console.warn('no entrance panel index', {
-      //     panelSpecs: panelSpecs.slice(),
-      //     entrancePanelSpec,
-      //   });
-      //   debugger;
-      // }
-      const entranceLocationIndex = entrancePanelSpec.entranceExitLocations.indexOf(entranceLocation);
-      // if (entranceLocationIndex === -1) {
-      //   console.warn('no entrance location index', {
-      //     entranceExitLocations: entrancePanelSpec.entranceExitLocations.slice(),
-      //     entranceLocation,
-      //   });
-      //   debugger;
-      // }
-      exitLocation.panelIndex = entrancePanelIndex;
-      exitLocation.entranceIndex = entranceLocationIndex;
+      // remember indices in both directions
+      {
+        // exit location
+        const entrancePanelIndex = panelSpecs.indexOf(entrancePanelSpec);
+        // if (entrancePanelIndex === -1) {
+        //   console.warn('no entrance panel index', {
+        //     panelSpecs: panelSpecs.slice(),
+        //     entrancePanelSpec,
+        //   });
+        //   debugger;
+        // }
+        const entranceLocationIndex = entrancePanelSpec.entranceExitLocations.indexOf(entranceLocation);
+        // if (entranceLocationIndex === -1) {
+        //   console.warn('no entrance location index', {
+        //     entranceExitLocations: entrancePanelSpec.entranceExitLocations.slice(),
+        //     entranceLocation,
+        //   });
+        //   debugger;
+        // }
+        exitLocation.panelIndex = entrancePanelIndex;
+        exitLocation.entranceIndex = entranceLocationIndex;
+      }
+      {
+        // entrance location
+        const exitPanelIndex = panelSpecs.indexOf(exitPanelSpec);
+        // if (exitPanelIndex === -1) {
+        //   console.warn('no exit panel index', {
+        //     panelSpecs: panelSpecs.slice(),
+        //     exitPanelSpec,
+        //   });
+        //   debugger;
+        // }
+        const exitLocationIndex = exitPanelSpec.entranceExitLocations.indexOf(exitLocation);
+        // if (exitLocationIndex === -1) {
+        //   console.warn('no exit location index', {
+        //     entranceExitLocations: exitPanelSpec.entranceExitLocations.slice(),
+        //     exitLocation,
+        //   });
+        //   debugger;
+        // }
+        entranceLocation.panelIndex = exitPanelIndex;
+        entranceLocation.exitIndex = exitLocationIndex;
+      }
 
       // latch fixed exit location
       const exitParentMatrixWorld = exitPanelSpec.transformScene.matrixWorld;
