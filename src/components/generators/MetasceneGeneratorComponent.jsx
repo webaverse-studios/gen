@@ -64,6 +64,7 @@ import {
 import {
   zineMagicBytes,
   ZineStoryboard,
+  ZineStoryboardBase,
   // ZinePanel,
   // ZineData,
   initCompressor,
@@ -1668,6 +1669,26 @@ export class Metazine extends EventTarget {
 
         // log the new panel spec
         this.renderPanelSpecs.push(entrancePanelSpec);
+        // {
+        //   // for (let i = 0; i < this.renderPanelSpecs.length; i++) {
+        //   //   const panelSpec = this.renderPanelSpecs[i];
+        //     const {entranceExitLocations} = entrancePanelSpec;
+            
+        //     let allNeg1 = true;
+        //     for (let i = 0; i < entranceExitLocations.length; i++) {
+        //       const entranceExitLocation = entranceExitLocations[i];
+        //       const {panelIndex, entranceIndex} = entranceExitLocation;
+        //       if (panelIndex !== -1 || entranceIndex !== -1) {
+        //         allNeg1 = false;
+        //         break;
+        //       }
+        //     }
+        //     console.log('all neg 1', allNeg1, entranceExitLocations);
+        //     if (allNeg1) {
+        //       debugger;
+        //     }
+        //   // }
+        // }
 
         // splice exit spec from candidates
         candidateExitSpecs.splice(exitSpecIndex, 1);
@@ -1717,17 +1738,75 @@ export class Metazine extends EventTarget {
     this.mapIndexResolution = mapIndexRenderer.getMapIndexResolution();
   }
   async exportAsync() {
-    const exportStoryboard = new ZineStoryboard();
+    const exportStoryboard = new ZineStoryboardBase();
     for (let i = 0; i < this.renderPanelSpecs.length; i++) {
       const panelSpec = this.renderPanelSpecs[i];
       const {
         file: zineFile,
+        entranceExitLocations,
       } = panelSpec;
+      
+      // load
       const zinefileArrayBuffer = await zineFile.arrayBuffer();
-      const zinefileUint8Array = new Uint8Array(zinefileArrayBuffer, zineMagicBytes.length);
+      
+      // import
+      let zinefileUint8Array = new Uint8Array(zinefileArrayBuffer, zineMagicBytes.length);
+      
+      // copy over changed properties
+      const storyboard = new ZineStoryboardBase();
+      storyboard.loadUncompressed(zinefileUint8Array);
+      const panelIds = storyboard.getKeys();
+      for (let j = 0; j < panelIds.length; j++) {
+        const panelId = panelIds[j];
+        const layerIds = storyboard.zd.getKeys([
+          panelId,
+        ]);
+        const layer1Id = layerIds[1];
+        
+        // const oldEntranceExitLocations = storyboard.zd.getData([
+        //   panelId,
+        //   layer1Id,
+        //   'entranceExitLocations',
+        // ]);
+        storyboard.zd.setData([
+          panelId,
+          layer1Id,
+          'entranceExitLocations',
+        ], entranceExitLocations);
+        // {
+        //   // for (let i = 0; i < this.renderPanelSpecs.length; i++) {
+        //   //   const panelSpec = this.renderPanelSpecs[i];
+        //     // const {entranceExitLocations} = entrancePanelSpec;
+            
+        //     const isAllNeg = (entranceExitLocations) => {
+        //       let allNeg = true;
+        //       for (let i = 0; i < entranceExitLocations.length; i++) {
+        //         const entranceExitLocation = entranceExitLocations[i];
+        //         const {panelIndex, entranceIndex} = entranceExitLocation;
+        //         if (panelIndex !== -1 || entranceIndex !== -1) {
+        //           allNeg = false;
+        //           break;
+        //         }
+        //       }
+        //       return allNeg;
+        //     };
+        //     let allNeg1 = isAllNeg(entranceExitLocations);
+        //     let allNeg2 = isAllNeg(oldEntranceExitLocations);
+        //     console.log('all negative', allNeg1, allNeg2, entranceExitLocations, oldEntranceExitLocations);
+        //     // if (allNeg1) {
+        //     //   debugger;
+        //     // }
+        //   // }
+        // }
+      }
+
+      // export
+      zinefileUint8Array = storyboard.exportUncompressed();
+      
+      // merge
       exportStoryboard.mergeUint8Array(zinefileUint8Array);
     }
-    const uint8Array = await exportStoryboard.exportAsync();
+    const uint8Array = exportStoryboard.exportUncompressed();
     return uint8Array;
   }
 }
