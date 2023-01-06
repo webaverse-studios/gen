@@ -1,1 +1,1 @@
-export const OPENAI_API_KEY = process.env['OPENAI_KEY'];
+export const OPENAI_API_KEY = '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';

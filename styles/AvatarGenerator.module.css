@@ -1,3 +1,31 @@
-.avatarGenerator {
-  
+.AvatarGenerator {
+    width: inherit;
+    height: inherit;
+}
+.AvatarGenerator .input {
+    min-width: 800px;
+    margin-right: 15px;
+    padding: 10px;
+    font-size: 24px;
+}
+.AvatarGenerator .button {
+    display: inline-block;
+    font-size: 30px;
+    padding: 10px;
+    border: 3px solid currentColor;
+    cursor: pointer;
+}
+.AvatarGenerator .button:hover {
+    color: #FFF;
+    background-color: #000;
+    border-color: #000;
+}
+.AvatarGenerator .select {
+    padding: 10px;
+    margin-right: 15px;
+    border: 3px solid currentColor;
+    font: inherit;
+}
+.AvatarGenerator .select .option {
+
 }

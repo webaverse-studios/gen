@@ -3,7 +3,7 @@ import classnames from 'classnames';
 
 import SceneGeneratorComponent from '../src/components/generators/SceneGeneratorComponent.jsx';
 import MetasceneGeneratorComponent from '../src/components/generators/MetasceneGeneratorComponent.jsx';
-import AvatarGeneratorComponent from '../src/components/generators/AvatarGeneratorComponent.jsx';
+import AvatarGeneratorComponent from '../src/components/generators/CleanedAvatarGenerator';
 import MobGeneratorComponent from '../src/components/generators/MobGeneratorComponent.jsx';
 import CharacterGeneratorComponent from '../src/components/generators/CharacterGeneratorComponent.jsx';
 import ItemGeneratorComponent from '../src/components/generators/ItemGeneratorComponent.jsx';

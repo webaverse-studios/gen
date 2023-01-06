@@ -67,7 +67,7 @@ const makeSeedCanvas = () => {
 
 //
 
-function makeNoiseCanvas(w, h) {
+export function makeNoiseCanvas(w, h) {
   const canvas = document.createElement('canvas');
   canvas.width = w;
   canvas.height = h;
@@ -400,17 +400,17 @@ export const editMeshTextures = async (mesh, {
     document.body.appendChild(editImg);
   }
 
-  const {
-    normalImage,
-    roughnessImage,
-    displacementImage,
-  } = await generateTextureMaps(editImg);
-
-  {
-    document.body.appendChild(normalImage);
-    document.body.appendChild(roughnessImage);
-    document.body.appendChild(displacementImage);
-  }
+  // const {
+  //   normalImage,
+  //   roughnessImage,
+  //   displacementImage,
+  // } = await generateTextureMaps(editImg);
+  //
+  // {
+  //   document.body.appendChild(normalImage);
+  //   document.body.appendChild(roughnessImage);
+  //   document.body.appendChild(displacementImage);
+  // }
 
   const geometry2 = mesh.geometry;
 
