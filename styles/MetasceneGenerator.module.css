@@ -15,6 +15,11 @@
   width: 1024px;
 }
 
+.metasceneGenerator .metazineCanvas {
+  position: relative;
+  width: 1024px;
+}
+
 .metasceneGenerator .metazineCanvas .overlay {
   position: absolute;
   top: 0;

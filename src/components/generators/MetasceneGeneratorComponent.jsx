@@ -15,6 +15,9 @@ import {
   getOrthographicCameraJson,
 } from '../../zine/zine-camera-utils.js';
 import {
+  makeId,
+} from '../../../utils.js';
+import {
   reconstructPointCloudFromDepthField,
   pointCloudArrayBufferToGeometry,
   reinterpretFloatImageData,
@@ -158,6 +161,8 @@ const panelSpecTextureSize = 256;
 const metazineAtlasTextureSize = 4096;
 const metazineAtlasTextureRowSize = Math.floor(metazineAtlasTextureSize / panelSpecTextureSize);
 const orbitControlsDistance = 10;
+const devServerUrl = `https://local.webaverse.com`;
+const devServerTmpUrl = `${devServerUrl}/tmp`;
 
 //
 
@@ -2623,6 +2628,39 @@ const MetazineCanvas = ({
   const [panelSpec, setPanelSpec] = useState(null);
 
   return (
+    <>
+    {panelSpec ? <div className={styles.header}>
+      <button className={styles.button} onClick={async e => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        // const uint8Array = await metazine.exportAsync();
+        // const blob = new Blob([
+        //   zineMagicBytes,
+        //   uint8Array,
+        // ], {
+        //   type: 'application/octet-stream',
+        // });
+
+        const {file} = panelSpec;
+        console.log('got panel spec file', file);
+
+        const u = `${devServerTmpUrl}/zine-${++ids}.zine`;
+        const res = await fetch(u, {
+          method: 'PUT',
+          body: file,
+        });
+        // console.log('got res', u, res);
+        const blob2 = await res.blob();
+        // console.log('got result', u, blob2);
+
+        // const devServerUrl 
+        const u2 = new URL(`https://local.webaverse.com/`);
+        u2.searchParams.set('url', u);
+
+        console.log('got u', u2.href, blob2);
+      }}>Zine2app</button>
+    </div> : null}
     <div className={styles.metazineCanvas}>
       {panelSpec ? <div className={styles.overlay}>
         <div className={styles.heroTag}>
@@ -2642,11 +2680,13 @@ const MetazineCanvas = ({
         onPanelSpecChange={setPanelSpec}
       />
     </div>
+    </>
   );
 };
 
 //
 
+let ids = 0;
 const MetasceneGeneratorComponent = () => {
   const [metazine, setMetazine] = useState(() => new Metazine());
   const [compiling, setCompiling] = useState(false);
@@ -2681,14 +2721,41 @@ const MetasceneGeneratorComponent = () => {
               });
               downloadFile(blob, 'metazine.zine');
             }}>Download zine</button>
+            <button className={styles.button} onClick={async e => {
+              e.preventDefault();
+              e.stopPropagation();
+
+              const uint8Array = await metazine.exportAsync();
+              const blob = new Blob([
+                zineMagicBytes,
+                uint8Array,
+              ], {
+                type: 'application/octet-stream',
+              });
+
+              const u = `${devServerTmpUrl}/metazine-${++ids}.zine`;
+              const res = await fetch(u, {
+                method: 'PUT',
+                body: blob,
+              });
+              // console.log('got res', u, res);
+              const blob2 = await res.blob();
+              // console.log('got result', u, blob2);
+
+              // const devServerUrl 
+              const u2 = new URL(`https://local.webaverse.com/`);
+              u2.searchParams.set('url', u);
+
+              console.log('got u', u2.href, blob2);
+            }}>Metazine2app</button>
           </div>
-          <div className={styles.metasceneRenderer}>
+          {/* <div className={styles.metasceneRenderer}> */}
             <MetazineCanvas
               width={panelSize}
               height={panelSize}
               metazine={metazine}
             />
-          </div>
+          {/* </div> */}
         </>
       ) : (
         compiling ?
