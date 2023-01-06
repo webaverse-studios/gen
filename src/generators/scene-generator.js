@@ -3429,7 +3429,7 @@ export class PanelRenderer extends EventTarget {
             break;
           }
           case 'r': {
-            const {planeSpecs, firstFloorPlaneIndex} = this.sceneMesh;
+            const {planeLabels, firstFloorPlaneIndex} = this.sceneMesh;
             const labelSpec = planeLabels[firstFloorPlaneIndex];
             const normal = localVector.fromArray(labelSpec.normal);
             // const center = localVector2.fromArray(labelSpec.center);
