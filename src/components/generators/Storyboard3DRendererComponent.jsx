@@ -51,6 +51,7 @@ const Panel3DCanvas = ({
 //
 
 export const Storyboard3DRendererComponent = ({
+  storyboard,
   panel,
 }) => {
   const _getPrompt = () => panel.getLayer(0)?.getData(promptKey) ?? '';
