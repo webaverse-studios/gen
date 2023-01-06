@@ -2634,6 +2634,13 @@ const MetazineCanvas = ({
         e.preventDefault();
         e.stopPropagation();
 
+        const {file} = panelSpec;
+        downloadFile(file, file.name);
+      }}>Download zine</button>
+      <button className={styles.button} onClick={async e => {
+        e.preventDefault();
+        e.stopPropagation();
+
         // const uint8Array = await metazine.exportAsync();
         // const blob = new Blob([
         //   zineMagicBytes,
@@ -2720,7 +2727,7 @@ const MetasceneGeneratorComponent = () => {
                 type: 'application/octet-stream',
               });
               downloadFile(blob, 'metazine.zine');
-            }}>Download zine</button>
+            }}>Download metazine</button>
             <button className={styles.button} onClick={async e => {
               e.preventDefault();
               e.stopPropagation();
