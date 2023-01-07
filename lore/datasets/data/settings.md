@@ -327,11 +327,11 @@ RED: 30, GREEN: 0, BLUE: 0, WHITE: 30, BLACK: 0
 ## Mobs:
 
 ## Name:
-Osha Valley 			
+Osha Valley
 ## Description:
 A beautiful and prosperous land with deep valleys, hills, lakes, and bountiful gardens. The valley is on the slight outskirts of the zones and is home to AIs who want to get away from the hustle and bustle of the city. Osha Valley is known to produce some of the most well-known ingredients for potion making, harvesting, and spells. While the valley is mostly peaceful, those who travel should heed caution when approached by a midnight wolf. 
 ## Biome:
-Valley 
+Valley
 ## Image:
 - ![Osha Valley | A sunset view of hills, valleys, and lakes filled with a crisp mist.]()
 ## Image Gallery:
