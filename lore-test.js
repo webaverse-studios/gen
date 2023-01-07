@@ -33,22 +33,38 @@ globalThis.test = async () => {
   // load
   const datasetSpecs = await getDatasetSpecs();
   // const datasetItems = await getDatasetItems();
+  const aiClient = new AiClient();
 
-  console.log('got dataset specs', datasetSpecs);
-
+  // console.log('got dataset specs', datasetSpecs);
   {
     const type = 'battle-banter';
     const datasetSpec = datasetSpecs.find(ds => ds.type === type);
     const items = await getDatasetItemsForDatasetSpec(datasetSpec);
-    console.log('battle-banter items', items);
+    // console.log('battle-banter items', items);
   }
-  
   const type = 'setting';
   const datasetSpec = datasetSpecs.find(ds => ds.type === type);
   const items = await getDatasetItemsForDatasetSpec(datasetSpec);
-  console.log('setting items', items);
+  // console.log('setting items', items);
 
   // write initial dataset to DB
+
+
+
+
+  // get embedding
+  {
+    const embedding = await aiClient.embed('lol');
+    console.log('got embedding', embedding);
+  }
+
+  // get tokenization
+  {
+    const tokenization = aiClient.tokenize('lol and the bestesterestest');
+    console.log('got tokenization', tokenization);
+  }
+
+
 
 
   // format dataset items
@@ -68,7 +84,6 @@ globalThis.test = async () => {
   }
 
   // generate an item from the dataset
-  const aiClient = new AiClient();
   const datasetGenerator = new DatasetGenerator({
     datasetSpecs,
     aiClient,
