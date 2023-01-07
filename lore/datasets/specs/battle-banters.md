@@ -6,5 +6,5 @@ Generate video game character banter.
 Character's full name
 ## Description:
 A short description of the character to give context to their personality
-## Banters*:
+## Banters:
 - List of battle banters the character says
