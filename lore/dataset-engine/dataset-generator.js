@@ -14,10 +14,7 @@ export class DatasetGenerator {
     this.aiClient = aiClient;
     this.fillRatio = fillRatio;
   }
-  async generateItem(type, {
-    name = '',
-    description = '',
-  } = {}) {
+  async generateItem(type, initialValue) {
     const datasetSpec = this.datasetSpecs.find(ds => ds.type === type);
     if (datasetSpec) {
       const datasetEngine = new DatasetEngine({
@@ -25,10 +22,7 @@ export class DatasetGenerator {
         aiClient: this.aiClient,
         fillRatio: this.fillRatio,
       });
-      const generatedItem = await datasetEngine.generateItem({
-        name,
-        description,
-      });
+      const generatedItem = await datasetEngine.generateItem(initialValue);
       return generatedItem;
     } else {
       throw new Error('unknown dataset: ' + type);

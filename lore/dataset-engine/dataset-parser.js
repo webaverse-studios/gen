@@ -2,15 +2,12 @@
 
 //
 
-export const formatItemText = (item, datasetSpec, initialValue = {}, opts = {}) => {
+const collectKeys = (datasetSpec, initialValue, keys) => {
   const {
     nameKey,
     descriptionKey,
     attributeKeys,
   } = datasetSpec;
-  const {
-    keys,
-  } = opts;
 
   const allKeys = [];
   if (nameKey in initialValue) {
@@ -46,6 +43,34 @@ export const formatItemText = (item, datasetSpec, initialValue = {}, opts = {}) 
     const bHas = b in initialValue;
     return +bHas - +aHas;
   });
+
+  return allKeys;
+};
+const findFirstMissingValueKeyIndex = (allKeys, initialValue) => {
+  let firstMissingValueKeyIndex = allKeys.length;
+  for (let i = 0; i < allKeys.length; i++) {
+    const k = allKeys[i];
+    if (!(k in initialValue)) {
+      firstMissingValueKeyIndex = i;
+      break;
+    }
+  }
+  return firstMissingValueKeyIndex;
+};
+
+//
+
+export const formatItemText = (item, datasetSpec, initialValue = {}, opts = {}) => {
+  // const {
+  //   nameKey,
+  //   descriptionKey,
+  //   attributeKeys,
+  // } = datasetSpec;
+  const {
+    keys,
+  } = opts;
+
+  const allKeys = collectKeys(datasetSpec, initialValue, keys);
 
   // acc result
   let s = '';
@@ -65,50 +90,10 @@ export const formatInitialValueText = (initialValue, datasetSpec, opts = {}) => 
     keys,
   } = opts;
 
-  const allKeys = [];
-  if (nameKey in initialValue) {
-    allKeys.push(nameKey);
-  }
-  if (descriptionKey in initialValue) {
-    allKeys.push(descriptionKey);
-  }
-  for (const k in initialValue) {
-    if (!allKeys.includes(k)) {
-      allKeys.push(k);
-    }
-  }
-  if (keys) {
-    for (let i = 0; i < keys.length; i++) {
-      const k = keys[i];
-      if (!allKeys.includes(k)) {
-        allKeys.push(k);
-      }
-    }
-  } else {
-    for (let i = 0; i < attributeKeys.length; i++) {
-      const k = attributeKeys[i];
-      if (!allKeys.includes(k)) {
-        allKeys.push(k);
-      }
-    }
-  }
-
-  // sort the keys so that the missing keys are at the end
-  allKeys.sort((a, b) => {
-    const aHas = a in initialValue;
-    const bHas = b in initialValue;
-    return +bHas - +aHas;
-  });
+  const allKeys = collectKeys(datasetSpec, initialValue, keys);
 
   // find the first missing value key index
-  let firstMissingValueKeyIndex = allKeys.length;
-  for (let i = 0; i < allKeys.length; i++) {
-    const k = allKeys[i];
-    if (!(k in initialValue)) {
-      firstMissingValueKeyIndex = i;
-      break;
-    }
-  }
+  const firstMissingValueKeyIndex = findFirstMissingValueKeyIndex(allKeys, initialValue);
 
   // acc result
   let s = '';
@@ -153,9 +138,9 @@ export const formatDatasetItemsForPolyfill = (dataset, datasetSpec, initialValue
     keys,
   } = opts;
 
-  if ([nameKey, descriptionKey].includes(keys)) {
-    throw new Error(`keys cannot include ${nameKey} or ${descriptionKey}`);
-  }
+  // if ([nameKey, descriptionKey].includes(keys)) {
+  //   throw new Error(`keys cannot include ${nameKey} or ${descriptionKey}`);
+  // }
 
   let result = '';
   for (let i = 0; i < dataset.length; i++) {
@@ -382,8 +367,8 @@ export const parseDatasetSpec = md => {
       ] = itemKeys;
       const type = item0[typeKey];
       const imagePrompt = item0[imagePromptKey];
-      // const attributeKeys = itemKeys.slice(2);
       const groupKey = attributeKeys.find(k => k.endsWith('*')) ?? null;
+      // console.log('got keys', [groupKey], attributeKeys);
       return {
         type,
         imagePrompt,
@@ -400,3 +385,42 @@ export const parseDatasetSpec = md => {
     throw new Error('had no prefix: ' + JSON.stringify(md));
   }
 };
+
+export const getCompletionParser = (datasetSpec, initialValue, opts) => completionString => {
+  const {
+    nameKey,
+    descriptionKey,
+    attributeKeys,
+  } = datasetSpec;
+  const {
+    keys,
+  } = opts;
+
+  let completionStringRemaining = completionString;
+  let index = 0;
+  const readLine = () => {
+    const match = completionStringRemaining.match(/^([^\n]*)(?:\n|$)/);
+    if (match) {
+      const line = match[1];
+      const deltaLength = line.length + 1;
+      completionStringRemaining = completionStringRemaining.slice(deltaLength);
+      index += deltaLength;
+      return line;
+    } else {
+      return null;
+    }
+  };
+
+  const completionValue = {};
+  const allKeys = collectKeys(datasetSpec, initialValue, keys);
+  const firstMissingValueKeyIndex = findFirstMissingValueKeyIndex(allKeys, initialValue);
+  for (let i = firstMissingValueKeyIndex; i < allKeys.length; i++) {
+    const key = allKeys[i];
+    if (i !== firstMissingValueKeyIndex) {
+      readLine(); // skip label line
+    }
+    const value = readLine();
+    completionValue[key] = value;
+  }
+  return completionValue;
+}

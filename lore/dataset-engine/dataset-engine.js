@@ -2,16 +2,17 @@ import alea from 'alea';
 import {
   formatInitialValueText,
   formatDatasetItemsForPolyfill,
+  getCompletionParser,
 } from './dataset-parser.js';
 import {
   getDatasetItemsForDatasetSpec,
 } from './dataset-specs.js';
 
-const stops = [
-  '\n\n',
-  '@Type',
-  '\n#'
-];
+// const stops = [
+//   '\n\n',
+//   '@Type',
+//   '\n#'
+// ];
 
 const modelMaxTokens = 4000;
 export class DatasetEngine {
@@ -24,15 +25,12 @@ export class DatasetEngine {
     this.aiClient = aiClient;
     this.fillRatio = fillRatio;
   }
-  async generateItem({
-    name = '',
-    description = '',
-  } = {}) {
-    const {
-      nameKey,
-      descriptionKey,
-      // attributeKeys,
-    } = this.datasetSpec;
+  async generateItem(initialValue) {
+    // const {
+    //   nameKey,
+    //   descriptionKey,
+    //   // attributeKeys,
+    // } = this.datasetSpec;
 
     // if (!name) {
     //   const namePrompt = formatDatasetNamePrompt(this.dataset);
@@ -65,19 +63,19 @@ export class DatasetEngine {
     // return attributes;
 
 
-    const initialValue = {
+    /* const initialValue = {
       Name: 'Death Mountain',
       // Description: 'A mountain in the middle of a desert.',
-    };
+    }; */
     const opts = {
       keys: ['Image'],
     };
     const initialValueString = formatInitialValueText(initialValue, this.datasetSpec, opts);
     const initialValueEncoded = this.aiClient.tokenize(initialValueString);
-    console.log('got string 1', {
-      initialValueString,
-      initialValueEncoded,
-    });
+    // console.log('got string 1', {
+    //   initialValueString,
+    //   initialValueEncoded,
+    // });
     let tokenLength = initialValueEncoded.length;
     // note: the token length is conservative, since we don't account for token merge across items
 
@@ -111,12 +109,30 @@ export class DatasetEngine {
 
     const itemsString = formatDatasetItemsForPolyfill(items, this.datasetSpec, initialValue, opts);
     const prompt = itemsString + '\n\n' + initialValueString;
-    console.log('got components', {
-      items,
-      itemsString,
-      initialValueString,
-    });
-    return prompt;
+    // console.log('got components', {
+    //   items,
+    //   itemsString,
+    //   initialValueString,
+    // });
+
+    const completion = await this.aiClient.generate(prompt, '\n');
+    // console.log('got completion', {
+    //   prompt,
+    //   completion,
+    // });
+    const parseFn = getCompletionParser(this.datasetSpec, initialValue, opts);
+    const parsedCompletion = parseFn(completion);
+    // console.log('parsed completion', {
+    //   prompt,
+    //   completion,
+    //   parsedCompletion,
+    // });
+
+    const completedValue = {
+      ...initialValue,
+      ...parsedCompletion,
+    };
+    return completedValue;
 
     /* if (this.dataset.items.length > 0) {
       const item0 = this.dataset.items[0];
