@@ -1,22 +1,58 @@
-export const formatItemText = (item, datasetSpec) => {
+// const capitalize = s => s[0].toUpperCase() + s.slice(1);
+
+//
+
+export const formatItemText = (item, datasetSpec, initialValue = {}, opts = {}) => {
   const {
     nameKey,
+    descriptionKey,
+    attributeKeys,
   } = datasetSpec;
+  const {
+    keys,
+  } = opts;
 
-  // name
-  let s = '';
-  const nameValue = item[nameKey];
-  s += `${nameKey}:\n${nameValue}\n`;
-  
-  // other attributes
-  for (const k in item) {
-    const v = item[k];
-    if (k !== nameKey) {
-      s += `${k}:\n${v}\n`;
+  const allKeys = [];
+  if (nameKey in initialValue) {
+    allKeys.push(nameKey);
+  }
+  if (descriptionKey in initialValue) {
+    allKeys.push(descriptionKey);
+  }
+  for (const k in initialValue) {
+    if (!allKeys.includes(k)) {
+      allKeys.push(k);
+    }
+  }
+  if (keys) {
+    for (let i = 0; i < keys.length; i++) {
+      const k = keys[i];
+      if (!allKeys.includes(k)) {
+        allKeys.push(k);
+      }
+    }
+  } else {
+    for (let i = 0; i < attributeKeys.length; i++) {
+      const k = attributeKeys[i];
+      if (!allKeys.includes(k)) {
+        allKeys.push(k);
+      }
     }
   }
 
-  // return
+  // sort the keys so that the missing keys are at the end
+  allKeys.sort((a, b) => {
+    const aHas = a in initialValue;
+    const bHas = b in initialValue;
+    return +bHas - +aHas;
+  });
+
+  // acc result
+  let s = '';
+  for (const k of allKeys) {
+    const v = item[k];
+    s += `${k}:\n${v}\n`;
+  }
   return s;
 };
 export const formatDatasetItems = (dataset, datasetSpec) => {
@@ -31,6 +67,30 @@ export const formatDatasetItems = (dataset, datasetSpec) => {
   for (let i = 0; i < dataset.length; i++) {
     const item = dataset[i];
     const s = formatItemText(item, datasetSpec);
+    result += s;
+    result += '\n\n';
+  }
+  return result;
+};
+export const formatDatasetItemsForPolyfill = (dataset, datasetSpec, initialValue = {}, opts = {}) => {
+  const {
+    type,
+    nameKey,
+    descriptionKey,
+    attributeKeys,
+  } = datasetSpec;
+  const {
+    keys,
+  } = opts;
+
+  if ([nameKey, descriptionKey].includes(keys)) {
+    throw new Error(`keys cannot include ${nameKey} or ${descriptionKey}`);
+  }
+
+  let result = '';
+  for (let i = 0; i < dataset.length; i++) {
+    const item = dataset[i];
+    const s = formatItemText(item, datasetSpec, initialValue, opts);
     result += s;
     result += '\n\n';
   }
@@ -162,9 +222,9 @@ export const parseDatasetItems = (md, datasetSpec, {
     let currentAttributeAsterisk = false;
     const _flushAttribute = () => {
       itemAttributes[currentAttributeName] = currentAttributeValue;
-      if (currentAttributeAsterisk) {
-        itemAttributes[currentAttributeName] = currentAttributeAsterisk;
-      } 
+      // if (currentAttributeAsterisk) {
+      //   itemAttributes[currentAttributeName] = currentAttributeAsterisk;
+      // }
 
       currentAttributeName = '';
       currentAttributeValue = '';
@@ -176,7 +236,7 @@ export const parseDatasetItems = (md, datasetSpec, {
       const itemLine = itemLines[i];
 
       const match3 = itemLine.match(/^([@#]+ ?[\s\S]+?)(\*?):(?: )?(.*)(?:\n|$)/);
-      if (match3 /* && !isAllCaps(name) */) {
+      if (match3) {
         const name = match3[1];
         const asterisk = match3[2];
         const value = match3[3];
