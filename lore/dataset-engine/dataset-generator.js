@@ -8,9 +8,11 @@ export class DatasetGenerator {
   constructor({
     datasetSpecs,
     aiClient,
+    fillRatio,
   }) {
     this.datasetSpecs = datasetSpecs;
     this.aiClient = aiClient;
+    this.fillRatio = fillRatio;
   }
   async generateItem(type, {
     name = '',
@@ -19,8 +21,9 @@ export class DatasetGenerator {
     const datasetSpec = this.datasetSpecs.find(ds => ds.type === type);
     if (datasetSpec) {
       const datasetEngine = new DatasetEngine({
-        dataset: datasetSpec,
+        datasetSpec,
         aiClient: this.aiClient,
+        fillRatio: this.fillRatio,
       });
       const generatedItem = await datasetEngine.generateItem({
         name,

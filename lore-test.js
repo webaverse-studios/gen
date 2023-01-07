@@ -64,30 +64,17 @@ globalThis.test = async () => {
     console.log('got tokenization', tokenization);
   }
 
-
-
-
-  // format dataset items
-  {
-    // console.log('got', {
-    //   items,
-    //   datasetSpec,
-    // });
-    // const s = formatDatasetItems(items, datasetSpec);
-    const s = formatDatasetItemsForPolyfill(items, datasetSpec, {
-      Name: 'Death Mountain',
-      // description: 'A mountain in the middle of a desert.',
-    }, {
-      keys: ['Image'],
-    });
-    return s;
-  }
-
   // generate an item from the dataset
   const datasetGenerator = new DatasetGenerator({
     datasetSpecs,
     aiClient,
+    // fillRatio: 0.5,
   });
-  const settingSpec = await datasetGenerator.generateItem('setting');
-  console.log('got setting', settingSpec);
+  const settingSpec = await datasetGenerator.generateItem('setting', {
+    Name: 'Death Mountain',
+    // description: 'A mountain in the middle of a desert.',
+  }, {
+    keys: ['Image'],
+  });
+  console.log(settingSpec);
 };

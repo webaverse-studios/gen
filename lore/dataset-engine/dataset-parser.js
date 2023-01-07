@@ -55,6 +55,74 @@ export const formatItemText = (item, datasetSpec, initialValue = {}, opts = {}) 
   }
   return s;
 };
+export const formatInitialValueText = (initialValue, datasetSpec, opts = {}) => {
+  const {
+    nameKey,
+    descriptionKey,
+    attributeKeys,
+  } = datasetSpec;
+  const {
+    keys,
+  } = opts;
+
+  const allKeys = [];
+  if (nameKey in initialValue) {
+    allKeys.push(nameKey);
+  }
+  if (descriptionKey in initialValue) {
+    allKeys.push(descriptionKey);
+  }
+  for (const k in initialValue) {
+    if (!allKeys.includes(k)) {
+      allKeys.push(k);
+    }
+  }
+  if (keys) {
+    for (let i = 0; i < keys.length; i++) {
+      const k = keys[i];
+      if (!allKeys.includes(k)) {
+        allKeys.push(k);
+      }
+    }
+  } else {
+    for (let i = 0; i < attributeKeys.length; i++) {
+      const k = attributeKeys[i];
+      if (!allKeys.includes(k)) {
+        allKeys.push(k);
+      }
+    }
+  }
+
+  // sort the keys so that the missing keys are at the end
+  allKeys.sort((a, b) => {
+    const aHas = a in initialValue;
+    const bHas = b in initialValue;
+    return +bHas - +aHas;
+  });
+
+  // find the first missing value key index
+  let firstMissingValueKeyIndex = allKeys.length;
+  for (let i = 0; i < allKeys.length; i++) {
+    const k = allKeys[i];
+    if (!(k in initialValue)) {
+      firstMissingValueKeyIndex = i;
+      break;
+    }
+  }
+
+  // acc result
+  let s = '';
+  for (let i = 0; i < firstMissingValueKeyIndex; i++) {
+    const k = allKeys[i];
+    const v = initialValue[k];
+    s += `${k}:\n${v}\n`;
+  }
+  if (firstMissingValueKeyIndex < allKeys.length) {
+    const k = allKeys[firstMissingValueKeyIndex];
+    s += `${k}:\n`;
+  }
+  return s;
+};
 export const formatDatasetItems = (dataset, datasetSpec) => {
   // const {
   //   type,
@@ -67,8 +135,10 @@ export const formatDatasetItems = (dataset, datasetSpec) => {
   for (let i = 0; i < dataset.length; i++) {
     const item = dataset[i];
     const s = formatItemText(item, datasetSpec);
+    if (result.length > 0) {
+      result += '\n\n';
+    }
     result += s;
-    result += '\n\n';
   }
   return result;
 };
@@ -91,8 +161,10 @@ export const formatDatasetItemsForPolyfill = (dataset, datasetSpec, initialValue
   for (let i = 0; i < dataset.length; i++) {
     const item = dataset[i];
     const s = formatItemText(item, datasetSpec, initialValue, opts);
+    if (result.length > 0) {
+      result += '\n\n';
+    }
     result += s;
-    result += '\n\n';
   }
   return result;
 };
