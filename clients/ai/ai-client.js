@@ -31,7 +31,10 @@ export function makeGenerateFn() {
       return "returning from error";
     }
   }
-  async function openaiRequest(prompt, stop/*, needsRepetition*/) {
+  async function openaiRequest(prompt, stop, opts) {
+    const {
+      max_tokens = 256,
+    } = opts ?? {};
     return await query({
       // model: 'text-davinci-002',
       model,
@@ -41,13 +44,13 @@ export function makeGenerateFn() {
       // frequency_penalty: needsRepetition ? 0.1 : 0.4,
       // presence_penalty: needsRepetition ? 0.1 : 0.4,
       // temperature: 0.85,
-      max_tokens: 256,
+      max_tokens,
       best_of: 1,
     });
   }
   
-  return async (prompt, stop/*, needsRepetition = true*/) => {
-    return await openaiRequest(prompt, stop/*, needsRepetition*/);
+  return async (prompt, stop, opts) => {
+    return await openaiRequest(prompt, stop, opts);
   };
 }
 
