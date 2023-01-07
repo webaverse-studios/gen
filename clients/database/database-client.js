@@ -1,12 +1,25 @@
+// import {AiClient} from './clients/ai/ai-client.js';
+// import databaseClient from './clients/database/database-client.js';
+import {
+  getDatasetSpecs,
+  getDatasetItems,
+  getTrainingItems,
+  getDatasetItemsForDatasetSpec,
+} from '../../lore/dataset-engine/dataset-specs.js';
+// import {DatasetGenerator} from './lore/dataset-engine/dataset-generator.js';
+import {
+  // formatDatasetNamePrompt,
+  // formatDatasetDescriptionPrompt,
+  // formatDatasetAttributePrompts,
+  formatDatasetItems,
+  formatDatasetItemsForPolyfill,
+} from '../../lore/dataset-engine/dataset-parser.js';
+import murmurhash from 'murmurhash';
 import {
   Qdrant,
-} from 'qdrant/index.js';
+} from '../../qdrant/index.js';
 
-export class DatabaseClient {
-  constructor() {
-    this.qdrant = new Qdrant('http://localhost:6333/');
-  }
-}
+const murmurhash3 = murmurhash.v3;
 
 /* const name = "pretty_colors";
 
@@ -95,105 +108,100 @@ if (delete_result.err) {
     console.log(delete_result.response);
 } */
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/* import uuidByString from 'uuid-by-string';
-import weaviate from 'weaviate-client';
-
+const embeddingDimensions = 1536;
 export class DatabaseClient {
-  constructor() {
-    this.client = weaviate.client({
-      scheme: 'http',
-      host: 'weaviate-server.webaverse.com',
-    });
+  constructor({
+    aiClient,
+  }) {
+    this.aiClient = aiClient;
+    
+    this.qdrant = new Qdrant('http://localhost:6333/');
   }
-  async getByName(className, title) {
-    // const id = uuidByString(title);
-    const result = await this.client.graphql
-      .get()
-      .withClassName(className)
-      .withFields('title content type')
-      .withWhere({
-        operator: 'Equal',
-        path: [
-          'title',
-        ],
-        valueString: title,
-      })
-      .do()
-    // console.log('got result', JSON.stringify({className, title, result}, null, 2));
-    return result?.data?.Get?.[className]?.[0];
-  }
-  async setByName(className, title, content) {
-    const _formatData = (title, content) => {
-      if (typeof content === 'string') {
-        const match = title.match(/^([^\/]+)\//);
-        if (match) {
-          const type = match[1];
-          // const v = j[k];
-          // value.type = type;
-          // const match = k.match(/^([^\/]+)/);
-          // const type = match?.[1] ?? '';
-          // v.type = type;
-          return {
-            class: className,
-            id: uuidByString(title),
-            properties: {
-              title,
-              content,
-              type,
-            },
-          };
-        } else {
-          return null;
-        }
-      } else {
-        return null;
-      }
-    };
-    const _uploadDatas = async datas => {
-      const batcher = this.client.batch.objectsBatcher();
-      for (const data of datas) {
-        batcher.withObject(data);
-      }
-      const result = await batcher.do();
-      let ok = true;
-      for (const item of result) {
-        if (item.result.errors) {
-          console.warn(item.result.errors);
-          ok = false;
-        }
-      }
-      return ok;
-    };
+  async init() {
+    const {
+      aiClient,
+      qdrant,
+    } = this;
+    const datasetSpecs = await getDatasetSpecs();
 
-    const data = _formatData(title, content);
-    if (!data) {
-      throw new Error('invalid data');
-    }
-    const ok = await _uploadDatas([data]);
-    if (!ok) {
-      throw new Error('failed to upload data');
+    // console.log('got dataset specs', datasetSpecs);
+    // console.log('got dataset items', datasetItems);
+
+    for (let i = 0; i < datasetSpecs.length; i++) {
+      const datasetSpec = datasetSpecs[i];
+      const {type} = datasetSpec;
+
+      const name = type;
+
+      const schema = {
+        "name": name,
+        "vectors": {
+          "size": embeddingDimensions,
+          "distance": "Cosine",
+        },
+      };
+
+      let delete_result = await qdrant.delete_collection(name);
+      if (delete_result.err) {
+        console.error(`ERROR:  Couldn't delete "${name}"!`);
+        console.error(delete_result.err);
+      } else {
+        console.log(`Deleted "${name} successfully!"`);
+        console.log(delete_result.response);
+      }
+
+      /// -------------------------------------------------------------------------
+      /// Create the new collection with the name and schema
+      let create_result = await qdrant.create_collection(name, schema);
+      if (create_result.err) {
+        console.error(`ERROR:  Couldn't create collection "${name}"!`);
+        console.error(create_result.err);
+      } else {
+        console.log(`Success! Collection "${name} created!"`);
+        console.log(create_result.response);
+      }
+
+      /// -------------------------------------------------------------------------
+      /// Show the collection info as it exists in the Qdrant engine
+      let collection_result = await qdrant.get_collection(name);
+      if (collection_result.err) {
+        console.error(`ERROR:  Couldn't access collection "${name}"!`);
+        console.error(collection_result.err);
+      } else {
+        console.log(`Collection "${name} found!"`);
+        console.log(collection_result.response);
+      }
+
+      let datasetItems = await getDatasetItemsForDatasetSpec(datasetSpec);
+      datasetItems = datasetItems.slice(0, 8); // XXX
+      console.log('create points from', datasetItems);
+
+      // compute points
+      const points = [];
+      for (let i = 0; i < datasetItems.length; i++) {
+        const item = datasetItems[i];
+        const itemString = JSON.stringify(item);
+        const id = murmurhash3(itemString);
+        const vector = await aiClient.embed(itemString);
+        // console.log('embed vectors', vector);
+        const point = {
+          id,
+          payload: item,
+          vector,
+        };
+        // console.log('add point', point);
+        points.push(point);
+      }
+      console.log('got points', points);
+      // const points = datasetItems.map(item => {
+      //   return {
+      //     // id: item.id,
+      //     payload: item,
+      //     vector: item.embedding,
+      //   };
+      // });
+      let upload_points_result = await qdrant.upload_points(name, points);
+      console.log('upload points', upload_points_result);
     }
   }
-} */
+}

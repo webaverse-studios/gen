@@ -1,5 +1,5 @@
 import {AiClient} from './clients/ai/ai-client.js';
-// import databaseClient from './clients/database/database-client.js';
+import {DatabaseClient} from './clients/database/database-client.js';
 import {
   getDatasetSpecs,
   getDatasetItems,
@@ -29,7 +29,14 @@ async createQuest(locations) {
 }
 */
 
-globalThis.test = async () => {
+globalThis.testDatabaseInit = async () => {
+  const aiClient = new AiClient();
+  const databaseClient = new DatabaseClient({
+    aiClient,
+  });
+  await databaseClient.init();
+};
+globalThis.testGeneration = async () => {
   // load
   const datasetSpecs = await getDatasetSpecs();
   // const datasetItems = await getDatasetItems();
@@ -72,7 +79,7 @@ globalThis.test = async () => {
   });
   const settingSpec = await datasetGenerator.generateItem('setting', {
     Name: 'Death Mountain',
-    // description: 'A mountain in the middle of a desert.',
+    // Description: 'A mountain in the middle of a desert.',
   }, {
     keys: ['Image'],
   });
