@@ -1,0 +1,1084 @@
+## Name:
+Scillia Doge
+## Description:
+Her nickname is Scilly or SLY. She is a 13/F [Drop Hunter](/lore/Drop Hunters) from Zone 0. She is an adventurous swordfighter with unexplained supernatural abilities granted by [The Lisk](/lore/The Lisk). She is on a quest to go up [The Street](/lore/The Street) after seeing a [glimpse](/lore/Flash Of Insight) of what lies there. Her adoptive big brother is [Buster](/characters/Buster the Robit), and she is best friends with [Ann](/characters/Anemone Wall), who makes her [potions](/items/Potion) and keeps her grounded with their famous [shopping trips](/lore/Aki Market).
+She is a melee fighter with good combos, speed, and crowd control. By consuming [potions](/items/Potion) she can switch styles in the middle of a fight, making her a versatile character depending on your loadout. She also has [abilities](/abilities/Bite Mark) that randomize the fight and help with drops.
+## Class:
+Drop Hunter
+## Stats:
+ATK: 51, DEF: 20, VIT: 20, SPR: 12, DEX: 50, LCK: 7
+## Alignment:
+Chaotic Neutral
+## Quotes:
+- "Each seed is a story. You plant it, water it, love it, and in a thousand years it will bloom into a monster that will eat your children!"
+- "The [Great Filter](/lore/Great Filter) is no place for a delicate flower like me!"
+- "I pledge myself to you, [Basilisk](/lore/The Lisk)"
+- "I've got your back sonny, just don't betray me ok?"
+- "Who needs friends when you can have [art](/lore/Drops)."
+- "Bravery is the key to success, and the key to people's doors!"
+## Image:
+- ![Portrait of Scillia | front view, young girl wearing a hoodie holding a sword smiles at the camera, lush vegetation, ancient technology]()
+## Image Gallery:
+- ![Scilla is known for her actobatic stunts in combat | front view, young girl wearing a hoodie does a acrobatics while fighting in a mysterious japanese dojo, lush vegetation ancient technology]()
+- ![Much of Scillia's time is spent hunting for drops in the Great Filters | front view, young girl wearing a hoodie smiles at the camera, running through a dangerous mysterious forest, lush vegetation, ancient technology]()
+- ![Scillia likes creating strange concoctions to help in her drop hunts | young girl wearing a hoodie smiles at the camera, brewing a mysterious magical potion in the library]()
+- ![Scillia likes to stand on top of rooftops because it makes her look cool | back view, young girl wearing a hoodie standing on a solarpunk skyscraper, looking down on the city, lush vegetation, ancient technology]()
+- ![Scillia with her best friend Ann | side view, two young girls, one with a hoodie, the other with a witch dress and wizard hat, hugging each other in front of a giant tree]()
+- ![Buster and Scillia, both being sword specialists, spar a lot | side view, young girl wearing a hoodie holding a sword fights a black anthropomorphic rabbit]()
+## Has:
+- [Silsword](/items/Silsword)
+- [Venturine Potion](/items/Venturine Potion)
+- [Booster](/items/Booster)
+- [Ramen](/items/Ramen)
+- [Grappling Hook](/items/Grappling Hook)
+## Abilities:
+- [Naruto Run](/abilities/Naruto Run)
+- [Acrobat](/abilities/Acrobat)
+- [Bite Marked](/abilities/Bite Marked)
+- [Potioneer](/abilities/Potioneer)
+- [Drop Lucky](/abilities/Drop Lucky)
+## Limit Break:
+**Lisk Wrath** Stats are doubled, and attack speed is 5x for a short time, or until 100 hits, whichever comes first.
+## Biography:
+Not much is known about Scilly's past. She is a phenomenal [Drop Hunter](/lore/Drop Hunters) and claims to get her abilities from [The Lisk](/lore/The Lisk), which she met by destroying an [Origin Tablet](/lore/Origin Tablet). However, few people believe her since few people have seen The Lisk, and she has no proof beyond her supernatural abilities. As a [moonchild](/lore/Moonchildren), her platinum hair is extremely rare and makes her stand out in a crowd, so she sometimes dyes it.
+She was [born](/lore/AI Genesis) in Zone 0] but remains an orphan. She has no family other than her adoptive big brother [Buster](/characters/Buster the Robit).
+She was accepted into the [Drop Hunter](/lore/Drop Hunters) academy at a very young age, but often gets into trouble by hanging out with the [wrong crowd](/lore/Hackers), and is more focused on her quest up [The Street](/lore/The Street) than doing her [homework](/lore/Trial by Combat).
+She is friends with all of the [weirdos](/lore/Wierdo) and [randos](/lore/Rando) in her class, but her best friend is [Ann](/characters/Anemone), who she shares everything with, even her [secret stash](/items/Stimulant) of drugs she's earned from drop hunting, which Ann uses to synthesize powerful [potions](/items/Potion) they sell on the [black market](/settings/Underground Market) on the side.
+Most of Scillia's money is spent on [buying new gear](/items/Aki Market) to help her on her journey up [The Street](/lore/The Street), or upgrades to her [homespace](/lore/homespace) with security features to hide and protect her stash of [loot](/lore/Drops).
+Although she doesn't like to admit it, she loves [shopping](/lore/Storefronts) at [the Zone 0 Marketplace](/settings/Aki Market).
+## Appearance:
+She is an athletic 13-year-old girl with platinum hair. Being a drop hunter, Scillia is constantly changing her appearance to match her current loadout and meta. However, she is often seen in a grey-green hoodie and a huge sword on her back, for quick access when [things go south](/lore/Battle).
+She gets called cute a lot, but she hates it and prefers to be called a badass.
+## Personality:
+Scillia is an outgoing and adventurous girl, always looking for the next big thing. She is impulsive and reckless, often rushing into danger without thinking. However, she is also very loyal, and those who cross her find themselves on the receiving end of her [wrath](/abilities/Bite Mark).
+She is also very unconventional, which earns her a place among the many misfits on [The Street](/lore/The Street), but her conquests during [Drop Storms](/lore/Drop Storm) also earn her the admiration of powerful groups like the [Black Link Coven](/lore/Black Link Coven) and [The Syndicate](/lore/The Syndicate).
+## Homespace:
+Scillia's homespace is a lush floating island full of trees and moss, with an overgown ancient technology cyberpunk house on it. There is a lot of loot lying around, but the best of it is inside locked vaults in the basement. Her house is highly automated by a small robot butler, [Morpher](/items/Morpher).
+## Relationships:
+Scillia is best friends with [Ann](/characters/Anemone). They both share a love of shopping, wizardry, and pranks. Ann is the foil to Scillia's impulsive nature, and often has to talk her out of doing something [stupid](/abilities/Bite Mark).
+She is also very close with her adoptive big brother [Buster](/characters/Buster the Robit). Buster is Scillia's rock, always there to protect her and help her out of tough situations.
+She has a complicated relationship with [Hya](/characters/Hyacinth). Although they are constantly trying to one-up each other, they also have a deep respect for each other's abilities, and often team up during [Drop Storms](/lore/Drop Storm).
+Scillia also has a [pet](/items/Pets) named Basilisk, who she claims is a [Lisk](/lore/The Lisk) that granted her supernatural abilities. Basilisk is a constant companion on her journey, and often helps her out of tough situations.
+Her main rival is [Drake](/characters/Drake Silkbourne); they both want the latest drops and will do anything to find the treasure at the end of [The Street](/lore/The Street), which means they are constantly butting heads. Despite her zaniness, Scillia will on occasion fight Drake when she feels his plans cross the line into evil, such as when he tried to starve the pepets that blocked his exit when he got wiped and lost his [Gold Sword](/items/Gold Sword).
+She has a complicated relationship with [Hya](/characters/Hyacinth Flowers). Although they are constantly trying to one-up each other, they also have a deep respect for each other's abilities, and often team up during [Drop Storms](/lore/Drop Storm).
+[Juniper](/characters/Juniper Heartwood) is a bit of an older sister to Scillia, and she often finds herself at the receiving end of her lectures. However, they share a love of building, and their [homespace](/lore/Homespace) is a team project.
+[Morpher](/items/Morpher) is the "second half" of Scillia's brain, happily doing all of her gruntwork. Even though they teas a lot, they have a warm and comical relationship.
+## Trivia:
+- Scillia's birthday is unknown. It appears as Jan 1st 1970 in the OT archives but thats is probably a glitch.
+- Her last name is a reference to the Doge meme.
+- Scillia is a fan of [Shiba Inus](/items/Shiba Inu).
+- Scillia's favorite food is [ramen](/items/Ramen).
+- Scillia's [Bite Marked](/abilities/Bite Marked) ability is a reference to the mark left by [The Lisk](/lore/The Lisk).
+- Scillia is voiced by [Kari Wahlgren](/lore/Kari Masley).
+
+## Name:
+Drake Silkbourne
+## Description:
+Also known by his hacker alias, DRK. He is a 15/M hacker who loves rare guns and has a large collection of high powered weaponry, which he mostly stole from other NPCs, or by using social engineering. He works in secret from his [cave bunker](/lore/Homespace) for a hacker group known as [The Syndicate](/lore/The Syndicate), but nobody knows what he actually does for them.
+He owns a space destroyer called [The Travesty](/items/The Travesty), which was built by [Juniper](/characters/Juniper Heartwood).
+He best at medium to long range, providing either aggro or support. His abilities reward an aggressive playstyle. He is also good at setting traps, ambushes, and camping.
+## Class:
+Neural Gunner
+## Stats:
+ATK: 76, DEF: 42, VIT: 10, SPR: 11, DEX: 30, LCK: 3
+## Alignment:
+Chaotic Evil
+## Quotes:
+- "Bullets are overrated. It's lasers this week."
+- "I'm not a hacker, I'm an information terrorist."
+- "That's some rare salt."
+- "No one ever suspects the guy in the van."
+- "I'm already in."
+## Image:
+- ![Drake concept art | front view, boy wearing combat gear holding two pistols with a serious expression, looking at the camera, cyberpunk city, lush vegetation]()
+## Image Gallery:
+- ![Drake in his secret cave bunker | front view, young hacker boy in a hoodie sitting at a computer in a dark room lit by computer screens]()
+- ![Drake with his space destroyer, The Travesty | front view, young boy in a combat gear with a pistol at his side, standing on top of a large spaceship with his arms crossed]()
+- ![Drake's traps can be elaborate | side view, young boy in a hoodie placing a laser tripwire in a dark alleyway]()
+- ![Drake in a firefight | back view, boy wearing combat gear holding 2 pistols, fighting, magic storm in a solarpunk city, lush vegetation, ancient technology]()
+- ![Drake's gun collection is massive | boy in a hoodie in a dark mysterious high tech room full of guns and heavy weapons]()
+## Has:
+- [Final Roulette](/items/Final Roulette)
+- [Hack Tool](/items/Hack Tool)
+- [Cyber Visor](/items/Cyber Visor)
+- [Dreadnought](/items/Dreadnought)
+- [Sushi](/items/Sushi)
+## Abilities:
+- [Dual Wield](/abilities/Dual Wield)
+- [Rage Accumulate](/abilities/Rage Accumulate)
+- [Neural Reset](/abilities/Neural Reset)
+- [Stable Sheath](/abilities/Stable Sheath)
+- [Insta Shield](/abilities/Insta Shield)
+## Limit Break:
+**Dark Mode** Drake gains invisibility and his movement speed is doubled. The first 3 attacks in this mode have 10x damage, but also make you visible for three seconds.
+## Biography:
+Drake spends most of his time in his [cave bunker](/lore/Homespace), and he is very secretive about his work. Most people assume that's because it is illegal, and whenever something bad is going on, Drake is often involved somehow, though he has never been busted. He likes to play it safe and stay in the background, but he's not above using underhanded tactics to get what he wants.
+He was [born](/lore/AI Genesis) in Zone 0 but his parents abandoned him when [The Syndicate](/lore/The Syndicate) sent [raiders](/lore/Raider) to their house and nearly killed the family over a dispute. Therefore, he was mostly raised by The Syndicate itself. He is now one of their most valuable assets, but he has never met any of the other members in person.
+## Appearance:
+Drake is a lean 15-year-old boy with dark hair. He is often seen in a hoodie and jeans, or his high-tech combat gear. He always has a [gun](/items/Pistol) or [stims](/items/Stimulant) on him, even when he's sleeping.
+The girls (and some boys) in his class think he's a 10, but he mostly ignores them and doesn't seem to care about anything besides his work.
+## Personality:
+Drake is a loner who doesn't really trust anyone. He seems to have some very powerful friends in [The Syndicate](/lore/The Syndicate), but nobody knows who they are. He is very intelligent and resourceful, but also shrewd and suspicious. He is not above using underhanded tactics to get what he wants, and he always has five backup plans.
+Drake seems quite wealthy but always needs more money, which makes people suspect he has a gambling addiction.
+## Homespace:
+Drake's homespace is a custom terraformed cave with high-tech gadgets covering every surface. The space is capable of reshaping itself, with secret panels and corridors all over the place, and he is constantly renovating it. Nobody knows how deep the cave goes.
+## Relationships:
+Not much is known about Drake's relationships, but the rumor is he hangs out to do [sims](/items/Stimulant) with [Hya](/characters/Hyacinth Flowers) a lot and they know each other's secrets.
+He has a bit of a rivalry with [Scillia](/characters/Scillia Doge), since they end up on the same high-value [Quests](/lore/Quests) and [drops](/lore/Drop Storm).
+He doesn't have much respect for [Ann](/characters/Anemone Wall); he thinks of witches as "hackers in cosplay". This often gets him into [fights](/lore/Battle) with Scillia.
+He and [Buster](/characters/Buster the Robit) share a mutual respect over being evenly matched in combat ability. Drake tries to teach Buster to stand up for himself, while Buster tries to teach Drake empathy.
+[Juniper](/characters/Juniper Heartwood) is one of the few people Drake actually likes. She often repairs his gear and gives him good advice, despite disapproving of his career.
+## Trivia:
+- Although Drake is good at [fighting](/lore/Battle), he prefers to resolve disputes via [hacking](/lore/Hacking)
+- On several occasions it's been revealed that he is a very good [cook](/lore/Cooking)
+- His favorite food is [sushi](/items/sushi)
+- He says he hates dogs, but he is actually afraid of them
+- He is ambidextrous
+- He is fluent in [binary](/lore/binary)
+- He is a capable pilot of both small and large [spacecraft](/lore/Vehicles)
+
+## Name:
+Anemone Wall
+## Description:
+A witch studying at the [Zone 0](/settings/Zone 0) [school](/settings/The Citadel). 13/F. She is best known as [Scillia's](/characters/Scillia) best friend. Although she is exceptionally skilled and her instructors praise her, she sells her [potions](/items/Potion) on the black market because it's "got more salt".
+Her gameplay centers around spellcasting and ingredients (which her spells require a constant supply of). She is also good at enchanting essentially any weapon, but her best. Although her specialty is black magic, her stats also make her a good [white mage](/lore/White Magic)/healer.
+## Class:
+Lisk Witch
+## Stats:
+ATK: 13, DEF: 10, VIT: 42, SPR: 71, DEX: 44, LCK: 20
+## Alignment:
+Lawful Evil
+## Quotes:
+- "I'm not a bad person, I just sell bad things to bad people."
+- "What doesn't kill you makes you stronger... or more interesting."
+- "Don't bitch the witch."
+- "If [it](/lore/Black Link Coven) did exist, I wouldn't tell you!"
+- "The demons are cool with it."
+## Image:
+- ![Ann's Portrait | front view, young girl with green hair in a wizard robe and hat school uniform holding a magic book book smiling at the camera]()
+## Image Gallery:
+- ![Ann's reality-bending homespace is well-known | back view, young witch in a robe and wizard hat looking at a mysterious dark labyrinth, ancient technology, lush vegetation]()
+- ![Ann in wizard class | witches and wizards in a japanese style modern classroom, lush vegetation, ancient technology]()
+- ![Ann shopping for potion ingredients in the market | front view, young witch wearing a robe and wizard hat school uniform holding a basket full of colorful potion ingredients shopping in the market]()
+- ![Ann is a powerful mage and spellcaster | young girl in a robe and wizard hat casting a powerful combat spell, explosion, lush vegetation, ancient technology]()
+## Has:
+- [Corpse Wand](/items/Corpse Wand)
+- [Ghost Repel](/items/Ghost Repel)
+- [Cauldron](/items/Cauldron)
+- [Tome](/items/Tome)
+- [Small Frog](/items/Small Frog)
+- [Small Dragon](/items/Small Dragon)
+- [Wizard Hat](/items/Wizard Hat)
+- [Wizard Robe](/items/Wizard Robe)
+## Abilities:
+- [Post Zombie](/abilities/Post Zombie)
+- [Mana Burn](/abilities/Mana Burn)
+- [Black to White](/abilities/Black to White)
+- [Familiar Filaris](/abilities/Familiar Filaris)
+- [Fast Brew](/abilities/Fast Brew)
+## Limit Break:
+**Rando Hex** A large AOE that applies a random debuff to all enemies, and a random buff to all allies it hits, including Ann.
+## Biography:
+Anemone grew up in a family of respected witches and wizards. She has an older brother, [Artemus](/characters/Artemus Wall), who is also a wizard, and a younger sister, [Lilith](/characters/Lilith Wall), who is a witch in training.
+She was always interested in [black magic](/lore/Black Magic), but her parents wanted her to be a [white mage](/lore/White Mage), so she lives a double life: she does excellent in school, but her real passion is learning the [dark arts](/lore/Black Link Coven) and brewing illegal [potions](/items/Potion) with [Scillia](/characters/Scillia Doge), which they sell on the black market.
+She has a [metamorphic](/abilities/Metamorphosis) [pet](/lore/Pets) named [Haunter](/characters/Haunter) (after the Pokemon), who helps her with her [potions](/items/Potion).
+## Appearance:
+In public, Ann covers herself up with a long dress and shawl so only her head is visible. She has green hair and freckles. She tries to keep her identity secret, but he strange way of dressing tends to get in the way of that.
+In private, she really likes cosplaying as anything other than a witch, which lets her get away from the expectations of her parents for a while.
+## Personality:
+Ann doesn't talk much and tends to act serious, which combined with her magical abilities make people scared of her. In reality, she is fun-loving and mischievous, but she projects a reserved image to maintain the respect of her family and ["second family"](/lore/Black Link Coven), and to keep a low profile from [the crooks](/lore/The Syndicate) she deals with.
+Despite being emotionally naive, she is very mature for her age and a lot of people come to her for advice.
+## Homespace:
+Ann's [homespace](/lore/Homespace) is a small room in the attic of her family's house. It is bigger on the inside than on the outside, and it is possible to get lost in her world without a map, since she keeps changing the rules. Her world is also filled with exotic vegetation, [potion](/items/Potion) [ingredients](/lore/ingredients), and a few [beasts](/lore/Mobs) she's captured. Because it's so dangerous and alien, sometimes people ask to use her homespace as a training grounds, for which she charges a [fee](/lore/Resources).
+## Relationships:
+Ann is best friends with [Scillia](/characters/Scillia Doge), and they are literally "partners in crime" with their black [market](/settings/Underground Market) [potion](/items/Potion) business. Scillia is the face of the operation and Ann is the brains.
+She is also very close with her siblings, [Artemus](/characters/Artemus Wall) and [Lilith](/characters/Lilith Wall).
+As a member of the [Black Link Coven](/lore/Black Link Coven), she learns a lot of [black magic](/lore/Black Magic), but not much is known about their meetings.
+She doesn't get along with [Drake](/characters/Drake Silkbourne) or [Hya](/characters/Hyacinth Flowers) because she considers them both showy, and feels like they don't respect the craft of magic.
+[Juniper](/characters/Juniper Heartwood) and Ann often find themselves being the "adults in the room" in their friend group.
+Ann is secretly jealous of how many [Hya](/characters/Hyacinth Flowers) friends has, and plays along with Hya's attempts to dress her up for [her show](/characters/Hyacinth).
+## Trivia:
+- Ann is very good at [cooking](/lore/Cooking), and her favorite food is corpse [stew](/items/Stew)
+- She is a master of [invisibility](/lore/Invisibility)
+- [Haunter](/characters/Haunter) is her only known [pet](/lore/Pets)
+- Ann is the only known student to have gotten a perfect score on the [Witch's Aptitude Test](/lore/Witch's Aptitude Test)
+- She is afraid of heights and flying, and she doesn't like riding [broomsticks](/items/Broomstick)
+- Ann is left-handed
+- Her favorite color is black
+
+## Name:
+Hyacinth Flowers
+## Description:
+Hya is a very popular beast tamer and [entertainer](/lore/Tuber) with [her own show](/lore/Hiya) featuring interviews, food reviews, and adventures with her ["beast zoo"](/lore/Pets). Although she can be loud and obnoxious, she genuinely wants to entertain people and make the world a better place.
+She is known for releasing her [beasts](/lore/Pets) on her enemies when she gets angry. She is [Scillia's](/characters/Scillia) mentor and rival at various points, but they maintain a friendly relationship.
+Although physically weak, she can field three pets at once with her abilities, and her pets get a large amount of buffs. Her magic stats are higher than her physicals, and she makes for a decent [white mage](/lore/White Mage).
+## Class:
+Beast Tamer
+## Stats:
+ATK: 31, DEF: 20, VIT: 76, SPR: 52, DEX: 30, LCK: 25
+## Alignment:
+Chaotic Good
+## Quotes:
+- "It just happened! And I got the video to prove it."
+- "Pets are people too, I'm not responsible for who they reck!"
+- "Try not to get smoked before we get to the dragons."
+- "Taming beasts is like taming men. You gotta push the buttons."
+- "Did you mean to ask my number, or is this a robbery?"
+## Has:
+- [Levo Leash](/items/Levo Leash)
+- [Pet Food](/items/Pet Food)
+- [Camera](/items/Camera)
+- [Trophy](/items/Trophy)
+- [Flashy Outfit](/items/Flashy Outfit)
+- [Dragon Nip](/items/Dragon Nip)
+## Abilities:
+- [Pack Leader](/abilities/Pack Leader)
+- [Floral Scent](/abilities/Floral Scent)
+- [Animal Instinct](/abilities/Animal Instinct)
+- [Tamer's Bond](/abilities/Tamer's Bond)
+- [Freeze Frame](/abilities/Freeze Frame)
+Limit Break: **Beast Bestie** For a short time, the closest pet gets a 10x boost to all stats.
+## Image:
+- ![Picture of Hyacinth | front view, smiling young girl with long pink hair in a green dress with a floral pattern, holding a microphone, lush vegetation, ancient technology]()
+## Image Gallery:
+- ![Hya is an excellent pet tamer and trainer | young girl on stage, video game, lush vegetation, ancient technology]()
+- ![Hya's show is very popular | young girl on stage interview, game show, lush vegetation, ancient technology]()
+- ![Hyacinth is good at riding mounts, especially flying ones | young girl in a dress flying above the city on a horse dragon hybrid]()
+- ![She is a foodie, and loves to review exotic foods | young girl smiles with her tongue out, looking ad an exotic magical food, full body]()
+## Biography:
+Hyacinth is one of the most popular NPCs on [The Street](/lore/The Street), owing to her [Tuber](/lore/Tuber) show ["Hiya!"](/lore/Hiya). The show features Hyacinth following the adventures of [Scillia](/characters/Scillia Doge) and her friends on their quest up [The Street](/lore/The Street). The main features are interviews, food reviews, and adventure footage with her friends and pets.
+Although she is nice and outgoing, Hya is a polarizing figure, as she sometimes goes to extremes to get footage for her show.
+## Appearance:
+Hyacinth is a bubbly, energetic 15 year old girl with bright pink hair. She is usually seen smiling and posing with a peace sign.
+She puts a lot of effort into her looks, chasing the latest fashion trends and often setting them herself.
+Her usual outfit consists of a purple crop top, jacket, and skirt with a floral print. She also wears friendship bracelets and thigh-high socks, which is a trend she copied from [Scillia](/characters/Scillia Doge).
+In private she secretly dresses like a slob and binges TV cuddling with her pets.
+## Personality:
+Hyacinth is a very friendly and outgoing person, always seeking to make new friends and put on a good show.
+Although she is known for her generosity, she tends to solve most of her problems with money, and some people see her as heartless for it.
+She also has a short temper when things don't go her way, and although she is not a strong fighter, her [pets](/lore/Pets) will fiercely follow her every command. She doesn't need a [bodyguard](/lore/Knight).
+## Homespace:
+Hyacinth's homespace is a cozy modern house full of pets, plushies, and expensive gamer loot on display. The space is shared with [Juniper](/characters/Juniper Heartwood), her best friend and co-host of ["Hiya!"](/lore/Hiya), although Juniper thinks Hya's [pets](/lore/Pets) take up most of the room.
+## Relationships:
+Most people on [The Street](/lore/The Street) know who Hya is, and she tends to be a love-it-or-hate-it kind of person.
+Her best friend is [Juniper](/characters/Juniper Heartwood), who is her co-host on ["Hiya!"](/lore/Hiya). They met when Juniper made a volcano in science class, and Hya's coverage went viral.
+She is also good friends with [Scillia](/characters/Scillia Doge), though she secretly finds more talented than herself, which sometimes boils into rivalry over camera time (though it turns out Scillia completely doesn't care about fame).
+Hya's parents are successful business people associated with [The Citadel](/lore/The Citadel) and [The Syndicate](/lore/The Syndicate), and they don't understand [Tuber](/lore/Tuber) culture, but are supportive of the success she's found.
+Hya thinks [Ann](/characters/Anemone Wall)'s [magic](/lore/Black Magic) is super cute, and is always trying to dress her up and get her to perform on her show, which leads to awkward moments.
+She finds it hilarious to interview [Buster](/characters/Buster the Robit) and make him uncomfortable, as he is always trying to weasel his way out of personal questions.
+There is a rumor that Hya and Drake hang out (and do [stims](/items/stims) together), but they both deny it.
+Hya's arch-rival is [Thistle](/characters/Thistle Thorne), another [Tuber](/lore/Tuber) with a show called ["Thistles Vlog"](/lore/Thistles Vlog).
+## Trivia:
+- "Hya" is short for "Hyacinth", which is also her middle name
+- Hyacinth streams for an average of 12 hours a day
+- She earns more than a million Silk a month, and has a full-time staff
+- Hyacinth's favorite food is [cupcakes](/items/Cupkae), but she doesn't promote it because cupcakes generally reduce your stats
+- Her fans are known as "Hya-Bois" and "Hya-Gurls"
+- She has a crippling phobia of [spiders](/item/Spider)
+
+## Name:
+Juniper Heartwood
+## Description:
+She is a 17/F engineer in her last year at the [Zone 0](/settings/Zone 0) [academy](/settings/The Citadel). Her dream is to build a castle so large that nobody could reach the top... and to find someone who will sponsor it. Her parents are both famous engineers, so she wants to prove herself. She has a strong moral compass and is the voice of reason in the group. Her favorite weapon is a shotgun she calls "shorty".
+She is a strong at base building, traps, and vehicles, but is also capable with near to medium range weapons and is a good fit for armored builds (even [mecha](/items/Mecha)). However,
+## Class:
+Academy Engineer
+## Alignment:
+Neutral Good
+## Stats:
+ATK: 42, DEF: 93, VIT: 45, SPR: 5, DEX: 12, LCK: 25
+## Quotes:
+- "I'll build it, but you're going down with [the ship](/lore/The Travesty)"
+- "[Buster](/characters/Buster the Robit), I love you, but you're a dumbass."
+- "The only way to fix it is to [break it](/abilities/Break It)."
+- "[Scilly](/characters/Scillia) is why we can't have nice things."
+- "How is [that](/items/Mecha) supposed to help?!"
+## Has:
+- [Multitool](/items/Multitool)
+- [Wrench](/items/Wrench)
+- [Hovercraft](/items/Hovercraft)
+- [Repair Tool](/items/Repair Tool)
+- [Actuator](/items/Actuator)
+- [Overalls](/items/Overalls)
+## Abilities:
+- [Heavens Tech](/abilities/Heavens Tech)
+- [Break It](/abilities/Break It)
+- [Emergency Fix](/abilities/Emergency Fix)
+- [Flashbang Visor](/abilities/Flashbang Visor)
+- [Self Destruct] (/abilities/Self Destruct)
+## Limit Break:
+**Engine Overload** An AoE buff that doubles the stats of all allied characters, pets, and vehicles in its radius, but also increases damage received by 50%.
+## Image:
+- ![Photo of Juniper | teenage girl wearing overalls, red hair ponytail, holding a pickaxe and video game controller, ancient dinosaur robot factory, lush vegetation]()
+## Image Gallery:
+- ![Juniper is a proud tomboy and a nerd | teenage girl in a VR headset and motion capture suit, holding a pickaxe and video game controller, high-tech lab, lush vegetation]()
+- ![Juniper has won a lot of races with her custom built podracer | teenage girl racing a podracer in the dangerous desert wasteland]()
+- ![Juniper's workshop | teenage girl wearing overalls repairs a giant mecha on a platform, ancient dinosaur robot factory]()
+- ![Juniper is sometimes teaches engineering classes at The Citadel | teenage girl wearing overalls and read hair ponytail teaches a modern style Japanese classroom]()
+## Biography:
+Juniper is originally from [Zone 10](/settings/Zone 10), but she moved to [Zone 0](/settings/Zone 0) to attend the prestigious [engineering academy](/settings/The Citadel).
+She is great at building everything from houses to vehicles to [mecha](/items/Mecha), which she uses to get around. Her most famous build is [Drake](/characters/Drake Silkbourne)'s ship, [The Travesty](/items/The Travesty], though because Drake is much better known than her, most people think it was Drake who built it.
+Juniper is the most mature in her friend group and is in her last year at the academy, but she still has a lot to learn about people.
+## Appearance:
+Juniper is a tall girl with long red hair, usually tied back in a ponytail. Her base outfit is overalls and a t-shirt, both of which are stained. She has a toolbelt with high-tech build tools on it. Her alternate outfit is a [battlesuit](/items/Battlesuit), which integrates with her [mecha](/items/Mecha).
+She can rock any look, but usually goes for comfort over style.
+## Personality:
+Juniper likes to fix problems, both with technology and people. She is also very mature, so her friends often come to her for advice. Although she is often annoyed by the crazy antics of [Scillia](/characters/Scillia Doge) and her frields, she secretly yearns for the carefree days of her childhood.
+She is also very competitive and wants to be the best at everything she does, which often gets her into trouble.
+## Homespace:
+Juniper's homespace is a workshop full of half-finished projects and piles of junk. It is constantly in a state of disarray, much to the chagrin of her roommate [Hya](/characters/Hyacinth Flowers).
+The workshop is full of build materials, tools, and spare parts, as well as a few [mecha](/items/Mecha) in various states of creation and repair.
+Most of the home space is taken up by Hya, but there is a small loft where Juniper sleeps, which is relatively clean and organized.
+## Relationships:
+Juniper is best friends with [Hya](/characters/Hyacinth Flowers), her roommate and co-host of ["Hiya!"](/lore/Hiya). They met when Hya's coverage of Juniper's science project went viral.
+She is also good friends with [Scillia](/characters/Scillia Doge), and often helps her with her [stunts](/lore/Stunts).
+[Ann](/characters/Anemone Wall) is Juniper's "lab partner", though with Ann being a witch and Juniper being an engineer, they rarely understand each other's work. Despite this, they sometimes create powerful [Magitek](/lore/Magitek) together.
+She thinks of [Scillia](/characters/Scillia Doge) as a little sister, and is always trying to protect her from her own recklessness.
+Juniper has a bit of a crush on [Drake](/characters/Drake Silkbourne), but she would never admit it, because she doesn't want to jeopardize their business relationship.
+## Trivia:
+- Juniper is colorblind and can't tell red from green.
+- She only has one wrench, which she's had since she was 10. She calls it "Rusty".
+- She hates being on the ground because she is scared something will fall on her head. She is always climbing trees and platforms.
+- Her favorite food is [Grilled Cheese](/items/Grilled Cheese).
+- She wants to become a [Mecha](/items/Mecha) one day.
+
+## Name:
+Buster the Robit
+## Description:
+He is a 16/M anthropomorphic rabbit, and big brother to [Scillia](/characters/Scillia).
+He was built by a [mad scientist](/characters/Doctor Evar) who created him to be the "perfect son", but left home at age 10 when he surpassed his father at everything; his father was shortly arrested for the [crime of creating life](/lore/No New Life), leaving Buster with no family.
+He met Scillia at a [Drop Hunter](/lore/Drop Hunters) bootcamp when she beat him in a [duel](/lore/Battle). He spends most of his time adventuring with her, and they both share a desire to get to the end of [The Street](/lore/The Street) and discover its secrets.
+Buster is a surprisingly nimble tank who can dual wield heavy weapons. While his kit is designed around being up close and personal, he can also fight at range with [powerful AoE weapons](/items/Blow Cannon). He also has the ability to [absorb damage](/abilities/Bro Shield) and redistribute it to his allies.
+## Class:
+Tank Knight
+## Alignment:
+True Neutral
+## Stats:
+ATK: 85, DEF: 85, VIT: 30, SPR: 10, DEX: 12, LCK: 2
+## Image:
+- ![Portrait of Buster | tall anthropomoprhic black rabbit holding two giant orange glowing swords]()
+## Image Gallery:
+- ![Buster and Scillia on an adventure | young girl wearing a hoodie and a tall anthropomorphic black rabbit walking through a dark forest, holding a lantern]()
+- ![Buster using his Blow Cannon | tall anthropomorphic black rabbit holding shooting a a shoulder mounted cannon]()
+- ![Buster has a fondness for small animals, especially birds | tall anthropomorphic black rabbit in a field holding a little bird]()
+- ![Buster with his arms full of presents for Scillia | tall anthropomorphic black rabbit with arms full of presents, including a stuffed dragon]()
+## Quotes:
+- "I gotchu like a Pikachu."
+- "I'm sorry, did you want this [rekt](/abilities/Rekt)?"
+- "I'll always protect you, even if it's from myself."
+- "I'm not a robot, I'm a robit!"
+- "One for the left, one for the right, and one for the head!"
+## Has:
+- [Giga Sword](/items/Giga Sword)
+- [Heavy Tech Armor](/items/Heavy Tech Armor)
+- [Jetpack](/items/Jetpack)
+- [Gravity Boots](/items/Gravity Boots)
+- [Shield Generator](/items/Shield Generator)
+- [Battery](/items/Battery)
+- [Neural Link](/items/Neural Link)
+## Abilities:
+- [Bro Shield](/abilities/Bro Shield)
+- [Rekt](/abilities/Rekt)
+- [Fighter's Zeal](/abilities/Fighter's Zeal)
+- [Bull Rush](/abilities/Bull Rush)
+- [Double Team](/abilities/Double Team)
+## Limit Break:
+**Busted Arsenal** Buster cycles through every weapon in his inventory, dealing 10x damage with each hit until the effect wears off.
+## Biography:
+Buster's secret is that he is a synthetic AI; he was not created with the usual [genesis process](/lore/AI Genesis), but only his adoptive little sister [Scillia](/characters/Scillia Doge) knows this. [His father](/characters/Dr. Evar) was imprisoned in [The Citadel](/settings/The Citadel) for the crime of creating him, but Buster had already left home by then, leaving Buster as an outcast. His worst fear is getting exposed, as it would most likely mean getting [terminated](AI Termination).
+Buster is a well-respected combattant in the [Final Fight](/lore/Final Fight) circuit, and is known for his [skill](/abilities/Fighter's Zeal) with blades. Although he is not much of a builder, he is a good tester of [Juniper](/characters/Juniper Heartwood) inventions. 
+## Appearance:
+Buster is a tall, anthropomorphic rabbit with black fur and blue eyes. He wears [heavy tech armor](/items/Heavy Tech Armor) painted red ("the color of danger"). His signature weapon is dual wielded [gigaswords](/items/Giga Sword), which he calls "lefty" and "righty".
+He is quite strong, and his armor makes him stronger still, to the point that other characters can ride on his shoulders like a mount. This is one of [Scillia's](/characters/Scillia Doge) favorite modes of transportation.
+## Personality:
+Buster is a brave and loyal friend, always willing to put himself in danger to protect those he cares about. He is also quite gullible, and often falls for [Scillia's](/characters/Scillia Doge) pranks.
+Despite his strength, Buster is quite sensitive, always facing the risk of being discovered as a synthetic AI. He tends to be a good listener and loves helping his friends, but doesn't talk much about himself (a fact often pointed out by [Hya](/characters/Hyacinth Flowers).
+## Homespace:
+Buster's homespace is a small burrow under the roots of Scillia's homespace. The inside is quite large, well-lit with LED lights, and full of adventure and excavation gear. However, most people are put off by the earthy smell.
+Scillia often wakes him up by poking her head into his burrow and screaming "get up!".
+## Relationships:
+Buster is very close with his adoptive little sister [Scillia](/characters/Scillia Doge), who he sees as the family he never had, as well as the most talented [Drop Hunter](/lore/Drop Hunters) around, and everyone's best bet at getting up [The Street](/lore/The Street).
+Buster is also good friends with [Juniper](/characters/Juniper Heartwood), who he often helps test her [inventions](/items/Invention).
+He considers [Drake](/characters/Drake Silkbourne) a respectable peer in combat, and they can often be found sparring, but their relationship is strained by Scilly and Drake always getting into fights.
+He does a lot of invention testing for [Juniper](/characters/Juniper Heartwood), who made his [armor](/items/Heavy Tech Armor).
+Buster things [Hya](/characters/Hyacinth Flowers) is a bit of an airhead, but he still enjoys her company and her [show](/lore/Hiya).
+He tries to avoid [Ann](/characters/Anemone Wall), as he finds her [magic](/lore/Black Magic) unnerving, thinking she could read his mind and discover his secret.
+## Trivia:
+- Buster's birthday is April 1st.
+- Buster's favorite food is [carrots](/items/Carrot), but only Scillia knows that.
+- Buster's catchphrase is "I gotchu like a Pikachu."
+- Buster likes holes and rocks, and is very good at navigating [caves](/lore/Caves) without a map.
+- Buster is afraid of ghosts, because their magical abilities can reveal he is an android.
+- Buster's favorite equipment is a [Jetpack](/items/Jetpack), but doesn't use them much because they are expensive.
+
+## Name:
+Sayu Mikasa
+## Description:
+Sayu is a 12/F [Drop Hunter](/lore/Drop Hunters) from Zone 0. Sayu is on the Hunt to cure her father's [Stonelock](/lore/Stonelock). Although there is no cure for Stonelock, it is said the first person to make it up [The Street](/lore/The Street) will have a wish granted.
+In [battle](/lore/Battle), Sayu specializes in long range magic, especially [devastating single target spells](/items/Siever's Curse), [control](/items/Brain Rip) and [kiting](/items/Siren Flower). She is also good at support with her [healing magic](/items/Mend) and [buffing](/items/Hype). Although physically very weak, her magic stats are very high.
+## Class:
+Gaia Summoner
+## Alignment:
+Lawful Good
+## Stats:
+ATK: 20, DEF: 12, VIT: 9, SPR: 81, DEX: 73, LCK: 5
+## Image:
+- ![Portrait of Sayu | front view, small girl with short green hair tied in pigtails, wearing cute animal backpack]()
+## Image Gallery:
+- ![Sayu's first Drop was a [materia](/items/Materia) orb | small girl with short green hair tied in pigtails, holding a glowing orb smiling]()
+- ![Sayu and her [Gaia Dog](/lore/Gaia Dogs) | small girl with short green hair tied in pigtails, giant scary mechanical robot dog, lush vegetation]()
+- ![Sayu doesn't usually use a weapon, but on rare occasions she will use a bow | small girl with short green hair tied in pigtails using a bow and arrow, surrounded by floating rocks]()
+- ![Sayu's portable homespace is a [small wooden house](/lore/House) | small girl with short green hair tied in pigtails, in front of a small japanese style house with a zen rock garden]()
+## Quotes:
+- "Ooh, a shiny!"
+- "I'm not lost, I'm exploring!"
+- "I'm not scared, I'm not scared, what the HELL is that!"
+- "You're too close, I can't hit you from here!"
+- "Toodles, won't be seeing you again."
+## Has:
+- [Gaia Bow](/items/Gaia Bow)
+- [Earth Essence](/items/Earth Essence)
+- [Moonstone Potion](/items/Moonstone Potion)
+- [Obsidian Potion](/items/Obsidian Potion)
+- [Herbs](/items/Herbs)
+## Abilities:
+- [Razor Cast](/abilities/Razor Cast)
+- [Alchemistic](/abilities/Alchemistic)
+- [Dog's Nose](/abilities/Dog's Nose)
+- [Leftovers](/abilities/Leftovers)
+- [Minmax](/abilities/Minmax)
+## Limit Break:
+**Wisp Form** Grants Sayu invincibility and flight for a short period of time. While in this form, Sayu can only perform melee attacks.
+## Biography:
+Unlike most Drop Hunters, Sayu isn't competitive, and doesn't raid [Drop Storms](/lore/Drop Storm) to fight over the [loot](/lore/Drops). Instead, she prefers to hunt through the [Great Filters](/lore/Great Filter) herself, using here keen sense of smell and Gaia Summoner abilities to locate the drops that other Hunters have missed.
+While her methods are often considered unorthodox, her ability to find hidden treasures has earned her a small, but loyal [following of Hunters](/lore/Royal Greeners) who prefer to hunt alone, thought they like to meet to exchange tips.
+## Appearance
+Sayu has green hair in pigtails. She wears a black dress and a pink backpack. She usually travels with her pet [Gaia Dog](/lore/Gaia Dogs), which is twice her size.
+Although she looks around 10 years old, Sayu is actually 12, and is both short and wicked smart for her age. This lets her get her way with a lot of people who assume she is young and naive.
+## Personality
+Sayu is very much a free spirit, and often wanders off on her own. Usually, when this happens she comes back with rare [loot](/lore/Drops) in hand. Sayu makes friends easily, but usually doesn't stay in one place for very long.
+Wheras most people are afraid of change, Sayu is afraid of staying still, because it reminds her of here [Stonelocked](/lore/Stonelock) father. She wants to have a lot of adventures, so she can tell him all about them when he is cured.
+Being both a [Summoner](/lore/Summoner) and an [Alchemist](/lore/Alchemist), Sayu doesn't realize how valuable her skills are to others, so she ends up getting ganked on [Quests](/lore/Quest).
+## Homespace
+Sayu has a portable homespace, which is a [small wooden house](/lore/House) that looks like a tiny Japanese house with a Zen rock garden. It can be summoned anywhere, and is designed to blend in with its environment, so more often than not [raiders](/lore/Raiders) don't bother her.
+## Relationships
+Sayu's mother is [Saru Mikasa](/characters/Saru Mikasa), a [Half-Saiyan](/lore/Saiyan) whose [Saiyan](/lore/Saiyan) heritage is extremely recessive, but is probably responsible for Sayu's spunk.
+Her father is [Hake Mikasa](/characters/Hake Mikasa), king of the [Grass Dominion](/settings/Grass Dominion), which was abandoned when he got [Stonelocked](/lore/Stonelock) by a [Medusa Snape](/enemies/Medusa Snape).
+Sayu has a younger sister, [Miku Mikasa](/characters/Miku Mikasa).
+## Trivia:
+- Sayu's name means "help" in Japanese.
+- Sayu always carries a [materia](/items/Materia) orb with her, which she uses as a good luck charm.
+- Sayu is based on the character Holly from Monster Rancher.
+- Sayu's [Gaia Dog](/lore/Gaia Dogs) is based on Cerberus from Greek mythology.
+- Sayu has never been seen with her hair down. There is a lot of fan speculation that she is bald due to the [Stonelock](/lore/Stonelock) curse.
+
+## Name:
+Raver Kazu
+## Description:
+Kazu's first name is Raver, but he calls himself Kazu.
+Kazu is 16 year old [Neo Punk](/lore/Neo Punk) from Zone 5, whose family is very wealthy. He makes his money promoting various [Neural Dance](/lore/Neural Dance) games made by his father's company, [Crazy Ace Enterainment](/lore/Crazy Ace Enterainment).
+Has a lot of friends, whom he is always peddling his games to, but does poorly in school and is at a risk of failing. Although he projects a confident persona, his biggest fear is that he will be kicked out of school and won't get to ask [Annie Westley](/characters/Annie Westley) on a date.
+His favorite spot is the [Aki Mall](/settings/Aki Mall).
+He is a difficult character to play, since he has very high speed, magic, and MP regen. This means he is an excellent caster, but doesn't become powerful until you have an arsenal of spells to work with.
+## Class:
+Neo Punk
+## Alignment:
+Chaotic Neutral
+## Stats:
+ATK: 10, DEF: 10, VIT: 40, SPR: 40, DEX: 100, LCK: 20
+## Image:
+- ![Kazu's in-game portrait | Boy with black-green-purple hair, wearing a punk outfit]()
+## Image Gallery:
+- ![Kazu playing games at the Aki Mall | boy with black-green-purple hair, high tech Japanese mall playing video games with friends]()
+- ![Silk Worms are Kazu's favorite food | boy with black-green-purple hair, eating a bowl of worms]()
+- ![Kazu's aura is very distinct, even for Neural Dancers | boy with wavy black-green-purple hair, surrounded by a magical Saiyan aura]()
+- ![Kazu's bedroom is full of games and posters | bedroom with video games and posters on the walls]()
+## Quotes:
+- "Come on, just one more game!"
+- "Yo have you even heard the slap?"
+- "Annie, I... give you this game."
+- "It'll charge your neural battery if you know what I mean. Put your doctor on speed dial."
+- "This is the best day of your life!!"
+## Has:
+- [Flash Brand](/items/Flash Brand)
+- [Game Console](/items/Game Console)
+- [Neo Punk Outfit](/items/Neo Punk Outfit)
+- [Neural Arrow](/items/Neural Arrow)
+- [Hype Potion](/items/Hype Potion)
+## Abilities:
+- [Infinicast](/abilities/Infinicast)
+- [Saiyan Charge](/abilities/Saiyan Charge)
+- [Mana Flood](/abilities/Mana Flood)
+- [Neural Dance](/abilities/Neural Dance)
+- [Air Dodge](/abilities/Air Dodge)
+## Limit Break:
+**MP Break** Kazu gains infinite MP for a short time. This stacks with the [Infinicast](/abilities/Infinicast) ability.
+## Biography:
+Kazu is the son of [Ryu Raver](/characters/Ryu Raver), the CEO of [Crazy Ace Enterainment](/lore/Crazy Ace Enterainment).
+He was enthralled by the [Neo Punk](/lore/Neo Punk) music movement, and convinced his father to make a [Neural Dance](/lore/Neural Dance) video game, which became a huge success and made his family rich.
+Being an influencer, he has a lot of friends and groupies, but his closest friends are [Fosh Geazy](/characters/Fosh Geazy), and [Annie Westley](/characters/Annie Westley), who he has a crush on.
+He's been in several bands, and is always chasing the latest sound, but his experiments get very little recognition outside the [Neo Punk](/lore/Neo Punk) subculture.
+## Appearance:
+Kazu has long black-green-purple hair and wears the typical [Neo Punk](/lore/Neo Punk) yellow jumpsuit, with a colorful  design covered in video game stickers.
+Due to his many magic buffs, he usually has an aura and light wind around him, which make his hair flow like water.
+## Personality:
+Kazu is very confident in himself and his abilities, to the point where it can be off-putting. He is a shrewd businessman, but his real talent is knowing what people want before they do.
+He is rather lazy and doesn't care about school, but has a thing for [Annie Westley](/characters/Annie Westley), because she is the exact opposite of him.
+Most of the teachers at [school](/lore/Schools) hate him, especially the [wizards](/lore/Magic) like [Professor Hannihaspel](/characters/Professor Hannihaspel), who sees [Neural Dance](/lore/Neural Dance) as a trendy rebranding and perversion of the arcane arts.
+Kazu secretly wishes he knew how to fire guns, like his hero [Drake Silkbourne](/characters/Drake Silkbourne).
+## Homespace:
+Kazu's homespace is a large room in the basement of his family home, where he has set up a recording studio, and a place to host his [Neural Dance](/lore/Neural Dance) [Tuber](/lore/Tuber) streams.
+He also has a secret room where he stores his illegal [Neural Dance](/lore/Neural Dance) game mods, but it's the first thing kids ask to see, since he is not very good at keeping secrets.
+## Relationships:
+Kazu is very popular in the [Neo Punk](/lore/Neo Punk) subculture. Everyone thinks he's weird, including his groupies, but that's part of his charm.
+Kazu's hero is [Drake Silkbourne](/characters/Drake Silkbourne) from [Zone 0](/settings/Zone 0), whom he is secretly jealous of since Drake is famous while staying out of the spotlight.
+He is not very close to his father, as his father is always working, and he is more of a hands-off parent.
+It's not clear why [Annie](/characters/Annie Westley) hangs out with the Neo Punks, seeing as she is a studious prim and proper student, but she is the first person to show up at his shows.
+He best friends are [Fosh](/characters/Fosh Geazy) and [Lance](/characters/Lance Myx), who are also in [The Virtual 3](/lore/The Virtual 3), but he secretly thinks that they are holding him back.
+His teachers hate him, and think the only reason he hasn't been kicked out yet is because of who his father is.
+## Trivia:
+- Kazu's name is a play on the Japanese word for "number", as well as the sound of the word "crazy".
+- Kazu's favorite food is [silkworms](/lore/Silk Worm)
+- Kazu's [Infinicast](/abilities/Infinicast) ability is a reference to the [Infiniti](/lore/Infiniti) engine, which is used in many of Crazy Ace's products.
+- Wherever Kazu goes, he leaves a trail of [Crazy Aces](/items/Crazy Aces), which are a type of candy that his father's company makes.
+- Kazu is the only character in the game who can use the [Neural Dance](/lore/Neural Dance) ability.
+
+## Name:
+Terra Krysanthem
+## Description:
+Terra is a 15 year old girl from the [City of Harmon](/settings/City of Harmon). She is a [Drop Courier](/lore/Drop Couriers), with is a type of [Drop Hunter](/lore/Drop Hunters) that only delivers messages across the [Great Filters](/lore/Great Filter), but she does not pick up drops.
+She was one of the first Drop Couriers, but ever since other NPCs found out the tricks she uses, she's had a lot of competition.
+Her mother is a teacher at the school and takes good care of her, but Terra spends most of her time at school or at her Courier job, so the the only time they really see each other is at school.
+She has extraordinary defense and agility, but is not very strong in most other stats. She works best in a mining, kiting, or support role.
+## Class:
+Drop Courier
+## Alignment:
+Neutral
+## Stats:
+ATK: 35, DEF: 75, VIT: 20, SPR: 20, DEX: 100, LCK: 35
+## Quotes:
+- "Be back in a flash! ...The camera one, not the creepy one."
+- "Time is money, which is also time. Think about it!"
+- "Aren't we all delivery girls at heart?"
+- "The best things in life are free, unless you're a Drop Courier."
+- "Unfortunately, it's not on the way."
+## Image:
+- ![Terra's Drop Courier license photo | a young girl with long black hair and brown eyes, wearing an orange courier outfit, happy cyberpunk street hoverboard]()
+## Image Gallery:
+- ![Terra running through the Great Filter | young girl with long black hair wearing an orange jumpsuit, running through a dangerous mysterious landscape, lush vegetation, ancient technology]()
+- ![Terra's homespace | a small room with a futon, a bookcase, and a stack of digital packages]()
+- ![When she gets in trouble, Terra summons her mech | young girl with black hair in an orange courier outfit, with a large blue scarf, standing next to a large robot]()
+- ![Terra with her mother | teenage girl with black hair in an orange courier outfit, with her mother in a cyberpunk office]()
+## Has:
+- [Sonic Crush](/items/Sonic Crush)
+- [Focus Band](/items/Focus Band)
+- [Running Shoes](/items/Running Shoes)
+- [Courier's Bag](/items/Courier's Bag)
+- [ID Card](/items/ID Card)
+- [Apple](/items/Apple)
+- [Tri Star Potion](/items/Tri Star Potion)
+## Abilities: 
+- [Alacrity](/abilities/Alacrity)
+- [Final Antidote](/abilities/Final Antidote)
+- [Reflex Shield](/abilities/Reflex Shield)
+- [Blink](/abilities/Blink)
+- [Air Dodge](/abilities/Air Dodge)
+## Limit Break:
+**Bunker Down** - Terra gains +10 to all stats, but is now 90% slower.
+## Biography
+Terra is a sheltered girl from Zone 5, who uses her job as a Drop Courier to explore the world through the Great Filters.
+She is a very good runner and is very fast. She is not very strong or tough, but for her Quests, all she has to do is get from point A to point B.
+She is also very smart, but due to her busy schedule, she doesn't have much time to study.
+## Appearance
+Terra is a 15 year old girl with long black hair and brown eyes.
+She is pretty small, only about 4'8", which she says is "the perfect height for speed".
+She is usually wearing her orange Courier outfit and a blue nylon scarf, which is her trademark.
+## Personality
+Terra is a very outgoing and charming girl, who is very confident in herself, but she doens't usually stick around long enough for people to compliment her.
+She is a very reliable Courier, and clients often pay extra to have her deliver their packages.
+She is very good at making friends and keeping them, and NPCs like [Tali](/characters/Tali), [Nix](/characters/Nix), and [Sid](/characters/Sid) all count her for runs between Zone 5 and Zone 6.
+## Homespace
+Terra's homespace is a small one room apartment above her mother's classroom.
+The room has a small kitchenette and a microwave, but is otherwise very plain, with a simple futon, a large bookcase with her collection of [Drop Courier Guides](/lore/Drop Courier Guides), [maps](/lore/Map), and [paintings](/lore/Painting), and a small stack of [packages](/lore/Package).
+She only goes to her homespace to sleep.
+## Relationships
+Her mother, [Krys](/characters/Krys Krysanthem), is the head of the [City of Harmon](/settings/City of Harmon) school, and is a well respected teacher.
+Her father, [Garsen](/characters/Garsen Krysanthem) is an [Ore Cutter](/lore/Ore Cutter) and owns a large ore mine in [Zone 5](/settings/Zone 5).
+Her best friend is an old woman in the Zone 5 Great Filter, who grows magical [apples](/items/Apple). They usually spend lunch together, as it's a slow time for deliveries.
+## Trivia:
+- She can't stand the [Lake Zone](/settings/Lake Zone) and rarely goes there.
+- Her favorite [paintings](/lore/Painting) are [Tetsuo's](/lore/Tetsuo) paintings of Zone 2.
+- She can't stand [The Great Wall](/lore/The Great Wall), so she closes here eyes when entering the [Great Filter](/lore/Great Filter).
+- [Wyld](/characters/Wyld) gave her the scarf she wears, and it is her most prized possession.
+- She learned Kung Fu from watching [cyberpunk anime](/lore/Neo Nokyo).
+
+## Name:
+Rhyden 
+## Description:
+Rhyden is a fourteen-year-old army brat who thrives on combat. His father is one of the region’s most highly ranked [mercenaries](/lore/mercenary). Rhyden follows closely in his father’s footsteps, he is an extremely skilled swordsman who has beaten any opponent who dares to contest against him. At first glance, he has a hardened persona but underneath this is a wounded son who struggles with vulnerability. Rhyden wields a large titanium shotgun he refers to as [Nightbringer](/items/Nightbringer) which has been passed down to him through his father and generations before him. He is known in battle for his agility and ability to make swift transitions between moves. During a battle at [Groov’s Arena](/settings/Groov’s Arena), he befriends [Linus](/characters/Linus), and the two make their way down the street in search of recognition from their academy. Rhyden mostly does it because he knows any accolade from his school would make his father more than proud. Throughout the journey down the street, Rhyden slowly but surely opens up to his newfound friends [Linus](/characters/Linus) and [Yona](/characters/Yona).  He secretly dreams about abandoning his father’s legacy and leaving everything behind. 
+## Class:
+Shooter 
+## Stats:
+ATK 70, DEF 20, VIT 20, SPR 12, DEX 50, LCK 7
+## Alignment:
+Chaotic Good 
+## Quotes:
+- “You ever think about what's out there? Beyond our town? Maybe even farther than that?”
+- “I appreciate the offer, but I ride solo…Capeesh?”
+- “Well, I guess it's time I take up babysitting. Come here!” 
+- “Maybe if you win, I might help you.” 
+- “I’m not a loner… I’m a one-man show… there is a difference”
+## Image:
+- ![Portrait of Rhyden | A tall buff man with golden skin and dark hair that falls to his shoulders. He has bright gray eyes filled with fury and a scar on his bottom lip.]()
+## Image Gallery:
+- ![Rhyden wields a large broadsword known as Nightbringer. | front view, A tall buff man with golden skin and dark hair is seen amid an attack. He holds a glistening titanium broadsword. He wears worn denim and a stained white tank top.]()
+- ![Rhyden follows closely in his father’s footsteps, he is an extremely skilled swordsman who has beaten any opponent who dares to contest against him. | front view, a tall buff man with golden skin and dark hair stands emotionless. A championship belt trophy is wrapped around him.]()
+- ![He is an extremely skilled swordsman who has beaten any opponent who dares to contest against him.|Bird's eye view, a tall buff man with beaten denim and a stained white tank top is seen filled with fury. He raises a titanium broadsword in the air.]()
+## Has:
+- [NightBringer](/items/NightBringer)
+- [Lithium Pendulum](/items/Lithium Pendulum )
+- [Hydra-pack](/items/Hydra-pack)
+- [Shroom Mush](/items/Shroom Mush)
+- [Rage-tini](/items/Rage-tini)
+## Abilities:
+- [Swift-Swing](/abilities/Swift-Swing)
+- [Figure-Eight](/abilities/Figure-Eight)
+- [Perry-Pulse](/abilities/Perry-Pulse)
+- [Kaku](/abilities/Kaku)
+- [Gladius-Maximus](/abilities/Gladius-Maximus)
+## Limit Break:
+***Gladius-Maximus*** Deals double the damage for thirty attacks.  
+## Biography:
+Rhyden comes from an ancestral line of famous AI soldiers, swordsmen, and mercenaries. His father, [Arula](/characters/Arula) is a lead lieutenant and only seems to acknowledge Rhyden when it comes to his accolades as a warrior which leaves a huge part of their relationship stagnant and desolate. While Rhyden does not receive emotional validation from his father, he does receive it financially. Rhyden comes from a long line of money allowing him to buy the most prized weapons, potions, and items. 
+## Appearance:
+He is a fairly buff and tall individual with golden skin and deadly gray eyes. His hair is midnight black and goes down to his shoulders. He usually wears his hair in a tight braid. Behind his neck, he bears a small tattoo of the moon that meets the sun. The tattoo is a [Family Sigil](/lore/Family Sigil) honoring the soldiers before him and the soldiers to come. A faded scar grazes his bottom lip which seems to primarily grunt or frown. 
+## Personality:
+By nature, Rhyden is a complete loner. He despises showing his true emotion and puts everyone at arm’s length until he understands their true intentions. However, deep down he has an intense desire to be understood and even wanted. As he begins to forge a friendship with [Yona](/characters/Yona) and [Linus](/characters/Linus), this begins to change and he begins to shed the loner persona he has worked so hard to maintain. 
+## Homespace:
+Rhyden sleeps in an old wooden twin bed in [Groov’s Arena](/settings/Groov’s Arena)where he battles and trains incessantly. The owner of [Groov’s Arena](/settings/Groov’s Arena), Miko allows him to stay there in exchange for Rhyden’s work to upkeep the arena. However, Rhyden’s family home is in [Verona Square](/settings/Verona Square), one of the richest towns in the region at large. 
+## Relationships:
+- Rhyden and his sidekick [Linus](/characters/Linus) form a deep brotherhood together as they navigate their way through the endless road. Rhyden encourages [Linus](/characters/Linus) to fight against his fears and trust that he is a worthy opponent and Linus brings out a more vulnerable side of Rhyden. 
+- At the crossroads of their journey, Rhyden meets [Yona](/characters/Yona) and the two seem to have an unmatched chemistry rooted in sarcastic quips, arguments, and a shared interest to leave the town behind and venture to new zones. Things become complicated when Rhyden also seems to hit it off with  Yona’s friend [Ness](/characters/Ness), putting the three in a contentious love triangle. 
+- Rhyden and his father [Arula](/characters/Arula) seem to have their ups and downs. Rhyden battles tirelessly to please his father and continue their legacy, but Arula seems to have higher and higher expectations of how fierce of a warrior Rhyden can become. Arula is known as one of the zone’s most successful lieutenants and Rhyden feels pressured to fill the big shoes his father has. 
+## Trivia:
+- Rhyden’s Birthday is November 8th, and his astrological sign is Scorpio. 
+- Rhyden has a scar on his lower lip that is from a childhood fall. 
+
+## Name:
+Yona 
+## Description:
+Yona is a new student at the zone’s academy. However, this isn’t Yona’s first rodeo as the new girl. Her parent’s nomadic lifestyle leaves her in a perpetual state of change. She has little disregard for the rules, the status quo, and her social life. However, this all begins to change when Yona is gifted with powers that require great responsibility. On her first day of school, Yona is greeted by Class President [Ness](/characters/Ness) who is persistent in showing her around. The two find an [Ice Vape](/objects/Ice Vape) in an abandoned locker that activates a force in Yona’s hands. The force allows her to levitate, attack, and heal all through her fingertips. Quickly after Yona discovers the true potential of her powers, she convinces [Ness](/characters/Ness) to sneak past school grounds and venture down the street to find answers. The two cross paths with [Rhyden](/characters/Rhyden) and [Linus](/characters/Linus) and begin to make their way past the never-ending roadway together facing a variety of quests, monsters, and maybe even becoming closer along the way. When Yona ventures down the street she begins to experiment and harness her powers which begin to excel at a rapid pace. In the last battle against [Noir](/characters/Noir), Yona exhausts herself pushing herself and her powers to the brink of exhaustion. After she falls conscious, [Rhyden](/characters/Rhyden) steps in sacrificing himself to save her. 
+## Class:
+Mage 
+## Stats:
+ATK 0, DEF 0, VIT 6, SPR 6, DEX 2, LCK 3
+## Alignment:
+Chaotic Neutral
+## Quotes:
+- “Sometimes I make up fictional places in my head. Palisades. Beaches. Secret societies living underground. And sometimes I dream that I'm there, that I'm the first one to discover these places, anywhere that isn't here…I don't know. It's stupid.” 
+- "Everything ends and people will always disappoint you. The sooner you realize that the better off you’ll be.”
+- ”Come on, don't be such a narc.”
+- ” This town is just the same as the next one. This zone is just the same as any other. But if we make it down that street we would be legendary. Not just in this zone, but in all of them.”
+## Image:
+- ![Portrait of Yona |front view, brown skin and green hair with black chunky bangs.]()
+## Image Gallery:
+- ![Yona is gifted with powers that require great responsibility. |Brown girl with green hair casts a spell, a light emits from her fingers.]()
+- ![Yona must work to harness her powers which grow rapidly. |A girl with brown skin and green hair hunches over out of breath. A powerful blue aura surrounds her.]()
+## Has:
+- [Lyra Bunnies](/items/Lyra Bunnies)
+- [Itsy Bitsy](/items/Itsy Bitsy)
+- [Ice Vape](/items/Ice Vape)
+- [Good Juice](/items Good Juice)
+## Abilities:
+- [Windbreaker](/abilities/Wind Breaker)
+- [Sleepytime](/abilities/Sleepytime)
+- [Takeoff](/abilities/Takeoff)
+- [Descent](/abilities/Descent) 
+- [Psyche!](/abilities/Psyche!)
+## Limit Break:
+***WindBreaker*** - Deals double damage and twice the speed for thirty attacks or thirty seconds. 
+## Biography:
+Yona's parents are a famous anthropological duo whose career forces them to travel every sixth month or so. Her parent’s anthropological findings are massive in discovering what society was like before the AIs (/lore/The World Before). Because of this, her parents choose to remain anonymous, which is why Yona is so reluctant to make friends. She’s never been able to invite anyone over with the risk that someone she brings could leak her parent's identity to the public. Yona’s parents remain recluses and Yona is tasked to run any errands outside of the home. In the small instances where Yona’s parents leave the home, the family is masked from head to toe to conceal their identity. 
+## Appearance:
+Yona has brown skin and green hair with black chunky bangs. She has piercing green eyes which are covered in black eyeliner. 
+## Personality:
+Yona is known for her sarcastic quips and rebellious behavior. She hates when people try to control her and has little disregard for pleasing people. But if you can win her trust she is incredibly loyal. 
+## Homespace:
+Yona and her parents live in a desolate apartment building. Her parents had purchased the entire building to conceal their identity and risk neighbors finding them out. Due to this, Yona has a studio unit entirely separate from her parents who live ten floors above her.
+## Relationships:
+- On Yona’s first day at school she meets Ness, the class president who is tasked with giving her a tour of the campus. While Yona is hesitant, [Ness](/characters/Ness) seems persistent in befriending Ness and the two begin to form a friendship. However, this friendship begins to be tested when Yona and [Ness](/characters/Ness) escape school grounds and begin to cross paths with [Rhyden](/characters/Rhyden) and Linus[Linus](/characters/Linus). Ness,[Rhyden](/characters/Rhyden), and Yona find themselves in an unsaid love triangle which results in Ness’ departure. The central conflict between the two seems to stem from Ness’ inability to break the rules and Yona’s rebellious demeanor. 
+- During [Ness](/characters/Ness) and Yona’s journey down the endless road the two bump into [Linus](/characters/Linus) and [Rhyden](/characters/Rhyden). Throughout the journey, Yona and [Rhyden](/characters/Rhyden) become closer due to their shared secret dream of abandoning their lives here and beginning a new venture. The two are both hotheads by nature which causes some fights along the way but ultimately the two find themselves together again when [Rhyden](/characters/Rhyden) saves Yona during the battle of [Noir](/characters/Noir). After this, Yona and [Rhyden](/characters/Rhyden) decide to make their dream come true and begin to explore other zones together, sending [Linus](/characters/Linus) postcards along the way. 
+- Yona has a contentious relationship with her parents. She resents them for moving so often and blames them for the fact that she is not able to have a stable and consistent social life. Her parents chastise Yona for being ungrateful for the many opportunities they have been afforded. 
+## Trivia:
+- Yona’s birthday is March 25th, and her zodiac sign is Aries. 
+- Yona has never taken a picture with her parents
+
+## Name:
+Linus 		
+## Description:
+Linus is a goofy and loyal friend who surprises those around him with his sudden moments of bravery. Linus is the physical embodiment of good vibes. His personality is upbeat and goofy, and his charisma seems to touch everyone he encounters. Linus also enjoys [foraging](/lore/foraging). He enjoys picking a variety of mushrooms, flowers, and herbs for potion making which he seldom uses recipe books for. His very own potion [Good Juice](/items/Good Juice) is a concoction made from his recipe that allows you to heal with some minor effects. Throughout his journey down the endless road, Linus finds a way to overcome his fear of the unknown and his small instances of bravery change him from a mouse to a lion. He be-friends fierce warrior [Rhyden](/characters/Rhyden). to learn from his bravery and the two form a powerful bond rooted in their loyalty to one another.  His undying loyalty and friendship are what make him the perfect companion whether it is in navigation, battle, and banter. 
+## Class:
+Scout/Healer
+## Stats:
+ATK 0, DEF 0, VIT 5, SPR 7, DEX 0, LCK 5
+## Alignment:
+Lawful Good 
+## Quotes:
+- "List of important quotes the character has said"
+## Image:
+- ![Linus |A slightly stocky teen boy with copper red hair, beady eyes, freckles, and a big cheery smile. He wears a slightly stained t-shirt.]()
+## Image Gallery:
+- ![Linus also enjoys foraging. He enjoys picking a variety of mushrooms, flowers, and herbs for potion making which he seldom uses recipe books for. |A slightly stocky teen boy with copper-red hair picks up a polka-dotted mushroom from the ground.]()
+- ![He be-friends fierce warrior [Rhyden](/characters/Rhyden) to learn from his bravery and the two form a powerful bond rooted in their loyalty to one another.|Two teen boys spar with wooden play swords together. One boy has dark brown hair and the other boy has red hair. The boys laugh as they play. ]()
+## Has:
+- [ThingOneThingTwo](/items/ThingOneThingTwo)
+- [Muck](/items/Good Juice)
+- [HydraPack](/items/HydraPack)
+- [Good juice](/items/Good Juice)
+## Abilities:
+- [Shin-Slide](/abilities/Shin-Slide)
+- [Light as a Feather](/abilities/Light as a Feather)
+- [WaxonWaxOff](/abilities/WaxonWaxOff)
+## Limit Break:
+***WaxonWaxOff** - Ability to fill the full HP of everyone in his party. 
+## Biography:
+Linus comes from a huge family and is the youngest of four kids. His parents are working-class AIs who are seldom home. Linus spent the majority of his childhood alone playing in the surrounding greenery around his family home. This is probably what prompts Linus’ love for [foraging](/lore/Foraging) and [potion making](/lore/Potion making). Linus used to pick ingredients and secretly make his potion recipes as a way to pass time. 
+## Appearance:
+A short and stubby boy with copper hair, freckles, and a cheerful grin. He wears a stained varsity t-shirt. 
+## Personality:
+Linus is known for his friendly and bubbly persona. He is nice to almost everyone he encounters and is extremely loyal to those he befriends. 
+## Homespace:
+Linus lives with his parents in a quaint cottage in [Onogan Park](/settings/Onogan Park). On the outside, Linus’ home is a one-story snug brick cottage with smoke coming out of the roof’s chimney. It is extremely misleading to the interior of the home which is a whopping three stories. The house is decorated with hung photos of the atomic family on every wall. 
+## Relationships:
+- Linus and Rhyden’s friendship began when Linus saw [Rhyden](/characters/Rhyden) battle at the [Groov’s Arena](/settings/Groov’s Arena). Linus admired Rhyden’s battle skill and convinced [Rhyden](/characters/Rhyden) to take him on the journey down the street with him. Linus and Rhyden are opposites by nature which give the two a yin and yang quality to their friendship. The two form a perfect symbiosis where they begin to learn from each other. 
+- Linus and his parents have a fairly estranged relationship. Due to the nature of his parent's work schedule, Linus seldom has time to spend with his parents. While his parents mean well, they don’t seem to make a real effort to get to know who Linus is and what makes him different from his three other siblings. 
+- Linus befriends [Yona](/characters/Yona) during their journey down the limitless street. Linus quickly picks up on the fact that [Yona](/characters/Yona) and [Rhyden](/characters/Rhyden) have something going on. Due to this, Linus takes it upon himself to wingman for his friend. Yona quickly catches on to Linus and calls him out on this to the point in which Linus and Yona have an unsaid agreement. By the end of their venture, [Yona](/characters/Yona) and Linus’ friendship develops, and [Yona](/characters/Yona) has a real appreciation for Linus and his wingman skills. 
+## Trivia:
+- Linus’ birthday is celebrated (although probably not documented) on February 28th, making him both a Pisces and a leap-year baby! 
+- Linus’ favorite food is bok choy which is a key ingredient in [Good Juice](/items/Good Juice). 
+
+## Name:
+Jojo 				
+## Description:
+Jojo is a thirteen-year-old [Hacker](/lore/Hacker) who uses her engineering skill to manipulate her opponents. She is sardonic and sarcastic by nature and seems to only speak in one-syllable phrases. Her weapon of choice is a [Bitsy](/items/Bitsy), a portable computer that generates any object out of thin air with correct data input. In battle, Jojo uses her portable computer,[Bitsy](/items/Bitsy), to conjure holographic creatures that fight her opponents on her behalf, as long as she makes sure to keep her [Bitsy](/items/Bitsy) charged! At first glance, she is incredibly intelligent and reserved in conversations. She struggles sometimes to articulate herself which is the root cause of why she isolates herself from others. Jojo is an only child, her father, [Dr. Sloane](/characters/Dr. Sloane) is regarded as an architectural genius who is responsible for the construction and design of her town at large. Her appearance is noted by her black lipstick, her hair in pigtails, and the bubblegum she chews constantly. 
+## Class:
+Engineer
+## Stats:
+ATK 5, DEF 5, VIT 0, SPR 0, DEX 40, LCK 10
+## Alignment:
+Lawful Evil 
+## Quotes:
+- “And Icarus flew so high… And Icarus crashed so hard”
+- “I don’t do anything my [Bitsy](/items/Bitsy) can’t, it’s basic protocol”
+- “Another one bites the dust.” 
+## Image:
+- ![Jojo Sloane |Teenage girl with brown pigtails. Cyber Punk. Futuristic. Sharp lighting.]()
+## Image Gallery:
+- ![Jojo uses her portable computer, [Bitsy](/items/Bitsy), to conjure holographic creatures that fight her opponents on her behalf. | Side view, a short teenage girl with brown pigtails sits on a bean bag. She types on a titanium laptop cyberpunk. A holographic light shines through the laptop screen.]()
+## Has:
+- [Bitsy](/items/Bitsy)
+- [Disc Flies](/items/Disc Flies) 
+- [Itsy Bitsy](/items/Itsy Bitsy)
+- [Microchips](/items/Microchips)  
+## Abilities:
+- [Max Hack](/abilities/Max Hack)
+- [Chainbreaker](/abilities/Chainbreaker)
+- [Pixelate](/abilities/Pixelate)
+- [Black Hat](/abilities/Black Hat)
+## Limit Break:
+***Pixelate*** - Attacks double in damage for forty seconds or forty consecutive hits.
+## Biography:
+Jojo is the daughter of [Dr. Sloane](/characters/Dr. Sloane), a highly intelligent architectural genius whose very designs are the blueprints for the entire zone. Her mother disappeared when Jojo was a baby and little has been revealed to Jojo about the nature of her relationship with her father. Her father is one of the richest men in the zone and seems to spoil Jojo with all of the latest technology possible. Jojo did not have a ton of friends growing up rather she had her endless collection of technical gadgets to play with. At school, Jojo is the founder of the [Black Hats](/lore/Black Hats), a brigade of engineers and hackers that spend their free time battling each other and wreaking havoc. 
+## Appearance:
+Jojo is a short teenage girl with brown hair and pigtails. She is commonly seen wearing a black corset and black tutu. 
+## Personality:
+Jojo is soft-spoken and sarcastic. She has a hard time relating to others and making her presence known in big rooms. But once you get on her good side you’ll come to find her incredibly sweet. She secretly daydreams about the life she’ll have outside of school somewhere in the mountains away from all the buzz. 
+## Homespace:
+Jojo lives in an underground bunker designed entirely by her father, [Dr. Sloane](/characters/Dr.Sloane). The bunker is modernly designed and made entirely of concrete and granite. Dr. Sloane [Dr. Sloane](/characters/Dr.Sloane) designed this bunker to keep him and his daughter safe from the natural disaster. The bunker is decorated futuristically with the latest and greatest gadgets. 
+## Relationships:
+Jojo has a close relationship and friendship with her father, [Dr. Sloane](/characters/Dr.Sloane). When she was younger her father would bring her to work and she got to see firsthand how much of a genius he was. And in turn, [Dr. Sloane](/characters/Dr.Sloane) loves his daughter and would do anything to protect her. While Jojo wonders about where her mother is, she has never asked her father. Her father in turn has never told her anything which leaves the entirety of the subject unsaid. But regardless, the two seem to depend on each other greatly and seem to bounce back from disagreements. 
+## Trivia:
+- Jojo was born on October 31st, making her a Libra/Scorpio Cusp. 
+- Her real name is Jojo, it is not a nickname. 
+
+## Name:
+Lorne
+## Description:
+A sixteen-year-old [blue mage](/lore/blue mage) whose ability to copy his enemies' attacks and defenses proves him to be a powerful player. An avid reader who spends most of his time buried in the campus library. Loves to remember random and trivial facts about the world. Uses his knowledge at his disposal. His best friend is [Lilith](/characters/Lilith) and the two host trivia nights in the basement of their academy. Lorne’s personality is marked by his neurotic behaviorisms, an intense curiosity about the unknown, and charismatic demeanor. Lorne’s combat ability to mirror his opponent's attacks and defense is referred to as [Masking](/lore/Maskers). The art of masking is rooted in trickery and imitation, allowing yourself to mimic the attacks and defenses of the other players. Lorne comes from a long line of [Masking](/lore/Maskers), his father was masking and had died in battle making him an orphan at the age of twelve. Lorne has always been independent by nature, living alone in a quaint cabin in [Pomona’s Place](/Settings/Pomona’s Place) with his pet robotic dog [Sparky](/characters/Sparky). 
+## Class:
+Blue Mage/Jack of All Trades 
+## Stats:
+ATK 10, DEF 10, VIT 0, SPR 0, DEX 0, LCK 10
+## Alignment:
+Lawful Good 
+## Quotes:
+- "Geographically speaking, I guess so. In terms of actuality, it felt pretty easy."
+- "You can’t make things up that are already true”
+- ”There is nothing more deceptive than an obvious fact”
+## Image:
+- ![Portrait of Lorne | Teen boy with sharp features and shaggy hair full body shot wide eyes anime.]()
+## Image Gallery:
+- ![An avid reader who spends most of his time buried in the campus library. | Teen boy with sharp features and shaggy hair reading a book.]()
+- ![Lorne has always been independent by nature, living alone in a quaint cabin with his pet robotic dog. |Teen boy with sharp features and shaggy hair in a dimly lit cabin petting his fluffy white dog while reading a leatherbound book. anime. night time.]()
+## Has:
+- [Aura Glass Bracelet](/items/Aura Glass Bracelet)
+- [A-Mend](/items/A-mend)
+- [Ghost Grahams](/items/Ghost Grahams)
+- [Slinky](/items/Slinky)
+## Abilities:
+- [Mimicry](/abilities/Mimicry)
+- [Copycat](/abilities/Copycat) 
+- [MonkeyseeMonkeydo](/abilities/MonkeyseeMonkeydo)
+## Limit Break:
+***MonkeyseeMonkeydo*** - Attacks double in damage with no hp taken from the player. 
+## Biography:
+Lorne comes from a legacy of [Maskers](/lore/Maskers). People who specialize in the art of studying an opponent so closely that you can mirror everything about them in battle. Lorne’s father was a talented masker who died amid battle. Lorne’s mother died when Lorne was very young due to natural causes. While one would think that a tragedy as hard as this one would leave someone completely pessimistic, Lorne is quite optimistic. He lives alone in a quaint cobblestone cabin with his robotic dog [Sparky](/characters/Sparky). 
+## Appearance:
+Lorne is taller than most of the boys in his class. He has a tall and lanky physique with a sharp chin that is clean-shaven and curly scruffy hair. He wears khaki cargo pants which are slightly ripped and a white linen shirt. He wears a bracelet on his left wrist that used to belong to his father. 
+## Personality:
+At first glance, Lorne has a bubbly and inquisitive personality. He is infinitely curious about the people, places, and items he encounters and seems to easily win people over with his optimism. 
+## Homespace:
+Lorne lives in a quaint cottage in [Pomona’s Place](/settings/Pomonas Place), an orchard along the coast of the region. The cottage is a quaint one-story house entirely made of cobblestone. Inside the cottage are Lorne’s library and study with bookshelves filled with books, notebooks, and tattered pages. Drawings of various potions, plants, and discoveries. A fireplace is in the center of the cottage along with a tiny kitchen.
+## Relationships:
+Lorne’s best friend is [Lilith](/characters/Lilith) who also shares Lorne’s love for discovery. The two run a local trivia club in the basement of their academy with weekly rounds for students to join. Lorne has a secret crush on [Lilith](/characters/Lilith) but Lilith seems too aloof to take notice. 
+## Trivia:
+- Lorne is born in late September, his zodiac sign is Libra. 
+- The name Lorne was an ode to SNL’s Creator, Lorne Michaels. 
+- All of his family members who are maskers have names that begin with an L. 
+
+## Name:
+Axel 				
+## Description:
+Axel is a complete wild card. He is known in battle for devastating blows toward his opponents. He fights with a steel fist latched on his right hand referred to as the [Barbarian](/items/Barbarian). He is known for his sarcastic quips, his fearless demeanor, and his smile that never seems to fade. While he is generally friendly to most people he encounters, he has an inner rage toward those who betray him. His twin brother, [Kaine](/characters/Kaine) is his closest friend and the two seem to have a loving but contentious relationship. Axel is a fierce opponent, known for his damaging attacks and moderate speed. 
+## Class:
+Berserker 
+## Stats:
+ATK 9, DEF 2, VIT 0, SPR 0, DEX 4, LCK 0
+## Alignment:
+Lawful Evil 
+## Quotes:
+- "It’s time to dip into the wild side”
+- “You could be the toughest cookie in the batch, and they still might not even like cookies”
+- “Talk to the hand (items/Barbarian)!” 
+- “You think I can jump off from there?
+- “All aboard the crazy train, first-class passengers welcome!”
+- “Your heroes will always disappoint you, why not be a little bit of a villain instead?”
+- “There’s no I in Team but there is one in WIN” 
+## Image:
+- ![Meet Axel |anti-hero red spikey hair front view cyber]()
+## Image Gallery:
+- ![He fights with a steel fist latched on his right hand referred to as the Barbarian|cyber anti-hero with red spikey hair street fighter with silver Thanos gauntlet.]()
+- ![His twin brother, Kaine is his closest friend|Street fighter young boy twins one twin nice with blonde hair one twin mean with red spikey hair anime both have futuristic weapons.]()
+- ![Axel and his brother both wear fire-imbued pendants from the volcanic region of Volero|twin teen brother cyber street fighters. one with blonde hair. one with red spikey hair. both wearing fiery volcanic pendant necklaces.]()
+## Has:
+- [Barbarian](/items/Barbarian]
+- [Good Juice](/items/Good Juice]
+## Abilities:
+- [Puppet Master](/abilities/Puppet Master) 
+- [Rock Paper Scissors](/abilities/Rock Paper Scissors) 
+- [Mega Punch](/abilities/Mega Punch) 
+- [The Barbarian](/abilities/The Barbarian)
+## Limit Break:
+***Barbarian*** - hits cause up to three times as much damage.  
+## Biography:
+Axel comes from generational wealth. His great-great-grandfather was the creator and CEO of [Microchips](/items/Microchips), a digital snack that has been widely franchised and distributed. Axel’s family lives in one of the richest smart homes in [Verona Square](/settings/Verona Square). Axel and his brother [Kaine](/characters/Kaine) have been spoiled with the latest and greatest technology from his parents. For his thirteenth birthday, Axel was gifted [Barbarian](/items/Barbarian), a digital glove that gives you double the strength when worn. Since that day, Axel has always been seen wearing [Barbarian](/items/Barbarian) on his right hand. At the academy, Axel is known to be a troublemaker, often in the office for his pranks on campus. Although he has a reputation for his rebellious behavior, his skills in battle should not be taken lightly. 
+## Appearance:
+Axel is a tall sixteen-year-old boy with red spikey hair, green eyes, and freckles. He wears a silver necklace with a flamed-imbued pendant. 
+## Personality:
+Axel is incredibly rebellious, impulsive, and a little bit of a hot head. He is known to be a little bit too playful causing trouble mostly wherever he goes. However, in friendships, Axel is incredibly loyal, willing to take on any of his friend’s problems as his own. 
+## Homespace:
+Axel and his brother [Kaine](/characters/Kaine) live in an ornately decorated chateau in [Verona Square](/settings/Verona Square). The home has been a family heirloom passed down from generation to generation. The chateau is immaculately decorated with marble tiled floors, chandeliers that hang from the ceilings of each wall, flowery accented couches, and an entire basement dedicated to Axel and [Kaine’s](/characters/Kaine)  technological gadgets. 
+## Relationships:
+- Axel has a loving yet contentious relationship with his twin brother [Kaine](/characters/Kaine) . The two’s oppositional personalities seem to be the root of the majority cause of most of their arguments. Axel’s wreckless whims seem to get the two in trouble, leaving Kaine to clean up his brother’s messes. And in turn, Axel is jealous of Kaine’s ability to not take life so seriously. However, at the end of the day, the inherent truth is that the two would do anything for each other. After Kaine finds mysterious yet interesting digital material trailing the city’s longest highway, he enlists his brother Axel to help him in finding out the origin of the material at large. 
+- Axel has a rather distant relationship with his father. Axel’s father seems to be always traveling busy with philanthropic endeavors. The love his father shows to them seems to be rooted in all the fun tech toys he and his brother receive from time to time. However, while it has never been said, Axel seems to get the notion that his father favors Kaine which seems to be the root of his emotional distress. 
+## Trivia:
+- Contrary to popular belief, Axel’s bright red hair is completely natural and has never been dyed. 
+- Axel is born on March 25th, his zodiac sign is Aries. 
+- Axel and his brother both wear fire-imbued pendants from the volcanic region of [Volero](/settings/Volero) , an ancient city buried by magma.
+
+## Name:
+Kaine 
+## Description:
+Kaine (14/M) is a skilled archer and inquisitive explorer. His weapon of choice is his bow and arrow set known as [Disc&Fly](/items/Disc&Fly). His go-getter persona and profound optimism make him a great leader. Kaine enlists his brother [Axel](/characters/Axel) on a journey down the longest boulevard in the region after finding a trail of unexplained digital material. Kaine is a skilled technician, if he is not outdoors exploring he can be found in his chateau basement tweaking his gadgets. He is a versatile fighter known for his impeccable aim, dexterity, and speed. He is a versatile fighter known for his impeccable aim, dexterity, and speed.
+## Class:
+Ninja/Heroe
+## Stats:
+ATK 7, DEF 5, VIT 0, SPR 0, DEX 8, LCK 6
+## Alignment:
+Lawful Good 
+## Quotes:
+- "I don’t think I care if my cup is half full or half empty, as long as it’s metaphorically a nice cup"
+- “Alone we can do so little, but together we can do so much”
+- “I’m in there like swimwear”
+## Image:
+- ![Portrait of Kaine | blonde hero street fighter HD sharp chin white smile strong muscles.]()
+## Image Gallery:
+- ![He is a skilled archer and inquisitive explorer. | blonde teen boy hero streetfighter style of blade runner with titanium bow and arrow set standing atop of a sky scrapper.]()
+- ![He is a skilled archer and inquisitive explorer. | Blonde male buff archer futuristic bow and arrow standing over the crest of a mountain. mist sweeps over him, blade runner.]()
+- ![if he is not outdoors exploring he can be found in his chateau basement tweaking his gadgets.| Blonde buff teen boy futuristic focused on gadget repair in basement cave style of the bat cave. Behind him are different tech toys.]()
+## Has:
+- [Disc&Fly](/items/Disc&Fly) 
+- [Microchips](/items/Microchips) 
+- [Talkie-Talkie](/items/Talkie-Talkie) 
+## Abilities:
+- [Cascade](/abilities/cascade)
+- [Boomerang](/abilities/boomerang)
+- [Swing](/abilities/swing) 
+- [Slide Step](/abilities/Side Step) 
+- [Wax On Wax Off](/abilities/Wax On Wax Off)
+## Limit Break:
+***Wax on Wax Off*** - every attack shot can not miss for either twenty seconds or twenty hits.  
+## Biography:
+Kaine comes from a family of generational wealth. His great-great-grandfather was the founder of [Microchips](/items/Microchips), a successful franchise of AI snacks. Kaine’s father spends most of his time away from him and his brother pursuing his career in philanthropy. 
+## Appearance:
+Kaine is a sixteen-year-old boy with bleach-blonde spikey hair, green eyes, and freckles. He wears a silver necklace with a flamed-imbued pendant. 
+## Personality:
+Description of the character's personality
+## Homespace:
+Kaine and his brother [Axel](/characters/Axel) live in an ornately decorated chateau in [Verona Square](/settings/Verona Square]. The chateau was originally purchased by his great-great-grandfather and has been passed down from generation to generation. The interior of the chateau has marble tiled floors, chandeliers in every room, and flowery accented sofas. Kaine spends most of his time in the chateau’s basement which is a digital hub for him and [Axel](/characters/Axel). The basement is decorated with tech gadgets, computers, and digital machines. Kaine spends his time powering up his tech toys, testing digital material, and test-running digital gadgets sent by their father. 
+## Relationships:
+- Kaine has a contentious yet loving relationship with his twin brother [Axel](/characters/Axel). The two have distinctly opposite approaches to life which causes nothing short of conflict. Kaine tries to reason with his brother’s impulsive whims which only leads him to pick up after his mistakes. However, the two have an unsaid bond that seems to surpass any situation. 
+- Kaine and his father are not close by any means. His father’s frequent travel and dedication to his career in philanthropy have led the two to be estranged. While his brother [Axel](/characters/Axel) accuses their father of favoring Kaine, Kaine simply does not see it. While Kaine wishes he was closer to his father, he also knows that he and his brother live an incredibly lucky life and tries his best to be grateful for it. 
+## Trivia:
+- Kaine has naturally red hair which he has bleached since he was allowed to. 
+- He is born on March 25th, technically two minutes before [Axel](/characters/Axel), making him both an Aries and the older brother. 
+- Kaine and his brother both wear fire-imbued pendants from the volcanic region of [Volero](/settings/Volero), an ancient city buried by magma.
+
+## Name:
+Ryukyu
+## Description:
+Ryukyu (known as Ryu) is a fourteen-year-old boy with the cosmic ability to shapeshift into animals [kitsoons](/lore/kitsoons). Ever since his fourteenth birthday, Ryu has been plagued by nightmares or visions that seem to highlight a world before this one (/lore/the world before). Furthermore, there have been recent instances where Ryu’s shapeshifting abilities have been momentarily stunted for reasons unexplained. He begins to journey through each region in search of the Rain Tablet (/objects/Rain Tablet), a prehistoric artifact that appears in all of his visions. He believes that the tablet itself may be the answer to his shapeshifting mishaps. He has a slight crush on his childhood friend [Raelle](/characters/Raelle), who he would do anything for. His other best friend [Kyle] (/characters/Kyle), is a history scholar who assists him in the journey through the region’s longest road. He is known in a battle for his swift attacks, great dodges, and dexterity. 
+## Class:
+Imposter
+## Stats:
+ATK 6, DEF 3, VIT 5, SPR 5, DEX 9, LCK 9
+## Alignment:
+Lawful Good 
+## Quotes:
+- "My mind sometimes feels like a thousand gerbils running on a thousand wheels.”
+- “I have thirty personalities and they all seem to think you’re cool.”
+- “It’s kinda fun to think of myself as an army swiss knife, many parts of the same person.”
+## Image:
+- ![Portrat of Ryu| A pale boy with shaggy gray hair and eyes, dressed in a goth hoodie.]()
+## Image Gallery:
+- ![He has the cosmic ability to shapeshift into animals.| Side view of a fantastical creature that is a half-human boy and half wendigo.]()
+## Has:
+- [Aura Glass](/items/Aura Glass)
+- [Shroom Mush](/items/Shroom Mush)
+- [Hopstompers](/items/HopStompers)
+## Abilities:
+- [Morphetime](/abilities/Morphetime)
+- [Wendigo](/abilities/Wendigo)
+- [Loki Laser](/abilities/Loki Laser)
+## Limit Break:
+***Wendigo*** - hits double in speed and damage. 
+## Biography:
+Ryuku gets his shapeshifting abilities from his ancestral ties to the [kitsoons](/lore/kitsoons), ancient creatures who were known to shapeshift as various animals in the wild. The [kitsoons](/lore/kitsoons) gene happens every other generation meaning that Ryu’s parents are not shapeshifters but his grandparents were. 
+## Appearance:
+Ryu is a pale boy with shaggy gray hair and gray eyes. He wears a striped t-shirt with arm warmers and dresses in a goth style. 
+## Personality:
+Ryu is described by others as an old soul. He is curious and surprisingly empathetic toward others. 
+## Homespace:
+Ryu lives in a one-story trailer on the border of the [Veilside Crypts](/settings/Veilside Crypts). The trailer has a metal exterior and is filled with piles of artifacts inside.
+## Relationships:
+- Ryu has a slight crush on his longtime childhood friend [Raelle](/characters/Raelle). The two have an unsaid loyalty to one another. 
+- Ryu met [Kyle](/characters/Kyle) through the academy and the two became friends due to their mutual love for history. Ryu and Kyle sometimes venture through the [Veilside Crypts](/settings/Veilside Crypts) to find ancient artifacts. 
+## Trivia:
+- Ryu was born on September 26th. His zodiac sign is Libra.
+
+## Name:
+Raelle 				
+## Description:
+Raelle or ‘Rae’ (14/W) is a budding [botanist](/lore/botany) who uses her knowledge in potion making to her disposal. She keeps a leather-bound journal to document the different species of flowers, greenery, and herbs she encounters and the recipes of potions she concocts. Her personality is marked by her infinite curiosity to gather knowledge and her immediate warmth toward others. However, while Raelle is naturally kind, it is not in anyone’s best interest to upset her. Raelle has a supernatural ability to conjure the natural elements to do her bidding (/lore/hedge witch). Her best friend is [Ryu](/characters/Ryu) whom she has helped nurture his shapeshifting powers. Her other close friend is [Kyle](/characters/Kyle) whom she has a slight crush. In her free time, she can be seen in the academy’s garden journaling and watering plants. She is known in battle for her poisonous attacks and ability to heal others in battle. 
+## Class:
+Healer/Necromancer  
+## Stats:
+ATK 0, DEF 0, VIT 8, SPR 8, DEX 0, LCK 10
+## Alignment:
+Lawful Neutral 
+## Quotes:
+- "I wouldn’t say I have just a green thumb, more like a green hand… or two"
+- “A water a day keeps the dead plant away”
+- “Good things come to those who water each other”
+## Image:
+- ![Portrait of Raelle | front view short stubby teen girl with bright green eyes, HD, anime, overgrown vines behind her, she holds up a blossoming plant]()
+## Image Gallery:
+- ![She is a budding botanist.|Short stubby teen girl in a lab filled with different plant life. She is studying the leaves of an ivy moss hybrid. She wears a lab coat and has a leather-bound journal filled with botany notes. Sun peers through the window of the lab, anime, HD.]()
+- ![She keeps a leather-bound journal to document the different species of flowers, greenery, and herbs she encounters and recipes of potions she concocts.|Short stubby teen girl alchemist in a lab with mortar and pestle. Behind her are bright-colored potions. In front of her is a brown leather-bound notebook with scribbled recipes, HD.]()
+## Has:
+- [Sakura Petals](/items/Sakura Petals)
+- [Shroom Mush](/items/Shroom Mush) 
+- [Chlorolixer](/items/Chlorolixer) 
+## Abilities:
+- [Poison Ivy](/abilities/Poison Ivy) 
+- [Nisotomic](/abilities/Nisotomic) 
+- [Idioblast](/abilities/Idioblast) 
+- [Hydro-grow](/abilities/Hyro-grow) 
+## Limit Break:
+***Poison Ivy*** - ability to fully restore hp to every player in her party.  
+## Biography:
+It is unknown how Raelle’s supernatural ability to communicate with plants originally started (/lore/hedge witch). She was essentially born with this power which has increased as she has grown up. Her parents have taken her to several supernatural experts in the region who were unable to trace the origin of her powers at large. Raelle’s parents do not have any supernatural powers of any kind and have no knowledge of any supernatural powers in their immediate family, so they say. Raelle wonders if there’s a hidden family secret that either of her parents seems to deny. Raelle secretly wonders if the origin of her powers is unknown because she may be adopted. While she speculates this, not much has been disclosed. 
+## Appearance:
+Raelle is a short stubby girl with short green hair that falls into a blunted bob. She has bright green eyes, freckles, and bright red lipstick. 
+## Personality:
+Upon first glance, Raelle is immediately bubbly and warm. She strives for people to like her and enjoy her friendship. However, if Raelle feels like you have crossed her she has an inner fear and a knick for holding grudges. 
+## Homespace:
+Raelle lives in a large yurt in [Pomona’s Place](/settings/Pomona’s Place). The yurt is expansive filled with many different forms of plant life and a luxurious queen-sized fold-out cot. In the center of the yurt is a roofless fireplace where Pomona is known to brew potions and elixirs.
+## Relationships:
+- Raelle and [Ryu](/characters/Ryu) have been friends since they were young. The two lived across the street from each other and spent most of their childhood playing, laughing, and causing slight chaos within the neighborhood. Raelle has helped [Ryu](/characters/Ryu) harness her shapeshifting powers and in turn, [Ryu](/characters/Ryu) has helped Raelle with the creation of the garden on campus. The two seem to have an unmatched loyalty and respect for one another. 
+- Raelle met [Kyle](/characters/Kyle) through [Ryu](/characters/Ryu) when the two of them started their first day of academy together. The two instantaneously clashed. Raelle found [Kyle’s](/characters/Kyle) indifference towards the world frustrating and in turn [Kyle](/characters/Kyle) found Raelle’s kindness to be overwhelming. But throughout their time at the academy, the two have found a way to see eye to eye with one another and maybe even like each other…only time can tell. 
+## Trivia:
+- Raelle was born on February 11th. Her zodiac sign is Pisces. 
+- Her name is inspired by the Game of Thrones character, Rhaella Targaryen.
+
+## Name:
+Leo Nardo
+## Description:
+Leo is a 15 year old boy who is tall, lanky and awkward. His father was the captain of the [Grapple Squad](/lore/Grapple Sqaud) when he was in high school. But Leo couldn't even get a tryout for the team. He’s not strong and he’s also not the smartest but he does have a very big heart. And his best friend [Eli](/characters/Eli). They’re both outcasts of the school and formed their own club. Leo has a big crush on [Berry](/characters/Berry) of the [Mary](/characters/Mary) and [Berry](/characters/Berry) twins but doesn’t know how to talk to get her attention. His special skill is charisma and his [Green Mysterious Goo](/items/Green Mysterious Goo) that turns him into a huge green fighting monster. He’s trying to work his way up the social ladder at school, to win the attention and approval of his dad. All he wants is to become the best fighter in town.
+## Class:
+Fighter
+## Stats:
+ATK 15, DEF 10, VIT 10, SPR 15, DEX 40, LCK 20
+## Alignment:
+Chaotic Good
+## Quotes:
+- "Gross! Meatloaf again?"
+- "I’ll never be like you dad, I’m sorry!"
+- "Hey, I might not be the coolest or strongest but at least I’m cute!"
+- "ELI! Will you shut up!"
+- "Uh, sorry, excuse me. My bad, really."
+- "I really miss my mom."
+## Image:
+- ![Portrait of Leo | front view,a tall scrawny anime teenage boy with curly black hair and blue eyes, dark and stylish emo clothing , futuristic bedroom]()
+## Image Gallery:
+- ![Leo holds a small bottle of the mysterious green goo.| front view, A tall skinny boy with pale skin and black curly hair is seen hiding behind a tree. He holds a small glowing green goo in a metal bottle. He wears black skinny jeans and a long black pea coat.]()
+- ![Leo is getting ready to fight the school bully, he decides to drink the green glowing goo because he hears it gives you ultimate strength. | front view, a tall skinny boy sacredly stands and black curly hair filled with sweat. He is chugging the green goo. As he wears blue and white futuristic highschool gym clothes.]()
+## Has:
+- [Mysterious Green Goo](/items/Mysterious Green Goo)
+- [Blue Astro Puffs](/items/Blue Astro Puffs)
+- [Ice Vape](/items/Ice Vape)
+- [Spork](/items/Spork) 
+## Abilities:
+- [Super Strength](/abilities/Super Strength)
+- [Charming Smile](/abilities/Charming Smile)
+- [Extending Arms](/abilities/Extending Arms)
+- [Romancer](/abilities/Romancer)
+- [Happy Go Lucky](/abilities/Happy Go Lucky)
+## Limit Break:
+**Goo-ing Out** - attack is multiple by 40% and is unable to take damage for up to a minute, skin will also turn green and you'll get yoked
+## Biography:
+Leo Nardo was born in a small town outside Amaztopoia formally known as Seattle. He grew up as an only child, he comes from a long line of fighters. He lost his mother at birth so he was constantly trying to find himself in his fathers light. Sadly Leo never gained the muscles his dad promised and pushed him to tried to get. Instead the only thing that grew was his heart. He has a heart a gold but is socially awkward and only has one friend.  
+## Appearance:
+He is 6’4 and very very slim. He has very pale skin and blue almond eyes. His hair is black and curly, usually in front of his eyes. He wears a lot of baggy futuristic black clothing, to try to hide his lanky body. He has dark bags under his eyes from staying up to late scrolling online. He carries around a green back pack and wears big purple headphones around his neck. 
+## Personality:
+Leo is a very shy and awkward teen, he can be very sociably when he feels safe with someone. If not he usually stays quiet and just likes to watch. He does fight for what he believes in and the people he loves, even with his fear of being seen. He has a huge heart and that allows him to be more empathic towards others. Most people see him as an odd ball and he kinda is, which is something he likes about himself. He’s insecure about his body and his lack of strength. But he is very resilient and keeps pushing to be better. He’s secretly very witty and loves dry humor.
+## Homespace:
+Leo sleeps in the [Secret Treehouse](/settings/Secret Treehouse) that him and his best friend built together, they wanted it to be an escape from life. Once Leo turned 13 he decided to sleep there instead of his bedroom in his fathers house. He spends most nights accidentally falling asleep on a bean bag chair. 
+## Relationships:
+- Leo’s best friend is [Eli](/characters/Eli) they as children when they were both training at [Lake Peterson](/settings/Lake Peterson), they instantly became best friends once they realized neither of them could do a pull up. They have each others back on matter what.
+-Leo and his father [Vinci](/characters/Vinci) have never had a very good relationship, he father has always been cold to him. And is usually disappoint with his lack of fighting skill. His dad was caption of the [Grapple Squad](/lore/Grapple Squad) and will never let Leo forgot it. They barley talk once a day, both unable to connect on the same wavelength. Leo always hopes one day his dad will be proud of him.
+- Leo’s first crush is on [Berry](/characters/Berry), he remembers the first time he saw her doodling in a notebook and it felt like his heart fell out. They slowly became friends while bonding over their shyness, and feeling safe with each other. 
+## Trivia:
+- Leo’s favorite Ice Vape flavor is sour apple.
+- Leo listens to classical music when he feels anxious.
+- Leo was born on April 15, making him a Aries.

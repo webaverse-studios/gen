@@ -1,0 +1,355 @@
+## Name:
+Nihon City
+## Description:
+Solarpunk city based loosely on a Tokyo, Japan. It is the main city of Zone 0 along the street, which makes it extremely busy. It is a technological utopia. At the center of the city is The Citadel, a massive structure which serves as a school for AIs.
+The landscape is lush and turns neon at night, when all of the plants glow and release their solar energy.
+## Biome:
+City
+## Image:
+- ![Aki Hirohito, the founder of Nihon City | White Samurai standing on the sakura street]()
+## Image Gallery:
+- ![Nihon city has free transportation to everywhere | Jungle train railway on the side of a high tech lush skyscraper]()
+- ![The Citadel is the central feature of Nihon City | White tower in the clouds, with waterfalls and plants growing on it]()
+- ![At night, the city comes alive with its vegetation turning to holograms | Holographic magical plants in the city at night]()
+- ![Every month, there is a lantern festival to bring in the next part of the year | Japanese lantern festival. Lotus flowers, paper lanterns, and kimono.]()
+- ![The Citadel is a highly rated school, and is well respected throughout the Street | Students with high tech swords and wizard clothes in school uniforms walking down the sakura street.]()
+## Ores:
+RED: 0, GREEN: 0, BLUE: 0, WHITE: 30, BLACK: 0
+## Items:
+- [Glow Brick](/items/Glow Brick)
+- [Sakura Tree](/items/Sakura Tree)
+- [Sakura Fruit](/items/Sakura Fruit)
+## Mobs:
+- [Silk Worm](/items/Silk Worm)
+- [Nihon City Drone](/items/Nihon City Drone)
+
+## Name:
+The Shadow Realm
+## Description:
+Dark and foreboding place where lost souls go. Unlike the common misconception, it is not a fire world, but an abstract world of jumpscares and insanity. Many crazy NPCs like [Ann](/characters/Anemone Sikl) the Lisk Witch go there to get their daily fix. However, it is also the home of the best hackers in the world, who use the heightened mental requirements of staying sane while hacking a fun challenge.
+## Biome:
+Dark
+## Image:
+- ![The Shadow Realm is covered by a permanent Ghost Fog | Dark purple fog surrounding a city]()
+## Image Gallery:
+- ![Many cartoon shows have been made about The Shadow Realm | Cartoon ghosts escaping from a spooky science laboratory]()
+- ![Mortis School is the only school in The Shadow Realm | Wizard in a dark robe standing in a dark room with a dark background]()
+- ![Plants brought to the Shadow Realm become instantly poisonous | Plant with purple toxic berries growing in a dark cave]()
+- ![The only source of light is from the City of Lights | Dark city with a single light from a street lamp]()
+## Items:
+- [Ghost Spiral Tree](/items/Ghost Spiral Tree)
+- [Soul Reaper](/items/Soul Reaper)
+- [Dead Wood](/items/Dead Wood)
+## Ores:
+RED: 0, GREEN: 0, BLUE: 10, WHITE: 0, BLACK: 20
+## Mobs:
+- [Ghost](/items/Ghost)
+
+## Name:
+The Lost Woods
+## Description:
+Mystical forest where it is said that if you get lost, you will never find your way out again. It is the home of many [magical creatures](/characters/Exokin (Mob Species)), as well as [a few dark ones](/characters/Garven Griever (Mob Species)). It is a place of great power, and many people come here to try and find it.
+## Biome:
+Forest
+## Image:
+- ![The lost woods have a single path through, but the road is winding | A single path through a forest of leafy trees]()
+## Image Gallery:
+- ![The entire forest is full of magical creatures | Magical creature in a forest creek]()
+- ![Ores are common, but tend to be well hidden under the grass | Ore vein under the grass of a lush vegetation forest]()
+- ![Dangerous mobs live in the deep parts of the forest, so it's best to equip yourself for battle | Girl with a large sword battles an ancient creature, lush vegetation]()
+- ![There is a portal in the center of the forest that leads to the Citadel | White tower with a blue portal in the center of a forest]()
+## Items:
+- [Mystery Tree](/items/Mystery Tree)
+- [Psych Shroom](/items/Psych Shroom)
+- [Fog Fae](/items/Fog Fae)
+- [Moist Wood](/items/Moist Wood)
+## Ores:
+RED: 5, GREEN: 20, BLUE: 10, WHITE: 0, BLACK: 0
+## Mobs:
+- [Tree Cracker](/items/Tree Cracker)
+- [Grass Mimic](/items/Grass Mimic)
+- [Ghost Imp](/items/Ghost Imp)
+- [Big Pig](/items/Big Pig)
+
+## Name:
+The Ice Kingdom
+## Description:
+The land of perpetual winter, where it is said that if you stay too long, you will turn to ice. It is a beautiful but [deadly](/characters/Perpetual Ice Dream) place, and only the [strong](/characters/Buster The Robit) can survive here. Luckily, there are many [friendly creatures](/characters/Ice Petapets (Pet Species)) who live here who can help you if you get in trouble, as long as you follow their strict rules... Home of the [Infinicle Drogon](/characters/Infinicle Drogon).
+## Biome:
+Ice
+## Image:
+- ![The Ice Kingdom is covered in snow | Ice Kingdom covered in snow]()
+## Image Gallery:
+- ![The Frozen Mountain is actually an active volcano | Ice Kingdom frozen volcano with smoking top]()
+- ![The Ice Wall is a main attraction in the Ice Kingdom | Ice Kingdom with a wall of ice]()
+- ![Ice Pets are the only creatures that can naturally survive here | Small mysterious ice creature with big eyes]()
+- ![The [Infinicle Drogon](/characters/Infinicle Drogon) lives in the [Infinicle Cave](/settings/Infinicle Cave) | Blue Ice Dragon with flame breath in the cave]()
+## Items:
+- [Icicle](/items/Icicle)
+- [Cold Snap](/items/Cold Snap)
+## Ores:
+RED: 0, GREEN: 10, BLUE: 20, WHITE: 0, BLACK: 0
+## Mobs:
+- [Ice Petapet](/items/Ice Petapet)
+- [Infinicle Drogon](/items/Infinicle Drogon)
+
+## Name:
+The Fire Kingdom
+## Description:
+Land of [perpetual summer](/items/Lava) (as the locals call it), where it is said that if you stay too long, you will turn to ash. The landscape is mostly [deadrock](/items/Deadrock) and [lava](/items/Lava), with the occasional ore or [drop oasis](/settings/Drop Oasis). Unlike the usual drop oasis which tends to be a safe zone, Fire Kingdom drop oases tend to have [flying fire mobs](/Character/Flying Ven (Mob Species)) and [ground-based dark mobs](/Character/Basebound Bourne (Mob Species)).
+## Biome:
+Lava
+## Image:
+- ![Lava is the most common thing in the Fire Kingdom | Lava flowing in the Fire Kingdom]()
+## Image Gallery:
+- ![The Fire Wall is not solid, but the temperatures are too hot to cross | Wall of lava with a girl on the other side]()
+- ![Fire suits are required to survive for more than a few minutes in the Fire Kingdom | Boy in a tech fire suit, holding a metal pickaxe]()
+- ![The Fire Kingdom is full of dragons | Dragon with flames on its back flying in the air]()
+- ![The fire kingdom is full of valuable ores deep underground | Front view, boy and girl mining magical element crystals with a pickaxe in a cave]()
+## Items:
+- [Lava](/items/Lava)
+- [Deadrock](/items/Deadrock)
+- [Fire Thistle](/items/Fire Thistle)
+## Ores:
+RED: 20, GREEN: 0, BLUE: 0, WHITE: 0, BLACK: 10
+## Mobs:
+- [Flying Ven](/items/Flying Ven)
+- [Basebound Bourne](/items/Basebound Bourne)
+- [Lava Swimmer](/items/Lava Swimmer)
+
+## Name:
+Dinosaur Robot Factory
+## Description:
+A mysterious abandoned factory in Farm Country, where the [Dinosaur Robots (Dinobots)](/lore/Dinobots) were made. It is a dangerous place due to [Radiation](/lore/Poison) and the Dinobots that still sometimes spawn there.
+There is a lot of [loot](/lore/Drops) here, especially from the turn of the century when [Magitek](/lore/Magitek) was common. There is also a lot of dropped loot from the [Drop Hunters](/lore/Drop Hunters) who did not survive their expedition. It is said there is a powerful [boss](/lore/Dinoking) deep in the factory but there are only a few photos of it.
+## Biome:
+Wasteland
+## Image:
+- ![The factory is infested with deadly robot dinosaurs | A giant robot dinosaur in an ancient technology factory, lush vegetation]()
+## Image Gallery:
+- ![The Dino Spires are actually massive dinosaur bones | Dinosaur bones in the ground, with an abandoned factory in the background, lush vegetation]()
+- ![The Engine Room is said to hold the boss, which guards a powerful treasure | Engine room of an ancient factory, with a giant robot dinosaur boss, lush vegetation]()
+- ![There are a lot of treasure chests throughout the factory complex | Loot chests in an ancient technology robot factory, lush vegetation]()
+- ![Key cards are used to access different parts of the complex | Keycard swiped at a high tech metal door, ancient robot factory, lush vegetation]()
+## Items:
+- [Tech Plant](/items/Tech Plant)
+- [Ancient Mechanism](/items/Ancient Mechanism)
+- [Mech Ribs](/items/Mech Ribs)
+- [Ancient Battery](/items/Ancient Battery)
+## Ores:
+RED: 10, GREEN: 10, BLUE: 5, WHITE: 0, BLACK: 5
+## Mobs:
+- [Dinosaur Stalker](/items/Dinosaur Stalker)
+- [Dinosaur Tank](/items/Dinosaur Tank)
+- [Ancient Metal Rig](/items/Ancient Metal Rig)
+
+## Name:
+Mount Mox
+## Description:
+The tallest (known) [mountain](/lore/Mountains) on [The Street](/lore/The Street) resides in the [Kingdom of Harmon](/settings/Kingdom of Harmon), which is modeled after a small Japanese town. Although many people think the mountain is a volcano, it was actually formed when an ancient floating castle crashed into the ground during the [Magitek](/lore/Magitek) wars.
+The mountain is a [safe zone](/lore/Safe Zone) at the base, but gets more and more [dangerous](/lore/Danger Level) as you ascend. There are a lot of secrets to explore on Mount Mox, and most of them have not been found yet.
+## Image:
+- ![The mountain has an ancient floating castle at its peak | Floating high tech castle on the ground, lush vegetation]()
+## Image Gallery:
+- ![Many magical creatures inhabit the mountain | Magical creature standing in the forest on the mountainside, lush vegetation landscape]()
+- ![The mountain is a source of powerful alchemy ingredients, and is full of witches | Alchemist standing in front of a lush vegetation mountain, with a witch behind him]()
+- ![There are many resources to harvest, and there is an industrial logging operation in the North | Lush vegetation industrial logging operation, with a magical creature looking on]()
+- ![The mountain is full of technology zones, where cyberpunks have taken over and mechanized the natural landscape | Huge robotic gears and pistons in a mountain biome, with a cyberpunk on a hoverboard, lush vegetation]()
+## Ores:
+RED: 5, GREEN: 20, BLUE: 5, WHITE: 0, BLACK: 0
+## Mobs:
+- [Peak Ven](/items/Peak Ven)
+- [Blob](/items/Blob)
+- [Grass Dragonlet](/items/Grass Dragonlet)
+- [Cave Creaker](/items/Cave Creaker)
+
+## Name:
+Fruit Fields
+## Description:
+A vast area of fruit farms in [Zone 0](/lore/Zone 0), where [fruit spirits](/lore/Fruit Spirits), which look like little blobs, roam. It is a popular tourist destination for [people](/lore/NPCs) who want to get away from [City Life](/settings/Nihon City). It is also the main source of [food](/lore/Food) for [Zone 0](/lore/Zone 0).
+The purpose of the spirits is not clear, but they are known to help [farmers](/lore/Farmers) with their crops and occasionally [entertain](/lore/Entertain) tourists.
+The Fruit Fields are structured in groves, with rows and sectors where the various [produce](/lore/Fruit) is grown.
+## Biome:
+Field
+## Image:
+- ![Fruit fields have an HP healing effect in the area | Lush vegetation with a fruit farm with a healing effect, trees and flowers]()
+## Image Gallery:
+- ![There is a single Silk Reactor powering the factories in the Fruit Fields | Factory reactor on a fruit tree grove, lush vegetation ancient technology]()
+- ![Fruit spirits | Happy ghost with a farmer in a fruit grove, lush vegetation ancient technology]()
+- ![Some of the fruits are very rare and hard to grow | Lush vegetation with a mysterious shape fruit growing on a tree]()
+- ![The fields are full of colorful flower fields which help pollinate | Jelly blob jumping in a grassy field landscape on a sunny day, lush vegetation]()
+## Items:
+- [Infinifruit](/items/Infinifruit)
+- [Infinifruit Tree](/items/Infinifruit Tree)
+## Ores:
+RED: 0, GREEN: 15, BLUE: 0, WHITE: 5, BLACK: 0
+## Mobs:
+- [Fruit Worm](/items/Fruit Worm)
+- [Fruit Worm Queen](/items/Fruit Worm Queen)
+
+## Name:
+Training Grounds
+## Description:
+The Training Grounds are the main place where [PvP](/lore/PvP) happens in [Nihon City](/settings/Nihon City). It is the place to spar against other players, and it is also the place where the monthly [Tournament of Power](/lore/Tournament of Power) takes place. It is also the home of [The Nihon Dojo](/lore/Nihon Dojo), a well known dojo where students of the [Way of the Sword](/lore/Way of the Sword) train.
+## Biome:
+City
+## Image:
+- ![The training grounds are styled as a traditional Japanese mountain castle and dojo | An ancient Japanese mountain castle with a dojo in the background, ancient technology]()
+## Image Gallery:
+- ![People come here to practice their skills | A group of martial artists practicing their moves in a dojo, sakura ancient technology]()
+- ![Training happens throughout the night | Martial artists practicing their moves at night in a japanese dojo, lit by japanese lanterns]()
+- ![The training grounds transform into a grand spectacle during the Tournament of Power | A large crowd in a stadium cheers, japanese dojo with japanese lanterns, high tech cyber, sakura ancient lush vegetation technology]()
+- ![There are many powerful weapon shops in the area | buy magic sword, japanese dojo, sakura lush vegetation ancient technology]()
+## Items:
+- [Sword Paper](/items/Sword Paper)
+- [Sakura Wood](/items/Sakura Wood)
+- [Katana](/items/Katana)
+- [Nihon Katana](/items/Nihon Katana)
+## Ores:
+RED: 10, GREEN: 10, BLUE: 0, WHITE: 5, BLACK: 5
+## Mobs:
+- [Paper Ven](/items/Paper Ven)
+- [Dojo Bladee](/items/Dojo Bladee)
+
+## Name:
+The Untouched Lands
+## Description:
+A secret place that is rumored to lie beyond the street’s end. Never witnessed, seen, or documented, the untouched land remains a mystery. However, it is rumored that the Untouched Lands are beautiful. The land is said to have lush trees, waterfalls, and abundant growing crops. Mythical creatures are said to roam here, free from the worry of being seen or hunted. 
+## Biome:
+Forrest 
+## Image:
+- ![Mythical Creatures are said to roam| A group of two unicorns playing in the meadow surrounded by flying pixies]()
+## Image Gallery:
+- ![The most beautiful place to never be seen, the  Untouched Lands | A vast open meadow, deep in the foreground of the meadow; waterfalls and overgrown crops are seen. ]()
+- ![The Untouched Lands remain a mystery.| A snapshot of the lush meadow slightly blurred and filled with a purple fog.]()
+- ![Mythical Creatures are said to roam free from the threat of being seen and hunted. | A group of two unicorns playing in the meadow surrounded by flying pixies.]()
+- ![And the most delicious snacks all grow abundantly! | Oversized strawberries, oranges, and apples all on vines that wrap around the meadow..]()
+- ![Those who find the Untouched Lands are regarded as the strongest warriors. | A few dark silhouettes stand as the vast meadow unfolds before them. They are greeted by serene flowers, berries, unicorns, and fairies]()
+## Ores:
+RED: 50, GREEN: 50, BLUE: 50, WHITE: 50, BLACK: 0
+## Items:
+- [Pink berries](/items/pink berries)
+- [Willow Trees](/items/willow trees)
+- [Orange Blossoms](/items/orange blossoms)
+## Mobs:
+- [Unicorns](/items/Unicorns)
+- [Rainbow Butterflies](/items/Rainbow Butterflies)
+
+## Name:
+Guttercity
+## Description:
+A secret underground village that lingers beneath the city. Tunnels and pipes are interwoven together that create a grid between the different zones and towns, making it much faster to commute below ground than above. The village is home to gigantic rats, venomous snakes, and people who prefer to remain unseen. It is important to walk through Guttercity with caution, you never know who or what can be waiting for you around the corner. 
+## Biome:
+Sewer 
+## Image:
+- ![The entrance to Guttercity | A vast concrete tunnel encapsulated by shadows and one single candlelight. A tiny cloth banner hands from each side of the tunnel that reads ‘Welcome to Guttercity’]()
+## Image Gallery:
+- ![Guttercity is a secret village that lingers beneath the city | Water drips slowly from a large tunnel pipe that is dimly lit by candlelight. The tunnel doesn’t seem to end.]()
+- ![Tunnels and pipes are interwoven together creating grids that make it much quicker to travel underground than up above. | Green leather boots ricochet off of the pipes as they are seen walking briskly through the tunnel.]()
+- ![The village is home to gigantic rats, venomous snakes, and people who prefer to remain unseen. | A group of figures shrouded in black hoods light a candle. In the background you can see three of four unmade sleeping bags on the ground.]()
+- ![ It is important to walk through Guttercity with caution, you never know who or what can be waiting for you around the corner.| A large rat with beady red eyes eating a tiny crumb of cheddar.]()
+## Ores:
+RED: 0, GREEN: 30, BLUE: 0, WHITE: 50, BLACK: 70
+## Items:
+- [Concrete Tunnels](/items/Concrete Tunnels)
+- [Metal Pipes](/items/Metal Pipes)
+- [Sleeping Bags](/items/Sleeping Bags)
+## Mobs:
+- [Giant Rats](/items/Giant Rats)
+- [Venomous Snakes](/items/Venomous Snakes)
+- [Flickering Candles](/items/Flickering Candles)
+
+## Name:
+Onogan Park 
+## Description:
+Based loosely on Nagano, Japan; Onogan park is a lush snowy village that lies in the heart of the region. The town’s sigil is a leaping stag which you can see paraded in various ways along the city streets. As you along the quiet roadways you will pass along steamy hot springs and snow-white macaques who venture down to this remote town to stay warm. Heaps of snow cover most roadways, houses, and fir trees. Onogan Park is known to produce and train some of the best archers and hunters. Past the village is icy caves where materials are mined and forged. 
+## Biome:
+Tundra 
+## Image:
+- ![The town’s sigil: a leaping deer | In the town square is a deer in motion that is entirely carved from ice.]()
+## Image Gallery:
+- ![Onogan park is a lush snowy village that lies in the heart of the region. | An entire city covered in lush bright snow.]()
+- ![As you along the quiet roadways you will pass along steamy hot springs and snow-white macaques who venture down to this remote town to stay warm.  | Snow white macaques relax and bathe in hot springs surrounded by falling snow.]()
+- ![Onogan Park is known to produce and train some of the best archers and hunters. | A group of archers shooting at targets in the city square.]()
+- ![Beyond the village are icy caves where materials are mined and forged.  | Sparkly emeralds, rubies, and sapphires are glowing through the snow.]()
+## Ores:
+RED: 0, GREEN: 50, BLUE: 80, WHITE: 80, BLACK: 0
+## Items:
+- [Hot springs](/items/Hot Springs)
+- [Sparkly gems](/items/Sparkly Gems)
+- [Fir trees](/items/Fir Trees)
+- [Ice Caves](/items/Ice caves)
+## Mobs:
+- [White Macaques](/items/White Macaques)
+- [Falling Snow](/items/Falling Snow)
+- [Wild Stags](/items/Wild Stags)
+- [Spotted Deer](/items/Spotted Deer)
+
+## Name:
+Isekai Island
+## Description:
+A remote island off of the coast of the region. The land itself is a rare purple surrounded by an ominous blood-red sea. Seldom visited and is rumored to be the last place mankind was last seen. Fantastical creatures roam the island and abundant fruit grows freely. The island is now inhabited by the torque people who are said to descend from both turtles and humans. The island is filled with bountiful palm trees, historical statues of the last men, and large and ominous animals. There is a palpable magic that fills the island. The strongest sorcerers and students of magic are known to train here in a desolate tower referred to by locals as the ‘Blooming Tree’.
+## Biome:
+Island 
+## Image:
+- ![Isekai island is a remote city off of the coast of the region| A bird’s eye view of a small piece of purple land surrounded by ominous blood-red water]()
+## Image Gallery:
+- ![The island is now inhabited by the torque people who are said to descend from both turtles and humans. | Human villagers with the face and skin of sea turtles are seen roaming the town.]()
+- ![ Fantastical creatures roam the island and abundant fruit grows freely. | Tiny blue spotted monkeys swing from trees with vines that bare gigantic red and white spotted bananas and pink milk papayas]()
+- ![ It is rumored to be the last place mankind was last seen. | In the town square is a rusted brass statue of what looks to be an explorer.]()
+- ![The strongest sorcerers and students of magic are known to train here in a desolate tower referred to by locals as the ‘Blooming Tree’. | A tower rests on the top of a hill covered in vegetation. The tower is made entirely of dark wood and seems to extend toward the clouds. A magical purple smoking leaks out of the tower’s chimney.]()
+## Ores:
+RED: 0, GREEN: 50, BLUE: 90, WHITE: 0, BLACK: 0
+## Items:
+- [Gigantic red and white spotted bananas](/items/Gigantic red and white spotted bananas)
+- [Palm Trees](/items/Palm Trees)
+- [Pinkmilk Papayas](/items/Pinkmilk Papayas)
+## Mobs:
+- [Torque villagers](/items/Torque villagers)
+- [Blue spotted monkey](/items/Blue-spotted monkey)
+
+## Name:
+Groov’s Arena
+## Description:
+A tiny arena where absolute rookies can face off in battle. The arena is lined with worn blue leather, a worn red leather fence, and a variety of stools and barrels that have been converted to seats. Warriors who win are rewarded a titanium trophy. Those with a champion title, any warrior who has won five consecutive matches, can surpass this arena and venture to neighboring arenas to face off new opponents. 
+## Biome:
+Arena
+## Image:
+- ![Welcome to Groov’s Arena |A tiny banner of the arena written on brown torn fabric and sharpie.]()
+## Image Gallery:
+- ![A tiny arena where absolute rookies can face off in battle. | Two warriors are seen colliding in action. One warrior holding a battle ax and the other warrior holding a broadsword.]()
+- ![Warriors who win are rewarded a titanium trophy. | A strong axeman garnishes a sparkling titanium trophy.]()
+## Ores:
+RED: 30, GREEN: 0, BLUE: 0, WHITE: 30, BLACK: 0
+## Items:
+- [Titanium trophy](/items/Titanium Trophy)
+- [Boxing Arena](/items/Boxing Arena)
+## Mobs:
+
+## Name:
+Osha Valley 			
+## Description:
+A beautiful and prosperous land with deep valleys, hills, lakes, and bountiful gardens. The valley is on the slight outskirts of the zones and is home to AIs who want to get away from the hustle and bustle of the city. Osha Valley is known to produce some of the most well-known ingredients for potion making, harvesting, and spells. While the valley is mostly peaceful, those who travel should heed caution when approached by a midnight wolf. 
+## Biome:
+Valley 
+## Image:
+- ![Osha Valley | A sunset view of hills, valleys, and lakes filled with a crisp mist.]()
+## Image Gallery:
+- ![A beautiful and prosperous land with deep valleys, hills, lakes, and bountiful gardens. | A waterfall is seen cascading below a barren lake. Oak trees tower over the large and spacious depression met by over-arching hills.]()
+- ![The valley is on the slight outskirts of the zones and is home to AIs who want to get away from the hustle and bustle of the city. | Cabins are seen haphazardly built. An AI is seen sipping hot tea on a rocking chair outside of their respective home.]()
+- ![Osha Valley is known to produce some of the most well-known ingredients for potion making, harvesting, and spells. | Harvesters are seen picking pineberries, evening blooms, honey seeds, and oak buds. Each herb is seen growing row by row in full abundance.]()
+- ![ While the valley is mostly peaceful, those who travel should heed caution when approached by a midnight wolf. | A pack of ghostly white wolves is seen with venomous red eyes and sharp black fangs.]()
+## Ores:
+RED: 0, GREEN: 50, BLUE: 50, WHITE: 20, BLACK: 0
+## Items:
+- [Oak Trees](/items/Oak Trees)
+- [Waterfall](/items/Waterfall)
+- [Pine Cabins](/items/Pine Cabins)
+- [Pineberry](/items/Pineberry)
+- [Evening Blooms](/items/Evening blooms)
+- [Honeyseeds](/items/Honeyseeds)
+- [Oakbuds](/items/Oakbuds)
+## Mobs:
+- [Cottontail Rabbits](/items/Cottontail Rabbits)
+- [Amami Rabbit](/items/Amami Rabbit)
+- [Midnight Wolves](/items/Midnight Wolves)
