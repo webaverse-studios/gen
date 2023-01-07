@@ -25,7 +25,7 @@ export function makeGenerateFn() {
 
       const data = await response.json();
       // console.log("choices:", data.choices);
-      return data.choices[0]?.text;
+      return data?.choices?.[0]?.text;
     } catch (e) {
       console.log(e);
       return "returning from error";
