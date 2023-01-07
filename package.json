@@ -21,6 +21,7 @@
     "maxrects-packer": "^2.7.3",
     "mime-types": "^2.1.35",
     "minimist": "^1.2.6",
+    "murmurhash": "^2.0.1",
     "murmurhash-js": "^1.0.0",
     "offscreen-engine": "./packages/offscreen-engine",
     "openai": "^3.1.0",
