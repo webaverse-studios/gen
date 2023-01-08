@@ -37,7 +37,6 @@ export function makeGenerateFn() {
       max_tokens = 256,
     } = opts ?? {};
     return await query({
-      // model: 'text-davinci-002',
       model,
       prompt,
       stop,
