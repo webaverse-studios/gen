@@ -14,12 +14,12 @@ const collectKeys = (datasetSpec, initialValue, opts) => {
   } = opts;
 
   const allKeys = [];
-  if (nameKey in initialValue) {
+  // if (nameKey in initialValue) {
     allKeys.push(nameKey);
-  }
-  if (descriptionKey in initialValue) {
+  // }
+  // if (descriptionKey in initialValue) {
     allKeys.push(descriptionKey);
-  }
+  // }
   for (const k in initialValue) {
     if (!allKeys.includes(k)) {
       allKeys.push(k);
