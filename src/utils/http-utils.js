@@ -33,13 +33,16 @@ export async function zineFile2Url(file) {
   const blob2 = await res.blob();
   // console.log('got result', u, blob2);
 
-  // const devServerUrl 
-  const u2 = new URL(`https://local.webaverse.com/`);
-  u2.searchParams.set('src', u);
-  return u2.href;
+  return u;
 }
 export async function openZineFile(file) {
+  // upload tmp file
   const u = await zineFile2Url(file);
+
+  // compute open url
+  const u2 = new URL(`https://local.webaverse.com/`);
+  u2.searchParams.set('src', u);
+  
   // open in new tab
-  window.open(u, '_blank');
+  window.open(u2.href, '_blank');
 }
