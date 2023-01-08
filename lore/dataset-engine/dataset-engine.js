@@ -25,51 +25,7 @@ export class DatasetEngine {
     this.aiClient = aiClient;
     this.fillRatio = fillRatio;
   }
-  async generateItem(initialValue) {
-    // const {
-    //   nameKey,
-    //   descriptionKey,
-    //   // attributeKeys,
-    // } = this.datasetSpec;
-
-    // if (!name) {
-    //   const namePrompt = formatDatasetNamePrompt(this.dataset);
-    //   // console.log('got name prompt', {namePrompt});
-    //   name = await this.aiClient.generate(namePrompt, stops);
-    //   name = name.trim();
-    // }
-    // if (!description) {
-    //   const descriptionPrompt = formatDatasetDescriptionPrompt(this.dataset, name);
-    //   // console.log('got description prompt', {descriptionPrompt});
-    //   description = await this.aiClient.generate(descriptionPrompt, stops);
-    //   description = description.trim();
-    // }
-
-    // const attributes = {
-    //   [nameKey]: name,
-    //   [descriptionKey]: description,
-    // };
-    // const attributePrompts = formatDatasetAttributePrompts(this.dataset, name, description);
-    // await Promise.all(attributePrompts.map(async attributePromptSpec => {
-    //   const {
-    //     key: attributeName,
-    //     prompt: attributePrompt,
-    //   } = attributePromptSpec;
-    //   let attributeValue = await this.aiClient.generate(attributePrompt, stops);
-    //   attributeValue = attributeValue.trim();
-    //   attributes[attributeName] = attributeValue;
-    // }));
-
-    // return attributes;
-
-
-    /* const initialValue = {
-      Name: 'Death Mountain',
-      // Description: 'A mountain in the middle of a desert.',
-    }; */
-    const opts = {
-      keys: ['Image'],
-    };
+  async generateItem(initialValue, opts) {
     const initialValueString = formatInitialValueText(initialValue, this.datasetSpec, opts);
     const initialValueEncoded = this.aiClient.tokenize(initialValueString);
     // console.log('got string 1', {

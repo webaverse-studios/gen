@@ -54,34 +54,44 @@ globalThis.testGeneration = async () => {
   const items = await getDatasetItemsForDatasetSpec(datasetSpec);
   // console.log('setting items', items);
 
-  // write initial dataset to DB
-
-
-
-
-  // get embedding
-  {
-    const embedding = await aiClient.embed('lol');
-    console.log('got embedding', embedding);
-  }
-
-  // get tokenization
-  {
-    const tokenization = aiClient.tokenize('lol and the bestesterestest');
-    console.log('got tokenization', tokenization);
-  }
-
   // generate an item from the dataset
-  const datasetGenerator = new DatasetGenerator({
-    datasetSpecs,
-    aiClient,
-    // fillRatio: 0.5,
-  });
-  const settingSpec = await datasetGenerator.generateItem('setting', {
-    Name: 'Death Mountain',
-    // Description: 'A mountain in the middle of a desert.',
-  }, {
-    keys: ['Image'],
-  });
-  console.log(settingSpec);
+  {
+    const datasetGenerator = new DatasetGenerator({
+      datasetSpecs,
+      aiClient,
+      // fillRatio: 0.5,
+    });
+    const settingSpec = await datasetGenerator.generateItem('setting', {
+      Name: 'Death Mountain',
+      // Description: 'A mountain in the middle of a desert.',
+    }, {
+      keys: ['Image'],
+    });
+    console.log(settingSpec);
+  }
+
+  /* // continue item from the dataset
+  {
+    // generate an item from the dataset
+    const datasetGenerator = new DatasetGenerator({
+      datasetSpecs,
+      aiClient,
+      // fillRatio: 0.5,
+    });
+    const initialValue = {
+      Name: 'Witches Luck',
+      Description: 'Three witches argue over the ingredients to buy at the market.',
+    };
+    const chatSpec1 = await datasetGenerator.generateItem('chat', initialValue, {
+      keys: ['Name', 'Description', 'Chat'],
+      continueKey: 'Chat',
+    });
+    console.log('chat spec 1', chatSpec1);
+
+    const chatSpec2 = await datasetGenerator.generateItem('chat', chatSpec1, {
+      keys: ['Name', 'Description', 'Chat'],
+      continueKey: 'Chat',
+    });
+    console.log(chatSpec2);
+  } */
 };
