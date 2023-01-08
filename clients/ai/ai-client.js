@@ -18,18 +18,19 @@ export function makeGenerateFn() {
         requestOptions
       );
       if (response.status !== 200) {
-        console.log(response.statusText);
-        console.log(response.status);
+        // console.log(response.statusText);
+        // console.log(response.status);
         console.log(await response.text());
-        return "";
+        throw new Error("OpenAI API Error: " + response.status + " " + response.statusText);
       }
 
       const data = await response.json();
       // console.log("choices:", data.choices);
       return data?.choices?.[0]?.text;
     } catch (e) {
-      console.log(e);
-      return "returning from error";
+      console.warn('OpenAI API Error', e);
+      // return "returning from error";
+      throw e;
     }
   }
   async function openaiRequest(prompt, stop, opts) {
@@ -73,17 +74,18 @@ export function makeEmbedFn() {
         requestOptions
       );
       if (response.status !== 200) {
-        console.log(response.statusText);
-        console.log(response.status);
+        // console.log(response.statusText);
+        // console.log(response.status);
         console.log(await response.text());
-        return "";
+        throw new Error("OpenAI API Error: " + response.status + " " + response.statusText);
       }
 
       const data = await response.json();
       return data?.data?.[0].embedding;
     } catch (e) {
-      console.log(e);
-      return "returning from error";
+      console.warn('OpenAI API Error', e);
+      // return "returning from error";
+      throw e;
     }
   }
   return embed;
