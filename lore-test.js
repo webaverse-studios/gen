@@ -48,25 +48,25 @@ globalThis.testGeneration = async () => {
     aiClient,
   });
 
-  /* // generate item from dataset
+  // generate item from dataset
   {
     const datasetGenerator = new DatasetGenerator({
       datasetSpecs,
       aiClient,
       // fillRatio: 0.5,
     });
-    const settingSpec = await datasetGenerator.generateItem('setting', {
-      Name: 'Death Mountain',
+    const questSpec = await datasetGenerator.generateItem('quest', {
+      // Name: 'Death Mountain',
       // Description: 'A mountain in the middle of a desert.',
     }, {
-      keys: ['Image'],
+      // keys: ['Image'],
     });
-    console.log(settingSpec);
-  } */
+    console.log(questSpec);
+  }
 
-  // generate cached tem from dataset
+  /* // generate cached item from dataset
   {
-    const datasetGenerator = new DatasetGenerator({
+    const datasetGenerator = new CachedDatasetGenerator({
       datasetSpecs,
       aiClient,
       // fillRatio: 0.5,
@@ -78,7 +78,7 @@ globalThis.testGeneration = async () => {
       keys: ['Image'],
     });
     console.log(settingSpec);
-  }
+  } */
 
   /* // continue item from dataset
   {
