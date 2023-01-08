@@ -2764,13 +2764,13 @@ const SideMetascene = ({
       <div className={styles.heroTag}>
         <div className={styles.h1}>{name}</div>
         <div className={styles.h2}>{description}</div>
-        <div className={styles.label}>Objectives</div>
+        {objectives.length > 0 ? <div className={styles.label}>Objectives</div> : null}
         <div className={styles.list}>
           {objectives.map(objective => (
             <div className={styles.listItem} key={objective}>{objective}</div>
           ))}
         </div>
-        <div className={styles.label}>Reward</div>
+        {reward ? <div className={styles.label}>Reward</div> : null}
         <div className={styles.h3}>{reward}</div>
       </div>
       <div className={classnames(styles.sidebar, styles.form)}>
@@ -2792,7 +2792,7 @@ const SideMetascene = ({
               }, {
                 // keys: ['Image'],
               });
-              console.log('got quest spect', questSpec);
+              console.log('got quest spec', questSpec);
               const {
                 Name,
                 Description,
