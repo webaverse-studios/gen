@@ -427,18 +427,21 @@ export const getCompletionParser = (datasetSpec, initialValue, opts) => completi
     completionValue[continueKey] = oldValue + completionString;
   } else {
     let completionStringRemaining = completionString;
-    let index = 0;
+    // let index = 0;
     const readLine = () => {
       const match = completionStringRemaining.match(/^([^\n]*)(?:\n|$)/);
       if (match) {
         const line = match[1];
         const deltaLength = line.length + 1;
         completionStringRemaining = completionStringRemaining.slice(deltaLength);
-        index += deltaLength;
+        // index += deltaLength;
         return line;
       } else {
         return null;
       }
+    };
+    const unshiftLine = line => {
+      completionStringRemaining = line + '\n' + completionStringRemaining;
     };
 
     const allKeys = collectKeys(datasetSpec, initialValue, opts);
@@ -446,10 +449,43 @@ export const getCompletionParser = (datasetSpec, initialValue, opts) => completi
     for (let i = firstMissingValueKeyIndex; i < allKeys.length; i++) {
       const key = allKeys[i];
       if (i !== firstMissingValueKeyIndex) { // skip upcoming label line
-        readLine();
+        const line = readLine();
+        const match = line.match(/^([^\n]*):(?:\n|$)/);
+        if (!match) {
+          throw new Error('invalid label line: ' + JSON.stringify(line));
+        }
+        if (match[1].toLowerCase() !== key.toLowerCase()) {
+          throw new Error('key mismatch: ' + JSON.stringify({
+            key,
+            line,
+            match: [
+              match[1].toLowerCase(),
+              key.toLowerCase(),
+            ],
+          }));
+        }
+        // XXX should check the line skipped
       }
+      // accumulate a complete attribute
       const value = readLine();
-      completionValue[key] = value;
+      let acc = '';
+      acc += value;
+      if (value.startsWith('-')) {
+        for (;;) {
+          const value2 = readLine();
+          if (value2 === null) {
+            break;
+          } else if (!value2.startsWith('-')) {
+            unshiftLine(value2);
+            break;
+          } else {
+            acc += '\n';
+            acc += value2;
+            continue;
+          }
+        }
+      }
+      completionValue[key] = acc;
     }
   }
   return completionValue;
