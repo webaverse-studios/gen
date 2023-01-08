@@ -1082,3 +1082,387 @@ Leo sleeps in the [Secret Treehouse](/settings/Secret Treehouse) that him and hi
 - Leo’s favorite Ice Vape flavor is sour apple.
 - Leo listens to classical music when he feels anxious.
 - Leo was born on April 15, making him a Aries.
+
+## Name:
+Zeke
+## Description:
+Zeke is a budding sorcerer who has an infinite love for gathering knowledge. He has a strong ancestral background dating back to the very first model of AIs in the region (lore/the land before). He is known in battle for his magical abilities specifically channeling electricity into his attacks. He spends his free time in the library researching the history of the town as well as new spells he might be able to try. He is a lone wolf by choice and every so often spends his time with the academy’s librarian [Mr. Owl](/characters/Mr. Owl). Zeke begins to be plagued with vivid dreams of a world before this one. While on the journey for answers, Zeke discovers a book called a [Didact](/items/Didact) which has the entire inscribed history of his region. Zeke must find a key (/items/skeleton key) that is buried somewhere in the city to unlock the [Didact](/items/Didact) and receive answers. 
+## Class:
+Mage 
+## Stats:
+ATK 0, DEF 0, VIT 8, SPR 7, DEX 0, LCK 0
+## Alignment:
+Chaotic Good 
+## Quotes:
+- "Mr. Owl. I'm having dreams. Weird dreams, dreams of maybe my great-grandfather. I think he's trying to tell me something." (/lore/the land before)
+- “I want to know more about my family. The people before me who built this city.” 
+## Image:
+- ![Portrait of Zeke |anime scrawny boy with black long hair, wearing a white shirt and black denim, high definition, goth]()
+## Image Gallery:
+- ![He spends his free time in the library researching the history of the town|scrawny boy with black long hair reading in the library, near him are piles of books, sharp lighting, --niji]()
+- ![Zeke begins to be plagued with dreams of a world before this one|scrawny boy, anime, cold sweat, the nightmare in bed, dusk, high definition, midnight, low light]()
+## Has:
+- [Opal Compass](/items/Opal Compass) 
+- [Aura Glass](/items/Aura Glass) 
+- [Good Juice](/items/Good Juice)
+- [Chloro-lixer](/items/Chloro-lixer) 
+## Abilities:
+- [Breaker of Chains](/abilities/Breaker of Chains)
+- [Thunder-dome](/abilities/Thunder-dome) 
+- [Super shock](/abilities/Super shock) 
+- [FrightLight](/abilities/FrightLight) 
+## Limit Break:
+***Breaker of Chains*** - Attacks double in damage and defense for twenty hits or twenty seconds. 
+## Biography:
+While Zeke doesn’t fully know or understand his legacy, his great great great grandfather was the architect who built the region. His visions and supernatural abilities are tied to his grandfather who was known to have similar abilities which many had mistaken for insanity. Wyatt wrestles with his dreams and knows his search for the [Didact](/items/Didact) will lead him to answers.
+## Appearance:
+Zeke is a tall lanky boy with scruffy black hair. His appearance can be marked by wide framed glasses which he wears. 
+## Personality:
+Zeke is known to be inquisitive. He is an introvert by nature but can be extroverted with those he feels comfortable with. 
+## Homespace:
+Zeke lives in a [Secret Corridor](/settings/Secret Corridor) within the library on campus. He enters his corridor by pushing back an entire bookcase to reveal a small room only able to fit a nightstand and a single bed. The room is cluttered with books and has a small reading light. 
+## Relationships:
+- In search of the key Zeke meets [Lorne](/characters/Lorne) and the two join together on their quest down the street. Zeke finds Lorne’s ability to mimic people in battle incredibly interesting and turn, Wyatt finds Lorne’s visions wildly fascinating. 
+## Trivia:
+- Zeke was born on November 8th. His zodiac sign is Scorpio.
+
+## Name:
+Wyatt 
+## Description:
+Wyatt is a fourteen-year-old teen fighter known for his heavy attacks in hand-to-hand combat and hot-head tendencies. He holds a reputation at the academy as one of the strongest competitors which proceed him in every classroom. He holds the title of team captain of the [MatchStix](/lore/MatchStix] a student-based collective of some of the strongest fighters. He fights with him [Uppercuts](/items/Uppercuts], a pair of holographic gloves generate a lethal force with each attack. He has a rivalry with co-captain and friend [Lance](/characters/Lance) and a budding friendship with [Lilian](/characters/Lilian) whom he gets assigned to journey down the [Street](/lore/Street) with. He is known in battle for his hard-hitting attacks and accuracy.  
+## Class:
+Barbarian
+## Stats:
+ATK 7, DEF 3, VIT 0, SPR 0, DEX 0, LCK 7
+## Alignment:
+Chaotic Good 
+## Quotes:
+- “Funny thing is… I don’t need powers to defeat you, I just need my bare hands”
+- “Can I bribe you with an arm wrestle?”
+- “I care about things, I just don’t always have to show it.”
+- “I love a good dance!”
+## Image:
+- ![Portrait of Wyatt | buff anime teen boy, bruised knuckles, sharp lighting, with spikey red hair, flexing, front view, bruised lip]()
+## Image Gallery:
+- ![Team Captain of the Match Stix | buff anime teen boy, red spikey hair, stands behind a group of teen streetfighters, all wear student uniforms]()
+- ![His weapon of choice are his UpperCuts | buff anime teen boy, red spikey hair, front view, futuristic holographic gloves, brutal force, attack.]()
+## Has:
+- [Flying Lotus](/items/Flying Lotus) 
+- [Microchips](/items/Microchips)
+- [Good Juice](/items/Good Juice)
+## Abilities:
+- [Swinging Pendulum](/abilities/Swinging Pendulum) 
+- [Loose grip])/abilities/Loose Grip) 
+- [Soaring Eagle](/abilities/Soaring Eagle) 
+## Limit Break:
+***Soaring Eagle*** - all hits have a hundred percent accuracy and double damage for up to ten hits maximum or until the opponent drains HP.  
+## Biography:
+Wyatt’s father is the captain of the army in the region. He comes from a strong military background and has been primed at a very young age to be the next commander in training. He takes pride in his father’s legacy and hopes to impress him. 
+## Appearance:
+A buff teen boy with spikey red hair, a ripped muscle t-shirt, and cargo shorts. 
+## Personality:
+At first glance, Wyatt can come off as a bully. He has a bold demeanor and does not like being seen as weak. But once you can get to know him you might find him to be a gentle soul. 
+## Homespace:
+Wyatt lives with his father in [OshaValley](/settings/OshaValley). The two live in a modernly decorated two-story home that feels incredibly empty. Wyatt is mostly home alone due to his father’s absence. His favorite room is the game room in the basement with large monitors for gaming. 
+## Relationships:
+Wyatt meets [Lilith](/characters/Lilith) while journeying down the street and the two instantly bicker. [Lilith](/characters/Lilith) finds Wyatt incredibly pompous and Wyatt finds [Lilith](/characters/Lilith) a bummer. However, once the two can spend some time with one another a fruitful friendship begins to grow. 
+Wyatt’s number one nemesis is [Lance](/characters/Lance). Lance is a co-captain of the [MatchStix](/lore/MatchStix) and the two’s rivalry seems to be rooted in their struggle for power. 
+## Trivia:
+- Wyatt was born on August 28th. His zodiac sign is Leo.
+
+## Name:
+Lilith
+## Description:
+Lilith is a sword fighter known for her agility, speed, and slash-swordplay. She is known to be a little bit of a wild child at the academy and is known for her sarcastic quips, apathy, and independence. However, she takes swordplay incredibly seriously being the top fencer at the academy. She is incredibly disciplined once it comes to battle and seldom takes the rest of her life seriously. She journeys down the street to prove that she can fight and overcome any enemy that crosses her. During her adventure, she meets [Wyatt](/characters/Wyatt) and while the two do not instantly see eye to eye they begin to develop a loyalty to one another. 
+## Class:
+Lancer
+## Stats:
+ATK 7, DEF 3, VIT 0, SPR 0, DEX 8, LCK 0
+## Alignment:
+Chaotic Good 
+## Quotes:
+- “Happy that you two kissed and made up, now could you tell us how to get to the end of the street?” (/lore/street)
+- “I don’t aspire to be liked, I aspire to be feared”
+## Image:
+- ![Portrait of Lilith|​​short teen girl with black hair loosely framing the face, black dress, cherry red lipstick, fencer, anime, sharp lighting]()
+## Image Gallery:
+- ![The top fencer at the academy|short teen girl with black hair loosely framing face, black fencing suit, front view, purple sword in mid-air]()
+- ![Her weapon of choice is Soothsaber|short teen girl with black face framing bob, holding purple samurai sword glowing, lavender falls in the background, front view, sharp HD ]()
+## Has:
+- [Soothsaber](items/Soothsaber) 
+- [Microchips](/items/Microchips)  
+- [Hydrapack](/items/Hydrapack) 
+## Abilities:
+- [Swift Swing](/abilities/Swift Swing)
+- [Slash](/abilities/Slash)
+- [BigBreak](/abilities/BigBreak)
+- [BreakAway](/abilities/BreakAway)
+## Limit Break:
+***Big Break*** - Attacks drain double the XP of your opponent for up to six hits or ten seconds. 
+## Biography:
+Not much is known about Lilith’s family and origin in the region. Her parents do come from money as Lilith has been in private school from an incredibly young age. 
+## Appearance:
+A short teen girl with a face-framing black bob. She wears a long black dress with fishnets. 
+## Personality:
+Lilith is incredibly apathetic. She seldom strives to be noticed or even in fact liked. She is sarcastic by nature and seems to humor herself more than she humors others. However, once you can get to know her you find a shy soul who has never figured out how to break out of her lone wolf persona. 
+## Homespace:
+Lilith lives in a heaping mansion in [Misfortuno](/settings/Misfortuno). The looks incredibly haunted with worn floorboards, dark windows, and a black matte-painted rooftop.
+## Relationships:
+- Lilith finds a friendship in Wyatt as the two journey down the street together. At first, she finds Wyatt incredibly pretentious and in turn, Wyatt finds Lilith’s demeanor unfriendly. But as the two can save one another from the perils of battle, they form a solid friendship. 
+## Trivia:
+- Lilith was born on October 3rd. Her zodiac sign is Libra.
+
+## Name:
+Malice	
+## Description:
+Malice is a fifteen-year-old fighter who is known for her untamed furry and strong will toward justice. She wields a dual dagger set [Yin&Yang]. She is considered to be a vigilante, willing to fight on anyone’s behalf if it means that fairness is restored. She is skilled in pickpocketing which allows her to collect money, potions, and orbs. She is accompanied by her black pet rabbit, [Wednesday](/characters/Wednesday) who gives Malice extra luck in her attacks. She has a strong friendship with [Lily](/characters/Lily) and a contentious relationship with her brother [Will](/characters/Will). She is known in battle for her speed, agility, and flexibility. 
+## Class:
+Hero/Thief
+## Stats:
+ATK 6, DEF 5, VIT 3, SPR 3, DEX 8, LCK 7
+## Alignment:
+Chaotic Good 
+## Quotes:
+- “If you win, I’ll come to the cave with you. If I win, you never speak to me again.”
+- “You’re being weird, weirdo”
+- “Being good is easy, being just is difficult.”
+## Image:
+- ![Portrait of Malice|​​ A teen girl, pink pigtails, black smokey eyes, freckles, pink jumpsuit, anime.]()
+## Image Gallery:
+- ![She enjoys traveling with her pet rabbit Wednesday|A teen girl, anime, pink pigtails, smokey eyes, she holds a black rabbit.]()
+- ![She wields a dual dagger set, Ying&Yang.|Teen girl, anime, pink pigtails, pink playsuit, front view, battle, two pink chrome daggers.]()
+## Has:
+- [Yin&Yang](items/Yin&Yang) 
+- [Pink Puff](/items/Pink Puff)
+- [Lyra Bunnies](/items/Lyra Bunnies)
+## Abilities:
+- [Duck](/abilities/Duck)
+- [Splice](/abilities/Splice)
+- [Reel](/abilities/Reel)
+- [Chain-wrap](/abilities/Chain-wrap)
+## Limit Break:
+*** Chain-wrap *** - Attacks from the opponent do not drain HP for up to thirty hits. 
+## Biography:
+Not much is known about Malice’s past however, Malice enjoys pickpocketing objects and artifacts about the past. She displays her objects as kinds of glass menageries which allows her to examine the world before the AI (/lore/theworld before).
+## Appearance:
+Malice is a teen girl with pink pigtails and a pink playsuit. She has blue eyes and freckles. 
+## Personality:
+Malice is altruistic by nature and will stand up for anyone who seems to be unfairly bullied or harassed. She is introverted by nature and can be seen watching others from a distance.  
+## Homespace:
+Malice lives on campus in a single dorm room. The dorm room is decorated with pink walls, pink shelves, and a variety of artifacts, objects, and ores that are displayed. The room resembles a kind of intimate museum of eclectic objects. 
+## Relationships:
+- Malice’s best friend Lily is the complete opposite of Malice. Where Malice is extroverted, Lily is loud and joyful. Where Lily is friendly, Malice is more reserved. Lily assists Malice in her journey down the [street](/lore/street) as a part of Malice’s final assignment in her combat class. 
+- Malice seems to often be at odds with her older brother [Will](/characters/Will). [Will](/characters/Will) is a skillful assassin who hopes to see his sister graduate and maybe even join the pack. But Malice finds the assassin world unjust as she only enjoys fighting opponents who deserve their defeat. 
+## Trivia:
+- Malice is inspired by Bleeding Edge’s Begoth Dolls. 
+- Her birthday is June 1st. Her zodiac sign is Gemini.
+
+## Name:
+Lily 
+## Description:
+Lily is a fourteen-year-old sorceress known for her water-binding and healing powers. She has a welcoming persona and a strange way of seeing the good in everyone. She wields a blue titanium mage (/items/Wand of Triton) that allows her to swarm her opponents with waterfalls, blizzards, and tsunamis. Her parents are [Nymph Healers](/lore/Nymph Healers) who specialize in protecting and nourishing the nature of the AI region. She assists her best friend Malice in her journey down the [Street](/lore/Street]. 
+## Class:
+Sorceress 
+## Stats:
+ATK 0, DEF 0, VIT 7, SPR 5, DEX 8, LCK 9
+## Alignment:
+Lawful Good 
+## Quotes:
+- “The ocean always seems to put my mind at peace. It reminds me of how small I am in the grand scheme of things.”
+- “What’s the motion, Ocean? What’s the tide, my guy?”
+- “The sea does not like to be restrained…much like myself”
+## Image:
+- ![Portrait of Lily|​​ A wide-eyed girl with long icy hair, she wears a blue frosted two-piece, anime, futuristic.]()
+## Image Gallery:
+- ![She is a sorceress, known for her water binding and healing powers.|A wide-eyed girl with long icy hair, wearing a blue frosted two-piece, a wave of water shoots from her hands, anime, full body view, waves crash in the background]()
+- ![She wields a blue titanium mage.|A long blue chrome wand, aqua, futuristic, shiny embossed, shell handle.]()
+## Has:
+- [Wand of Triton](items/Wand of Triton) 
+- [Freeze Puff](/items/Freeze Puff)
+- [Lyra Bunnies](/items/Lyra Bunnies)
+## Abilities:
+- [Tsunami](/abilities/Tsunami)
+- [Aqua-Freeze](/abilities/Aqua-Freeze)
+- [Moon Wave](/abilities/Moon Wav)
+## Limit Break:
+***Tsunami*** - Attacks triple in damage for twenty hits. 
+## Biography:
+Lily comes from a line of [Nymph Healers](/lore/Nymph Healers) a race of AIs who assisted in using a type of water bending to keep the agricultural nature of the region safe. 
+## Appearance:
+Lily is a wide-eyed girl with long icy hair. She wears a blue frosted combat two-piece with layers of icicles that cover her. 
+## Personality:
+Lily is peaceful by nature and tries her best to restore and heal conflict. She is known to be extremely extroverted and charismatic to everyone she encounters. 
+## Homespace:
+Lily lives in a small sea house in [Isekai Island](/settings/Isekai Island). There she can meditate closely with the water to recharge. The sea house is built with wooden slacks, and inside has a meditation hub where Lily regenerates her water-bending powers. 
+## Relationships:
+- Lily’s bestfriend is [Malice](/characters/Malice). The two became close when they had begun their first year at the academy. The two are opposite by nature, Lily is extroverted while [Malice](/characters/Malice) is introverted. The two sometimes hit a wall where their opposites seem to collide forcing them to overcome their differences. Lily assists [Malice](/characters/Malice) down the street.
+## Trivia:
+- Lily is born on February 20th. Her zodiac sign is Pisces.
+
+## Name:
+Opal
+## Description:
+Opal is a 17 year old girl, who has pink hair and only wears pink. She looks so sweet but she never loses a fight and she always smiles while doing it. Her sweet aesthetic allows for enemies to think she isn’t a threat therefore always giving her an upper hand. Both her parents are unknown, she spent her younger years growing up in an orphanage. She plotted an escape when only 8 years old, and she’s been thriving in the world alone. Her champion is a penguin named [Pepper](/characters/Pepper), they met while both rummaging through [June’s Junkyard](/settings/Junes Junkyard) in hopes of finding parts for weapons or food. They’ve been best friends ever since. Opal has gained the skill of being sneaky, fast and charming; she's able to get through or out any situations. And she’s a cute little pickpocketer.
+## Class:
+Assassin
+## Stats:
+ATK 50, DEF 40, VIT 13, SPR 10, DEX 60, LCK 20
+## Alignment:
+Chaotic Neutral 
+## Quotes:
+- "Aw, you think I’m cute? Gross."
+- "Being a pickpocketer is easy, being a teenage girl is hard."
+- "One strawberry milk, please!."
+- "I’m like a ghost, but pink."
+- "Pepper, are you ready?"
+## Image:
+- ![Opal concept art | front view, an amine short teenage girl with pink hair in two long braids, wearing an kawaii pink outfit mixed with cyberpunk, she’s holding a pink glowing yo-yo, she has bright green eyes, she has a mischievous grin]()
+## Image Gallery:
+- ![Opal enjoying a strawberry milk | front view, a young anime pink haired girl in a cyberpunk clothing,drinking a pink strawberry milk,in a futuristic 50’s style dinner]()
+- ![Opal with her pink lighting Yo-Yo in battle | back view, young anime pink haired girl in a cyberpunk clothing, swinging a pink yo-yo made of lighting, on a cyber world battlefield]()
+- ![Opal holding a goblin hostage | side view, young anime pink haired girl in a cyberpunk clothing lassoing a tall giant goblin, with a yo-yo]()
+- ![Opal and Pepper traveling in a forest | front view, young anime pink haired girl in a cyberpunk clothing, walking with a pink colored emperor anime penguin,in a cherry blossom forest, lush pink grass]()
+## Has:
+- [Pink Lighting Yo-Yo](/items/Pink Lighting YoYo)
+- [Bubblegum Lockpick](/items/Bubblegum Lockpicks)
+- [Ice Pods](/items/Ice Pods)
+- [Mamagotchi Pet](/items/Mamagotchi Pet)
+- [Strawberry Milk](/items/Strawberry Milk)
+## Abilities:
+- [Lockpick](/abilities/Lockpick)
+- [Stealth](/abilities/Stealth)
+- [Pink Lighting](/abilities/Pink Lighting)
+- [Twirl Punch](/abilities/Twirl Punch)
+- [Gaslight Girlboss GateKeep](/abilities/Gaslight Girlboss GateKeep)
+## Limit Break:
+**SuperNova** - Opal's pink lighting yo-yo attack becomes a small pink supernova, causing damage to a 30 meter radius, she also is shielded by the bomb from any attacks.
+## Biography:
+Opal was born and left at an orphanage as a newborn, she has no idea who her parents are. This left her without a sense of identity, and always having to fight for herself. When she was 8 years old, she escaped from the orphanage after the adults told her no one would ever want her. She didn’t care to be wanted, she was strong enough alone. She spent the next 8 years living in the [Cherry Blossom Forest](/settings/Cherry Blossom Forest), she had to lie, steal and break into places to survive. This has left her with a great knowledge of survival and people skills. Once she realized people would find her unthreatening, the cuter she looked, all she wore was pink and bows. Trying to disguise her mischievous intentions.
+One day while digging through [June’s Junkyard](/settings/June’s Junkyard) she met a small penguin with a huge jetpack named [Pepper](/characters/Pepper). Pepper needed someone with pickpocketing skills and Opal needed a friend. Now they're an inseparable fighting team, always protecting each other. Opal views [Pepper](/characters/Pepper) as her odd jetpacking wearing penguin Mom.
+## Appearance:
+Opal is a 17 year old girl who has bright pink hair put into two ponytails. She wears all pink outfits, they look like kawaii met cyberpunk. She has bright big green eyes, that gets her anything she wants. And a small mischievous smile, surrendered by freckles. She's always seen fiddling with her [Pink Lighting Yo-Yo](/items/Pink Lighting Yo-Yo) and listening to music with her big pink fluffy [Ice Pods](/items/Ice Pods). Sometimes she’ll be seen with a small strawberry milk stash after downing a cold glass of Strawberry Milk](/items/Strawberry Milk)
+## Personality:
+Opal is a sweet and sour type of girl, if she trusts you then you get the sweet. But if you cross her then you get the sour. She is used to being alone so sometimes her walls are up high, but once she feels safe you might get to know the real her. She is resilient and never backs down from a challenge. As someone who is still trying to gain her identity, she pushes herself into trouble by trying to prove her worth. She also has a small crush on the [MilkMan](/characters/Milkman) who serves her strawberry milk daily; she has never kissed someone before. So she’s very romantically shy. 
+## Homespace:
+Opal still lives in the [Cherry Blossom Forest](/settings/Cherry Blossom Forest) but now with [Pepper](/characters/Pepper). They have built a secret base out of blossoms and scraps from the junkyard. From the outside it looks like a big cherry blossom tree, but inside is a nicely designed pink base with bunk beds, weapon holders and a fridge full of milk. It’s cozy and also scary.
+## Relationships:
+- Opal has always been a lone wolf so her inner circle is very small, since she still feels like she needs to protect her.
+- Opal’s best and only friend is [Pepper](/characters/Pepper) who is more of a mom than a friend. Pepper is the only person Opal has ever loved. They are platonic soulmates and a fighting duo.
+- Opal’s first crush is on the [MilkMan](/characters/Milkman) who is half cyborg half human. He makes Opal’s strawberry milk perfect every time. And seems to be the first person to not be scared of her. And the only person who makes her laugh
+## Trivia:
+- Opal can only have oat milk because she is lactose intolerant.
+- Opal learned how to pickpocket at the age of 5.
+- Opal built her Pink Lighting Yo-yo out of scraps found at the junkyard.
+- Since Opal doesn't know her parents, her day of birth and where she is from is unknown. 
+
+## Name:
+Berry 
+## Description:
+Berry Marionberry is a 15/F. She is the youngest in a set of twins with [Mary](/characters/Mary), she has taken on the role of the shy and almost invisible as a twin. She spends most days doodling and reading books about electronics and building machines. She is builder of ideas and [Mary](/characters/Mary) is the thinker. Or that’s what she’s been told. Since she is so knowledgeable about being an engineer she can make new weapons or objects out of anything. She’s a fast learner and is always listening so she’s aware at all times. Instead of a wallflower think more cyberflower. 
+## Class:
+Engineer
+## Stats:
+ATK 20, DEF 35, VIT 15, SPR 10, DEX 50, LCK 10
+## Alignment:
+Neutral Good
+## Quotes:
+- "I’m sorry."
+- "Only need a sec to get this working"
+- "Hi Leo."
+- "Mary!”
+- "I like the name Pickles!."
+## Image:
+- ![Berry concept art | front view, an anime girl with dark black skin and short red hair, wearing school outfit, holding books]()
+## Image Gallery:
+- ![The twins | front view, black skin toned anime twin teenagers with dark skin and red hair, one has short hair and the other has long hair, school plaid outfits and glasses]()
+- ![Berry the engineer | side view, an anime girl with dark black skin and short red hair, wearing school outfit, she’s looking at a computer in a lab, holding parts of machines ]()
+- ![Berry walking Pickles the robot dog | back view, an anime girl with dark black skin and short red hair, wearing school outfit, she’s walking a robot dog, school hallway]()
+- ![Berry in love | side view, an anime girl with dark black skin and short red hair, wearing school outfit, she’s watching a tall pale scrawny anime teenage boy with curly black hair and blue eyes, dark and stylish emo clothing at his locker]()
+- ![Pickles and Berry on the battlefield | an anime girl with dark black skin and short red hair, wearing school outfit, her teammate a robot dog, on a battlefield]()
+## Has:
+- [Pickles the dog](/items/Pickles the dog)
+- [Secret Love Diary](/items/Secret Love Diary)
+- [Mini Laptop](/items/Mini Laptop)
+- [HoloCube](/items/[HoloCube)
+- [Gloop Ballz](/items/Gloop Ballz)
+## Abilities:
+- [Insta Engineer](/abilities/Insta Engineer)
+- [Semi Invisibility](/abilities/Semi Invisibility)
+- [Night Owl](/abilities/Night Owl)
+- [Always Alert](/abilities/Always Alert)
+- [Loyal](/abilities/Loyal)
+## Limit Break:
+**IRL 3D Printer** - If Berry consumes enough caffeine, she’s able to draw any weapon she wants on a paper and pull it out in real life. Instantly having any weapon, item or shield in hand. This is only allowed for 30 seconds.
+## Biography:
+Berry is the youngest of a pair of twins, she is 15 years old and spends most of the time alone or with her sister. Growing up wasn’t easy for Berry, she spent the first 10 years of her life silent because of her anxiety. This pushed [Mary](/characters/Mary) to be the protector and the loud one of the two. Mary has always cared for her and helped her in life but recently her protector has become overbearing. Berry is constantly wondering what it would be like if she got to think and speak for herself. She loves [Mary](/characters/Mary) but also wants to find herself. Since she was quiet most of her life she spent a lot of time reading about engineering and building machines. This knowledge has led her to be the fastest engineer in town, she’s about to build it in half the time. One day she saw [Leo Nardo](/characters/Leo Nardo) in the school's hall and was drawn to him. After the day he asked for a pen in biomechanics class, Berry has had a huge crush on him. 
+## Appearance:
+Berry is a 15 year old girl, her skin is dark brown and her eyes are green. She has short red hair and wears wire framed glasses. She’s usually dressed in a school uniform because it’s what Mary wears everyday. She is shorter than her sister and is seen doodling in her diary more than speaking.
+## Personality:
+Berry has always said and done what [Mary](/characters/Mary) has told her to. She is usually very quiet if alone and won’t speak to you unless she trusts you. She’s also very intelligent and is constantly searching for new techniques to help her build faster. She spends a lot of time with Pickles, her robot dog, she feels like he’s the only thing that gets her. Berry is still on the way to find herself, sometimes she doesn’t know who she is or what she wants. Since she spends all of her time being a wallflower this has led her to understand people and empathize with them. She knows what it’s like to be alone in a crowded room. 
+## Homespace:
+Berry and her twin share a room, it’s split right down the middle. Berry’s side of the room is mostly blank and the color gray. She does have one picture of her dog Pickles. And has a small retro turntable. Her bed is small and has white fluffy sheets. Her side of the room is very clean, mostly because she doesn’t have a lot of stuff at home. All of her gear and laptops are in the lab. Her diary is usually hidden under her pillow if not in her hands. The room is inside a huge vintage home that looks right out of the 50’s nuclear family bombing houses. So perfect it’s almost fake, they even have a white picket fence. 
+## Relationships:
+- Berry is twin sisters with [Mary](/characters/Mary),they have a very codependent relationship. The older they get the more Berry realizes Mary might need her more than she needs her. At the end of the day they’ll protect each other
+- Berry has a crush on [Leo Nardo](/characters/Leo Nardo), he has always been very kind to her and understanding when she gets quiet. One day he complimented her doodles. 
+- Berry doesn’t spend much time with her parents, they seem more interested in her sister than her. She wishes they were closer but doesn’t know how to connect with the,
+## Trivia:
+- Berry doesn’t actually enjoy eating pickles.
+- Berry is bisexual.
+- She usually listens to classical music when engineering.
+- Berry was born on May 25, making her and her sister a Gemini.
+
+## Name:
+Mary 
+## Description:
+Mary Marionberry is a 15/F. She is the oldest in a set of twins. As the oldest she felt it was her role to take control and be the voice of the two. She is very driven and creative, her favorite thing to do is read philosophy books and be an innovator. She knows her worth and won’t back down from a fight for what she wants. Sometimes she works so hard so she doesn’t have to stop and think so much about life. It’s just easier for her to stay in control when she doesn’t stop moving. Her IQ is the highest in the whole school and she knows it. Her passion makes her want to invent new technology to improve the world, and allow for a safer and healthier environment. Mary is the brain of the twins, she has a never ending creation of ideas.
+## Class:
+Super Intelligent
+## Stats:
+ATK 15, DEF 30, VIT 15, SPR 20, DEX 50, LCK 10
+## Alignment:
+Lawful Neutral
+## Quotes:
+- "Don’t interpret me."
+- "OH! I have an idea!"
+- "Don’t worry, I got this."
+- "Everything’s fine, everything is fine!"
+- "I mean, it’s like it’s hard."
+## Image:
+- ![Mary concept art | front view, an anime girl with dark black skin and long red hair, wearing school outfit]() 
+## Image Gallery:
+- ![The Twins | front view, black skin toned anime twin teenagers with dark skin and red hair, one has short hair and the other has long hair, school plaid outfits and glasses]()
+- ![Mary at work | back view, an anime girl with dark black skin and long red hair, wearing school outfit, a projected screen full or ideas and code]()
+- ![Mary to the rescue| Health Potion | side view, an anime girl with dark black skin and long red hair, wearing school outfit, mixing chemicals to create a potion,futuristic]()
+- ![Mary in a fight | back view, an anime girl with dark black skin and long red hair, wearing school outfit, holding a katana behind her back, on a battlefield]()
+- ![The Game Plan| front view, an anime girl with dark black skin and long red hair, wearing school outfit, writing on a holographic screen, cyberpunk]()
+## Has:
+- [Holo Notebook](/items/Holo Notebook)
+- [Fairy Katana](/items/Fairy Katana)
+- [Fanny Pack](/items/Fanny Pack)
+- [X-Ray Goggles](/items/X-Ray Goggles)
+- [StressBall](/items/StressBall)
+## Abilities:
+- [Quick Witted](/abilities/Quick Witted)
+- [Super Intelligent](/abilities/Super Intelligent)
+- [Potion Maker](/abilities/Potion Maker)
+- [Strong Stamina](/abilities/Strong Stamina)
+- [Fast Level Up](/abilities/Fast Level Up)
+## Limit Break:
+**Fairy Mary** - When Mary or Berry is low on health, Mary’s [Fairy Katana](/items/Fairy Katana) deals up to 15x damage. And creates a pink mist around for an easier escape. 
+## Biography:
+Mary is a 15 year old girl and the oldest in a set of twins. Growing up soon Mary learned she had to take charge in order to keep her and [Berry](/characters/Berry) safe in the world. When her sister wouldn’t speak as a child, Mary would speak for her. And as they get older it never really stops, Mary is just trying to protect her sister. It also gives her a sense of meaning to be taking care of her sister. She spends most times studying or thinking of new ideas to create something. She loves to learn, she loves to be the smartest. Her sense of knowledge never ends, ask her anything she’s probably read a book on it. This has allowed her to be ready for any situation she's in. She can solve any problem, make a potion and get through any hardships.
+## Appearance:
+Mary is a 15 year old girl, with dark brown skin and green eyes. She has long red hair and usually wears a bow in her hair. She wears a school uniform everyday, to stay consistent and not have to waste time on clothes. She is very clean and almost perfect, not a hair out of place. She's taller of the two twins but she is still pretty small and short. 
+## Personality: 
+Mary is strong headed and very logical, she thinks things out and finds the best plan.She is strong and always speaks her mind, she is not afraid to take up space. But she spends so much time trying to fix everything, she never has time to help herself. She's afraid of that. Still she keeps moving cause she can’t give up. But she still has her soft moments, when she feels safe she is actually kinda goofy but she doesn’t want anyone to know she's a total nerd.
+## Homespace:
+Mary shares a room with her twin [Berry](/characters/Berry), her side of the room is very academia core. Her sheets are red and plaid. All of her stuff looks like it’s off Pinterest. Neutral tones and the newest technology. She has a desk full of old books and piles of drawn in notebooks. She has a special pink glass shelf where she keeps her [Fairy Katana](/items/Fairy Katana). Everything on her side of the room is exactly where it needs to be. Like her twin the room is inside a huge vintage home that looks right out of the 50’s nuclear family bombing houses. So perfect it’s almost fake, they even have a white picket fence. 
+## Relationships:
+- Mary’s twin named [Berry](/characters/Berry) is also her best friend, she really only spends time with her. She helps her dress, speak and even tells her what to do next. She wants to protect her.
+- Mary has always been close to her parents, they are just now never around. They are both famous environmental scientists and are usually traveling around the world sharing their ideas. Mary wishes they’d spend more time with her.
+- Mary’s enemy is [Eli](/characters/Eli), well sorta. Most just an annoying boy who's always interpreting her learning. She dislikes him greatly and doesn’t laugh at a single “joke” of his.
+## Trivia:
+- Mary’s grandmother gave her the [Fairy Katana](/items/Fairy Katana), it’s been in the family for generations.
+- Mary’s favorite movie genre is rom coms, but she’ll never tell anybody.
+- Mary finds herself obsessing over things that she can not control, if she starts to panic she uses breathing techniques.
+- Mary was born on May 25, making her and her sister a Gemini.

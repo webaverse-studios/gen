@@ -1271,7 +1271,8 @@ ATK 5, DEF 15, VIT 5, SPR 10, DEX 0, LCK 5
 ## Decomposition:
 RED 1, GREEN 0, BLUE 0, WHITE 4, BLACK 2, SILVER 3
 ## Price:
-A joke
+0
+
 ## Name:
 Stuff animal nunchuck 
 ## Description:
@@ -1295,5 +1296,109 @@ This is the sharpest weapon on the street, it can cut through enemies arms in ju
 ATK 70, DEF 10, VIT 40, SPR 5, DEX 15, LCK 5
 ## Decomposition:
 RED 9, GREEN 0, BLUE 0, WHITE 0, BLACK 1, SILVER 0
+## Price:
+1000
+
+## Name:
+Bitsy
+## Description:
+A portable computer that generates any object out of thin air with correct data input. Think of this object as a 3-D Printer for the futuristic generation. The computer is made entirely out of LED Blue titanium with a hole in the computer’s monitor where objects are physicalized. The objects are holographic by nature and can interact with the physical elements of the real world. 
+## Image:
+![A titanium laptop cyberpunk. A holographic light shines through the laptop screen.]()
+## Stats:
+ATK 15, DEF 5, VIT 0, SPR 0, DEX 50, LCK 1
+## Decomposition:
+RED 10, GREEN 0, BLUE 50, WHITE 0, BLACK 5
+## Price:
+30000
+
+## Name:
+Rain Tablet
+## Description:
+A holographic tablet with encrypted information highlighting historical information about a society that once was. The tablet is rumored to be hidden in the Untouched Lands. 
+## Image:
+![A blue futuristic holographic tablet with digital inscriptions in a foreign language.]()
+## Stats:
+ATK 0, DEF 0, VIT 0, SPR 0, DEX 0, LCK 8
+## Decomposition:
+RED 0, GREEN 0, BLUE 50, WHITE 50, BLACK 20
+## Price:
+400000
+
+## Name:
+Night Bringer 
+## Description:
+A titanium shotgun that shoots laser-powered bullets. The gun is a family heirloom that has been passed down from generation to generation. On the gun’s handle are faded initials which are now illegible. 
+## Image:
+![A futuristic titanium shotgun with faded inscribed markings on the gun’s handle.]()
+## Stats:
+ATK 8, DEF 1, VIT 0, SPR 0, DEX 0, LCK 8
+## Decomposition:
+RED 0, GREEN 0, BLUE 50, WHITE 50, BLACK 50
+## Price:
+600
+
+## Name:
+Chlorolixer 
+## Description:
+An herbal concoction made with a variety of roots and herbs. Increases HP and luck upon consumption. 
+## Image:
+![Glowing green goo in a glass mason jar.]()
+## Stats:
+ATK 0, DEF 1, VIT 0, SPR 0, DEX 0, LCK 10
+## Decomposition:
+RED 0, GREEN 100, BLUE 50, WHITE 0, BLACK 0
+## Price:
+100
+
+## Name:
+UpperCuts 
+## Description:
+A pair of holographic gloves generate a lethal force with each attack.
+## Image:
+![blue transparent gloves, futuristic, holographic force glows]()
+## Stats:
+ATK 8, DEF 0, VIT 2, SPR 0, DEX 0, LCK 3
+## Decomposition:
+RED 0, GREEN 100, BLUE 0, WHITE 50, BLACK 50
+## Price:
+350
+
+## Name:
+Yin&Yang
+## Description:
+A pair of pink chrome solar-powered daggers. The daggers are incredibly light to wield for swift hits and flexibility in combat. 
+## Image:
+![two pink chrome daggers, futuristic, led light powered, light.]()
+## Stats:
+ATK 5, DEF 3, VIT 0, SPR 0, DEX 0, LCK 5
+## Decomposition:
+RED 100, GREEN 0, BLUE 0, WHITE 100, BLACK 0
+## Price:
+450
+
+## Name:
+Wand of Triton 
+## Description:
+A blue titanium wand that channels the surrounding bodies of water for battle. The wand only works with those who have proven skills in water bending. 
+## Image:
+![A long blue chrome wand, aqua, futuristic, shiny embossed, shell handle]()
+## Stats:
+ATK 0, DEF 0, VIT 8, SPR 5, DEX 0, LCK 5
+## Decomposition:
+RED 0, GREEN 0, BLUE 100, WHITE 40, BLACK 0
+## Price:
+900
+
+## Name:
+Freeze Puff
+## Description:
+A magical vapor that when blown can cause cosmic effects. This puff is flavored ‘freeze’ which shoots arctic attacks toward your opponent. 
+## Image:
+![blue cigarette, icy, shiny, futuristic, glows blue.]()
+## Stats:
+ATK 0, DEF 0, VIT 9, SPR 5, DEX 0, LCK 5
+## Decomposition:
+RED 0, GREEN 0, BLUE 100, WHITE 100, BLACK 0
 ## Price:
 1000

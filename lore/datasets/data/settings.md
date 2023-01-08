@@ -325,13 +325,15 @@ RED: 30, GREEN: 0, BLUE: 0, WHITE: 30, BLACK: 0
 - [Titanium trophy](/items/Titanium Trophy)
 - [Boxing Arena](/items/Boxing Arena)
 ## Mobs:
+- [Sword Knight](/items/Sword Knight)
+- [Massive Golem](/items/Massive Golem)
 
 ## Name:
-Osha Valley
+Osha Valley 			
 ## Description:
 A beautiful and prosperous land with deep valleys, hills, lakes, and bountiful gardens. The valley is on the slight outskirts of the zones and is home to AIs who want to get away from the hustle and bustle of the city. Osha Valley is known to produce some of the most well-known ingredients for potion making, harvesting, and spells. While the valley is mostly peaceful, those who travel should heed caution when approached by a midnight wolf. 
 ## Biome:
-Valley
+Valley 
 ## Image:
 - ![Osha Valley | A sunset view of hills, valleys, and lakes filled with a crisp mist.]()
 ## Image Gallery:
@@ -353,3 +355,137 @@ RED: 0, GREEN: 50, BLUE: 50, WHITE: 20, BLACK: 0
 - [Cottontail Rabbits](/items/Cottontail Rabbits)
 - [Amami Rabbit](/items/Amami Rabbit)
 - [Midnight Wolves](/items/Midnight Wolves)
+
+## Name:
+Volero
+## Description:
+A small encampment based on the largest volcano in the region, Volero. The volcano rests in the middle of the area where tiny glass-blown houses surround it. It has now been dormant, not actively erupted in a hundred years. The volcano is regarded as a sacred place known to be the spiritual hub for [Pelia](/lore/Pelia) the goddess of change. A statue of the goddess stands at the entrance of the village and in the winter, people of the summer bless her with gifts. It is said that when Pelia is enraged, the volcano will erupt once again. Students who aspire to wield fire journey to Volero to train in the art of fire bending (/lore/fire bending). In the fall, a fire-bending competition is held (/lore/Fyre Fest) where the strongest warrior of fire is rewarded. 
+## Biome:
+Volcano
+## Image:
+- ![Statue of Pelia|statue of the volcano goddess, molten lava, flames encircle the statue]()
+## Image Gallery:
+- ![The volcano rests in the center of the region, it is said to be a sacred place.|a dormant volcano on the edge of a steep mountain, volcanic rock wraps around the mountain, glowing lava seeps through cracks, hd]()
+- ![Villagers live in glass-blown houses surrounding the volcano.|God view, village, glass-blown igloos, highly detailed, open space, orange paved roads, red trees, magma flowers ]()
+- ![In the fall, Fyre Fest is held where the strongest fire benders compete.|Topdown, the village of glass-blown houses, red trees hung by red lanterns, magma flowers, fire benders.]()
+## Ores:
+RED 100, GREEN 0, BLUE 0, WHITE 0, BLACK 0
+## Items:
+- [Magma Trees](/items/Magma Trees)
+- [Volcano](/items/Volcano)
+- [Magma Rocks](/items/Magma Rocks)
+## Mobs:
+- [Fire Birds](/items/Fire Birds)
+- [Lava Worms](/items/Lava Worms)
+
+## Name:
+Misfortuno
+## Description:
+A barren ghost town in the mid-west of the region. The town’s scenery is macabre, filled with stone and moss statues, black iron fences, and marble mausoleum-like buildings. At the town’s center is a black stone fountain known as a spiritual hub for spirits who have yet to cross over. The town’s weather is cloudy with seldom sunshine and a blanket of fog that sweeps through each street. The town is largely said to be abandoned only filled with the ghosts of a world before. A rumored creature known as the [Shadow Man](/lore/Shadow Man) is said to roam the ghost town looking for any soul to catch. 
+## Biome:
+Ghost Town 
+## Image:
+- ![The entrance of Misfortuno|looming black iron fence, decorated with graveyard statues]()
+## Image Gallery:
+- ![The shadow fountain, a hub for spirits and those who were before.|God view, haunted fountain, one central stone statue in the center, black roses encircle the fountain.]()
+- ![The Shadow Man is said to roam the largely abandoned town.|Ghostly shadow creature, long limbs, a top hat, ghastly toothy smile, roams a stone village.]()
+- ![The town is said to be abandoned for over a hundred years. |Topdown, abandoned town, mausoleum houses, misty fog, low lighting, spirits float background.]()
+## Ores:
+RED 0, GREEN 0, BLUE 0, WHITE 100, BLACK 100
+## Items:
+- [Dead Trees](/items/Dead Trees)
+- [Black Roses](/items/Black Roses)
+- [Haunted Rocks](/items/Haunted Rocks)
+## Mobs:
+- [Crows](/items/Crows)
+- [Ghosts](/items/Ghosts)
+
+## Name:
+Hallow’s Cove 
+## Description:
+A ghostly port on the peninsula of the region. The tiny port is dimly lit by rusted metal street lights and is met by the sounds of waves crashing. In the waters lurk rare fish not found in any region but this one. On the dock of the port you can find the earliest model sailboats said to harbor the spirits of the past. But if you are able to please the spirits, they may reward you in prosperous ways. 
+## Biome:
+Port 
+## Image:
+- ![Sir Gregory Hall, a famous sailor of Hallow’s Cove. |A bronze statue lifted among the water at the edge of the port.]()
+## Image Gallery:
+- ![Hallow’s Cove, a ghostly port on the peninsula of the region. | A mystical fog fills a boardwalk with rotted wood, past the board walk you can see dark ominous waters.]()
+- ![In the waters lurk rare fish not found in any other region. | A vibrant electric blue fish with the beak of a bird and pink neon stripes.]()
+- ![The spirits of sailors haunt this port, but if you are able to please them they may reward you in the most prosperous ways. | Dazzling gems. Piles of golden Treasure lead to a golden forged saber.]()
+## Ores:
+RED 0, GREEN 0, BLUE 60, WHITE 30, BLACK 60
+## Items:
+- [Golden Treasure](/items/Golden Treasure)
+- [Fishing Rods](/items/Fishing Rods)
+## Mobs:
+- [Pirate Ghosts](/items/Pirate Ghosts)
+- [Hallow’s Fish](/items/Hallow’s Fish)
+
+## Name:
+Veilside Crypts
+## Description:
+A hidden ancestral crypt found in the foothills along the coast of the region. The crypt is home to ancient artifacts, ores, and the tombs of age-old royalty. Throughout the crypt lurk bizarre drawings leading to a puzzle that is desperate to be solved. If you can decipher the hieroglyphics, you will be able to take hold of the Pharoah’s blade, the richest and most decadent weapon to date! But take heed! As soon as the sun sets, darkness fills the crypt and the spirits come out of their tombs to play! 
+## Biome:
+Crypt
+## Image:
+- ![Welcome to the Veilside Crypts. |Two decorative statues of Pharaohs stand on either side of the cave’s opening. There are two torches next to each statue that blaze viciously.]()
+## Image Gallery:
+- ![The crypt is home to ancient artifacts, ores, and the tombs of age-old royalty. | The inside of the cave is lined with brightly lit torches and golden tombs covered in dust and cobwebs.]()
+- ![Throughout the crypt lurk bizarre drawings leading to a puzzle that is desperate to be solved. | A series of comic book like illustrations are written on the cave walls in a dark charcoal.]()
+- ![If you can decipher the puzzle, you will be led to the Pharaoh's blade, the richest and most decadent weapon to date! | A golden broadsword with encrusted rubies, sapphires, and emeralds.]()
+-![But take heed! As soon as the sun sets, darkness fills the crypt and the spirits come out of their tombs to play! | A rotting mummy’s hand is seen crawling out of the tomb.]()
+## Ores:
+RED 50, GREEN 0, BLUE 0, WHITE 30, BLACK 70
+## Items:
+- [Golden Tombs](/items/Golden Tombs)
+- [Pharoah’s Blade](/items/Pharoah’s Blade)
+- [Torchlights](/items/Torchlights]
+- [Ancient Urns](/items/Ancient Urns]
+## Mobs:
+- [Tomb Mummy](/items/Tomb Mummy)
+- [Veilside Beetle](/items/Veilside Beetle)
+
+## Name:
+Verona Square
+## Description:
+Based on Noto, Sicily; Verona Square is a village courtyard in the heart of the city. The square differs in architecture from the rest of the town with high rise palazzo buildings made entirely out of brick and stone. In the center of the square is the city capitol, a building with high arches and podiums. The square is always busy, flooded with people weaving in and out of stores, and the fragrant smell of crispy street food. Vendors set up shops selling ores, weapons, potions, ingredients, and food. Students come to purchase school supplies and trade nefarious items. 
+## Biome:                            
+Courtyard
+## Image:
+- ![Verona Square is a courtyard in the heart of the city.| A stone pathway leads to a fountain. Along the path are high rise palazzo buildings with roman architecture.]()
+## Image Gallery:
+- ![The square is always busy, flooded with people weaving in and out of stores. | Crowds of people exit the palazzo buildings with cloth wrapped items such as swords and potions.]()
+- ![Vendors set up shops selling ores, weapons, potions, ingredients, and food. | Along the stoneway path are booths where vendors set up shop. One booth is filled with crystals. One booth is filled with potions varying in size and color. One booth has freshly forged iron swords, daggers, and broadswords.]()
+-![In the center of the square is the city capitol. | A white building that resembles Rome’s Capitol with a large porcelain stairway.]()
+- ![Students come to the square to buy and trade. | A group of teen students in school uniform are crowded around each other in a circle. In the center of the circle,  in the center of the circle are two students who are in the middle of a trade.]()
+## Ores:
+RED 0, GREEN 50, BLUE 30, WHITE 30, BLACK 0
+## Items:
+- [Fountain](/items/fountain)
+- [Booths](/items/Booths)
+- [Stone Archways](/items/Stone Archways)
+- [Light Posts](/items/Light Posts)
+## Mobs:
+- [Starlings](/items/Starlings)
+- [Pigeons](/items/Pigeons)
+
+## Name:
+Pomona’s Place
+## Description:
+A mystical orchard in the southside of the region where the sun blazes on. 
+## Biome:
+Orchard
+## Image:
+- ![Statue of Pomona | A seven foot tall statue of a Roman woman made entirely out of stone.]()
+## Image Gallery:
+- ![Hallow’s Cove, a ghostly port on the peninsula of the region. | A mystical fog fills a boardwalk with rotted wood, past the board walk you can see dark ominous waters.]()
+- ![In the waters lurk rare fish not found in any other region. | A vibrant electric blue fish with the beak of a bird and pink neon stripes.]()
+- ![The spirits of sailors haunt this port, but if you are able to please them they may reward you in the most prosperous ways. | Dazzling gems. Piles of golden Treasure lead to a golden forged saber.]()
+## Ores:
+RED 0, GREEN 0, BLUE 60, WHITE 30, BLACK 60
+## Items:
+- [Golden Treasure](/items/Golden Treasure)
+- [Fishing Rods](/items/Fishing Rods)
+## Mobs:
+- [Pirate Ghosts](/items/Pirate Ghosts)
+- [Fish](/items/fish)
