@@ -63,7 +63,8 @@ export const Gen = () => {
   const _setTab = newTab => () => {
     // console.log('set tab', newTab);
     // setTab(newTab);
-    const u = new URL(globalThis.location);
+    const u = new URL(globalThis.location.href);
+    u.search = '';
     u.searchParams.set('tab', newTab);
     router.pushUrl(u.href);
   };
