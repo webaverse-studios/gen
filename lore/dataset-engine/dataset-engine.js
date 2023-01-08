@@ -68,18 +68,19 @@ export class DatasetEngine {
     }
 
     const itemsString = formatDatasetItemsForPolyfill(items, this.datasetSpec, initialValue, opts);
-    const prompt = itemsString + '\n\n' + initialValueString;
-    // console.log('got components', {
-    //   items,
-    //   itemsString,
-    //   initialValueString,
-    // });
-
+    let prompt = itemsString + '\n\n' + initialValueString;
     let stops;
+    const lineKey = '\n-';
     if (continueKey) {
-      stops = '\n\n';
+      prompt += lineKey;
+      stops = [
+        lineKey,
+        '\n\n',
+      ];
     } else {
-      stops = '\n';
+      stops = [
+        '\n',
+      ];
     }
     const completion = await this.aiClient.generate(prompt, stops);
     // console.log('got completion', {
