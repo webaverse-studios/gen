@@ -121,8 +121,8 @@ export const Storyboard3DRendererComponent = ({
           <button className={styles.button} onClick={async e => {
             const blob = await getZineFileBlob();
             const src = await zineFile2Url(blob);
-            const u = new URL(globalThis.location);
-            u.searchParams.set('tab', 'multiscene');
+            const u = new URL(globalThis.location.href);
+            u.searchParams.set('tab', 'metasceneGenerator');
             u.searchParams.set('src', src);
             const router = useRouter();
             router.pushUrl(u.href);
