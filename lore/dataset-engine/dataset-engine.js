@@ -74,7 +74,7 @@ export class DatasetEngine {
       ];
     } else {
       stops = [
-        '\n',
+        '\n\n',
       ];
     }
     const completion = await this.aiClient.generate(prompt, stops);
