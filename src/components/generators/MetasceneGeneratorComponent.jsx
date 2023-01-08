@@ -142,6 +142,9 @@ import {
   DatasetGenerator,
   // CachedDatasetGenerator,
 } from '../../../lore/dataset-engine/dataset-generator.js';
+import {
+  useRouter,
+} from '../../generators/router.js';
 // import {
 //   formatDatasetItems,
 //   formatDatasetItemsForPolyfill,
@@ -2876,6 +2879,53 @@ const MetasceneGeneratorComponent = () => {
     });
     _setFiles(sortedFiles);
   };
+  const compile = async files => {
+    if (files.length > 0) {
+      initCompressor({
+        numWorkers: defaultMaxWorkers,
+      });
+
+      setCompiling(true);
+      try {
+        const filesSorted = shuffle(files.slice(), seed)
+          .slice(0, numInPanels)
+          // .sort((a, b) => a.name.localeCompare(b.name));
+        await metazine.compileZineFiles(filesSorted, {
+          seed,
+          numPanels: numOutPanels,
+        });
+      } finally {
+        setCompiling(false);
+      }
+
+      setLoaded(true);
+    }
+  };
+  const setSrc = async src => {
+    const res = await fetch(src);
+    const blob = await res.blob();
+    console.log('set src', {src, blob});
+    const files = [blob];
+    setFiles(files);
+    compile(files);
+  };
+
+  useEffect(() => {
+    const router = useRouter();
+    if (router.currentSrc) {
+      // console.log('src init', router.currentSrc);
+      setSrc(router.currentSrc);
+    }
+    const srcchange = e => {
+      const {src} = e.data;
+      // console.log('src change', src);
+      setSrc(src);
+    };
+    router.addEventListener('srcchange', srcchange);
+    return () => {
+      router.removeEventListener('srcchange', srcchange);
+    };
+  }, []);
 
   return (
     <div className={styles.metasceneGenerator}>
@@ -2958,27 +3008,8 @@ const MetasceneGeneratorComponent = () => {
                     setNumOutPanels(e.target.value);
                   }} />
                 </label>
-                <input type='button' value='Generate' className={styles.submitButton} onClick={async () => {
-                  if (files.length > 0) {
-                    initCompressor({
-                      numWorkers: defaultMaxWorkers,
-                    });
-
-                    setCompiling(true);
-                    try {
-                      const filesSorted = shuffle(files.slice(), seed)
-                        .slice(0, numInPanels)
-                        // .sort((a, b) => a.name.localeCompare(b.name));
-                      await metazine.compileZineFiles(filesSorted, {
-                        seed,
-                        numPanels: numOutPanels,
-                      });
-                    } finally {
-                      setCompiling(false);
-                    }
-
-                    setLoaded(true);
-                  }
+                <input type='button' value='Generate' className={styles.submitButton} onClick={e => {
+                  compile(files);
                 }} />
               </div>
             : null}
