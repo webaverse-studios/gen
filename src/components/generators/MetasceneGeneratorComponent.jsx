@@ -2799,7 +2799,7 @@ const MetasceneGeneratorComponent = () => {
   const [compiling, setCompiling] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [seed, setSeed] = useState('lol');
-  const [numInPanels, setNumInPanels] = useState(300);
+  const [numInPanels, setNumInPanels] = useState(200);
   const [numOutPanels, setNumOutPanels] = useState(32);
   const [files, _setFiles] = useState([]);
 
