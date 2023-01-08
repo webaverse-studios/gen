@@ -2689,22 +2689,16 @@ const SideMetascene = ({
   return (
     <div className={styles.overlay}>
       <div className={styles.heroTag}>
-        <div className={styles.h1}>
-          {name}
-        </div>
-        <div className={styles.h2}>
-          {description}
-        </div>
+        <div className={styles.h1}>{name}</div>
+        <div className={styles.h2}>{description}</div>
+        <div className={styles.label}>Objectives</div>
         <div className={styles.list}>
           {objectives.map(objective => (
-            <div className={styles.listItem} key={objective}>
-              {objective}
-            </div>
+            <div className={styles.listItem} key={objective}>{objective}</div>
           ))}
         </div>
-        <div className={styles.h3}>
-          {reward}
-        </div>
+        <div className={styles.label}>Reward</div>
+        <div className={styles.h3}>{reward}</div>
       </div>
       <div className={classnames(styles.sidebar, styles.form)}>
         {!loreEnabled ? (
