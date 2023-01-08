@@ -7,6 +7,7 @@ import {
 } from '../../generators/scene-generator.js';
 import {
   downloadFile,
+  zineFile2Url,
   openZineFile,
 } from '../../utils/http-utils.js';
 import styles from '../../../styles/Storyboard3DRenderer.module.css';
@@ -19,6 +20,7 @@ import {
   panelSize,
 } from '../../zine/zine-constants.js';
 import {zineMagicBytes} from '../../zine/zine-format.js';
+import {useRouter} from '../../generators/router.js';
 
 //
 
@@ -87,32 +89,48 @@ export const Storyboard3DRendererComponent = ({
   // const layersArray = panel.getLayers();
   // console.log('got layers', layersArray);
 
+  const getZineFileBlob = async () => {
+    const uint8Array = await storyboard.zs.exportAsync();
+    const blob = new Blob([
+      zineMagicBytes,
+      uint8Array,
+    ], {
+      type: 'application/octet-stream',
+    });
+    return blob;
+  };
+
   return (
     <div className={styles.storyboard3DRenderer}>
       <div className={styles.header}>
-        <input type='text' className={styles.input} value={prompt} placeholder='prompt' onChange={e => {
-          setPrompt(e.target.value);
-          panel.setData(promptKey, e.target.value);
-        }} />
+        <div className={styles.row}>
+          <input type='text' className={styles.input} value={prompt} placeholder='prompt' onChange={e => {
+            setPrompt(e.target.value);
+            panel.setData(promptKey, e.target.value);
+          }} />
+        </div>
         {/* <div className={styles.text}>Status: Compiled</div> */}
-        <button className={styles.button} onClick={async e => {
+        {/* <button className={styles.button} onClick={async e => {
           await panel.compile();
-        }}>Recompile</button>
-        <button className={styles.button} onClick={async e => {
-          // await panel.compile();
-          console.log('download', storyboard);
-          const uint8Array = await storyboard.zs.exportAsync();
-          const blob = new Blob([
-            zineMagicBytes,
-            uint8Array,
-          ], {
-            type: 'application/octet-stream',
-          });
-          openZineFile(blob);
-        }}>Zine2app</button>
-        <button className={styles.button} onClick={async e => {
+        }}>Recompile</button> */}
+        <div className={styles.row}>
+          <button className={styles.button} onClick={async e => {
+            const blob = await getZineFileBlob();
+            openZineFile(blob);
+          }}>Zine2app</button>
+          <button className={styles.button} onClick={async e => {
+            const blob = await getZineFileBlob();
+            const src = await zineFile2Url(blob);
+            const u = new URL(globalThis.location);
+            u.searchParams.set('tab', 'multiscene');
+            u.searchParams.set('src', src);
+            const router = useRouter();
+            router.pushUrl(u.href);
+          }}>Zine2multi</button>
+          <button className={styles.button} onClick={async e => {
             await panel.collectData();
-        }}>Submit Scale</button>
+          }}>Submit Scale</button>
+        </div>
       </div>
       <Panel3DCanvas
         panel={panel}
