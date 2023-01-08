@@ -23,7 +23,7 @@ export function downloadFile(file, filename) {
 }
 
 let ids = 0;
-export async function openZineFile(file) {
+export async function zineFile2Url(file) {
   const u = `${devServerTmpUrl}/zine-${++ids}.zine`;
   const res = await fetch(u, {
     method: 'PUT',
@@ -36,9 +36,10 @@ export async function openZineFile(file) {
   // const devServerUrl 
   const u2 = new URL(`https://local.webaverse.com/`);
   u2.searchParams.set('src', u);
-
-  // console.log('got u', u2.href, blob2);
-
+  return u2.href;
+}
+export async function openZineFile(file) {
+  const u = await zineFile2Url(file);
   // open in new tab
-  window.open(u2.href, '_blank');
+  window.open(u, '_blank');
 }
