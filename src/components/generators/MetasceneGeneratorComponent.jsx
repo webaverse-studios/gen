@@ -2654,14 +2654,14 @@ const SideScene = ({
 
   return (
     <div className={styles.overlay}>
-      {/* <div className={styles.heroTag}>
+      <div className={styles.heroTag}>
         <div className={styles.h1}>
           {panelSpec.name}
         </div>
         <div className={styles.h2}>
           {panelSpec.description}
         </div>
-      </div> */}
+      </div>
       <div className={classnames(styles.sidebar, styles.form)}>
         <img src={panelSpec.imgSrc} className={styles.img} />
         {!loreEnabled ? (
