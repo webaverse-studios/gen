@@ -49,12 +49,8 @@ globalThis.testGeneration = async () => {
     const items = await getDatasetItemsForDatasetSpec(datasetSpec);
     // console.log('battle-banter items', items);
   }
-  const type = 'setting';
-  const datasetSpec = datasetSpecs.find(ds => ds.type === type);
-  const items = await getDatasetItemsForDatasetSpec(datasetSpec);
-  // console.log('setting items', items);
 
-  // generate an item from the dataset
+  /* // generate an item from the dataset
   {
     const datasetGenerator = new DatasetGenerator({
       datasetSpecs,
@@ -68,9 +64,9 @@ globalThis.testGeneration = async () => {
       keys: ['Image'],
     });
     console.log(settingSpec);
-  }
+  } */
 
-  /* // continue item from the dataset
+  // continue item from the dataset
   {
     // generate an item from the dataset
     const datasetGenerator = new DatasetGenerator({
@@ -88,10 +84,10 @@ globalThis.testGeneration = async () => {
     });
     console.log('chat spec 1', chatSpec1);
 
-    const chatSpec2 = await datasetGenerator.generateItem('chat', chatSpec1, {
+    /* const chatSpec2 = await datasetGenerator.generateItem('chat', chatSpec1, {
       keys: ['Name', 'Description', 'Chat'],
       continueKey: 'Chat',
     });
-    console.log(chatSpec2);
-  } */
+    console.log(chatSpec2); */
+  }
 };
