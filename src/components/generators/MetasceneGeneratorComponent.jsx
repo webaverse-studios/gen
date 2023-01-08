@@ -2632,9 +2632,9 @@ const Metazine3DCanvasWrapper = React.memo(Metazine3DCanvas, (prevProps, nextPro
 });
 const SideScene = ({
   panelSpec,
-  loreEnabled,
-  setLoreEnabled,
 }) => {
+  const [loreEnabled, setLoreEnabled] = useState(false);
+
   return (
     <div className={styles.overlay}>
       <div className={styles.heroTag}>
@@ -2661,9 +2661,9 @@ const SideScene = ({
 };
 const SideMetascene = ({
   // panelSpec,
-  loreEnabled,
-  setLoreEnabled,
-}) => {
+}) => {  
+  const [loreEnabled, setLoreEnabled] = useState(false);
+
   return (
     <div className={styles.overlay}>
       {/* <div className={styles.heroTag}>
@@ -2722,11 +2722,7 @@ const MetazineCanvas = ({
     <div className={styles.metazineCanvas}>
       {panelSpec ? <SideScene
         panelSpec={panelSpec}
-        loreEnabled={loreEnabled}
-        setLoreEnabled={setLoreEnabled}
       /> : <SideMetascene
-        loreEnabled={loreEnabled}
-        setLoreEnabled={setLoreEnabled}
       />}
       <Metazine3DCanvasWrapper
         metazine={metazine}
