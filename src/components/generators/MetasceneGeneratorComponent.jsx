@@ -3,6 +3,7 @@ import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUti
 // import {OBB} from 'three/examples/jsm/math/OBB.js';
 import {useState, useRef, useEffect} from 'react';
 import React from 'react';
+import classnames from 'classnames';
 import alea from 'alea';
 import concaveman from 'concaveman';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
@@ -2625,10 +2626,68 @@ const Metazine3DCanvas = ({
 const Metazine3DCanvasWrapper = React.memo(Metazine3DCanvas, (prevProps, nextProps) => {
   return prevProps.metazine === nextProps.metazine;
 });
+const SideScene = ({
+  panelSpec,
+  loreEnabled,
+  setLoreEnabled,
+}) => {
+  return (
+    <div className={styles.overlay}>
+      <div className={styles.heroTag}>
+        <div className={styles.h1}>
+          {panelSpec.name}
+        </div>
+        <div className={styles.h2}>
+          {panelSpec.description}
+        </div>
+      </div>
+      <div className={classnames(styles.sidebar, styles.form)}>
+        <img src={panelSpec.imgSrc} className={styles.img} />
+        {!loreEnabled ? (
+          <div
+            className={styles.button}
+            onClick={e => {
+              setLoreEnabled(true);
+            }}
+          >Enable Lore</div>
+        ) : null}
+      </div>
+    </div>
+  );
+};
+const SideMetascene = ({
+  // panelSpec,
+  loreEnabled,
+  setLoreEnabled,
+}) => {
+  return (
+    <div className={styles.overlay}>
+      {/* <div className={styles.heroTag}>
+        <div className={styles.h1}>
+          {panelSpec.name}
+        </div>
+        <div className={styles.h2}>
+          {panelSpec.description}
+        </div>
+      </div> */}
+      <div className={classnames(styles.sidebar, styles.form)}>
+        {!loreEnabled ? (
+          <div
+            className={styles.button}
+            onClick={e => {
+              setLoreEnabled(true);
+            }}
+          >Enable Lore</div>
+        ) : null}
+      </div>
+    </div>
+  );
+};
 const MetazineCanvas = ({
   metazine,
 }) => {
   const [panelSpec, setPanelSpec] = useState(null);
+  const [loreEnabled, setLoreEnabled] = useState(false);
 
   return (
     <>
@@ -2657,19 +2716,14 @@ const MetazineCanvas = ({
       }}>Zine2app</button>
     </div> : null}
     <div className={styles.metazineCanvas}>
-      {panelSpec ? <div className={styles.overlay}>
-        <div className={styles.heroTag}>
-          <div className={styles.h1}>
-            {panelSpec.name}
-          </div>
-          <div className={styles.h2}>
-            {panelSpec.description}
-          </div>
-        </div>
-        <div className={styles.sidebar}>
-          <img src={panelSpec.imgSrc} className={styles.img} />
-        </div>
-      </div> : null}
+      {panelSpec ? <SideScene
+        panelSpec={panelSpec}
+        loreEnabled={loreEnabled}
+        setLoreEnabled={setLoreEnabled}
+      /> : <SideMetascene
+        loreEnabled={loreEnabled}
+        setLoreEnabled={setLoreEnabled}
+      />}
       <Metazine3DCanvasWrapper
         metazine={metazine}
         onPanelSpecChange={setPanelSpec}

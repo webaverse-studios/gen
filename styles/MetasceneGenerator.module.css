@@ -51,6 +51,9 @@
 .metasceneGenerator .metazineCanvas .overlay .heroTag .h2 {
   max-width: 600px;
 }
+.metasceneGenerator .metazineCanvas .overlay .form {
+  pointer-events: all;
+}
 .metasceneGenerator .metazineCanvas .overlay .sidebar {
   position: absolute;
   top: 0;
