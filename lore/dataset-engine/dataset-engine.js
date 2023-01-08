@@ -1,4 +1,5 @@
 import alea from 'alea';
+// import uuidHash from 'uuid-hash';
 import {
   formatInitialValueText,
   formatDatasetItemsForPolyfill,
@@ -7,12 +8,6 @@ import {
 import {
   getDatasetItemsForDatasetSpec,
 } from './dataset-specs.js';
-
-// const stops = [
-//   '\n\n',
-//   '@Type',
-//   '\n#'
-// ];
 
 const modelMaxTokens = 4000;
 export class DatasetEngine {
@@ -100,24 +95,5 @@ export class DatasetEngine {
       ...parsedCompletion,
     };
     return completedValue;
-
-    /* if (this.dataset.items.length > 0) {
-      const item0 = this.dataset.items[0];
-
-      const prompt = this.dataset.generateItemPrompt(name);
-      const result = await this.aiClient.generate(prompt, '\n\n');
-      
-      const response = `##${result}`;
-      const fullResponse = `# ${name}\n${response}`;
-      const parsedResponse = parseItems(fullResponse)[0] ?? null;
-      
-      return {
-        prompt,
-        response,
-        parsedResponse,
-      };
-    } else {
-      throw new Error(`dataset has no items: ${this.dataset}`);
-    } */
   }
 }

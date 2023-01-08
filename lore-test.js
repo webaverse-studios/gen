@@ -6,7 +6,10 @@ import {
   getTrainingItems,
   getDatasetItemsForDatasetSpec,
 } from './lore/dataset-engine/dataset-specs.js';
-import {DatasetGenerator} from './lore/dataset-engine/dataset-generator.js';
+import {
+  DatasetGenerator,
+  CachedDatasetGenerator,
+} from './lore/dataset-engine/dataset-generator.js';
 import {
   // formatDatasetNamePrompt,
   // formatDatasetDescriptionPrompt,
@@ -41,16 +44,11 @@ globalThis.testGeneration = async () => {
   const datasetSpecs = await getDatasetSpecs();
   // const datasetItems = await getDatasetItems();
   const aiClient = new AiClient();
+  const databaseClient = new DatabaseClient({
+    aiClient,
+  });
 
-  // console.log('got dataset specs', datasetSpecs);
-  {
-    const type = 'battle-banter';
-    const datasetSpec = datasetSpecs.find(ds => ds.type === type);
-    const items = await getDatasetItemsForDatasetSpec(datasetSpec);
-    // console.log('battle-banter items', items);
-  }
-
-  /* // generate an item from the dataset
+  /* // generate item from dataset
   {
     const datasetGenerator = new DatasetGenerator({
       datasetSpecs,
@@ -66,12 +64,28 @@ globalThis.testGeneration = async () => {
     console.log(settingSpec);
   } */
 
-  // continue item from the dataset
+  // generate cached tem from dataset
   {
-    // generate an item from the dataset
     const datasetGenerator = new DatasetGenerator({
       datasetSpecs,
       aiClient,
+      // fillRatio: 0.5,
+    });
+    const settingSpec = await datasetGenerator.generateItem('character', {
+      Name: 'Death Mountain',
+      // Description: 'A mountain in the middle of a desert.',
+    }, {
+      keys: ['Image'],
+    });
+    console.log(settingSpec);
+  }
+
+  /* // continue item from dataset
+  {
+    const datasetGenerator = new DatasetGenerator({
+      datasetSpecs,
+      aiClient,
+      databaseClient,
       // fillRatio: 0.5,
     });
     const initialValue = {
@@ -97,5 +111,5 @@ globalThis.testGeneration = async () => {
       ...chatSpec2,
     };
     console.log('chat spec 2', chatSpec2, mergedValue2);
-  }
+  } */
 };
