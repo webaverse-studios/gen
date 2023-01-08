@@ -3347,14 +3347,14 @@ export class PanelRenderer extends EventTarget {
     this.portalNetMesh.enabled = this.tool === 'portal';
     this.portalNetMesh.updateVisibility();
 
-    this.entranceExitMesh.enabled = ['plane', 'portal'].includes(this.tool);
+    this.entranceExitMesh.enabled = ['portal'].includes(this.tool);
     this.entranceExitMesh.updateVisibility();
 
     this.pathMesh.visible = this.tool === 'portal';
 
     for (let i = 0; i < this.wallPlaneMeshes.length; i++) {
       const wallPlaneMesh = this.wallPlaneMeshes[i];
-      wallPlaneMesh.visible = this.tool === 'portal';
+      wallPlaneMesh.visible = this.tool === 'plane';
     }
 
     this.selector.setTool(this.tool);
