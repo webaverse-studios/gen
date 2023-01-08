@@ -423,9 +423,6 @@ export const getCompletionParser = (datasetSpec, initialValue, opts) => completi
 
   const completionValue = {};
   if (continueKey) {
-    // if (typeof initialValue[continueKey] !== 'string') {
-    //   throw new Error('initialValue[continueKey] is not a string: ' + JSON.stringify(continueKey));
-    // }
     const oldValue = initialValue[continueKey] ?? '';
     completionValue[continueKey] = oldValue + completionString;
   } else {

@@ -26,6 +26,10 @@ export class DatasetEngine {
     this.fillRatio = fillRatio;
   }
   async generateItem(initialValue, opts) {
+    const {
+      continueKey,
+    } = opts;
+
     const initialValueString = formatInitialValueText(initialValue, this.datasetSpec, opts);
     const initialValueEncoded = this.aiClient.tokenize(initialValueString);
     // console.log('got string 1', {
@@ -71,7 +75,13 @@ export class DatasetEngine {
     //   initialValueString,
     // });
 
-    const completion = await this.aiClient.generate(prompt, '\n');
+    let stops;
+    if (continueKey) {
+      stops = '\n\n';
+    } else {
+      stops = '\n';
+    }
+    const completion = await this.aiClient.generate(prompt, stops);
     // console.log('got completion', {
     //   prompt,
     //   completion,

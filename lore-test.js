@@ -82,12 +82,20 @@ globalThis.testGeneration = async () => {
       keys: ['Name', 'Description', 'Chat'],
       continueKey: 'Chat',
     });
-    console.log('chat spec 1', chatSpec1);
+    const mergedValue1 = {
+      ...initialValue,
+      ...chatSpec1,
+    };
+    console.log('chat spec 1', chatSpec1, mergedValue1);
 
-    /* const chatSpec2 = await datasetGenerator.generateItem('chat', chatSpec1, {
+    const chatSpec2 = await datasetGenerator.generateItem('chat', mergedValue1, {
       keys: ['Name', 'Description', 'Chat'],
       continueKey: 'Chat',
     });
-    console.log(chatSpec2); */
+    const mergedValue2 = {
+      ...mergedValue1,
+      ...chatSpec2,
+    };
+    console.log('chat spec 2', chatSpec2, mergedValue2);
   }
 };
