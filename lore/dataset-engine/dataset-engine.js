@@ -78,10 +78,11 @@ export class DatasetEngine {
       ];
     }
     const completion = await this.aiClient.generate(prompt, stops);
-    // console.log('got completion', {
-    //   prompt,
-    //   completion,
-    // });
+    console.log('got completion', {
+      prompt,
+      stops,
+      completion,
+    });
     const parseFn = getCompletionParser(this.datasetSpec, initialValue, opts);
     const parsedCompletion = parseFn(completion);
     // console.log('parsed completion', {
