@@ -2570,6 +2570,10 @@ const Metazine3DCanvas = ({
             renderer.snapCameraToPanelSpec();
             break;
           }
+          case 'Escape': {
+            onPanelSpecChange(null);
+            break;
+          }
           case 'm': {
             e.preventDefault();
             e.stopPropagation();
