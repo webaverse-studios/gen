@@ -130,6 +130,22 @@ import {
   makeFloorFlowerMesh,
   makeFloorPetalMesh,
 } from '../../generators/flower-mesh.js';
+import {AiClient} from '../../../clients/ai/ai-client.js';
+// import {DatabaseClient} from './clients/database/database-client.js';
+import {
+  getDatasetSpecs,
+  getDatasetItems,
+  getTrainingItems,
+  getDatasetItemsForDatasetSpec,
+} from '../../../lore/dataset-engine/dataset-specs.js';
+import {
+  DatasetGenerator,
+  // CachedDatasetGenerator,
+} from '../../../lore/dataset-engine/dataset-generator.js';
+// import {
+//   formatDatasetItems,
+//   formatDatasetItemsForPolyfill,
+// } from './lore/dataset-engine/dataset-parser.js';
 
 //
 
@@ -156,6 +172,7 @@ const fakeMaterial = new THREE.MeshBasicMaterial({
   color: 0xFF0000,
 });
 
+const aiClient = new AiClient();
 const imageAiClient = new ImageAiClient();
 
 //
@@ -2637,20 +2654,20 @@ const SideScene = ({
 
   return (
     <div className={styles.overlay}>
-      <div className={styles.heroTag}>
+      {/* <div className={styles.heroTag}>
         <div className={styles.h1}>
           {panelSpec.name}
         </div>
         <div className={styles.h2}>
           {panelSpec.description}
         </div>
-      </div>
+      </div> */}
       <div className={classnames(styles.sidebar, styles.form)}>
         <img src={panelSpec.imgSrc} className={styles.img} />
         {!loreEnabled ? (
           <div
             className={styles.button}
-            onClick={e => {
+            onClick={async e => {
               setLoreEnabled(true);
             }}
           >Enable Lore</div>
@@ -2663,23 +2680,64 @@ const SideMetascene = ({
   // panelSpec,
 }) => {  
   const [loreEnabled, setLoreEnabled] = useState(false);
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [image, setImage] = useState('');
+  const [objectives, setObjectives] = useState([]);
+  const [reward, setReward] = useState('');
 
   return (
     <div className={styles.overlay}>
-      {/* <div className={styles.heroTag}>
+      <div className={styles.heroTag}>
         <div className={styles.h1}>
-          {panelSpec.name}
+          {name}
         </div>
         <div className={styles.h2}>
-          {panelSpec.description}
+          {description}
         </div>
-      </div> */}
+        <div className={styles.list}>
+          {objectives.map(objective => (
+            <div className={styles.listItem} key={objective}>
+              {objective}
+            </div>
+          ))}
+        </div>
+        <div className={styles.h3}>
+          {reward}
+        </div>
+      </div>
       <div className={classnames(styles.sidebar, styles.form)}>
         {!loreEnabled ? (
           <div
             className={styles.button}
-            onClick={e => {
+            onClick={async e => {
               setLoreEnabled(true);
+
+              const datasetSpecs = await getDatasetSpecs();
+              const datasetGenerator = new DatasetGenerator({
+                datasetSpecs,
+                aiClient,
+                // fillRatio: 0.5,
+              });
+              const questSpec = await datasetGenerator.generateItem('quest', {
+                // Name: 'Death Mountain',
+                // Description: 'A mountain in the middle of a desert.',
+              }, {
+                // keys: ['Image'],
+              });
+              console.log('got quest spect', questSpec);
+              const {
+                Name,
+                Description,
+                Image,
+                Objectives,
+                Reward,
+              } = questSpec;
+              setName(Name);
+              setDescription(Description);
+              setImage(Image);
+              setObjectives(Objectives.split(/\n+/));
+              setReward(Reward);
             }}
           >Enable Lore</div>
         ) : null}
