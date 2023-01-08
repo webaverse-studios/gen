@@ -132,7 +132,7 @@ Some choose boats, and some choose beasts
 The Gathering Cavern
 ## Description:
 The coven has some magic up your sleeve
-## Imaage:
+## Image:
 - ![The Gathering Cavern | A large cave filled with glowing lights, crystals, and a strange mist]()
 ## Objectives:
 - Gather crystals
