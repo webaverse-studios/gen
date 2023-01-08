@@ -31,39 +31,31 @@ const datasetSpecsBasePath = `/lore/datasets/specs/`;
 const datasetDataBasePath = `/lore/datasets/data/`;
 const mdSpecs = [
   {
-    // type: 'character',
     url: 'characters.md',
   },
   {
-    // type: 'setting',
     url: 'settings.md',
   },
   {
-    // type: 'item',
     url: 'items.md',
   },
   {
-    // type: 'cutscene',
     url: 'cutscenes.md',
   },
   {
-    // type: 'chat',
     url: 'chats.md',
   },
   {
-    // type: 'lore',
     url: 'lore.md',
   },
   {
-    // type: 'battle-banter',
     url: 'battle-banters.md',
-    // groupKey: 'Banters',
   },
   {
-    // type: 'match',
     url: 'matches.md',
-    // nameKey: 'Match string',
-    // descriptionKey: 'Candidate assets',
+  },
+  {
+    url: 'quests.md',
   },
 ];
 const datasetSpecUrls = mdSpecs.map(mdSpec => `${datasetSpecsBasePath}${mdSpec.url}`);
