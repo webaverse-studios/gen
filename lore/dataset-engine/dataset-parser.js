@@ -98,7 +98,7 @@ export const formatItemText = (item, datasetSpec, initialValue = {}, opts = {}) 
   let s = '';
   for (const k of allKeys) {
     const v = item[k];
-    s += `${k}:\n${v}\n`;
+    s += `#${k}:\n${v}\n`;
   }
   return s;
 };
@@ -123,11 +123,11 @@ export const formatInitialValueText = (initialValue, datasetSpec, opts = {}) => 
   for (let i = 0; i < firstMissingValueKeyIndex; i++) {
     const k = allKeys[i];
     const v = initialValue[k];
-    s += `${k}:\n${v}\n`;
+    s += `#${k}:\n${v}\n`;
   }
   if (firstMissingValueKeyIndex < allKeys.length) {
     const k = allKeys[firstMissingValueKeyIndex];
-    s += `${k}:\n`;
+    s += `#${k}:\n`;
   }
   return s;
 };
@@ -429,7 +429,7 @@ export const getCompletionParser = (datasetSpec, initialValue, opts) => completi
     let completionStringRemaining = completionString;
     // let index = 0;
     const readLine = () => {
-      const match = completionStringRemaining.match(/^([^\n]*)(?:\n|$)/);
+      const match = completionStringRemaining.match(/^([^\n]+)(?:\n|$)/);
       if (match) {
         const line = match[1];
         const deltaLength = line.length + 1;
@@ -437,45 +437,48 @@ export const getCompletionParser = (datasetSpec, initialValue, opts) => completi
         // index += deltaLength;
         return line;
       } else {
+        // console.warn('could not read line:', [completionStringRemaining]);
         return null;
       }
     };
     const unshiftLine = line => {
       completionStringRemaining = line + '\n' + completionStringRemaining;
     };
-
+    const labelLineRegex = /^#([^\n]*):(?:\n|$)/;
+    
     const allKeys = collectKeys(datasetSpec, initialValue, opts);
     const firstMissingValueKeyIndex = findFirstMissingValueKeyIndex(allKeys, initialValue);
     for (let i = firstMissingValueKeyIndex; i < allKeys.length; i++) {
       const key = allKeys[i];
       if (i !== firstMissingValueKeyIndex) { // skip upcoming label line
         const line = readLine();
-        const match = line.match(/^([^\n]*):(?:\n|$)/);
-        if (!match) {
-          throw new Error('invalid label line: ' + JSON.stringify(line));
+        if (line !== null) {
+          const match = line.match(labelLineRegex);
+          if (!match) {
+            throw new Error('invalid label line: ' + JSON.stringify(line));
+          }
+          if (match[1].trim().toLowerCase() !== key.toLowerCase()) {
+            throw new Error('key mismatch: ' + JSON.stringify({
+              key,
+              line,
+              match: [
+                match[1].toLowerCase(),
+                key.toLowerCase(),
+              ],
+            }));
+          }
         }
-        if (match[1].toLowerCase() !== key.toLowerCase()) {
-          throw new Error('key mismatch: ' + JSON.stringify({
-            key,
-            line,
-            match: [
-              match[1].toLowerCase(),
-              key.toLowerCase(),
-            ],
-          }));
-        }
-        // XXX should check the line skipped
       }
       // accumulate a complete attribute
       const value = readLine();
-      let acc = '';
-      acc += value;
-      if (value.startsWith('-')) {
+      if (value !== null) {
+        let acc = '';
+        acc += value;
         for (;;) {
           const value2 = readLine();
           if (value2 === null) {
             break;
-          } else if (!value2.startsWith('-')) {
+          } else if (labelLineRegex.test(value2)) {
             unshiftLine(value2);
             break;
           } else {
@@ -484,8 +487,10 @@ export const getCompletionParser = (datasetSpec, initialValue, opts) => completi
             continue;
           }
         }
+        completionValue[key] = acc;
+      } else {
+        completionValue[key] = null;
       }
-      completionValue[key] = acc;
     }
   }
   return completionValue;
