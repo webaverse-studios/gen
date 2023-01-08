@@ -2902,12 +2902,13 @@ const MetasceneGeneratorComponent = () => {
     }
   };
   const setSrc = async src => {
-    const res = await fetch(src);
-    const blob = await res.blob();
-    console.log('set src', {src, blob});
-    const files = [blob];
-    setFiles(files);
-    compile(files);
+    if (src) {
+      const res = await fetch(src);
+      const blob = await res.blob();
+      const files = [blob];
+      setFiles(files);
+      compile(files);
+    }
   };
 
   useEffect(() => {
