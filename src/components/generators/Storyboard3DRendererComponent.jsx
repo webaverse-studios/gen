@@ -91,13 +91,13 @@ export const Storyboard3DRendererComponent = ({
 
   const getZineFileBlob = async () => {
     const uint8Array = await storyboard.zs.exportAsync();
-    const blob = new Blob([
+    const file = new File([
       zineMagicBytes,
       uint8Array,
-    ], {
+    ], 'storyboard.zine', {
       type: 'application/octet-stream',
     });
-    return blob;
+    return file;
   };
 
   return (
