@@ -2651,6 +2651,14 @@ const SideScene = ({
   panelSpec,
 }) => {
   const [loreEnabled, setLoreEnabled] = useState(false);
+  const [biome, setBiome] = useState(null);
+  const [description, setDescription] = useState(null);
+  const [image, setImage] = useState(null);
+  const [imageGallery, setImageGallery] = useState([]);
+  const [items, setItems] = useState([]);
+  const [mobs, setMobs] = useState([]);
+  const [name, setName] = useState(null);
+  const [ores, setOres] = useState([]);
 
   return (
     <div className={styles.overlay}>
@@ -2669,9 +2677,74 @@ const SideScene = ({
             className={styles.button}
             onClick={async e => {
               setLoreEnabled(true);
+
+              const datasetSpecs = await getDatasetSpecs();
+              const datasetGenerator = new DatasetGenerator({
+                datasetSpecs,
+                aiClient,
+                // fillRatio: 0.5,
+              });
+              const settingSpec = await datasetGenerator.generateItem('setting', {
+                // Name: 'Death Mountain',
+                // Description: 'A mountain in the middle of a desert.',
+              }, {
+                // keys: ['Image'],
+              });
+              console.log('got setting spec', settingSpec);
+              const {
+                Biome,
+                Description,
+                Image,
+                'Image Gallery': ImageGallery,
+                Items,
+                Mobs,
+                Name,
+                Ores,
+              } = settingSpec;
+              setBiome(Biome);
+              setDescription(Description);
+              setImage(Image);
+              setImageGallery((ImageGallery ?? '').split(/\n+/));
+              setItems((Items ?? '').split(/\n+/));
+              setMobs((Mobs ?? '').split(/\n+/));
+              setName(Name);
+              setOres((Ores ?? '').split(/\n+/));
             }}
           >Enable Lore</div>
-        ) : null}
+        ) : <div className={styles.lore}>
+          {name && <div className={styles.name}>{name}</div>}
+          {description && <div className={styles.description}>{description}</div>}
+          {biome && <div className={styles.biome}>{biome}</div>}
+          {image && <div className={styles.image}>{image}</div>}
+          {imageGallery.length > 0 && <div className={styles.imageGallery}>
+            <div className={styles.h3}>Image Gallery</div>
+            {imageGallery.map((imgSrc, i) => (
+              // <img key={i} src={imgSrc} className={styles.img} />
+              <div key={i} className={styles.imgText}>{imgSrc}</div>
+            ))}
+          </div>}
+          {items?.length > 0 && <div className={styles.items}>
+            <div className={styles.h3}>Items</div>
+            {items.map((item, i) => (
+              // <div key={i} className={styles.item}>{item}</div>
+              <div key={i} className={styles.imgText}>{item}</div>
+            ))}
+          </div>}
+          {mobs?.length > 0 && <div className={styles.mobs}>
+            <div className={styles.h3}>Mobs</div>
+            {mobs.map((mob, i) => (
+              // <div key={i} className={styles.mob}>{mob}</div>
+              <div key={i} className={styles.imgText}>{mob}</div>
+            ))}
+          </div>}
+          {ores?.length > 0 && <div className={styles.ores}>
+            <div className={styles.h3}>Ores</div>
+            {ores.map((ore, i) => (
+              // <div key={i} className={styles.ore}>{ore}</div>
+              <div key={i} className={styles.imgText}>{ore}</div>
+            ))}
+          </div>}
+        </div>}
       </div>
     </div>
   );
