@@ -2793,7 +2793,7 @@ const MetazineCanvas = ({
 
 //
 
-let ids = 0;
+// let ids = 0;
 const MetasceneGeneratorComponent = () => {
   const [metazine, setMetazine] = useState(() => new Metazine());
   const [compiling, setCompiling] = useState(false);
