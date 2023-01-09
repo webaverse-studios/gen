@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-// import {OBB} from 'three/examples/jsm/math/OBB.js';
+import {OBB} from 'three/examples/jsm/math/OBB.js';
 import {useState, useRef, useEffect} from 'react';
 import React from 'react';
 import classnames from 'classnames';
@@ -412,6 +412,63 @@ const getPanelSpecsAtlasTextureImageAsync = async panelSpecs => {
 
   return atlasCanvas;
 };
+class PanelPicker {
+  constructor({
+    mouse,
+    camera,
+    panelSpecs,
+  }) {
+    this.mouse = mouse;
+    this.camera = camera;
+    this.panelSpecs = panelSpecs;
+
+    this.raycaster = new THREE.Raycaster();
+  }
+  update() {
+    this.raycaster.setFromCamera(this.mouse, this.camera);
+
+    // find panel spec intersections
+    const intersections = [];
+    for (let i = 0; i < this.panelSpecs.length; i++) {
+      const panelSpec = this.panelSpecs[i];
+      const {
+        floorPlaneLocation,
+        floorBoundingBox,
+      } = panelSpec;
+
+      const floorPlaneQuaternion = new THREE.Quaternion()
+        .fromArray(floorPlaneLocation.quaternion);
+
+      const floorBBox = new THREE.Box3(
+        new THREE.Vector3().fromArray(floorBoundingBox.min),
+        new THREE.Vector3().fromArray(floorBoundingBox.max)
+      );
+      const center = floorBBox.getCenter(new THREE.Vector3());
+      const size = floorBBox.getSize(new THREE.Vector3());
+
+      // const box2Position = localVector3.fromArray(box2.position);
+      // const box2Quaternion = localQuaternion2.fromArray(box2.quaternion);
+      // const box2Scale = localVector4.fromArray(box2.scale);
+      const obb = new OBB().set(
+        center, // center
+        size.clone()
+          .multiplyScalar(0.5), // halfSize
+        new THREE.Matrix3(), // rotation
+      )
+        .applyMatrix4(new THREE.Matrix4().compose(
+          new THREE.Vector3(),
+          floorPlaneQuaternion,
+          oneVector
+        ))
+        .applyMatrix4(panelSpec.matrixWorld);
+      const intersects = obb.intersectsRay(this.raycaster.ray);
+      if (intersects) {
+        intersections.push(panelSpec);
+      }
+    }
+    console.log('got intersections', intersections);
+  }
+}
 class SceneBatchedMesh extends THREE.Mesh {
   constructor({
     panelSpecs = [],
@@ -2178,9 +2235,16 @@ export class MetazineRenderer extends EventTarget {
     const mouse = new THREE.Vector2();
     this.mouse = mouse;
 
-    // raycaster
-    const raycaster = new THREE.Raycaster();
-    this.raycaster = raycaster;
+    // // raycaster
+    // const raycaster = new THREE.Raycaster();
+    // this.raycaster = raycaster;
+
+    const panelPicker = new PanelPicker({
+      mouse,
+      camera,
+      panelSpecs: metazine.renderPanelSpecs,
+    });
+    this.panelPicker = panelPicker;
 
     // lights
     const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
@@ -2296,7 +2360,7 @@ export class MetazineRenderer extends EventTarget {
         (x / rect.width) * 2 - 1,
         -(y / rect.height) * 2 + 1
       );
-      this.raycaster.setFromCamera(this.mouse, this.camera);
+      this.panelPicker.update();
     };
 
     const canvas = this.renderer.domElement;
