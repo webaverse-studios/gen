@@ -624,41 +624,17 @@ class SceneBatchedMesh extends THREE.Mesh {
 
 class MapIndexMesh extends THREE.Mesh {
   constructor({
-    mapIndex,
-    mapIndexResolution,
+    width,
+    height,
   }) {
     const geometry = new THREE.PlaneGeometry(floorNetWorldSize, floorNetWorldSize)
       .rotateX(-Math.PI / 2);
   
-    const mapIndexUnpacked = new Uint8Array(mapIndex.length * 4);
-    for (let i = 0; i < mapIndex.length; i++) {
-      const indexValue = mapIndex[i];
-      const c = localColor.setHex(colors[indexValue % colors.length]);
-      mapIndexUnpacked[i * 4] = c.r * 255;
-      mapIndexUnpacked[i * 4 + 1] = c.g * 255;
-      mapIndexUnpacked[i * 4 + 2] = c.b * 255;
-      mapIndexUnpacked[i * 4 + 3] = 255;
-    }
-
-    const [
-      width,
-      height,
-    ] = mapIndexResolution;
-    const map = new THREE.DataTexture(
-      mapIndexUnpacked,
-      width,
-      height,
-      THREE.RGBAFormat,
-      THREE.UnsignedByteType,
-    );
-    map.minFilter = THREE.NearestFilter;
-    map.magFilter = THREE.NearestFilter;
-    map.needsUpdate = true;
     const material = new THREE.ShaderMaterial({
       uniforms: {
         map: {
-          value: map,
-          needsUpdate: true,
+          value: null,
+          needsUpdate: false,
         },
       },
       vertexShader: `\
@@ -690,8 +666,34 @@ class MapIndexMesh extends THREE.Mesh {
     });
 
     super(geometry, material);
-
     this.frustumCulled = false;
+    this.width = width;
+    this.height = height;
+  }
+  setMapIndex(mapIndex) {
+    const mapIndexUnpacked = new Uint8Array(mapIndex.length * 4);
+    for (let i = 0; i < mapIndex.length; i++) {
+      const indexValue = mapIndex[i];
+      const c = localColor.setHex(colors[indexValue % colors.length]);
+      mapIndexUnpacked[i * 4] = c.r * 255;
+      mapIndexUnpacked[i * 4 + 1] = c.g * 255;
+      mapIndexUnpacked[i * 4 + 2] = c.b * 255;
+      mapIndexUnpacked[i * 4 + 3] = 255;
+    }
+
+    const map = new THREE.DataTexture(
+      mapIndexUnpacked,
+      this.width,
+      this.height,
+      THREE.RGBAFormat,
+      THREE.UnsignedByteType,
+    );
+    map.minFilter = THREE.NearestFilter;
+    map.magFilter = THREE.NearestFilter;
+    map.needsUpdate = true;
+
+    this.material.uniforms.map.value = map;
+    this.material.uniforms.map.needsUpdate = true;
   }
 }
 
@@ -1631,8 +1633,7 @@ export class Metazine extends EventTarget {
     super();
     
     this.renderPanelSpecs = [];
-    this.mapIndex = null;
-    this.mapIndexResolution = null;
+    this.mapIndexRenderer = null;
 
     this.#listen();
   }
@@ -1987,8 +1988,12 @@ export class Metazine extends EventTarget {
 
 
     this.dispatchEvent(new MessageEvent('panelgeometryupdate'));
+    this.#updateMapIndex();
+    this.dispatchEvent(new MessageEvent('mapindexupdate'));
   }
   #updateMapIndex() {
+    this.mapIndexRenderer.renderer.clear();
+
     for (let i = 0; i < this.renderPanelSpecs.length; i++) {
       const panelSpec = this.renderPanelSpecs[i];
       const attachPanelIndex = i;
@@ -2327,17 +2332,17 @@ export class MetazineRenderer extends EventTarget {
     this.entranceExitMesh = entranceExitMesh;
 
     // map index mesh
-    const {
-      mapIndex,
-      mapIndexResolution,
-    } = this.metazine;
+    const mapIndex = this.metazine.mapIndexRenderer.getMapIndex();
+    const mapIndexResolution = this.metazine.mapIndexRenderer.getMapIndexResolution();
     const mapIndexMesh = new MapIndexMesh({
-      mapIndex,
-      mapIndexResolution,
+      width: mapIndexResolution[0],
+      height: mapIndexResolution[1],
     });
     mapIndexMesh.position.y = -15;
+    mapIndexMesh.setMapIndex(mapIndex);
     this.scene.add(mapIndexMesh);
     mapIndexMesh.updateMatrixWorld();
+    this.mapIndexMesh = mapIndexMesh;
 
     // underfloor mesh
     const underfloorMesh = new UnderfloorMesh();
@@ -2445,6 +2450,11 @@ export class MetazineRenderer extends EventTarget {
       this.entranceExitMesh.updateGeometry();
     };
     this.metazine.addEventListener('panelgeometryupdate', panelgeometryupdate);
+    const mapIndexUpdate = e => {
+      const mapIndex = this.metazine.mapIndexRenderer.getMapIndex();
+      this.mapIndexMesh.setMapIndex(mapIndex);
+    };
+    this.metazine.addEventListener('mapindexupdate', mapIndexUpdate);
 
     this.addEventListener('destroy', e => {
       document.removeEventListener('keydown', keydown);
@@ -2456,6 +2466,7 @@ export class MetazineRenderer extends EventTarget {
       canvas.removeEventListener('wheel', blockEvent);
 
       this.metazine.removeEventListener('panelgeometryupdate', panelgeometryupdate);
+      this.metazine.removeEventListener('mapindexupdate', mapIndexUpdate);
     });
   }
   render() {
