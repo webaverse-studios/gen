@@ -54,19 +54,22 @@
 .metasceneGenerator .metazineCanvas .overlay .form {
   pointer-events: all;
 }
-.metasceneGenerator .metazineCanvas .overlay .sidebar {
+.metasceneGenerator .metazineCanvas .overlay .infobar {
   position: absolute;
   top: 0;
   bottom: 0;
   right: 0;
   display: flex;
   flex-direction: column;
-  width: 200px;
-  /* background-color: #000; */
+  width: 300px;
+  pointer-events: none;
 }
-.metasceneGenerator .metazineCanvas .overlay .sidebar .img {
+.metasceneGenerator .metazineCanvas .overlay .infobar .img {
   width: 100%;
   object-fit: cover;
+}
+.metasceneGenerator .metazineCanvas .overlay .infobar .button {
+  pointer-events: all;
 }
 
 .metasceneGenerator .header {
@@ -93,4 +96,19 @@
 
 .metasceneGenerator .numberInput {
   width: 50px;
+}
+
+/* */
+
+.metasceneGenerator .sidebar {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 235px;
+  padding: 10px;
+  background-color: #000;
+  color: #FFF;
+  /* border-left: 1px solid #000; */
+  /* overflow-y: auto; */
 }

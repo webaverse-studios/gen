@@ -203,10 +203,33 @@ const blockEvent = e => {
 
 //
 
-class EntranceExitMesh extends THREE.Mesh { // XXX needs to be unified with the one in scene-generator.js
-  constructor({
-    entranceExitLocations,
-  }) {
+const collectEntranceExits = panelSpecs => {
+  const entranceExitLocations = [];
+  for (let i = 0; i < panelSpecs.length; i++) {
+    const panelSpec = panelSpecs[i];
+    const localEntranceExitLocations = panelSpec.entranceExitLocations.map(eel => {
+      const position = localVector.fromArray(eel.position);
+      const quaternion = localQuaternion.fromArray(eel.quaternion);
+      const scale = localVector2.copy(oneVector);
+      localMatrix.compose(
+        position,
+        quaternion,
+        scale
+      )
+        .premultiply(panelSpec.matrixWorld)
+        .decompose(position, quaternion, scale);
+      return {
+        ...eel,
+        position: position.toArray(),
+        quaternion: quaternion.toArray(),
+      };
+    });
+    entranceExitLocations.push(...localEntranceExitLocations);
+  }
+  return entranceExitLocations;
+};
+const getEntranceExitGeometry = (entranceExitLocations) => {
+  if (entranceExitLocations.length > 0) {
     const baseGeometry = new THREE.BoxGeometry(entranceExitWidth, entranceExitHeight, entranceExitDepth)
       .translate(0, entranceExitHeight / 2, entranceExitDepth / 2);
     const geometries = entranceExitLocations.map(portalLocation => {
@@ -223,17 +246,23 @@ class EntranceExitMesh extends THREE.Mesh { // XXX needs to be unified with the 
         selectIndices[i * 2 + 0] = portalLocation.panelIndex;
         selectIndices[i * 2 + 1] = portalLocation.entranceIndex;
       }
-      // if (typeof portalLocation.panelIndex !== 'number' || typeof portalLocation.entranceIndex !== 'number') {
-      //   console.warn('invalid portal location', portalLocation);
-      //   debugger;
-      // }
-      // if (portalLocation.panelIndex !== -1) {
-      //   console.log('got new panel index', portalLocation.panelIndex, portalLocation.entranceIndex);
-      // }
       g.setAttribute('selectIndex', new THREE.BufferAttribute(selectIndices, 2, false));
       return g;
     });
-    const geometry = geometries.length > 0 ? BufferGeometryUtils.mergeBufferGeometries(geometries) : new THREE.BufferGeometry();
+    const geometry = BufferGeometryUtils.mergeBufferGeometries(geometries);
+    return geometry;
+  } else {
+    return new THREE.BufferGeometry();
+  }
+};
+// XXX needs to be unified with the one in scene-generator.js
+// XXX note that they take different arguments (and use the above holder methods to convert values)
+class EntranceExitMesh extends THREE.Mesh {
+  constructor({
+    panelSpecs,
+  }) {
+    const entranceExitLocations = collectEntranceExits(panelSpecs);
+    const geometry = getEntranceExitGeometry(entranceExitLocations);
 
     const material = new THREE.ShaderMaterial({
       uniforms: {
@@ -271,16 +300,23 @@ class EntranceExitMesh extends THREE.Mesh { // XXX needs to be unified with the 
       transparent: true,
     });
     super(geometry, material);
-
-    const hasGeometry = geometries.length > 0;
+    this.panelSpecs = panelSpecs;
 
     const entranceExitMesh = this;
     entranceExitMesh.frustumCulled = false;
     entranceExitMesh.enabled = false;
     entranceExitMesh.visible = false;
     entranceExitMesh.updateVisibility = () => {
-      entranceExitMesh.visible = entranceExitMesh.enabled && hasGeometry;
+      entranceExitMesh.visible = entranceExitMesh.enabled &&
+        !!(this.geometry.attributes?.position.count > 0);
     };
+  }
+  updateGeometry() {
+    this.geometry.dispose();
+
+    const entranceExitLocations = collectEntranceExits(this.panelSpecs);
+    const geometry = getEntranceExitGeometry(entranceExitLocations);
+    this.geometry = geometry;
   }
 }
 
@@ -344,7 +380,11 @@ const getPanelSpecsGeometry = panelSpecs => {
     g.setAttribute('scaleOffset', new THREE.BufferAttribute(scaleOffsets, 1));
     return g;
   });
-  return BufferGeometryUtils.mergeBufferGeometries(geometries);
+  if (geometries.length > 0) {
+    return BufferGeometryUtils.mergeBufferGeometries(geometries);
+  } else {
+    return new THREE.BufferGeometry();
+  }
 };
 const getPanelSpecsAtlasTextureImageAsync = async panelSpecs => {
   const atlasCanvas = document.createElement('canvas');
@@ -468,6 +508,11 @@ class SceneBatchedMesh extends THREE.Mesh {
 
     super(geometry, material);
     this.frustumCulled = false;
+    this.panelSpecs = panelSpecs;
+  }
+  updateGeometry() {
+    this.geometry.dispose();
+    this.geometry = getPanelSpecsGeometry(this.panelSpecs);
   }
 }
 
@@ -1478,12 +1523,16 @@ export class Metazine extends EventTarget {
   constructor() {
     super();
     
-    // this.zd = new ZineData();
-    
-    // load result
     this.renderPanelSpecs = [];
     this.mapIndex = null;
     this.mapIndexResolution = null;
+
+    this.#listen();
+  }
+  #listen() {
+    this.addEventListener('panelgeometryupdate', e => {
+      this.#updateMapIndex();
+    });
   }
 
   getPanels() {
@@ -1495,7 +1544,6 @@ export class Metazine extends EventTarget {
   }
   async compileZineFiles(zineFiles, {
     seed = '',
-    numPanels = defaultNumPanels,
   } = {}) {
     console.time('loadPanels');
     let panelSpecs;
@@ -1513,7 +1561,27 @@ export class Metazine extends EventTarget {
     }
     console.timeEnd('loadPanels');
 
+    // get the render panel specs
+    this.renderPanelSpecs = panelSpecs;
+    
+    const mapIndexRenderer = new MapIndexRenderer();
+    this.mapIndexRenderer = mapIndexRenderer;
+    this.mapIndex = mapIndexRenderer.getMapIndex();
+    this.mapIndexResolution = mapIndexRenderer.getMapIndexResolution();
+  }
+  autoConnect() { // automatically connect panel exits to panel entrances 
     const rng = alea(seed);
+    const panelSpecs = this.renderPanelSpecs;
+
+    // helper functions
+    // reset transform to identity
+    const resetTransform = panelSpec => {
+      panelSpec.position.setScalar(0);
+      panelSpec.quaternion.identity();
+      panelSpec.scale.setScalar(1);
+      panelSpec.updateMatrixWorld();
+    };
+    // weighted rng
     const probabalisticIndexRng = (weights) => {
       let weightSum = 0;
       for (let i = 0; i < weights.length; i++) {
@@ -1529,7 +1597,6 @@ export class Metazine extends EventTarget {
       }
       return weights.length - 1;
     };
-
     // randomly choose a panel spec index that satisfies a condition
     const getConditionPanelSpecIndex = (panelSpecs, condition, maxTries = 100) => {
       for (let i = 0; i < maxTries; i++) {
@@ -1543,17 +1610,31 @@ export class Metazine extends EventTarget {
       return -1;
     };
 
-    // get the render panel specs
-    this.renderPanelSpecs = [];
+    // clear entrances/exit panelIndex, entranceIndex to -1
+    for (let i = 0; i < panelSpecs.length; i++) {
+      const panelSpec = panelSpecs[i];
+      for (let j = 0; j < panelSpec.entranceExitLocations.length; j++) {
+        const eel = panelSpec.entranceExitLocations[j];
+        eel.entrancePanelIndex = -1;
+        eel.entranceIndex = -1;
+      }
+    }
+    // reset initial transforms
+    for (let i = 0; i < panelSpecs.length; i++) {
+      const panelSpec = panelSpecs[i];
+      resetTransform(panelSpec);
+    }
+    
     // first panel
     const candidateEntrancePanelSpecs = panelSpecs.slice();
     const firstPanelSpecIndex = getConditionPanelSpecIndex(
       candidateEntrancePanelSpecs,
       panelSpec => panelSpec.entranceExitLocations.length >= 2
     );
+    console.log('got first panel', firstPanelSpecIndex);
     const firstPanelSpec = candidateEntrancePanelSpecs.splice(firstPanelSpecIndex, 1)[0];
     firstPanelSpec.resetToFloorTransform();
-    this.renderPanelSpecs.push(firstPanelSpec);
+    // this.renderPanelSpecs.push(firstPanelSpec);
     const candidateExitSpecs = firstPanelSpec.entranceExitLocations.map(eel => {
       return {
         panelSpec: firstPanelSpec,
@@ -1561,11 +1642,11 @@ export class Metazine extends EventTarget {
       };
     });
 
-    // connect panel exits to panel entrances
+    // iteratively connect additional panels
     let numIntersects = 0;
     const maxNumIntersects = 100;
-    while(
-      this.renderPanelSpecs.length < numPanels &&
+    while (
+      // this.renderPanelSpecs.length < numPanels &&
       candidateExitSpecs.length > 0 &&
       candidateEntrancePanelSpecs.length > 0
     ) {
@@ -1625,198 +1706,196 @@ export class Metazine extends EventTarget {
         candidateEntrancePanelSpecs,
         panelSpec => panelSpec.entranceExitLocations.length >= 2
       );
-      const entrancePanelSpec = candidateEntrancePanelSpecs[entrancePanelSpecIndex];
-      const candidateEntranceLocations = entrancePanelSpec.entranceExitLocations.slice();
-      // choose the location which has the closest angle to the exit location
-      const exitDirection = localVector.set(0, 0, -1)
-        .applyQuaternion(y180Quaternion)
-        .applyQuaternion(localQuaternion.fromArray(exitLocation.quaternion))
-      candidateEntranceLocations.sort((a, b) => {
-        const aDirection = localVector2.set(0, 0, -1)
-          .applyQuaternion(localQuaternion.fromArray(a.quaternion));
-        let aDotExitDirection = aDirection.dot(exitDirection);
+      if (entrancePanelSpecIndex !== -1) {
+        const entrancePanelSpec = candidateEntrancePanelSpecs[entrancePanelSpecIndex];
+        const candidateEntranceLocations = entrancePanelSpec.entranceExitLocations.slice();
+        // choose the location which has the closest angle to the exit location
+        const exitDirection = localVector.set(0, 0, -1)
+          .applyQuaternion(y180Quaternion)
+          .applyQuaternion(localQuaternion.fromArray(exitLocation.quaternion))
+        candidateEntranceLocations.sort((a, b) => {
+          const aDirection = localVector2.set(0, 0, -1)
+            .applyQuaternion(localQuaternion.fromArray(a.quaternion));
+          let aDotExitDirection = aDirection.dot(exitDirection);
 
-        const bDirection = localVector3.set(0, 0, -1)
-          .applyQuaternion(localQuaternion.fromArray(b.quaternion));
-        let bDotExitDirection = bDirection.dot(exitDirection);
+          const bDirection = localVector3.set(0, 0, -1)
+            .applyQuaternion(localQuaternion.fromArray(b.quaternion));
+          let bDotExitDirection = bDirection.dot(exitDirection);
+          
+          return bDotExitDirection - aDotExitDirection; // sort by largest dot product
+        });
+        const candidateEntranceLocationIndex = 0;
+        const entranceLocation = candidateEntranceLocations[candidateEntranceLocationIndex];
         
-        return bDotExitDirection - aDotExitDirection; // sort by largest dot product
-      });
-      const candidateEntranceLocationIndex = 0;
-      const entranceLocation = candidateEntranceLocations[candidateEntranceLocationIndex];
-      
-      // remember indices in both directions
-      {
-        // exit location
-        const entrancePanelIndex = panelSpecs.indexOf(entrancePanelSpec);
-        // if (entrancePanelIndex === -1) {
-        //   console.warn('no entrance panel index', {
-        //     panelSpecs: panelSpecs.slice(),
-        //     entrancePanelSpec,
-        //   });
-        //   debugger;
-        // }
-        const entranceLocationIndex = entrancePanelSpec.entranceExitLocations.indexOf(entranceLocation);
-        // if (entranceLocationIndex === -1) {
-        //   console.warn('no entrance location index', {
-        //     entranceExitLocations: entrancePanelSpec.entranceExitLocations.slice(),
-        //     entranceLocation,
-        //   });
-        //   debugger;
-        // }
-        exitLocation.panelIndex = entrancePanelIndex;
-        exitLocation.entranceIndex = entranceLocationIndex;
-      }
-      {
-        // entrance location
-        const exitPanelIndex = panelSpecs.indexOf(exitPanelSpec);
-        // if (exitPanelIndex === -1) {
-        //   console.warn('no exit panel index', {
-        //     panelSpecs: panelSpecs.slice(),
-        //     exitPanelSpec,
-        //   });
-        //   debugger;
-        // }
-        const exitLocationIndex = exitPanelSpec.entranceExitLocations.indexOf(exitLocation);
-        // if (exitLocationIndex === -1) {
-        //   console.warn('no exit location index', {
-        //     entranceExitLocations: exitPanelSpec.entranceExitLocations.slice(),
-        //     exitLocation,
-        //   });
-        //   debugger;
-        // }
-        entranceLocation.panelIndex = exitPanelIndex;
-        entranceLocation.exitIndex = exitLocationIndex;
-      }
-
-      // latch fixed exit location
-      const exitParentMatrixWorld = exitPanelSpec.transformScene.matrixWorld;
-
-      // reset entrance transform
-      entrancePanelSpec.position.setScalar(0);
-      entrancePanelSpec.quaternion.identity();
-      entrancePanelSpec.scale.setScalar(1);
-      entrancePanelSpec.updateMatrixWorld();
-      // latch new entrance location
-      const entranceParentMatrixWorld = entrancePanelSpec.transformScene.matrixWorld;
-
-      // latch entrance panel spec as the transform target
-      const target = entrancePanelSpec;
-
-      connect({
-        exitLocation,
-        entranceLocation,
-        exitParentMatrixWorld,
-        entranceParentMatrixWorld,
-        target,
-      });
-      // const attachPanelIndex = this.renderPanelSpecs.length;
-      // const newPanelIndex = attachPanelIndex + 1;
-      let intersect = false; // XXX hack
-      // {
-      //   intersect = mapIndexRenderer.intersect(
-      //     entrancePanelSpec,
-      //     attachPanelIndex,
-      //     newPanelIndex
-      //   );
-      // }
-      // if (intersect) {
-      //   console.log('intersect');
-      // } else {
-      //   console.log('no intersect');
-      // }
-      if (intersect) {
-        if (++numIntersects < maxNumIntersects) {
-          // console.log('intersect', {
-          //   intersect,
-          //   attachPanelIndex,
-          //   newPanelIndex,
-          // });
-          continue;
-        } else {
-          console.warn('too many intersects');
-          debugger;
+        // remember indices in both directions
+        {
+          // exit location
+          const entrancePanelIndex = panelSpecs.indexOf(entrancePanelSpec);
+          // if (entrancePanelIndex === -1) {
+          //   console.warn('no entrance panel index', {
+          //     panelSpecs: panelSpecs.slice(),
+          //     entrancePanelSpec,
+          //   });
+          //   debugger;
+          // }
+          const entranceLocationIndex = entrancePanelSpec.entranceExitLocations.indexOf(entranceLocation);
+          // if (entranceLocationIndex === -1) {
+          //   console.warn('no entrance location index', {
+          //     entranceExitLocations: entrancePanelSpec.entranceExitLocations.slice(),
+          //     entranceLocation,
+          //   });
+          //   debugger;
+          // }
+          exitLocation.panelIndex = entrancePanelIndex;
+          exitLocation.entranceIndex = entranceLocationIndex;
         }
-      } else {
-        // draw the map index
+        {
+          // entrance location
+          const exitPanelIndex = panelSpecs.indexOf(exitPanelSpec);
+          // if (exitPanelIndex === -1) {
+          //   console.warn('no exit panel index', {
+          //     panelSpecs: panelSpecs.slice(),
+          //     exitPanelSpec,
+          //   });
+          //   debugger;
+          // }
+          const exitLocationIndex = exitPanelSpec.entranceExitLocations.indexOf(exitLocation);
+          // if (exitLocationIndex === -1) {
+          //   console.warn('no exit location index', {
+          //     entranceExitLocations: exitPanelSpec.entranceExitLocations.slice(),
+          //     exitLocation,
+          //   });
+          //   debugger;
+          // }
+          entranceLocation.panelIndex = exitPanelIndex;
+          entranceLocation.exitIndex = exitLocationIndex;
+        }
+
+        // latch fixed exit location
+        const exitParentMatrixWorld = exitPanelSpec.transformScene.matrixWorld;
+
+        // reset entrance transform
+        resetTransform(entrancePanelSpec);
+        // latch new entrance location
+        const entranceParentMatrixWorld = entrancePanelSpec.transformScene.matrixWorld;
+
+        // latch entrance panel spec as the transform target
+        const target = entrancePanelSpec;
+
+        connect({
+          exitLocation,
+          entranceLocation,
+          exitParentMatrixWorld,
+          entranceParentMatrixWorld,
+          target,
+        });
+        // const attachPanelIndex = this.renderPanelSpecs.length;
+        // const newPanelIndex = attachPanelIndex + 1;
+        let intersect = false; // XXX hack
         // {
-        //   mapIndexRenderer.draw(
+        //   intersect = mapIndexRenderer.intersect(
         //     entrancePanelSpec,
-        //     MapIndexRenderer.MODE_REPLACE,
         //     attachPanelIndex,
         //     newPanelIndex
         //   );
         // }
-
-        // log the new panel spec
-        this.renderPanelSpecs.push(entrancePanelSpec);
-        // {
-        //   // for (let i = 0; i < this.renderPanelSpecs.length; i++) {
-        //   //   const panelSpec = this.renderPanelSpecs[i];
-        //     const {entranceExitLocations} = entrancePanelSpec;
-            
-        //     let allNeg1 = true;
-        //     for (let i = 0; i < entranceExitLocations.length; i++) {
-        //       const entranceExitLocation = entranceExitLocations[i];
-        //       const {panelIndex, entranceIndex} = entranceExitLocation;
-        //       if (panelIndex !== -1 || entranceIndex !== -1) {
-        //         allNeg1 = false;
-        //         break;
-        //       }
-        //     }
-        //     console.log('all neg 1', allNeg1, entranceExitLocations);
-        //     if (allNeg1) {
-        //       debugger;
-        //     }
-        //   // }
+        // if (intersect) {
+        //   console.log('intersect');
+        // } else {
+        //   console.log('no intersect');
         // }
+        if (intersect) {
+          if (++numIntersects < maxNumIntersects) {
+            // console.log('intersect', {
+            //   intersect,
+            //   attachPanelIndex,
+            //   newPanelIndex,
+            // });
+            continue;
+          } else {
+            console.warn('too many intersects');
+            debugger;
+          }
+        } else {
+          // draw the map index
+          // {
+          //   mapIndexRenderer.draw(
+          //     entrancePanelSpec,
+          //     MapIndexRenderer.MODE_REPLACE,
+          //     attachPanelIndex,
+          //     newPanelIndex
+          //   );
+          // }
 
-        // splice exit spec from candidates
-        candidateExitSpecs.splice(exitSpecIndex, 1);
-        // splice entrance panel spec from candidates
-        candidateEntrancePanelSpecs.splice(entrancePanelSpecIndex, 1);
+          // log the new panel spec
+          this.renderPanelSpecs.push(entrancePanelSpec);
+          // {
+          //   // for (let i = 0; i < this.renderPanelSpecs.length; i++) {
+          //   //   const panelSpec = this.renderPanelSpecs[i];
+          //     const {entranceExitLocations} = entrancePanelSpec;
+              
+          //     let allNeg1 = true;
+          //     for (let i = 0; i < entranceExitLocations.length; i++) {
+          //       const entranceExitLocation = entranceExitLocations[i];
+          //       const {panelIndex, entranceIndex} = entranceExitLocation;
+          //       if (panelIndex !== -1 || entranceIndex !== -1) {
+          //         allNeg1 = false;
+          //         break;
+          //       }
+          //     }
+          //     console.log('all neg 1', allNeg1, entranceExitLocations);
+          //     if (allNeg1) {
+          //       debugger;
+          //     }
+          //   // }
+          // }
 
-        // splice the used entrance location from entrance panel spec's enter exit location candidates
-        candidateEntranceLocations.splice(candidateEntranceLocationIndex, 1);
-        // push the remaining unused entrances to candidate exit specs
-        const newCandidateExitSpecs = candidateEntranceLocations.map(eel => {
-          return {
-            panelSpec: entrancePanelSpec,
-            entranceExitLocation: eel,
-          };
-        });
-        candidateExitSpecs.push(...newCandidateExitSpecs);
+          // splice exit spec from candidates
+          candidateExitSpecs.splice(exitSpecIndex, 1);
+          // splice entrance panel spec from candidates
+          candidateEntrancePanelSpecs.splice(entrancePanelSpecIndex, 1);
+
+          // splice the used entrance location from entrance panel spec's enter exit location candidates
+          candidateEntranceLocations.splice(candidateEntranceLocationIndex, 1);
+          // push the remaining unused entrances to candidate exit specs
+          const newCandidateExitSpecs = candidateEntranceLocations.map(eel => {
+            return {
+              panelSpec: entrancePanelSpec,
+              entranceExitLocation: eel,
+            };
+          });
+          candidateExitSpecs.push(...newCandidateExitSpecs);
+        }
+      } else {
+        // we couldn't find an entrance location we can connect, so stop
+        console.log('break');
+        break;
       }
     }
 
-    // map index renderer
-    const mapIndexRenderer = new MapIndexRenderer();
-    // draw first panel
-    // {
-    //   const attachPanelIndex = 0;
-    //   const newPanelIndex = 1;
-    //   mapIndexRenderer.draw(
-    //     firstPanelSpec,
-    //     MapIndexRenderer.MODE_REPLACE,
-    //     attachPanelIndex,
-    //     newPanelIndex
-    //   );
-    // }
-    // draw panels
+    // set aside remaining candidate entrance panel specs
+    console.log('set aside remaining panel specs', candidateEntrancePanelSpecs);
+    for (let i = 0; i < candidateEntrancePanelSpecs.length; i++) {
+      const panelSpec = candidateEntrancePanelSpecs[i];
+      panelSpec.position.set(-50, 0, -50);
+      panelSpec.updateMatrixWorld();
+    }
+
+
+    this.dispatchEvent(new MessageEvent('panelgeometryupdate'));
+  }
+  #updateMapIndex() {
     for (let i = 0; i < this.renderPanelSpecs.length; i++) {
       const panelSpec = this.renderPanelSpecs[i];
       const attachPanelIndex = i;
       const newPanelIndex = i + 1;
-      mapIndexRenderer.draw(
+      this.mapIndexRenderer.draw(
         panelSpec,
         MapIndexRenderer.MODE_REPLACE,
         attachPanelIndex,
         newPanelIndex
       );
     }
-    
-    this.mapIndex = mapIndexRenderer.getMapIndex();
-    this.mapIndexResolution = mapIndexRenderer.getMapIndexResolution();
   }
   async exportAsync() {
     const exportStoryboard = new ZineStoryboardBase();
@@ -1894,8 +1973,7 @@ export class Metazine extends EventTarget {
 
 //
 
-// XXX debugging
-const makePositionCubesMesh = (positions) => {
+/* const makePositionCubesMesh = (positions) => {
   // render an instanced cubes mesh to show the depth
   const positionCubesGeometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
   const positionCubesMaterial = new THREE.MeshPhongMaterial({
@@ -1916,7 +1994,7 @@ const makePositionCubesMesh = (positions) => {
   }
   positionCubesMesh.instanceMatrix.needsUpdate = true;
   return positionCubesMesh;
-};
+}; */
 class ChunkEdgeMesh extends THREE.Object3D {
   constructor() {
     super();
@@ -2124,42 +2202,19 @@ export class MetazineRenderer extends EventTarget {
 
     // bootstrap
     this.#initAux();
-    this.listen();
+    this.#listen();
     this.animate();
   }
   #initAux() {
-    // entrance exit locations
-    const entranceExitLocations = [];
-    for (let i = 0; i < this.metazine.renderPanelSpecs.length; i++) {
-      const panelSpec = this.metazine.renderPanelSpecs[i];
-      const localEntranceExitLocations = panelSpec.entranceExitLocations.map(eel => {
-        const position = localVector.fromArray(eel.position);
-        const quaternion = localQuaternion.fromArray(eel.quaternion);
-        const scale = localVector2.copy(oneVector);
-        localMatrix.compose(
-          position,
-          quaternion,
-          scale
-        )
-          .premultiply(panelSpec.matrixWorld)
-          .decompose(position, quaternion, scale);
-        return {
-          ...eel,
-          position: position.toArray(),
-          quaternion: quaternion.toArray(),
-        };
-      });
-      entranceExitLocations.push(...localEntranceExitLocations);
-    }
-
     // entrance exit mesh
     const entranceExitMesh = new EntranceExitMesh({
-      entranceExitLocations,
+      panelSpecs: this.metazine.renderPanelSpecs,
     });
     entranceExitMesh.enabled = true;
     entranceExitMesh.updateVisibility();
     this.scene.add(entranceExitMesh);
     entranceExitMesh.updateMatrixWorld();
+    this.entranceExitMesh = entranceExitMesh;
 
     // map index mesh
     const {
@@ -2190,7 +2245,7 @@ export class MetazineRenderer extends EventTarget {
     storyTargetMesh.updateMatrixWorld();
     this.storyTargetMesh = storyTargetMesh;
 
-    // XXX debug cube mesh
+    // XXX debug cube mesh at origin
     const cubeMesh = new THREE.Mesh(
       new THREE.BoxGeometry(1, 1, 1),
       new THREE.MeshPhongMaterial({
@@ -2201,7 +2256,7 @@ export class MetazineRenderer extends EventTarget {
     this.scene.add(cubeMesh);
     cubeMesh.updateMatrixWorld();
   }
-  listen() {
+  #listen() {
     const keydown = e => {
       if (!e.repeat && !e.ctrlKey) {
         switch (e.key) {
@@ -2252,17 +2307,11 @@ export class MetazineRenderer extends EventTarget {
     canvas.addEventListener('click', blockEvent);
     canvas.addEventListener('wheel', blockEvent);
 
-    // const update = e => {
-    //   this.updateOutmeshLayers();
-    // };
-    // this.panel.zp.addEventListener('layeradd', update);
-    // this.panel.zp.addEventListener('layerremove', update);
-    // this.panel.zp.addEventListener('layerupdate', update);
-
-    // const transformchange = e => {
-    //   this.updateObjectTransforms();
-    // };
-    // this.zineRenderer.addEventListener('transformchange', transformchange);
+    const panelgeometryupdate = e => {
+      this.sceneBatchedMesh.updateGeometry();
+      this.entranceExitMesh.updateGeometry();
+    };
+    this.metazine.addEventListener('panelgeometryupdate', panelgeometryupdate);
 
     this.addEventListener('destroy', e => {
       document.removeEventListener('keydown', keydown);
@@ -2273,11 +2322,7 @@ export class MetazineRenderer extends EventTarget {
       canvas.removeEventListener('click', blockEvent);
       canvas.removeEventListener('wheel', blockEvent);
 
-      // this.panel.zp.removeEventListener('layeradd', update);
-      // this.panel.zp.removeEventListener('layerremove', update);
-      // this.panel.zp.removeEventListener('layerupdate', update);
-
-      // this.zineRenderer.removeEventListener('transformchange', transformchange);
+      this.metazine.removeEventListener('panelgeometryupdate', panelgeometryupdate);
     });
   }
   render() {
@@ -2673,7 +2718,7 @@ const SideScene = ({
           {panelSpec.description}
         </div>
       </div>
-      <div className={classnames(styles.sidebar, styles.form)}>
+      <div className={classnames(styles.infobar, styles.form)}>
         <img src={panelSpec.imgSrc} className={styles.img} />
         {!loreEnabled ? (
           <div
@@ -2713,7 +2758,7 @@ const SideScene = ({
               setName(Name);
               setOres((Ores ?? '').split(/\n+/));
             }}
-          >Enable Lore</div>
+          >Enable Scene Lore</div>
         ) : <div className={styles.lore}>
           {name && <div className={styles.name}>{name}</div>}
           {description && <div className={styles.description}>{description}</div>}
@@ -2764,7 +2809,7 @@ const SideMetascene = ({
 
   return (
     <div className={styles.overlay}>
-      <div className={styles.heroTag}>
+      {name ? <div className={styles.heroTag}>
         <div className={styles.h1}>{name}</div>
         <div className={styles.h2}>{description}</div>
         {objectives.length > 0 ? <div className={styles.label}>Objectives</div> : null}
@@ -2775,8 +2820,8 @@ const SideMetascene = ({
         </div>
         {reward ? <div className={styles.label}>Reward</div> : null}
         <div className={styles.h3}>{reward}</div>
-      </div>
-      <div className={classnames(styles.sidebar, styles.form)}>
+      </div> : null}
+      <div className={classnames(styles.infobar, styles.form)}>
         {!loreEnabled ? (
           <div
             className={styles.button}
@@ -2809,7 +2854,7 @@ const SideMetascene = ({
               setObjectives(Objectives.split(/\n+/));
               setReward(Reward);
             }}
-          >Enable Lore</div>
+          >Enable Quest Lore</div>
         ) : null}
       </div>
     </div>
@@ -2823,61 +2868,50 @@ const MetazineCanvas = ({
 
   return (
     <>
-    {panelSpec ? <div className={styles.header}>
-      <button className={styles.button} onClick={async e => {
-        e.preventDefault();
-        e.stopPropagation();
+      {panelSpec ? <div className={styles.header}>
+        <button className={styles.button} onClick={async e => {
+          e.preventDefault();
+          e.stopPropagation();
 
-        const {file} = panelSpec;
-        downloadFile(file, file.name);
-      }}>Download zine</button>
-      <button className={styles.button} onClick={async e => {
-        e.preventDefault();
-        e.stopPropagation();
+          const {file} = panelSpec;
+          downloadFile(file, file.name);
+        }}>Download zine</button>
+        <button className={styles.button} onClick={async e => {
+          e.preventDefault();
+          e.stopPropagation();
 
-        // const uint8Array = await metazine.exportAsync();
-        // const blob = new Blob([
-        //   zineMagicBytes,
-        //   uint8Array,
-        // ], {
-        //   type: 'application/octet-stream',
-        // });
-
-        const {file} = panelSpec;
-        openZineFile(file);
-      }}>Zine2app</button>
-    </div> : null}
-    <div className={styles.metazineCanvas}>
-      {panelSpec ? <SideScene
-        panelSpec={panelSpec}
-      /> : <SideMetascene
-      />}
-      <Metazine3DCanvasWrapper
-        metazine={metazine}
-        onPanelSpecChange={setPanelSpec}
-      />
-    </div>
+          const {file} = panelSpec;
+          openZineFile(file);
+        }}>Zine2app</button>
+      </div> : null}
+      <div className={styles.metazineCanvas}>
+        {panelSpec ? <SideScene panelSpec={panelSpec} /> : <SideMetascene />}
+        <Metazine3DCanvasWrapper
+          metazine={metazine}
+          onPanelSpecChange={setPanelSpec}
+        />
+      </div>
     </>
   );
 };
 
 //
 
-// let ids = 0;
 const MetasceneGeneratorComponent = () => {
   const [metazine, setMetazine] = useState(() => new Metazine());
-  const [compiling, setCompiling] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [seed, setSeed] = useState('lol');
-  const [numInPanels, setNumInPanels] = useState(200);
-  const [numOutPanels, setNumOutPanels] = useState(32);
+  const [maxPanels, setMaxPanels] = useState(16);
   const [files, _setFiles] = useState([]);
 
   const setFiles = files => {
-    const sortedFiles = files.slice().sort((a, b) => {
-      return a.name.localeCompare(b.name);
-    });
+    const sortedFiles = files.slice().sort((a, b) => a.name.localeCompare(b.name));
     _setFiles(sortedFiles);
+    
+    if (sortedFiles.length === 0) {
+      setLoading(false);
+    }
   };
   const compile = async files => {
     if (files.length > 0) {
@@ -2885,17 +2919,16 @@ const MetasceneGeneratorComponent = () => {
         numWorkers: defaultMaxWorkers,
       });
 
-      setCompiling(true);
+      setLoading(true);
       try {
         const filesSorted = shuffle(files.slice(), seed)
-          .slice(0, numInPanels)
-          // .sort((a, b) => a.name.localeCompare(b.name));
+          .slice(0, maxPanels);
+
         await metazine.compileZineFiles(filesSorted, {
           seed,
-          numPanels: numOutPanels,
         });
       } finally {
-        setCompiling(false);
+        setLoading(false);
       }
 
       setLoaded(true);
@@ -2910,16 +2943,22 @@ const MetasceneGeneratorComponent = () => {
       compile(files);
     }
   };
+  const drop = async e => {
+    const files = Array.from(e.dataTransfer.files);
+    setFiles(files);
+    compile(files);
+  };
+  const autoConnect = () => {
+    metazine.autoConnect();
+  };
 
   useEffect(() => {
     const router = useRouter();
     if (router.currentSrc) {
-      // console.log('src init', router.currentSrc);
       setSrc(router.currentSrc);
     }
     const srcchange = e => {
       const {src} = e.data;
-      // console.log('src change', src);
       setSrc(src);
     };
     router.addEventListener('srcchange', srcchange);
@@ -2930,6 +2969,21 @@ const MetasceneGeneratorComponent = () => {
 
   return (
     <div className={styles.metasceneGenerator}>
+      <div className={styles.header}>
+        {/* <div className={styles.spacer} /> */}
+        <label className={styles.label}>
+          Seed:
+          <input type='text' value={seed} onChange={e => {
+            setSeed(e.target.value);
+          }} />
+        </label>
+        <label className={styles.label}>
+          Max panels:
+          <input type='number' className={styles.numberInput} value={maxPanels} onChange={e => {
+            setMaxPanels(e.target.value);
+          }} />
+        </label>
+      </div>
       {loaded ? (
         <>
           <div className={styles.header}>
@@ -2958,70 +3012,35 @@ const MetasceneGeneratorComponent = () => {
                 type: 'application/octet-stream',
               });
               openZineFile(blob);
-
-              /* const u = `${devServerTmpUrl}/metazine-${++ids}.zine`;
-              const res = await fetch(u, {
-                method: 'PUT',
-                body: blob,
-              });
-              // console.log('got res', u, res);
-              const blob2 = await res.blob();
-              // console.log('got result', u, blob2);
-
-              // const devServerUrl 
-              const u2 = new URL(`https://local.webaverse.com/`);
-              u2.searchParams.set('url', u);
-
-              console.log('got u', u2.href, blob2); */
             }}>Metazine2app</button>
           </div>
-          {/* <div className={styles.metasceneRenderer}> */}
-            <MetazineCanvas
-              width={panelSize}
-              height={panelSize}
-              metazine={metazine}
-            />
-          {/* </div> */}
+          <div className={styles.sidebar}>
+            {loading ?
+              <div>building...</div>
+            :
+              <input type='button' value='Auto-Connect' className={styles.button} onClick={autoConnect} />
+            }
+          </div>
+          <MetazineCanvas
+            width={panelSize}
+            height={panelSize}
+            metazine={metazine}
+          />
         </>
-      ) : (
-        compiling ?
-          <div>building...</div>
-        :
-          <>
-            {files.length > 0 ?
-              <div className={styles.header}>
-                <div className={styles.spacer} />
-                <label className={styles.label}>
-                  Seed:
-                  <input type='text' value={seed} onChange={e => {
-                    setSeed(e.target.value);
-                  }} />
-                </label>
-                <label className={styles.label}>
-                  Max panels:
-                  <input type='number' className={styles.numberInput} value={numInPanels} onChange={e => {
-                    setNumInPanels(e.target.value);
-                  }} />
-                </label>
-                <label className={styles.label}>
-                  Out panels:
-                  <input type='number' className={styles.numberInput} value={numOutPanels} onChange={e => {
-                    setNumOutPanels(e.target.value);
-                  }} />
-                </label>
-                <input type='button' value='Generate' className={styles.submitButton} onClick={e => {
-                  compile(files);
-                }} />
-              </div>
-            : null}
-            <DropTarget
-              className={styles.panelPlaceholder}
-              files={files}
-              onFilesChange={setFiles}
-              multiple
-            />
-          </>
-        )
+      ) :
+        <>
+          <div className={styles.main}>
+            {loading ?
+              null
+            : <DropTarget
+                className={styles.panelPlaceholder}
+                files={files}
+                onFilesChange={setFiles}
+                onDrop={drop}
+                multiple
+              />}
+          </div>
+        </>
       }
     </div>
   );
