@@ -437,11 +437,7 @@ class PanelPicker extends THREE.Object3D {
         transparent: true,
       });
       const mesh = new THREE.Mesh(geometry, material);
-      // mesh.visible = false;
       mesh.frustumCulled = false;
-      // mesh.onBeforeRender = () => {
-      //   console.log('before render');
-      // };
       return mesh;
     })();
     this.add(pickerMesh);
@@ -469,9 +465,9 @@ class PanelPicker extends THREE.Object3D {
       // const floorPlaneQuaternion = new THREE.Quaternion()
       //   .fromArray(floorPlaneLocation.quaternion);
 
-      const p = new THREE.Vector3()
-      const q = new THREE.Quaternion()
-      const s = new THREE.Vector3()
+      const p = new THREE.Vector3();
+      const q = new THREE.Quaternion();
+      const s = new THREE.Vector3();
       panelSpec.matrixWorld.decompose(p, q, s);
 
       const bbox = new THREE.Box3(
@@ -485,18 +481,14 @@ class PanelPicker extends THREE.Object3D {
       const center = bbox.getCenter(new THREE.Vector3());
       const size = bbox.getSize(new THREE.Vector3());
 
+      const centerOffset = center.clone()
+        .applyQuaternion(q);
       const obb = new OBB().set(
-        center.clone()
-          .applyQuaternion(q), // center
+        centerOffset.clone(), // center
         size.clone()
           .multiplyScalar(0.5), // halfSize
         new THREE.Matrix3(), // rotation
       )
-        // .applyMatrix4(new THREE.Matrix4().compose(
-        //   new THREE.Vector3(),
-        //   floorPlaneQuaternion,
-        //   oneVector
-        // ))
         .applyMatrix4(panelSpec.matrixWorld)
       const intersection = obb.intersectRay(this.raycaster.ray, new THREE.Vector3());
       if (intersection) {
@@ -504,15 +496,9 @@ class PanelPicker extends THREE.Object3D {
         if (distance < closestIntersectionDistance) {
           closestIntersectionDistance = distance;
 
-          panelSpec.matrixWorld.decompose(
-            this.pickerMesh.position,
-            this.pickerMesh.quaternion,
-            this.pickerMesh.scale
-          );
-          this.pickerMesh.position.add(
-            center.clone()
-              .applyQuaternion(this.pickerMesh.quaternion)
-          );
+          this.pickerMesh.position.copy(p)
+            .add(centerOffset);
+          this.pickerMesh.quaternion.copy(q);
           this.pickerMesh.scale.copy(size);
           this.pickerMesh.updateMatrixWorld();
           this.pickerMesh.visible = true;
