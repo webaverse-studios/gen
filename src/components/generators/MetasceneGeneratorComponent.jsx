@@ -1316,6 +1316,9 @@ class MapIndexRenderer {
 
     return intersect;
   }
+  /* getMapIndexRenderTarget() {
+    return this.renderTargets[0];
+  } */
   getMapIndex() {
     // read back image data
     const readRenderTarget = this.renderTargets[0];
