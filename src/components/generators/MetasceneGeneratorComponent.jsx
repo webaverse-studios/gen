@@ -1649,9 +1649,7 @@ export class Metazine extends EventTarget {
   clear() {
     this.zs.clear();
   }
-  async compileZineFiles(zineFiles, {
-    seed = '',
-  } = {}) {
+  async compileZineFiles(zineFiles) {
     console.time('loadPanels');
     let panelSpecs;
     {
