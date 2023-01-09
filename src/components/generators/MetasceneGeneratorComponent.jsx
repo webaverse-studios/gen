@@ -2772,7 +2772,7 @@ const Metazine3DCanvas = ({
             break;
           }
           case 'Escape': {
-            onPanelSpecChange(null);
+            renderer.selectPanelSpec(null);
             break;
           }
           case 'm': {
