@@ -53,6 +53,7 @@ import {
   entranceExitHeight,
   entranceExitWidth,
   entranceExitDepth,
+  defaultCameraFov,
 } from '../../zine/zine-constants.js';
 // import {
 //   depthVertexShader,
@@ -2538,6 +2539,9 @@ export class MetazineRenderer extends EventTarget {
         )
       );
       this.camera.updateMatrixWorld();
+      // reset fov
+      this.camera.fov = defaultCameraFov;
+      this.camera.updateProjectionMatrix();
 
       // set controls
       this.controls.target.copy(worldCenter);
