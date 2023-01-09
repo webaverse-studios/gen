@@ -439,9 +439,9 @@ class PanelPicker extends THREE.Object3D {
       const mesh = new THREE.Mesh(geometry, material);
       // mesh.visible = false;
       mesh.frustumCulled = false;
-      mesh.onBeforeRender = () => {
-        console.log('before render');
-      };
+      // mesh.onBeforeRender = () => {
+      //   console.log('before render');
+      // };
       return mesh;
     })();
     this.add(pickerMesh);
@@ -462,39 +462,57 @@ class PanelPicker extends THREE.Object3D {
       const panelSpec = this.panelSpecs[i];
       const {
         floorPlaneLocation,
+        boundingBox,
         floorBoundingBox,
       } = panelSpec;
 
-      const floorPlaneQuaternion = new THREE.Quaternion()
-        .fromArray(floorPlaneLocation.quaternion);
+      // const floorPlaneQuaternion = new THREE.Quaternion()
+      //   .fromArray(floorPlaneLocation.quaternion);
 
-      const floorBBox = new THREE.Box3(
-        new THREE.Vector3().fromArray(floorBoundingBox.min),
-        new THREE.Vector3().fromArray(floorBoundingBox.max)
+      const p = new THREE.Vector3()
+      const q = new THREE.Quaternion()
+      const s = new THREE.Vector3()
+      panelSpec.matrixWorld.decompose(p, q, s);
+
+      const bbox = new THREE.Box3(
+        new THREE.Vector3().fromArray(boundingBox.min),
+        new THREE.Vector3().fromArray(boundingBox.max)
       );
-      const center = floorBBox.getCenter(new THREE.Vector3());
-      const size = floorBBox.getSize(new THREE.Vector3());
+      // const floorBBox = new THREE.Box3(
+      //   new THREE.Vector3().fromArray(floorBoundingBox.min),
+      //   new THREE.Vector3().fromArray(floorBoundingBox.max)
+      // );
+      const center = bbox.getCenter(new THREE.Vector3());
+      const size = bbox.getSize(new THREE.Vector3());
 
       const obb = new OBB().set(
-        center, // center
+        center.clone()
+          .applyQuaternion(q), // center
         size.clone()
           .multiplyScalar(0.5), // halfSize
         new THREE.Matrix3(), // rotation
       )
-        .applyMatrix4(new THREE.Matrix4().compose(
-          new THREE.Vector3(),
-          floorPlaneQuaternion,
-          oneVector
-        ))
-        .applyMatrix4(panelSpec.matrixWorld);
+        // .applyMatrix4(new THREE.Matrix4().compose(
+        //   new THREE.Vector3(),
+        //   floorPlaneQuaternion,
+        //   oneVector
+        // ))
+        .applyMatrix4(panelSpec.matrixWorld)
       const intersection = obb.intersectRay(this.raycaster.ray, new THREE.Vector3());
       if (intersection) {
-        // intersections.push(panelSpec);
         const distance = this.raycaster.ray.origin.distanceTo(intersection);
         if (distance < closestIntersectionDistance) {
           closestIntersectionDistance = distance;
-          this.pickerMesh.position.copy(center);
-          this.pickerMesh.quaternion.copy(panelSpec.quaternion);
+
+          panelSpec.matrixWorld.decompose(
+            this.pickerMesh.position,
+            this.pickerMesh.quaternion,
+            this.pickerMesh.scale
+          );
+          this.pickerMesh.position.add(
+            center.clone()
+              .applyQuaternion(this.pickerMesh.quaternion)
+          );
           this.pickerMesh.scale.copy(size);
           this.pickerMesh.updateMatrixWorld();
           this.pickerMesh.visible = true;
