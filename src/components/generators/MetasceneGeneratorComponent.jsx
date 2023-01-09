@@ -1631,7 +1631,6 @@ export class Metazine extends EventTarget {
       candidateEntrancePanelSpecs,
       panelSpec => panelSpec.entranceExitLocations.length >= 2
     );
-    console.log('got first panel', firstPanelSpecIndex);
     const firstPanelSpec = candidateEntrancePanelSpecs.splice(firstPanelSpecIndex, 1)[0];
     firstPanelSpec.resetToFloorTransform();
     // this.renderPanelSpecs.push(firstPanelSpec);
