@@ -412,23 +412,52 @@ const getPanelSpecsAtlasTextureImageAsync = async panelSpecs => {
 
   return atlasCanvas;
 };
-class PanelPicker {
+class PanelPicker extends THREE.Object3D {
   constructor({
     mouse,
     camera,
     panelSpecs,
   }) {
+    super();
+
     this.mouse = mouse;
     this.camera = camera;
     this.panelSpecs = panelSpecs;
 
+    this.hoverPanelSpec = null;
+
     this.raycaster = new THREE.Raycaster();
+
+    // picker mesh
+    const pickerMesh = (() => {
+      const geometry = new THREE.BoxGeometry(1, 1, 1);
+      const material = new THREE.MeshPhongMaterial({
+        color: 0x808080,
+        opacity: 0.5,
+        transparent: true,
+      });
+      const mesh = new THREE.Mesh(geometry, material);
+      // mesh.visible = false;
+      mesh.frustumCulled = false;
+      mesh.onBeforeRender = () => {
+        console.log('before render');
+      };
+      return mesh;
+    })();
+    this.add(pickerMesh);
+    pickerMesh.updateMatrixWorld();
+    this.pickerMesh = pickerMesh;
   }
   update() {
     this.raycaster.setFromCamera(this.mouse, this.camera);
 
+    this.pickerMesh.visible = false;
+
+    const oldHoverPanelSpec = this.hoverPanelSpec;
+    this.hoverPanelSpec = null;
+
     // find panel spec intersections
-    const intersections = [];
+    let closestIntersectionDistance = Infinity;
     for (let i = 0; i < this.panelSpecs.length; i++) {
       const panelSpec = this.panelSpecs[i];
       const {
@@ -446,9 +475,6 @@ class PanelPicker {
       const center = floorBBox.getCenter(new THREE.Vector3());
       const size = floorBBox.getSize(new THREE.Vector3());
 
-      // const box2Position = localVector3.fromArray(box2.position);
-      // const box2Quaternion = localQuaternion2.fromArray(box2.quaternion);
-      // const box2Scale = localVector4.fromArray(box2.scale);
       const obb = new OBB().set(
         center, // center
         size.clone()
@@ -461,12 +487,34 @@ class PanelPicker {
           oneVector
         ))
         .applyMatrix4(panelSpec.matrixWorld);
-      const intersects = obb.intersectsRay(this.raycaster.ray);
-      if (intersects) {
-        intersections.push(panelSpec);
+      const intersection = obb.intersectRay(this.raycaster.ray, new THREE.Vector3());
+      if (intersection) {
+        // intersections.push(panelSpec);
+        const distance = this.raycaster.ray.origin.distanceTo(intersection);
+        if (distance < closestIntersectionDistance) {
+          closestIntersectionDistance = distance;
+          this.pickerMesh.position.copy(center);
+          this.pickerMesh.quaternion.copy(panelSpec.quaternion);
+          this.pickerMesh.scale.copy(size);
+          this.pickerMesh.updateMatrixWorld();
+          this.pickerMesh.visible = true;
+
+          this.hoverPanelSpec = panelSpec;
+        }
       }
     }
-    console.log('got intersections', intersections);
+    if (this.hoverPanelSpec !== oldHoverPanelSpec) {
+      // console.log(
+      //   'got position',
+      //   this.pickerMesh.position.toArray(),
+      //   this.pickerMesh.quaternion.toArray(),
+      //   this.pickerMesh.scale.toArray(),
+      // );
+      this.dispatchEvent({
+        type: 'hoverchange',
+        hoverPanelSpec: this.hoverPanelSpec,
+      });
+    }
   }
 }
 class SceneBatchedMesh extends THREE.Mesh {
@@ -2235,17 +2283,6 @@ export class MetazineRenderer extends EventTarget {
     const mouse = new THREE.Vector2();
     this.mouse = mouse;
 
-    // // raycaster
-    // const raycaster = new THREE.Raycaster();
-    // this.raycaster = raycaster;
-
-    const panelPicker = new PanelPicker({
-      mouse,
-      camera,
-      panelSpecs: metazine.renderPanelSpecs,
-    });
-    this.panelPicker = panelPicker;
-
     // lights
     const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
     directionalLight.position.set(1, 2, 3);
@@ -2259,6 +2296,16 @@ export class MetazineRenderer extends EventTarget {
     scene.add(sceneBatchedMesh);
     sceneBatchedMesh.updateMatrixWorld();
     this.sceneBatchedMesh = sceneBatchedMesh;
+
+    // panel picker
+    const panelPicker = new PanelPicker({
+      mouse,
+      camera,
+      panelSpecs: metazine.renderPanelSpecs,
+    });
+    scene.add(panelPicker);
+    panelPicker.updateMatrixWorld();
+    this.panelPicker = panelPicker;
 
     // select
     this.selectedPanelSpec = null;
