@@ -508,12 +508,6 @@ class PanelPicker extends THREE.Object3D {
       }
     }
     if (this.hoverPanelSpec !== oldHoverPanelSpec) {
-      // console.log(
-      //   'got position',
-      //   this.pickerMesh.position.toArray(),
-      //   this.pickerMesh.quaternion.toArray(),
-      //   this.pickerMesh.scale.toArray(),
-      // );
       this.dispatchEvent({
         type: 'hoverchange',
         hoverPanelSpec: this.hoverPanelSpec,
