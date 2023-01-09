@@ -2487,7 +2487,7 @@ export class MetazineRenderer extends EventTarget {
     _startLoop();
   }
   selectPanelSpec(panelSpec = null) {
-    // updat member
+    // update member
     this.selectedPanelSpec = panelSpec;
     
     // update meshes
