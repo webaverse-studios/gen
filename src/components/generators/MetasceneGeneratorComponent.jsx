@@ -2391,11 +2391,34 @@ export class MetazineRenderer extends EventTarget {
     };
     document.addEventListener('keydown', keydown);
 
+    let dragSpec = null;
     const mousedown = e => {
-      // this.selector.setMouseDown(true);
+      const isLeftClick = e.button === 0;
+      if (isLeftClick) {
+        dragSpec = {
+          startX: e.clientX,
+          startY: e.clientY,
+        };
+      }
     };
     const mouseup = e => {
-      // this.selector.setMouseDown(false);
+      const isLeftClick = e.button === 0;
+      if (isLeftClick) {
+        if (dragSpec) {
+          const {clientX, clientY} = e;
+          const {startX, startY} = dragSpec;
+          const deltaX = clientX - startX;
+          const deltaY = clientY - startY;
+          if (deltaX === 0 && deltaY === 0) {
+            this.selectPanelSpec(this.panelPicker.hoverPanelSpec);
+          }
+        } else {
+          // console.warn('mosue up with no drag spec');
+          // debugger;
+        }
+        
+        dragSpec = null;
+      }
     };
     const mousemove = e => {
       // set the THREE.js.Raycaster from the mouse event
