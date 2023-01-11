@@ -265,6 +265,9 @@ export const categories = {
     "mountain-merged",
     "grass-merged",
   ],
+  sky: [
+    "sky-other-merged",
+  ],
   food: [
     "banana",
     "apple",
