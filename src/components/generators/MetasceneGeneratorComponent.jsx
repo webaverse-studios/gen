@@ -150,6 +150,9 @@ import {
 //   formatDatasetItems,
 //   formatDatasetItemsForPolyfill,
 // } from './lore/dataset-engine/dataset-parser.js';
+import {
+  FreeList,
+} from '../../utils/allocator-utils.js';
 
 //
 
@@ -188,6 +191,8 @@ const panelSpecTextureSize = 256;
 const metazineAtlasTextureSize = 4096;
 const metazineAtlasTextureRowSize = Math.floor(metazineAtlasTextureSize / panelSpecTextureSize);
 const orbitControlsDistance = 10;
+const maxPanels = 256;
+const matrixWorldTextureWidthInPixels = maxPanels * 16 / 4;
 
 //
 
@@ -323,15 +328,156 @@ class EntranceExitMesh extends THREE.Mesh {
 
 //
 
-const getPanelSpecsGeometry = panelSpecs => {
-  const geometries = panelSpecs.map((panelSpec, i) => {
+const getPanelSpecsGeometryTextures = panelSpecs => {
+  const geometry = new THREE.BufferGeometry();
+  const planeGeometry = new THREE.PlaneGeometry(
+    1, 1,
+    panelSpecGeometrySize - 1, panelSpecGeometrySize - 1
+  );
+
+  // attributes
+  const positions = new Float32Array(maxPanels * planeGeometry.attributes.position.count * 3);
+  const positionsAttribute = new THREE.BufferAttribute(positions, 3);
+  geometry.setAttribute('position', positionsAttribute);
+  
+  const uvs = new Float32Array(maxPanels * planeGeometry.attributes.uv.count * 2);
+  const uvsAttribute = new THREE.BufferAttribute(uvs, 2);
+  geometry.setAttribute('uv3', uvsAttribute);
+
+  const textureIndex = new Float32Array(maxPanels * planeGeometry.attributes.position.count);
+  for (let i = 0; i < maxPanels; i++) {
+    const baseIndex = i * planeGeometry.attributes.position.count;
+    for (let j = 0; j < planeGeometry.attributes.position.count; j++) {
+      textureIndex[baseIndex + j] = i;
+    }
+  }
+  const textureIndexAttribute = new THREE.BufferAttribute(textureIndex, 1);
+  geometry.setAttribute('textureIndex', textureIndexAttribute);
+
+  // indices
+  const indices = new Uint32Array(maxPanels * planeGeometry.index.count);
+  for (let i = 0; i < maxPanels; i++) {
+    for (let j = 0; j < planeGeometry.index.count; j++) {
+      const dstIndex = i * planeGeometry.index.count + j;
+      const srcIndex = j;
+      const positionsOffset = i * planeGeometry.attributes.position.count;
+      indices[dstIndex] = positionsOffset + planeGeometry.index.array[srcIndex];
+    }
+  }
+  const indicesAttribute = new THREE.BufferAttribute(indices, 1);
+  geometry.setIndex(indicesAttribute);
+
+  // virtual instanced texture attributes
+  const matrixWorlds = new Float32Array(maxPanels * 16);
+  const matrixWorldsTexture = new THREE.DataTexture(
+    matrixWorlds,
+    matrixWorldTextureWidthInPixels, 1,
+    THREE.RGBAFormat,
+    THREE.FloatType,
+  );
+
+  // const scaleQuaternions = new Float32Array(maxPanels * 4);
+  // const scaleQuaternionsTexture = new THREE.DataTexture(
+  //   scaleQuaternions,
+  //   maxPanels * 4 / 4, 1,
+  //   THREE.RGBAFormat,
+  //   THREE.FloatType,
+  // );
+
+  // const scaleHeights = new Float32Array(maxPanels);
+  // const scaleHeightsTexture = new THREE.DataTexture(
+  //   scaleHeights,
+  //   maxPanels, 1,
+  //   THREE.LuminanceFormat,
+  //   THREE.FloatType,
+  // );
+
+  const scaleOffsets = new Float32Array(maxPanels);
+  const scaleOffsetsTexture = new THREE.DataTexture(
+    scaleOffsets,
+    maxPanels, 1,
+    THREE.RedFormat,
+    THREE.FloatType,
+  );
+
+  const selectIndexes = new Float32Array(maxPanels);
+  const selectIndexesTexture = new THREE.DataTexture(
+    selectIndexes,
+    maxPanels, 1,
+    THREE.RedFormat,
+    THREE.FloatType,
+  );
+
+  // allocator
+  const freeList = new FreeList(maxPanels);
+
+  const _addPanelSpec = (panelSpec, panelSpecIndex) => {
     const {sceneChunkMesh} = panelSpec;
-    // transform
-    const g = sceneChunkMesh.geometry.clone()
-      .applyMatrix4(
-        sceneChunkMesh.matrixWorld
-      );
-    // atlased uvs
+
+    // compute
+    const {
+      floorPlaneLocation,
+      floorBoundingBox,
+    } = panelSpec;
+
+    // const scaleQuaternion = new THREE.Quaternion()
+    //   .fromArray(floorPlaneLocation.quaternion)
+    //   .invert();
+    
+    const floorBoundingBox3 = new THREE.Box3(
+      new THREE.Vector3().fromArray(floorBoundingBox.min),
+      new THREE.Vector3().fromArray(floorBoundingBox.max)
+    );
+    // const scaleHeight = floorBoundingBox3.max.y - floorBoundingBox3.min.y;
+
+    // allocate
+    const index = freeList.alloc(1);
+
+    // positions
+    positions.set(
+      sceneChunkMesh.geometry.attributes.position.array,
+      index * sceneChunkMesh.geometry.attributes.position.count * 3
+    );
+    positionsAttribute.needsUpdate = true;
+
+    // uvs
+    {
+      const srcUvs = planeGeometry.attributes.uv.array;
+      const px = (panelSpecIndex % metazineAtlasTextureRowSize) / metazineAtlasTextureRowSize;
+      const py = Math.floor(panelSpecIndex / metazineAtlasTextureRowSize) / metazineAtlasTextureRowSize;
+      for (let j = 0; j < srcUvs.length; j += 2) {
+        const dstIndex = index * srcUvs.length + j;
+        const srcIndex = j;
+        uvs[dstIndex + 0] = srcUvs[srcIndex + 0] * panelSpecTextureSize / metazineAtlasTextureSize + px;
+        uvs[dstIndex + 1] = srcUvs[srcIndex + 1] * panelSpecTextureSize / metazineAtlasTextureSize + py;
+      }
+      uvsAttribute.needsUpdate = true;
+    }
+
+    // virtual instanced texture attributes
+    matrixWorlds.set(sceneChunkMesh.matrixWorld.elements, index * 16);
+    matrixWorldsTexture.needsUpdate = true;
+
+    // scaleQuaternion.toArray(scaleQuaternions, index * 4);
+    // scaleQuaternionsTexture.needsUpdate = true;
+
+    // scaleHeights[index] = scaleHeight;
+    // scaleHeightsTexture.needsUpdate = true;
+
+    scaleOffsets[index] = floorBoundingBox3.min.y;
+    scaleOffsetsTexture.needsUpdate = true;
+
+    selectIndexes[index] = panelSpecIndex;
+    selectIndexesTexture.needsUpdate = true;
+
+    // return
+    return index;
+  };
+  for (let i = 0; i < panelSpecs.length; i++) {
+    const panelSpec = panelSpecs[i];
+    const index = _addPanelSpec(panelSpec, i);
+
+    /* // atlased uvs
     const uvs = g.attributes.uv.array;
     const px = (i % metazineAtlasTextureRowSize) / metazineAtlasTextureRowSize;
     const py = Math.floor(i / metazineAtlasTextureRowSize) / metazineAtlasTextureRowSize;
@@ -369,23 +515,33 @@ const getPanelSpecsGeometry = panelSpecs => {
     for (let j = 0; j < scaleHeights.length; j++) {
       localVector.fromArray(g.attributes.position.array, j * 3)
         .applyQuaternion(scaleQuaternion);
-      const dy = localVector.y - floorBoundingBox3.min.y;
+      // const dy = localVector.y - floorBoundingBox3.min.y;
 
       scaleQuaternion.toArray(scaleQuaternions, j * 4);
       scaleHeights[j] = scaleHeight;
-      // scaleOffsets[j] = dy;
       scaleOffsets[j] = floorBoundingBox3.min.y;
     }
     g.setAttribute('scaleQuaternion', new THREE.BufferAttribute(scaleQuaternions, 4));
     g.setAttribute('scaleHeight', new THREE.BufferAttribute(scaleHeights, 1));
     g.setAttribute('scaleOffset', new THREE.BufferAttribute(scaleOffsets, 1));
-    return g;
-  });
-  if (geometries.length > 0) {
-    return BufferGeometryUtils.mergeBufferGeometries(geometries);
-  } else {
-    return new THREE.BufferGeometry();
+    return g; */
   }
+  // if (geometries.length > 0) {
+  //   return BufferGeometryUtils.mergeBufferGeometries(geometries);
+  // } else {
+  //   return new THREE.BufferGeometry();
+  // }
+  
+  geometry.setDrawRange(0, panelSpecs.length * planeGeometry.index.count);
+
+  return {
+    geometry,
+    matrixWorldsTexture,
+    // scaleQuaternionsTexture,
+    // scaleHeightsTexture,
+    scaleOffsetsTexture,
+    selectIndexesTexture,
+  };
 };
 const getPanelSpecsAtlasTextureImageAsync = async panelSpecs => {
   const atlasCanvas = document.createElement('canvas');
@@ -464,9 +620,6 @@ class PanelPicker extends THREE.Object3D {
         floorBoundingBox,
       } = panelSpec;
 
-      // const floorPlaneQuaternion = new THREE.Quaternion()
-      //   .fromArray(floorPlaneLocation.quaternion);
-
       const p = new THREE.Vector3();
       const q = new THREE.Quaternion();
       const s = new THREE.Vector3();
@@ -476,10 +629,6 @@ class PanelPicker extends THREE.Object3D {
         new THREE.Vector3().fromArray(boundingBox.min),
         new THREE.Vector3().fromArray(boundingBox.max)
       );
-      // const floorBBox = new THREE.Box3(
-      //   new THREE.Vector3().fromArray(floorBoundingBox.min),
-      //   new THREE.Vector3().fromArray(floorBoundingBox.max)
-      // );
       const center = bbox.getCenter(new THREE.Vector3());
       const size = bbox.getSize(new THREE.Vector3());
 
@@ -487,8 +636,7 @@ class PanelPicker extends THREE.Object3D {
         .applyQuaternion(q);
       const obb = new OBB().set(
         centerOffset.clone(), // center
-        size.clone()
-          .multiplyScalar(0.5), // halfSize
+        size.clone().multiplyScalar(0.5), // halfSize
         new THREE.Matrix3(), // rotation
       )
         .applyMatrix4(panelSpec.matrixWorld)
@@ -548,7 +696,14 @@ class SceneBatchedMesh extends THREE.Mesh {
   constructor({
     panelSpecs = [],
   }) {
-    const geometry = getPanelSpecsGeometry(panelSpecs);
+    const {
+      geometry,
+      matrixWorldsTexture,
+      // scaleQuaternionsTexture,
+      // scaleHeightsTexture,
+      scaleOffsetsTexture,
+      selectIndexesTexture,
+    } = getPanelSpecsGeometryTextures(panelSpecs);
     
     const map = new THREE.Texture();
     (async () => {
@@ -575,16 +730,47 @@ class SceneBatchedMesh extends THREE.Mesh {
           value: -1,
           needsUpdate: true,
         },
+        matrixWorldsTexture: {
+          value: matrixWorldsTexture,
+          needsUpdate: true,
+        },
+        // scaleQuaternionsTexture: {
+        //   value: scaleQuaternionsTexture,
+        //   needsUpdate: true,
+        // },
+        // scaleHeightsTexture: {
+        //   value: scaleHeightsTexture,
+        //   needsUpdate: true,
+        // },
+        scaleOffsetsTexture: {
+          value: scaleOffsetsTexture,
+          needsUpdate: true,
+        },
+        selectIndexesTexture: {
+          value: selectIndexesTexture,
+          needsUpdate: true,
+        },
       },
       vertexShader: `\
         uniform float uSelectIndex;
-        attribute float selectIndex;
-        attribute vec4 scaleQuaternion;
-        attribute float scaleHeight;
-        attribute float scaleOffset;
+        uniform sampler2D matrixWorldsTexture;
+        // uniform sampler2D scaleQuaternionsTexture;
+        // uniform sampler2D scaleHeightsTexture;
+        uniform sampler2D scaleOffsetsTexture;
+        uniform sampler2D selectIndexesTexture;
+
+        attribute float textureIndex;
+        attribute vec2 uv3;
+
         varying vec2 vUv;
-        // varying vec3 vNormal;
         flat varying float vSelected;
+
+        //
+
+        const float maxPanels = ${maxPanels.toFixed(8)};
+        const float matrixWorldTextureWidthInPixels = ${matrixWorldTextureWidthInPixels.toFixed(8)};
+
+        //
 
         vec4 quaternion_inverse(vec4 q) {
           return vec4(-q.xyz, q.w);
@@ -596,7 +782,27 @@ class SceneBatchedMesh extends THREE.Mesh {
         }
 
         void main() {
-          vUv = uv;
+          vUv = uv3;
+
+          // read virtual instance textures
+          vec2 baseUv = vec2((textureIndex + 0.5) / maxPanels, 0.5);
+          vec2 baseUvMatrixWorld = vec2((textureIndex * 4. + 0.5) / matrixWorldTextureWidthInPixels, 0.5); 
+
+          vec4 matrixWorld1 = texture2D(matrixWorldsTexture, baseUvMatrixWorld + vec2(0., 0.) / matrixWorldTextureWidthInPixels);
+          vec4 matrixWorld2 = texture2D(matrixWorldsTexture, baseUvMatrixWorld + vec2(1., 0.) / matrixWorldTextureWidthInPixels);
+          vec4 matrixWorld3 = texture2D(matrixWorldsTexture, baseUvMatrixWorld + vec2(2., 0.) / matrixWorldTextureWidthInPixels);
+          vec4 matrixWorld4 = texture2D(matrixWorldsTexture, baseUvMatrixWorld + vec2(3., 0.) / matrixWorldTextureWidthInPixels);
+          mat4 matrixWorld = mat4(
+            matrixWorld1.x, matrixWorld1.y, matrixWorld1.z, matrixWorld1.w,
+            matrixWorld2.x, matrixWorld2.y, matrixWorld2.z, matrixWorld2.w,
+            matrixWorld3.x, matrixWorld3.y, matrixWorld3.z, matrixWorld3.w,
+            matrixWorld4.x, matrixWorld4.y, matrixWorld4.z, matrixWorld4.w
+          );
+          // matrixWorld = transpose(matrixWorld);
+          // vec4 scaleQuaternion = texture2D(scaleQuaternionsTexture, baseUv);
+          // float scaleHeight = texture2D(scaleHeightsTexture, baseUv).r;
+          float scaleOffset = texture2D(scaleOffsetsTexture, baseUv).r;
+          float selectIndex = texture2D(selectIndexesTexture, baseUv).r;
 
           vec3 p = position;
 
@@ -604,35 +810,28 @@ class SceneBatchedMesh extends THREE.Mesh {
             vSelected = 1.;
           } else {
             vSelected = 0.;
-            // p = rotate_vertex_quaternion(p, scaleQuaternion);
             p.y -= scaleOffset;
-            // p.y /= scaleHeight;
             p.y *= 0.2;
             p.y += scaleOffset;
-            // vec4 scaleQuaternionInverse = quaternion_inverse(scaleQuaternion);
-            // p = rotate_vertex_quaternion(p, scaleQuaternionInverse);
           }
 
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+          gl_Position = projectionMatrix * viewMatrix * matrixWorld * vec4(p, 1.0);
+          // gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
         }
       `,
       fragmentShader: `\
         uniform sampler2D map;
         varying vec2 vUv;
-        // varying vec3 vNormal;
         flat varying float vSelected;
 
         void main() {
-          // gl_FragColor = vec4(vNormal, 1.0);
           gl_FragColor = texture2D(map, vUv);
-          // gl_FragColor = vec4(vUv, 0.0, 1.0);
-          // gl_FragColor.rg + vUv;
-
           if (vSelected == 0.) {
-            // gl_FragColor.rgb += 0.2;
             gl_FragColor.rgb *= 0.5;
             gl_FragColor.a = 0.5;
           }
+
+          // gl_FragColor = vec4(vUv, 0., 1.);
         }
       `,
       transparent: true,
@@ -644,7 +843,31 @@ class SceneBatchedMesh extends THREE.Mesh {
   }
   updateGeometry() {
     this.geometry.dispose();
-    this.geometry = getPanelSpecsGeometry(this.panelSpecs);
+    this.material.uniforms.matrixWorldsTexture.value.dispose();
+    // this.material.uniforms.scaleQuaternionsTexture.value.dispose();
+    // this.material.uniforms.scaleHeightsTexture.value.dispose();
+    this.material.uniforms.scaleOffsetsTexture.value.dispose();
+    this.material.uniforms.selectIndexesTexture.value.dispose();
+
+    const {
+      geometry,
+      matrixWorldsTexture,
+      // scaleQuaternionsTexture,
+      // scaleHeightsTexture,
+      scaleOffsetsTexture,
+      selectIndexesTexture,
+    } = getPanelSpecsGeometryTextures(this.panelSpecs);
+    this.geometry = geometry;
+    this.material.uniforms.matrixWorldsTexture.value = matrixWorldsTexture;
+    this.material.uniforms.matrixWorldsTexture.needsUpdate = true;
+    // this.material.uniforms.scaleQuaternionsTexture.value = scaleQuaternionsTexture;
+    // this.material.uniforms.scaleQuaternionsTexture.needsUpdate = true;
+    // this.material.uniforms.scaleHeightsTexture.value = scaleHeightsTexture;
+    // this.material.uniforms.scaleHeightsTexture.needsUpdate = true;
+    this.material.uniforms.scaleOffsetsTexture.value = scaleOffsetsTexture;
+    this.material.uniforms.scaleOffsetsTexture.needsUpdate = true;
+    this.material.uniforms.selectIndexesTexture.value = selectIndexesTexture;
+    this.material.uniforms.selectIndexesTexture.needsUpdate = true;
   }
 }
 
@@ -2007,13 +2230,12 @@ export class Metazine extends EventTarget {
     }
 
     // set aside remaining candidate entrance panel specs
-    console.log('set aside remaining panel specs', candidateEntrancePanelSpecs);
+    // console.log('set aside remaining panel specs', candidateEntrancePanelSpecs);
     for (let i = 0; i < candidateEntrancePanelSpecs.length; i++) {
       const panelSpec = candidateEntrancePanelSpecs[i];
       panelSpec.position.set(-50, 0, -50);
       panelSpec.updateMatrixWorld();
     }
-
 
     this.dispatchEvent(new MessageEvent('panelgeometryupdate'));
     this.#updateMapIndex();
