@@ -10,11 +10,14 @@ import {optimizeAvatarModel} from "../../utils/avatar-optimizer.js";
 import {editMeshTextures, makeNoiseCanvas, preprocessMeshForTextureEdit} from "../../utils/model-utils.js";
 import alea from "../../utils/alea.js";
 import {loadImage} from "../../../utils.js";
-import {img2img} from "../../clients/sd-image-client.js";
+import {img2img, img_inpainting, txt2img} from "../../clients/sd-image-client.js";
+import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter';
+import {MTLLoader} from "three/examples/jsm/loaders/MTLLoader.js";
 
 // 3D Canvas to render avatar
 
 const size = 512;
+const baseUrl = `https://stable-diffusion.webaverse.com/`;
 
 export const combineMasked = (mask, t1, t2) => {
     console.log('combineMasked')
@@ -31,9 +34,10 @@ export const combineMasked = (mask, t1, t2) => {
     ctx.restore();
     ctx.globalCompositeOperation = 'destination-over';
     ctx.drawImage(t1, 0, 0, t1.width, t1.height);
-    document.body.appendChild(canvas);
+    // document.body.appendChild(canvas);
     return canvas;
 }
+
 
 function SkinnedMesh3DRenderer(props) {
     // display the selected mesh by making every other part invisible
@@ -41,6 +45,7 @@ function SkinnedMesh3DRenderer(props) {
     console.log("SKINNED", mesh);
     const containerRef = useRef(null);
     const textureCanvasRef = useRef(null);
+    const [scene, setScene] = useState(null);
 
 
         useEffect(() => {
@@ -49,6 +54,7 @@ function SkinnedMesh3DRenderer(props) {
         objct.add(mesh);
         const canvas = containerRef.current;
         const renderer = new AvatarRenderer(objct, canvas);
+        setScene(renderer.scene);
 
         const textureCanvas = textureCanvasRef.current;
         // display mesh texture as 2D image
@@ -63,6 +69,32 @@ function SkinnedMesh3DRenderer(props) {
         };
 
     }, [mesh, containerRef]);
+
+    function DownloadGLTF(mesh) {
+        console.log("Downloading", mesh);
+
+        const exporter = new GLTFExporter();
+        exporter.parse(mesh, function (gltf) {
+            console.log("GLTF", JSON.stringify(gltf));
+            const link = document.createElement('a');
+            link.download = 'three-object.gltf';
+            link.href = URL.createObjectURL(new Blob([JSON.stringify(gltf)], { type: 'application/octet-stream' }));
+            link.click();
+        });
+
+        const {material} = mesh;
+        console.log("Material", material);
+        const mtlLoader = new MTLLoader();
+        const mtlString = mtlLoader.parse(material).sourceFile;
+        console.log("MTL", mtlString);
+        const link = document.createElement('a');
+        link.download = 'meshMaterial.mtl';
+        link.href = URL.createObjectURL(new Blob([mtlString], { type: 'application/octet-stream' }));
+        link.click();
+    }
+
+
+
     return (
         <div>
             <canvas
@@ -77,11 +109,12 @@ function SkinnedMesh3DRenderer(props) {
                 height={size}
                 ref={textureCanvasRef}
             />
+            <button onClick={() => DownloadGLTF(mesh)}>Download GLTF</button>
         </div>
     );
 }
 
-const defaultPrompt = 'diffuse texture, Unreal Engine anime video game, JRPG blue shirt';
+const defaultPrompt = 'An albedo texture atlas of a blue shirt, albedotxt';
 
 function extractMask(props) {
     const {mesh} = props;
@@ -311,13 +344,13 @@ function MaskedSkinnedMeshRenderer(props) {
         masked_canvas.width = 512 * imgRation;
         masked_canvas.height = 512 * imgRation;
         masked_canvas.style.cssText = `\
-          background: red;
+          background: white;
         `;
         const texture_canvas = textureRef.current;
         texture_canvas.width = 512 * imgRation;
         texture_canvas.height = 512 * imgRation;
         texture_canvas.style.cssText = `\
-          background: black;
+          background: white;
         `;
         // setting up context
         const masked_renderer = makeRenderer(masked_canvas);
@@ -397,6 +430,10 @@ function MaskedSkinnedMeshRenderer(props) {
                     value: hueShift,
                     needsUpdate: true,
                 },
+                uFlipY: {
+                  value: +flipY,
+                  needsUpdate: true,
+                },
             },
             vertexShader: `\
         uniform float uFlipY;
@@ -405,6 +442,9 @@ function MaskedSkinnedMeshRenderer(props) {
         void main() {
           vUv = uv;
           vec2 duv = (uv - 0.5) * 2.;          
+          if (uFlipY > 0.) {
+            duv.y *= -1.;
+          }
           gl_Position = vec4(duv.x, duv.y, 0., 1.0);
         }
       `,
@@ -416,29 +456,32 @@ function MaskedSkinnedMeshRenderer(props) {
         varying vec2 vUv;
 
         // convert rgb to hsv in glsl
-        vec3 rgb2hsv(vec3 c) {
-          vec4 K = vec4(0., -1./3., 2./3., -1.);
-          vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));
-          vec4 q = mix(vec4(p.xyw, c.r), vec4(c.r, p.yzx), step(p.x, c.r));
-
-          float d = q.x - min(q.w, q.y);
-          float e = 1.0e-10;
-          return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
+        // All components are in the range [0…1], including hue.
+        vec3 rgb2hsv(vec3 c)
+        {
+            vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
+            vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));
+            vec4 q = mix(vec4(p.xyw, c.r), vec4(c.r, p.yzx), step(p.x, c.r));
+        
+            float d = q.x - min(q.w, q.y);
+            float e = 1.0e-10;
+            return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
         }
 
         // convert hsv to rgb in glsl
-        vec3 hsv2rgb(vec3 c) {
-          vec4 K = vec4(1., 2./3., 1./3., 3.);
-          vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
-          return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+        vec3 hsv2rgb(vec3 c)
+        {
+            vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+            vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+            return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
         }
 
         void main() {
           vec4 color = texture2D(uMap, vUv);
 
-          vec3 hsv = rgb2hsv(color.rgb);
-          hsv.x += uHueShift;
-          color.rgb = hsv2rgb(hsv);
+          // vec3 hsv = rgb2hsv(color.rgb);
+          // hsv.x += uHueShift;
+          // color.rgb = hsv2rgb(hsv);
           gl_FragColor = vec4(color.rgb, uAlpha);
         }
       `,
@@ -502,21 +545,19 @@ const editTexture = async (mesh, {
     height,
     opaqueImgDataUrl,
     maskImgDataUrl,
-    flipY = true,
+    flipY = false,
 }) => {
-    const editImg = await img2img({
+    const editImg = await img_inpainting({
         prompt,
-        width,
-        height,
+        width:512,
+        height:512,
         imageDataUrl: opaqueImgDataUrl,
-        // imageDataUrl: maskImgDataUrl,
         maskImageDataUrl: maskImgDataUrl,
     });
     console.log('edit image', editImg);
     {
         document.body.appendChild(editImg);
     }
-
     return editImg;
 };
 
@@ -527,14 +568,14 @@ async function AITextureEdit(props) {
     console.log('ok 1', {
         width,
         height,
-        SDmask:
+        SDmask,
         mask,
         texture,
     });
     const editImg = await editTexture(mesh, {
         prompt,
-        width:512,
-        height:512,
+        width:1024,
+        height:1024,
         opaqueImgDataUrl:texture,
         maskImgDataUrl:SDmask,
     });
@@ -556,12 +597,6 @@ async function AITextureEdit(props) {
     material2.needsUpdate = true;
 
     mesh.material = material2;
-
-
-    // console.log("changed mesh", mesh2);
-    // return (
-    //     <SkinnedMesh3DRenderer mesh={mesh2}/>
-    // )
 }
 
 function MeshSelector(props){
@@ -599,6 +634,7 @@ function MeshSelector(props){
             <button onClick={() => {AITextureEdit({prompt: prompt, mesh: selectedOption})}}>Edit</button>
             <div>
                 {selectedOption && <SkinnedMesh3DRenderer mesh={selectedOption.clone()} />}
+                {selectedOption && <MaskedSkinnedMeshRenderer mesh={selectedOption.clone()} />}
             </div>
             {/*if (edited) {*/}
             {/*    <div>*/}
@@ -617,23 +653,42 @@ const Avatar3DCanvas = ({
                             mesh,
                            }) => {
     const canvasRef = useRef();
+    const [scene, setScene] = useState(null);
 
     useEffect(() => {
         const canvas = canvasRef.current;
         const renderer = new AvatarRenderer(model, canvas);
+        setScene(renderer.scene);
 
         return () => {
             renderer.destroy();
         };
     }, [model, mesh, canvasRef.current]);
 
+    function DownloadGLTF(scene) {
+        console.log("Downloading", scene);
+
+        const exporter = new GLTFExporter();
+        exporter.parse(scene, function (gltf) {
+            console.log("GLTF", JSON.stringify(gltf));
+            const link = document.createElement('a');
+            link.download = 'three-object.gltf';
+            link.href = URL.createObjectURL(new Blob([JSON.stringify(gltf)], { type: 'application/octet-stream' }));
+            link.click();
+        });
+    }
+
+
     return (
+        <div>
         <canvas
             className={styles.canvas}
             width={size}
             height={size}
             ref={canvasRef}
         />
+        <button onClick={() => DownloadGLTF(scene)}>Download GLTF</button>
+        </div>
     );
 };
 

@@ -21,6 +21,8 @@ import {
 import {
   colors,
 } from '../constants/detectron-colors.js';
+import {loadImage} from "../../utils.js";
+import {combineMasked} from "../components/generators/AvatarRendererComponent.jsx";
 
 //
 
@@ -104,7 +106,7 @@ export const preprocessMeshForTextureEdit = async (mesh, options = {}) => {
   const maskBgAlpha = options.maskBgAlpha ?? 0;
   const maskFgAlpha = options.maskFgAlpha ?? 0.07;
   const opaqueBgAlpha = options.opaqueBgAlpha ?? 0.5;
-  const opaqueFgAlpha = options.opaqueBgAlpha ?? 0.5;
+  const opaqueFgAlpha = options.opaqueBgAlpha ?? 1;
   
   const meshes = [mesh];
   // for (let i = 0; i < meshes.length; i++) {
@@ -394,7 +396,8 @@ export const editMeshTextures = async (mesh, {
     // imageDataUrl: maskImgDataUrl,
     maskImageDataUrl: maskImgDataUrl,
   });
-  // console.log('edit image', editImg);
+  console.log('edit image', editImg);
+
 
   {
     document.body.appendChild(editImg);
