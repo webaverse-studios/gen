@@ -4597,6 +4597,70 @@ export async function compileVirtualScene(imageArrayBuffer) {
   }
   console.timeEnd('camera');
 
+  console.time('sphericalHarmonics');
+  let sphericalHarmonics;
+  {
+    // const positions = geometry.attributes.position.array;
+    // const labels = [];
+    // const labelIndices = new Uint8Array(width * height).fill(255);
+    
+    const skyCutCanvas = document.createElement('canvas');
+    skyCutCanvas.width = width;
+    skyCutCanvas.height = height;
+    skyCutCanvas.classList.add('skyCut');
+    const ctx = skyCutCanvas.getContext('2d');
+    const imageData = ctx.createImageData(width, height);
+    document.body.appendChild(skyCutCanvas);
+
+    // const seenIndices = new Set();
+    // let numSkies = 0;
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const index = y * width + x;
+  
+        // if (!seenIndices.has(index)) {
+          // seenIndices.add(index);
+  
+          // initialize loop
+          const value = segmentMask[index];
+          // if (value !== -1) {
+            if (categoryClassIndices.sky.indexOf(value)) {
+              // numSkies++;
+              // localColor.set(0, 0, 0);
+              imageData.data[index * 4 + 0] = 255;
+              imageData.data[index * 4 + 1] = 255;
+              imageData.data[index * 4 + 2] = 255;
+              imageData.data[index * 4 + 3] = 255;
+            } else {
+              imageData.data[index * 4 + 0] = 0;
+              imageData.data[index * 4 + 1] = 0;
+              imageData.data[index * 4 + 2] = 0;
+              imageData.data[index * 4 + 3] = 255;
+            }
+          // }
+        // }
+      }
+    }
+    // console.log('num skies', numSkies, imageData.data);
+    ctx.putImageData(imageData, 0, 0);
+
+    const maskBlob = await new Promise((accept, reject) => {
+      skyCutCanvas.toBlob(accept);
+    });
+
+    const formData = new FormData();
+    formData.append('img', blob);
+    formData.append('mask', maskBlob);
+
+    const res = await fetch(`https://inverse-render-net.webaverse.com/lighting`, {
+      method: 'POST',
+      body: formData,
+    });
+    const arrayBuffer = await res.arrayBuffer();
+    sphericalHarmonics = new Float32Array(arrayBuffer);
+  }
+  console.timeEnd('sphericalHarmonics');
+
   const geometry = pointCloudArrayBufferToGeometry(pointCloudArrayBuffer, width, height);
   const semanticSpecs = getSemanticSpecs({
     geometry,
@@ -5320,6 +5384,7 @@ export async function compileVirtualScene(imageArrayBuffer) {
     outlineJson,
     depthFieldHeaders,
     depthField: depthFieldArrayBuffer,
+    sphericalHarmonics,
     planesJson,
     portalJson,
     segmentLabels,
