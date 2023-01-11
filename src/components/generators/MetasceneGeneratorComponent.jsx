@@ -185,7 +185,6 @@ const imageAiClient = new ImageAiClient();
 //
 
 const defaultMaxWorkers = globalThis?.navigator?.hardwareConcurrency ?? 4;
-const defaultNumPanels = 8;
 const panelSpecGeometrySize = 256;
 const panelSpecTextureSize = 256;
 const metazineAtlasTextureSize = 4096;
