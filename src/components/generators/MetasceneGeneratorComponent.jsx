@@ -18,10 +18,10 @@ import {
 import {
   makeId,
 } from '../../../utils.js';
-import {
-  devServerUrl,
-  devServerTmpUrl,
-} from '../../constants/generator-constants.js';
+// import {
+//   devServerUrl,
+//   devServerTmpUrl,
+// } from '../../constants/generator-constants.js';
 import {
   reconstructPointCloudFromDepthField,
   pointCloudArrayBufferToGeometry,
