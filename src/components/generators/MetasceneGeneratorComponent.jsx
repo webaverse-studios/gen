@@ -190,7 +190,7 @@ const panelSpecTextureSize = 256;
 const metazineAtlasTextureSize = 4096;
 const metazineAtlasTextureRowSize = Math.floor(metazineAtlasTextureSize / panelSpecTextureSize);
 const orbitControlsDistance = 10;
-const maxRenderPanels = 256;
+const maxRenderPanels = 64;
 const matrixWorldTextureWidthInPixels = maxRenderPanels * 16 / 4;
 
 //
