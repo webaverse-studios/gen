@@ -321,221 +321,6 @@ class EntranceExitMesh extends THREE.Mesh {
 
 //
 
-const getPanelSpecsGeometryTextures = panelSpecs => {
-  const geometry = new THREE.BufferGeometry();
-  const planeGeometry = new THREE.PlaneGeometry(
-    1, 1,
-    panelSpecGeometrySize - 1, panelSpecGeometrySize - 1
-  );
-
-  // attributes
-  const positions = new Float32Array(maxRenderPanels * planeGeometry.attributes.position.count * 3);
-  const positionsAttribute = new THREE.BufferAttribute(positions, 3);
-  geometry.setAttribute('position', positionsAttribute);
-  
-  const uvs = new Float32Array(maxRenderPanels * planeGeometry.attributes.uv.count * 2);
-  const uvsAttribute = new THREE.BufferAttribute(uvs, 2);
-  geometry.setAttribute('uv3', uvsAttribute);
-
-  const textureIndex = new Float32Array(maxRenderPanels * planeGeometry.attributes.position.count);
-  for (let i = 0; i < maxRenderPanels; i++) {
-    const baseIndex = i * planeGeometry.attributes.position.count;
-    for (let j = 0; j < planeGeometry.attributes.position.count; j++) {
-      textureIndex[baseIndex + j] = i;
-    }
-  }
-  const textureIndexAttribute = new THREE.BufferAttribute(textureIndex, 1);
-  geometry.setAttribute('textureIndex', textureIndexAttribute);
-
-  // indices
-  const indices = new Uint32Array(maxRenderPanels * planeGeometry.index.count);
-  for (let i = 0; i < maxRenderPanels; i++) {
-    for (let j = 0; j < planeGeometry.index.count; j++) {
-      const dstIndex = i * planeGeometry.index.count + j;
-      const srcIndex = j;
-      const positionsOffset = i * planeGeometry.attributes.position.count;
-      indices[dstIndex] = positionsOffset + planeGeometry.index.array[srcIndex];
-    }
-  }
-  const indicesAttribute = new THREE.BufferAttribute(indices, 1);
-  geometry.setIndex(indicesAttribute);
-
-  // virtual instanced texture attributes
-  const matrixWorlds = new Float32Array(maxRenderPanels * 16);
-  const matrixWorldsTexture = new THREE.DataTexture(
-    matrixWorlds,
-    matrixWorldTextureWidthInPixels, 1,
-    THREE.RGBAFormat,
-    THREE.FloatType,
-  );
-
-  // const scaleQuaternions = new Float32Array(maxRenderPanels * 4);
-  // const scaleQuaternionsTexture = new THREE.DataTexture(
-  //   scaleQuaternions,
-  //   maxRenderPanels * 4 / 4, 1,
-  //   THREE.RGBAFormat,
-  //   THREE.FloatType,
-  // );
-
-  // const scaleHeights = new Float32Array(maxRenderPanels);
-  // const scaleHeightsTexture = new THREE.DataTexture(
-  //   scaleHeights,
-  //   maxRenderPanels, 1,
-  //   THREE.LuminanceFormat,
-  //   THREE.FloatType,
-  // );
-
-  const scaleOffsets = new Float32Array(maxRenderPanels);
-  const scaleOffsetsTexture = new THREE.DataTexture(
-    scaleOffsets,
-    maxRenderPanels, 1,
-    THREE.RedFormat,
-    THREE.FloatType,
-  );
-
-  const selectIndexes = new Float32Array(maxRenderPanels);
-  const selectIndexesTexture = new THREE.DataTexture(
-    selectIndexes,
-    maxRenderPanels, 1,
-    THREE.RedFormat,
-    THREE.FloatType,
-  );
-
-  // allocator
-  const freeList = new FreeList(maxRenderPanels);
-
-  const _addPanelSpec = (panelSpec, panelSpecIndex) => {
-    const {sceneChunkMesh} = panelSpec;
-
-    // compute
-    const {
-      floorPlaneLocation,
-      floorBoundingBox,
-    } = panelSpec;
-
-    // const scaleQuaternion = new THREE.Quaternion()
-    //   .fromArray(floorPlaneLocation.quaternion)
-    //   .invert();
-    
-    const floorBoundingBox3 = new THREE.Box3(
-      new THREE.Vector3().fromArray(floorBoundingBox.min),
-      new THREE.Vector3().fromArray(floorBoundingBox.max)
-    );
-    // const scaleHeight = floorBoundingBox3.max.y - floorBoundingBox3.min.y;
-
-    // allocate
-    const index = freeList.alloc(1);
-
-    // positions
-    positions.set(
-      sceneChunkMesh.geometry.attributes.position.array,
-      index * sceneChunkMesh.geometry.attributes.position.count * 3
-    );
-    positionsAttribute.needsUpdate = true;
-
-    // uvs
-    {
-      const srcUvs = planeGeometry.attributes.uv.array;
-      const px = (panelSpecIndex % metazineAtlasTextureRowSize) / metazineAtlasTextureRowSize;
-      const py = Math.floor(panelSpecIndex / metazineAtlasTextureRowSize) / metazineAtlasTextureRowSize;
-      for (let j = 0; j < srcUvs.length; j += 2) {
-        const dstIndex = index * srcUvs.length + j;
-        const srcIndex = j;
-        uvs[dstIndex + 0] = srcUvs[srcIndex + 0] * panelSpecTextureSize / metazineAtlasTextureSize + px;
-        uvs[dstIndex + 1] = srcUvs[srcIndex + 1] * panelSpecTextureSize / metazineAtlasTextureSize + py;
-      }
-      uvsAttribute.needsUpdate = true;
-    }
-
-    // virtual instanced texture attributes
-    matrixWorlds.set(sceneChunkMesh.matrixWorld.elements, index * 16);
-    matrixWorldsTexture.needsUpdate = true;
-
-    // scaleQuaternion.toArray(scaleQuaternions, index * 4);
-    // scaleQuaternionsTexture.needsUpdate = true;
-
-    // scaleHeights[index] = scaleHeight;
-    // scaleHeightsTexture.needsUpdate = true;
-
-    scaleOffsets[index] = floorBoundingBox3.min.y;
-    scaleOffsetsTexture.needsUpdate = true;
-
-    selectIndexes[index] = panelSpecIndex;
-    selectIndexesTexture.needsUpdate = true;
-
-    // return
-    return index;
-  };
-  for (let i = 0; i < panelSpecs.length; i++) {
-    const panelSpec = panelSpecs[i];
-    const index = _addPanelSpec(panelSpec, i);
-
-    /* // atlased uvs
-    const uvs = g.attributes.uv.array;
-    const px = (i % metazineAtlasTextureRowSize) / metazineAtlasTextureRowSize;
-    const py = Math.floor(i / metazineAtlasTextureRowSize) / metazineAtlasTextureRowSize;
-    for (let j = 0; j < uvs.length; j += 2) {
-      uvs[j + 0] = uvs[j + 0] * panelSpecTextureSize / metazineAtlasTextureSize + px;
-      uvs[j + 1] = uvs[j + 1] * panelSpecTextureSize / metazineAtlasTextureSize + py;
-    }
-    g.attributes.uv.needsUpdate = true;
-
-    // select index
-    const selectIndexes = new Uint16Array(g.attributes.position.count)
-      .fill(i);
-    g.setAttribute('selectIndex', new THREE.BufferAttribute(selectIndexes, 1, false));
-
-    // scale quaternion + offset vectors
-    const scaleQuaternions = new Float32Array(g.attributes.position.count * 4);
-    const scaleHeights = new Float32Array(g.attributes.position.count);
-    const scaleOffsets = new Float32Array(g.attributes.position.count);
-    
-    const {
-      floorPlaneLocation,
-      floorBoundingBox,
-    } = panelSpec;
-
-    const scaleQuaternion = new THREE.Quaternion()
-      .fromArray(floorPlaneLocation.quaternion)
-      .invert();
-    
-    const floorBoundingBox3 = new THREE.Box3(
-      new THREE.Vector3().fromArray(floorBoundingBox.min),
-      new THREE.Vector3().fromArray(floorBoundingBox.max)
-    );
-    const scaleHeight = floorBoundingBox3.max.y - floorBoundingBox3.min.y;
-
-    for (let j = 0; j < scaleHeights.length; j++) {
-      localVector.fromArray(g.attributes.position.array, j * 3)
-        .applyQuaternion(scaleQuaternion);
-      // const dy = localVector.y - floorBoundingBox3.min.y;
-
-      scaleQuaternion.toArray(scaleQuaternions, j * 4);
-      scaleHeights[j] = scaleHeight;
-      scaleOffsets[j] = floorBoundingBox3.min.y;
-    }
-    g.setAttribute('scaleQuaternion', new THREE.BufferAttribute(scaleQuaternions, 4));
-    g.setAttribute('scaleHeight', new THREE.BufferAttribute(scaleHeights, 1));
-    g.setAttribute('scaleOffset', new THREE.BufferAttribute(scaleOffsets, 1));
-    return g; */
-  }
-  // if (geometries.length > 0) {
-  //   return BufferGeometryUtils.mergeBufferGeometries(geometries);
-  // } else {
-  //   return new THREE.BufferGeometry();
-  // }
-  
-  geometry.setDrawRange(0, panelSpecs.length * planeGeometry.index.count);
-
-  return {
-    geometry,
-    matrixWorldsTexture,
-    // scaleQuaternionsTexture,
-    // scaleHeightsTexture,
-    scaleOffsetsTexture,
-    selectIndexesTexture,
-  };
-};
 const getPanelSpecsAtlasTextureImageAsync = async panelSpecs => {
   const atlasCanvas = document.createElement('canvas');
   atlasCanvas.width = metazineAtlasTextureSize;
@@ -686,33 +471,86 @@ class PanelPicker extends THREE.Object3D {
   }
 }
 class SceneBatchedMesh extends THREE.Mesh {
-  constructor({
-    panelSpecs = [],
-  }) {
-    const {
-      geometry,
-      matrixWorldsTexture,
-      // scaleQuaternionsTexture,
-      // scaleHeightsTexture,
-      scaleOffsetsTexture,
-      selectIndexesTexture,
-    } = getPanelSpecsGeometryTextures(panelSpecs);
-    
-    const map = new THREE.Texture();
-    (async () => {
-      const atlasTextureImage = await getPanelSpecsAtlasTextureImageAsync(panelSpecs);
-      atlasTextureImage.style.cssText = `\
-        position: relative;
-        max-width: 1024px;
-        max-height: 1024px;
-        background: red;
-      `;
-      atlasTextureImage.classList.add('atlasTextureImage');
-      document.body.appendChild(atlasTextureImage);
+  static planeGeometry = new THREE.PlaneGeometry(
+    1, 1,
+    panelSpecGeometrySize - 1, panelSpecGeometrySize - 1
+  );
+  constructor() {
+    const geometry = new THREE.BufferGeometry();
 
-      map.image = atlasTextureImage;
-      map.needsUpdate = true;
-    })();
+    // attributes
+    const positions = new Float32Array(maxRenderPanels * SceneBatchedMesh.planeGeometry.attributes.position.count * 3);
+    const positionsAttribute = new THREE.BufferAttribute(positions, 3);
+    geometry.setAttribute('position', positionsAttribute);
+    
+    const uvs = new Float32Array(maxRenderPanels * SceneBatchedMesh.planeGeometry.attributes.uv.count * 2);
+    const uvsAttribute = new THREE.BufferAttribute(uvs, 2);
+    geometry.setAttribute('uv', uvsAttribute);
+
+    const textureIndex = new Float32Array(maxRenderPanels * SceneBatchedMesh.planeGeometry.attributes.position.count);
+    for (let i = 0; i < maxRenderPanels; i++) {
+      const baseIndex = i * SceneBatchedMesh.planeGeometry.attributes.position.count;
+      for (let j = 0; j < SceneBatchedMesh.planeGeometry.attributes.position.count; j++) {
+        textureIndex[baseIndex + j] = i;
+      }
+    }
+    const textureIndexAttribute = new THREE.BufferAttribute(textureIndex, 1);
+    geometry.setAttribute('textureIndex', textureIndexAttribute);
+
+    // indices
+    const indices = new Uint32Array(maxRenderPanels * SceneBatchedMesh.planeGeometry.index.count);
+    for (let i = 0; i < maxRenderPanels; i++) {
+      for (let j = 0; j < SceneBatchedMesh.planeGeometry.index.count; j++) {
+        const dstIndex = i * SceneBatchedMesh.planeGeometry.index.count + j;
+        const srcIndex = j;
+        const positionsOffset = i * SceneBatchedMesh.planeGeometry.attributes.position.count;
+        indices[dstIndex] = positionsOffset + SceneBatchedMesh.planeGeometry.index.array[srcIndex];
+      }
+    }
+    const indicesAttribute = new THREE.BufferAttribute(indices, 1);
+    geometry.setIndex(indicesAttribute);
+    geometry.setDrawRange(0, 0);
+
+    // virtual instanced texture attributes
+    const matrixWorlds = new Float32Array(maxRenderPanels * 16);
+    const matrixWorldsTexture = new THREE.DataTexture(
+      matrixWorlds,
+      matrixWorldTextureWidthInPixels, 1,
+      THREE.RGBAFormat,
+      THREE.FloatType,
+    );
+
+    const scaleOffsets = new Float32Array(maxRenderPanels);
+    const scaleOffsetsTexture = new THREE.DataTexture(
+      scaleOffsets,
+      maxRenderPanels, 1,
+      THREE.RedFormat,
+      THREE.FloatType,
+    );
+
+    const selectIndexes = new Float32Array(maxRenderPanels);
+    const selectIndexesTexture = new THREE.DataTexture(
+      selectIndexes,
+      maxRenderPanels, 1,
+      THREE.RedFormat,
+      THREE.FloatType,
+    );
+        
+    const atlasCanvas = document.createElement('canvas');
+    atlasCanvas.width = metazineAtlasTextureSize;
+    atlasCanvas.height = metazineAtlasTextureSize;
+    atlasCanvas.ctx = atlasCanvas.getContext('2d');
+    atlasCanvas.cssText = `\
+      position: relative;
+      max-width: 1024px;
+      max-height: 1024px;
+      background: red;
+    `;
+    atlasCanvas.classList.add('atlasCanvas');
+    document.body.appendChild(atlasCanvas);
+
+    const map = new THREE.Texture(atlasCanvas);
+
     const material = new THREE.ShaderMaterial({
       uniforms: {
         map: {
@@ -727,14 +565,6 @@ class SceneBatchedMesh extends THREE.Mesh {
           value: matrixWorldsTexture,
           needsUpdate: true,
         },
-        // scaleQuaternionsTexture: {
-        //   value: scaleQuaternionsTexture,
-        //   needsUpdate: true,
-        // },
-        // scaleHeightsTexture: {
-        //   value: scaleHeightsTexture,
-        //   needsUpdate: true,
-        // },
         scaleOffsetsTexture: {
           value: scaleOffsetsTexture,
           needsUpdate: true,
@@ -747,13 +577,10 @@ class SceneBatchedMesh extends THREE.Mesh {
       vertexShader: `\
         uniform float uSelectIndex;
         uniform sampler2D matrixWorldsTexture;
-        // uniform sampler2D scaleQuaternionsTexture;
-        // uniform sampler2D scaleHeightsTexture;
         uniform sampler2D scaleOffsetsTexture;
         uniform sampler2D selectIndexesTexture;
 
         attribute float textureIndex;
-        attribute vec2 uv3;
 
         varying vec2 vUv;
         flat varying float vSelected;
@@ -775,7 +602,7 @@ class SceneBatchedMesh extends THREE.Mesh {
         }
 
         void main() {
-          vUv = uv3;
+          vUv = uv;
 
           // read virtual instance textures
           vec2 baseUv = vec2((textureIndex + 0.5) / maxRenderPanels, 0.5);
@@ -792,8 +619,6 @@ class SceneBatchedMesh extends THREE.Mesh {
             matrixWorld4.x, matrixWorld4.y, matrixWorld4.z, matrixWorld4.w
           );
           // matrixWorld = transpose(matrixWorld);
-          // vec4 scaleQuaternion = texture2D(scaleQuaternionsTexture, baseUv);
-          // float scaleHeight = texture2D(scaleHeightsTexture, baseUv).r;
           float scaleOffset = texture2D(scaleOffsetsTexture, baseUv).r;
           float selectIndex = texture2D(selectIndexesTexture, baseUv).r;
 
@@ -829,38 +654,144 @@ class SceneBatchedMesh extends THREE.Mesh {
       `,
       transparent: true,
     });
-
     super(geometry, material);
-    this.frustumCulled = false;
-    this.panelSpecs = panelSpecs;
-  }
-  updateGeometry() {
-    this.geometry.dispose();
-    this.material.uniforms.matrixWorldsTexture.value.dispose();
-    // this.material.uniforms.scaleQuaternionsTexture.value.dispose();
-    // this.material.uniforms.scaleHeightsTexture.value.dispose();
-    this.material.uniforms.scaleOffsetsTexture.value.dispose();
-    this.material.uniforms.selectIndexesTexture.value.dispose();
 
+    this.frustumCulled = false;
+    
+    this.panelSpecs = [];
+    this.freeList = new FreeList(maxRenderPanels);
+  }
+  addPanel(panelSpec) {
+    this.panelSpecs.push(panelSpec);
+
+    const index = this.freeList.alloc(1);
+    this.#addPanelSpecToGeometry(panelSpec, index);
+    this.#addPanelSpecToTextureAtlas(panelSpec, index);
+  }
+  #addPanelSpecToGeometry(panelSpec, index) {
+    const {
+      sceneChunkMesh,
+      floorPlaneLocation,
+      floorBoundingBox,
+    } = panelSpec;
     const {
       geometry,
-      matrixWorldsTexture,
-      // scaleQuaternionsTexture,
-      // scaleHeightsTexture,
-      scaleOffsetsTexture,
-      selectIndexesTexture,
-    } = getPanelSpecsGeometryTextures(this.panelSpecs);
-    this.geometry = geometry;
-    this.material.uniforms.matrixWorldsTexture.value = matrixWorldsTexture;
-    this.material.uniforms.matrixWorldsTexture.needsUpdate = true;
-    // this.material.uniforms.scaleQuaternionsTexture.value = scaleQuaternionsTexture;
-    // this.material.uniforms.scaleQuaternionsTexture.needsUpdate = true;
-    // this.material.uniforms.scaleHeightsTexture.value = scaleHeightsTexture;
-    // this.material.uniforms.scaleHeightsTexture.needsUpdate = true;
-    this.material.uniforms.scaleOffsetsTexture.value = scaleOffsetsTexture;
-    this.material.uniforms.scaleOffsetsTexture.needsUpdate = true;
-    this.material.uniforms.selectIndexesTexture.value = selectIndexesTexture;
-    this.material.uniforms.selectIndexesTexture.needsUpdate = true;
+    } = this;
+
+    // attributes
+    const positionsAttribute = geometry.attributes.position;
+    const positions = positionsAttribute.array;
+    const uvsAttribute = geometry.attributes.uv;
+    const uvs = uvsAttribute.array;
+    // virtual instance attributes
+    const matrixWorldsTexture = this.material.uniforms.matrixWorldsTexture.value;
+    const matrixWorlds = matrixWorldsTexture.image.data;
+    const scaleOffsetsTexture = this.material.uniforms.scaleOffsetsTexture.value;
+    const scaleOffsets = scaleOffsetsTexture.image.data;
+    const selectIndexesTexture = this.material.uniforms.selectIndexesTexture.value;
+    const selectIndexes = selectIndexesTexture.image.data;
+
+    const floorBoundingBox3 = new THREE.Box3(
+      new THREE.Vector3().fromArray(floorBoundingBox.min),
+      new THREE.Vector3().fromArray(floorBoundingBox.max)
+    );
+
+    // positions
+    positions.set(
+      sceneChunkMesh.geometry.attributes.position.array,
+      index * sceneChunkMesh.geometry.attributes.position.count * 3
+    );
+    positionsAttribute.needsUpdate = true;
+
+    // uvs
+    {
+      const srcUvs = SceneBatchedMesh.planeGeometry.attributes.uv.array;
+      const px = (index % metazineAtlasTextureRowSize) / metazineAtlasTextureRowSize;
+      const py = Math.floor(index / metazineAtlasTextureRowSize) / metazineAtlasTextureRowSize;
+      for (let j = 0; j < srcUvs.length; j += 2) {
+        const dstIndex = index * srcUvs.length + j;
+        const srcIndex = j;
+        uvs[dstIndex + 0] = srcUvs[srcIndex + 0] * panelSpecTextureSize / metazineAtlasTextureSize + px;
+        uvs[dstIndex + 1] = srcUvs[srcIndex + 1] * panelSpecTextureSize / metazineAtlasTextureSize + py;
+      }
+      uvsAttribute.needsUpdate = true;
+    }
+
+    // virtual instanced texture attributes
+    matrixWorlds.set(sceneChunkMesh.matrixWorld.elements, index * 16);
+    matrixWorldsTexture.needsUpdate = true;
+
+    scaleOffsets[index] = floorBoundingBox3.min.y;
+    scaleOffsetsTexture.needsUpdate = true;
+
+    selectIndexes[index] = index;
+    selectIndexesTexture.needsUpdate = true;
+
+    geometry.drawRange.count += SceneBatchedMesh.planeGeometry.index.count;
+  }
+  async #addPanelSpecToTextureAtlas(panelSpec, index) {
+    const {imageArrayBuffer} = panelSpec;
+    const blob = new Blob([imageArrayBuffer]);
+    const imageBitmap = await createImageBitmap(blob);
+    
+    const x = (index % metazineAtlasTextureRowSize) * panelSpecTextureSize;
+    let y = Math.floor(index / metazineAtlasTextureRowSize) * panelSpecTextureSize;
+    y = metazineAtlasTextureSize - y - panelSpecTextureSize;
+
+    // console.log('got context', this.material?.uniforms?.map?.value?.ctx.image);
+    // if (!this.material?.uniforms?.map?.value?.ctx) {
+    //   debugger;
+    // }
+    this.material.uniforms.map.value.image.ctx.drawImage(
+      imageBitmap,
+      x, y,
+      panelSpecTextureSize, panelSpecTextureSize
+    );
+    this.material.uniforms.map.value.needsUpdate = true;
+
+    /* (async () => {
+      const atlasTextureImage = await getPanelSpecsAtlasTextureImageAsync(panelSpecs);
+      atlasTextureImage.style.cssText = `\
+        position: relative;
+        max-width: 1024px;
+        max-height: 1024px;
+        background: red;
+      `;
+      atlasTextureImage.classList.add('atlasTextureImage');
+      document.body.appendChild(atlasTextureImage);
+
+      map.image = atlasTextureImage;
+      map.needsUpdate = true;
+    })(); */
+  }
+  updateGeometry() {
+    const matrixWorlds = this.material.uniforms.matrixWorldsTexture.value.image.data;
+    for (let i = 0; i < this.panelSpecs.length; i++) {
+      const panelSpec = this.panelSpecs[i];
+      matrixWorlds.set(panelSpec.sceneChunkMesh.matrixWorld.elements, i * 16);
+      globalThis.matrixWorlds = matrixWorlds;
+      globalThis.matrixWorldsTexture = this.material.uniforms.matrixWorldsTexture.value;
+    }
+    this.material.uniforms.matrixWorldsTexture.value.needsUpdate = true;
+    
+    // this.geometry.dispose();
+    // this.material.uniforms.matrixWorldsTexture.value.dispose();
+    // this.material.uniforms.scaleOffsetsTexture.value.dispose();
+    // this.material.uniforms.selectIndexesTexture.value.dispose();
+
+    // const {
+    //   geometry,
+    //   matrixWorldsTexture,
+    //   scaleOffsetsTexture,
+    //   selectIndexesTexture,
+    // } = getPanelSpecsGeometryTextures(this.panelSpecs);
+    // this.geometry = geometry;
+    // this.material.uniforms.matrixWorldsTexture.value = matrixWorldsTexture;
+    // this.material.uniforms.matrixWorldsTexture.needsUpdate = true;
+    // this.material.uniforms.scaleOffsetsTexture.value = scaleOffsetsTexture;
+    // this.material.uniforms.scaleOffsetsTexture.needsUpdate = true;
+    // this.material.uniforms.selectIndexesTexture.value = selectIndexesTexture;
+    // this.material.uniforms.selectIndexesTexture.needsUpdate = true;
   }
 }
 
@@ -2538,9 +2469,10 @@ export class MetazineRenderer extends EventTarget {
     scene.add(directionalLight);
 
     // scene batched mesh
-    const sceneBatchedMesh = new SceneBatchedMesh({
-      panelSpecs: metazine.renderPanelSpecs,
-    });
+    const sceneBatchedMesh = new SceneBatchedMesh();
+    for (const panelSpec of metazine.renderPanelSpecs) {
+      sceneBatchedMesh.addPanel(panelSpec);
+    }
     scene.add(sceneBatchedMesh);
     sceneBatchedMesh.updateMatrixWorld();
     this.sceneBatchedMesh = sceneBatchedMesh;
