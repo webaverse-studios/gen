@@ -426,6 +426,7 @@ class PanelPicker extends THREE.Object3D {
     this.panelSpecs = panelSpecs;
 
     this.hoverPanelSpec = null;
+    this.selectPanelSpec = null;
 
     this.raycaster = new THREE.Raycaster();
 
@@ -504,7 +505,7 @@ class PanelPicker extends THREE.Object3D {
           this.pickerMesh.updateMatrixWorld();
           this.pickerMesh.visible = true;
 
-          this.hoverPanelSpec = panelSpec;
+          this.hover(panelSpec);
         }
       }
     }
@@ -514,6 +515,33 @@ class PanelPicker extends THREE.Object3D {
         hoverPanelSpec: this.hoverPanelSpec,
       });
     }
+  }
+  hover(panelSpec) {
+    this.hoverPanelSpec = panelSpec;
+  }
+  select() {
+    this.selectPanelSpec = this.hoverPanelSpec;
+
+    this.dispatchEvent({
+      type: 'selectchange',
+      selectPanelSpec: this.selectPanelSpec,
+    });
+  }
+  rotate(angleY) {
+    if (this.selectPanelSpec) {
+      this.selectPanelSpec.quaternion
+        .premultiply(
+          new THREE.Quaternion()
+            .setFromAxisAngle(
+              upVector,
+              angleY
+            )
+        );
+      this.selectPanelSpec.updateMatrixWorld();
+    }
+    this.dispatchEvent({
+      type: 'panelgeometryupdate',
+    });
   }
 }
 class SceneBatchedMesh extends THREE.Mesh {
@@ -1973,7 +2001,7 @@ export class Metazine extends EventTarget {
         }
       } else {
         // we couldn't find an entrance location we can connect, so stop
-        console.log('break');
+        // console.log('break');
         break;
       }
     }
@@ -2302,25 +2330,25 @@ export class MetazineRenderer extends EventTarget {
     sceneBatchedMesh.updateMatrixWorld();
     this.sceneBatchedMesh = sceneBatchedMesh;
 
-    // panel picker
-    const panelPicker = new PanelPicker({
-      mouse,
-      camera,
-      panelSpecs: metazine.renderPanelSpecs,
-    });
-    scene.add(panelPicker);
-    panelPicker.updateMatrixWorld();
-    this.panelPicker = panelPicker;
-
-    // select
-    this.selectedPanelSpec = null;
-
     // bootstrap
     this.#initAux();
     this.#listen();
     this.animate();
   }
   #initAux() {
+    // panel picker
+    const panelPicker = new PanelPicker({
+      mouse: this.mouse,
+      camera: this.camera,
+      panelSpecs: this.metazine.renderPanelSpecs,
+    });
+    this.scene.add(panelPicker);
+    panelPicker.updateMatrixWorld();
+    this.panelPicker = panelPicker;
+    panelPicker.addEventListener('selectchange', e => {
+      this.handlePanelSpecChange(e.selectPanelSpec);
+    });
+
     // entrance exit mesh
     const entranceExitMesh = new EntranceExitMesh({
       panelSpecs: this.metazine.renderPanelSpecs,
@@ -2360,7 +2388,7 @@ export class MetazineRenderer extends EventTarget {
     storyTargetMesh.updateMatrixWorld();
     this.storyTargetMesh = storyTargetMesh;
 
-    // XXX debug cube mesh at origin
+    // debug cube mesh at origin
     const cubeMesh = new THREE.Mesh(
       new THREE.BoxGeometry(1, 1, 1),
       new THREE.MeshPhongMaterial({
@@ -2415,7 +2443,7 @@ export class MetazineRenderer extends EventTarget {
           const deltaX = clientX - startX;
           const deltaY = clientY - startY;
           if (deltaX === 0 && deltaY === 0) {
-            this.selectPanelSpec(this.panelPicker.hoverPanelSpec);
+            this.panelPicker.select();
           }
         } else {
           // console.warn('mosue up with no drag spec');
@@ -2450,6 +2478,7 @@ export class MetazineRenderer extends EventTarget {
       this.entranceExitMesh.updateGeometry();
     };
     this.metazine.addEventListener('panelgeometryupdate', panelgeometryupdate);
+    this.panelPicker.addEventListener('panelgeometryupdate', panelgeometryupdate);
     const mapIndexUpdate = e => {
       const mapIndex = this.metazine.mapIndexRenderer.getMapIndex();
       this.mapIndexMesh.setMapIndex(mapIndex);
@@ -2466,6 +2495,7 @@ export class MetazineRenderer extends EventTarget {
       canvas.removeEventListener('wheel', blockEvent);
 
       this.metazine.removeEventListener('panelgeometryupdate', panelgeometryupdate);
+      this.panelPicker.removeEventListener('panelgeometryupdate', panelgeometryupdate);
       this.metazine.removeEventListener('mapindexupdate', mapIndexUpdate);
     });
   }
@@ -2497,7 +2527,7 @@ export class MetazineRenderer extends EventTarget {
     };
     _startLoop();
   }
-  selectPanelSpec(panelSpec = null) {
+  handlePanelSpecChange(panelSpec = null) {
     // update member
     this.selectedPanelSpec = panelSpec;
     
@@ -2592,14 +2622,8 @@ export class MetazineRenderer extends EventTarget {
       this.underfloorMesh.setTransform(panelSpec, underfloorPosition, underfloorQuaternion, underfloorScale);
       this.underfloorMesh.updateMatrixWorld();
     }
-
-    this.dispatchEvent(new MessageEvent('panelspecchange', {
-      data: {
-        panelSpec,
-      },
-    }))
   }
-  snapCameraToPanelSpec() {
+  setCameraToPanelSpec() {
     if (this.selectedPanelSpec) {
       this.camera.copy(this.selectedPanelSpec.camera)
       this.camera.matrix.premultiply(this.selectedPanelSpec.matrixWorld)
@@ -2694,9 +2718,10 @@ const Metazine3DCanvas = ({
     const canvas = canvasRef.current;
     if (canvas) {
       const renderer = new MetazineRenderer(canvas, metazine);
-      renderer.addEventListener('panelspecchange', e => {
-        onPanelSpecChange(e.data.panelSpec);
-      });
+      const selectchange = e => {
+        onPanelSpecChange(e.selectPanelSpec);
+      };
+      renderer.panelPicker.addEventListener('selectchange', selectchange);
 
       const _direction = (x, z) => {
         // get candidate panel specs
@@ -2755,10 +2780,12 @@ const Metazine3DCanvas = ({
           });
         if (panelSpecCentersSweep.length > 0) {
           const closestPanelSpec = panelSpecCentersSweep[0].panelSpec;
-          renderer.selectPanelSpec(closestPanelSpec);
-        // } else {
-          // renderer.selectPanelSpec(null);
+          renderer.panelPicker.hover(closestPanelSpec);
+          renderer.panelPicker.select();
         }
+      };
+      const _rotate = angleY => {
+        renderer.panelPicker.rotate(angleY);
       };
       const keydown = async e => {
         switch (e.key) {
@@ -2778,12 +2805,21 @@ const Metazine3DCanvas = ({
             _direction(1, 0);
             break;
           }
+          case 'q': {
+            _rotate(Math.PI / 2);
+            break;
+          }
+          case 'e': {
+            _rotate(-Math.PI / 2);
+            break;
+          }
           case 'g': {
-            renderer.snapCameraToPanelSpec();
+            renderer.setCameraToPanelSpec();
             break;
           }
           case 'Escape': {
-            renderer.selectPanelSpec(null);
+            renderer.panelPicker.hover(null);
+            renderer.panelPicker.select();
             break;
           }
           case 'm': {
@@ -2825,6 +2861,7 @@ const Metazine3DCanvas = ({
 
       return () => {
         renderer.destroy();
+        renderer.panelPicker.removeEventListener('selectchange', selectchange);
         window.removeEventListener('keydown', keydown);
       };
     }
@@ -3011,7 +3048,6 @@ const MetazineCanvas = ({
   metazine,
 }) => {
   const [panelSpec, setPanelSpec] = useState(null);
-  const [loreEnabled, setLoreEnabled] = useState(false);
 
   return (
     <>
