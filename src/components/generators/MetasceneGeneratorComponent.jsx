@@ -191,8 +191,8 @@ const panelSpecTextureSize = 256;
 const metazineAtlasTextureSize = 4096;
 const metazineAtlasTextureRowSize = Math.floor(metazineAtlasTextureSize / panelSpecTextureSize);
 const orbitControlsDistance = 10;
-const maxPanels = 256;
-const matrixWorldTextureWidthInPixels = maxPanels * 16 / 4;
+const maxRenderPanels = 256;
+const matrixWorldTextureWidthInPixels = maxRenderPanels * 16 / 4;
 
 //
 
@@ -336,16 +336,16 @@ const getPanelSpecsGeometryTextures = panelSpecs => {
   );
 
   // attributes
-  const positions = new Float32Array(maxPanels * planeGeometry.attributes.position.count * 3);
+  const positions = new Float32Array(maxRenderPanels * planeGeometry.attributes.position.count * 3);
   const positionsAttribute = new THREE.BufferAttribute(positions, 3);
   geometry.setAttribute('position', positionsAttribute);
   
-  const uvs = new Float32Array(maxPanels * planeGeometry.attributes.uv.count * 2);
+  const uvs = new Float32Array(maxRenderPanels * planeGeometry.attributes.uv.count * 2);
   const uvsAttribute = new THREE.BufferAttribute(uvs, 2);
   geometry.setAttribute('uv3', uvsAttribute);
 
-  const textureIndex = new Float32Array(maxPanels * planeGeometry.attributes.position.count);
-  for (let i = 0; i < maxPanels; i++) {
+  const textureIndex = new Float32Array(maxRenderPanels * planeGeometry.attributes.position.count);
+  for (let i = 0; i < maxRenderPanels; i++) {
     const baseIndex = i * planeGeometry.attributes.position.count;
     for (let j = 0; j < planeGeometry.attributes.position.count; j++) {
       textureIndex[baseIndex + j] = i;
@@ -355,8 +355,8 @@ const getPanelSpecsGeometryTextures = panelSpecs => {
   geometry.setAttribute('textureIndex', textureIndexAttribute);
 
   // indices
-  const indices = new Uint32Array(maxPanels * planeGeometry.index.count);
-  for (let i = 0; i < maxPanels; i++) {
+  const indices = new Uint32Array(maxRenderPanels * planeGeometry.index.count);
+  for (let i = 0; i < maxRenderPanels; i++) {
     for (let j = 0; j < planeGeometry.index.count; j++) {
       const dstIndex = i * planeGeometry.index.count + j;
       const srcIndex = j;
@@ -368,7 +368,7 @@ const getPanelSpecsGeometryTextures = panelSpecs => {
   geometry.setIndex(indicesAttribute);
 
   // virtual instanced texture attributes
-  const matrixWorlds = new Float32Array(maxPanels * 16);
+  const matrixWorlds = new Float32Array(maxRenderPanels * 16);
   const matrixWorldsTexture = new THREE.DataTexture(
     matrixWorlds,
     matrixWorldTextureWidthInPixels, 1,
@@ -376,40 +376,40 @@ const getPanelSpecsGeometryTextures = panelSpecs => {
     THREE.FloatType,
   );
 
-  // const scaleQuaternions = new Float32Array(maxPanels * 4);
+  // const scaleQuaternions = new Float32Array(maxRenderPanels * 4);
   // const scaleQuaternionsTexture = new THREE.DataTexture(
   //   scaleQuaternions,
-  //   maxPanels * 4 / 4, 1,
+  //   maxRenderPanels * 4 / 4, 1,
   //   THREE.RGBAFormat,
   //   THREE.FloatType,
   // );
 
-  // const scaleHeights = new Float32Array(maxPanels);
+  // const scaleHeights = new Float32Array(maxRenderPanels);
   // const scaleHeightsTexture = new THREE.DataTexture(
   //   scaleHeights,
-  //   maxPanels, 1,
+  //   maxRenderPanels, 1,
   //   THREE.LuminanceFormat,
   //   THREE.FloatType,
   // );
 
-  const scaleOffsets = new Float32Array(maxPanels);
+  const scaleOffsets = new Float32Array(maxRenderPanels);
   const scaleOffsetsTexture = new THREE.DataTexture(
     scaleOffsets,
-    maxPanels, 1,
+    maxRenderPanels, 1,
     THREE.RedFormat,
     THREE.FloatType,
   );
 
-  const selectIndexes = new Float32Array(maxPanels);
+  const selectIndexes = new Float32Array(maxRenderPanels);
   const selectIndexesTexture = new THREE.DataTexture(
     selectIndexes,
-    maxPanels, 1,
+    maxRenderPanels, 1,
     THREE.RedFormat,
     THREE.FloatType,
   );
 
   // allocator
-  const freeList = new FreeList(maxPanels);
+  const freeList = new FreeList(maxRenderPanels);
 
   const _addPanelSpec = (panelSpec, panelSpecIndex) => {
     const {sceneChunkMesh} = panelSpec;
@@ -767,7 +767,7 @@ class SceneBatchedMesh extends THREE.Mesh {
 
         //
 
-        const float maxPanels = ${maxPanels.toFixed(8)};
+        const float maxRenderPanels = ${maxRenderPanels.toFixed(8)};
         const float matrixWorldTextureWidthInPixels = ${matrixWorldTextureWidthInPixels.toFixed(8)};
 
         //
@@ -785,7 +785,7 @@ class SceneBatchedMesh extends THREE.Mesh {
           vUv = uv3;
 
           // read virtual instance textures
-          vec2 baseUv = vec2((textureIndex + 0.5) / maxPanels, 0.5);
+          vec2 baseUv = vec2((textureIndex + 0.5) / maxRenderPanels, 0.5);
           vec2 baseUvMatrixWorld = vec2((textureIndex * 4. + 0.5) / matrixWorldTextureWidthInPixels, 0.5); 
 
           vec4 matrixWorld1 = texture2D(matrixWorldsTexture, baseUvMatrixWorld + vec2(0., 0.) / matrixWorldTextureWidthInPixels);
