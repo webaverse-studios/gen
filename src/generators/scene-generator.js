@@ -3153,6 +3153,7 @@ export class PanelRenderer extends EventTarget {
     const {
       sceneMesh,
       scenePhysicsMesh,
+      lightMesh,
       floorNetMesh,
       edgeDepthMesh,
       wallPlaneMeshes,
@@ -3161,6 +3162,7 @@ export class PanelRenderer extends EventTarget {
     this.camera.copy(this.zineRenderer.camera);
     this.sceneMesh = sceneMesh;
     this.scenePhysicsMesh = scenePhysicsMesh;
+    this.lightMesh = lightMesh;
     this.floorNetMesh = floorNetMesh;
     this.wallPlaneMeshes = wallPlaneMeshes;
     this.edgeDepthMesh = edgeDepthMesh;
@@ -3230,6 +3232,9 @@ export class PanelRenderer extends EventTarget {
       floorFlowerPetalMesh.updateMatrixWorld();
       this.floorFlowerPetalMesh = floorFlowerPetalMesh;
     }
+
+    // light mesh
+    lightMesh.visible = true;
 
     // selector
     {
