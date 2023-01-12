@@ -165,7 +165,9 @@ const localVector6 = new THREE.Vector3();
 const localVector7 = new THREE.Vector3();
 const localVector8 = new THREE.Vector3();
 const localQuaternion = new THREE.Quaternion();
+const localQuaternion2 = new THREE.Quaternion();
 const localMatrix = new THREE.Matrix4();
+const localMatrix2 = new THREE.Matrix4();
 // const localMatrix3D = new THREE.Matrix3();
 // const localTriangle = new THREE.Triangle();
 // const localTriangle2 = new THREE.Triangle();
@@ -464,12 +466,8 @@ class PanelPicker extends THREE.Object3D {
       type: 'selectchange',
       selectPanelSpec: this.selectPanelSpec,
     });
-
-    if (!this.selectPanelSpec) {
-      this.dragSpec = null;
-    }
   }
-  drag(newCenterPosition) {
+  drag(newCenterPosition, newQuaternion) {
     const panelSpec = this.selectPanelSpec;
     const {
       floorPlaneLocation,
@@ -477,18 +475,103 @@ class PanelPicker extends THREE.Object3D {
       floorBoundingBox,
     } = panelSpec;
 
+    const getClosestEntranceExitSnap = () => {
+      const {
+        entranceExitLocations,
+      } = panelSpec;
+
+      let closestDistance = Infinity;
+      let closestPanelSpec = null;
+      let closestEntranceExitLocation = null;
+      let closestOtherPanelSpec = null;
+      let closestOtherEntranceExitLocation = null;
+      for (let i = 0; i < this.panelSpecs.length; i++) {
+        const otherPanelSpec = this.panelSpecs[i];
+        if (otherPanelSpec === panelSpec) {
+          continue;
+        }
+
+        const {
+          entranceExitLocations: otherEntranceExitLocations,
+        } = otherPanelSpec;
+        for (let j = 0; j < otherEntranceExitLocations.length; j++) {
+          const otherEntranceExitLocation = otherEntranceExitLocations[j];
+          
+          localMatrix.compose(
+            localVector.fromArray(otherEntranceExitLocation.position),
+            localQuaternion.fromArray(otherEntranceExitLocation.quaternion),
+            oneVector
+          )
+            .premultiply(otherPanelSpec.transformScene.matrixWorld)
+            .decompose(localVector, localQuaternion, localVector2);
+
+          for (let k = 0; k < entranceExitLocations.length; k++) {
+            const entranceExitLocation = entranceExitLocations[k];
+            
+            localMatrix2.compose(
+              localVector3.fromArray(entranceExitLocation.position),
+              localQuaternion2.fromArray(entranceExitLocation.quaternion),
+              oneVector
+            )
+              .premultiply(panelSpec.transformScene.matrixWorld)
+              .decompose(localVector3, localQuaternion2, localVector4);
+
+            const distance = localVector.distanceTo(localVector3);
+            if (distance < closestDistance) {
+              closestDistance = distance;
+
+              closestPanelSpec = panelSpec;
+              closestEntranceExitLocation = entranceExitLocation;
+
+              closestOtherPanelSpec = otherPanelSpec;
+              closestOtherEntranceExitLocation = otherEntranceExitLocation;
+            }
+          }
+        }
+      }
+
+      if (closestDistance < 10) {
+        return {
+          distance: closestDistance,
+          panelSpec: closestPanelSpec,
+          entranceExitLocation: closestEntranceExitLocation,
+          otherPanelSpec: closestOtherPanelSpec,
+          otherEntranceExitLocation: closestOtherEntranceExitLocation,
+        };
+      } else {
+        return null;
+      }
+    };
+
     const bbox = new THREE.Box3(
       new THREE.Vector3().fromArray(boundingBox.min),
       new THREE.Vector3().fromArray(boundingBox.max)
     )//.applyMatrix4(panelSpec.matrix);
     const center = bbox.getCenter(new THREE.Vector3());
     const centerOffset = center.clone()
-      .applyQuaternion(panelSpec.quaternion);
+      .applyQuaternion(newQuaternion);
 
     panelSpec.position.copy(newCenterPosition)
       .sub(centerOffset);
+    panelSpec.quaternion.copy(newQuaternion);
     panelSpec.updateMatrixWorld();
-    
+
+    const snap = getClosestEntranceExitSnap();
+    if (snap) {
+      const exitLocation = snap.otherEntranceExitLocation;
+      const entranceLocation = snap.entranceExitLocation;
+      const exitParentMatrixWorld = snap.otherPanelSpec.transformScene.matrixWorld;
+      const entranceParentMatrixWorld = snap.panelSpec.transformScene.matrixWorld;
+      const entrancePanelSpec = snap.panelSpec;
+      connect({
+        exitLocation,
+        entranceLocation,
+        exitParentMatrixWorld,
+        entranceParentMatrixWorld,
+        target: entrancePanelSpec,
+      });
+    }
+
     this.dispatchEvent({
       type: 'panelgeometryupdate',
     });
@@ -1979,7 +2062,6 @@ export class Metazine extends EventTarget {
     );
     const firstPanelSpec = candidateEntrancePanelSpecs.splice(firstPanelSpecIndex, 1)[0];
     firstPanelSpec.resetToFloorTransform();
-    // this.renderPanelSpecs.push(firstPanelSpec);
     const candidateExitSpecs = firstPanelSpec.entranceExitLocations.map(eel => {
       return {
         panelSpec: firstPanelSpec,
@@ -2125,14 +2207,12 @@ export class Metazine extends EventTarget {
         const entranceParentMatrixWorld = entrancePanelSpec.transformScene.matrixWorld;
 
         // latch entrance panel spec as the transform target
-        const target = entrancePanelSpec;
-
         connect({
           exitLocation,
           entranceLocation,
           exitParentMatrixWorld,
           entranceParentMatrixWorld,
-          target,
+          target: entrancePanelSpec,
         });
         // const attachPanelIndex = this.renderPanelSpecs.length;
         // const newPanelIndex = attachPanelIndex + 1;
@@ -2173,7 +2253,8 @@ export class Metazine extends EventTarget {
           // }
 
           // log the new panel spec
-          this.renderPanelSpecs.push(entrancePanelSpec);
+          // this.renderPanelSpecs.push(entrancePanelSpec);
+
           // {
           //   // for (let i = 0; i < this.renderPanelSpecs.length; i++) {
           //   //   const panelSpec = this.renderPanelSpecs[i];
@@ -2655,6 +2736,7 @@ export class MetazineRenderer extends EventTarget {
       if (isLeftClick) {
         let startPanelSpec;
         let startCenterPosition;
+        let startQuaternion;
         if (
           this.panelPicker.selectPanelSpec &&
           this.panelPicker.hoverPanelSpec === this.panelPicker.selectPanelSpec
@@ -2674,8 +2756,10 @@ export class MetazineRenderer extends EventTarget {
 
           startCenterPosition = center.clone()
             // .applyMatrix4(startPanelSpec.matrixWorld);
+          startQuaternion = startPanelSpec.quaternion.clone();
         } else {
           startCenterPosition = null;
+          startQuaternion = null;
         }
 
         const startFloorIntersection = intersectFloor(localPlane, localVector);
@@ -2685,6 +2769,7 @@ export class MetazineRenderer extends EventTarget {
           startY: e.clientY,
           panelSpec: startPanelSpec,
           startCenterPosition,
+          startQuaternion,
           startFloorIntersection: startFloorIntersection && startFloorIntersection.clone(),
         };
         this.controls.enabled = !this.panelPicker.selectPanelSpec ||
@@ -2734,6 +2819,7 @@ export class MetazineRenderer extends EventTarget {
         const {
           panelSpec,
           startCenterPosition,
+          startQuaternion,
           startFloorIntersection,
         } = this.dragSpec;
 
@@ -2753,7 +2839,7 @@ export class MetazineRenderer extends EventTarget {
             const newCenterPosition = startCenterPosition.clone()
               .add(delta);
 
-            this.panelPicker.drag(newCenterPosition);
+            this.panelPicker.drag(newCenterPosition, startQuaternion);
           }
         }
       }
@@ -2935,6 +3021,13 @@ export class MetazineRenderer extends EventTarget {
       console.warn('no panel spec selected');
     }
   }
+  rotate(angleY) {
+    this.panelPicker.rotate(angleY);
+    
+    if (this.dragSpec && this.panelPicker.selectPanelSpec) {
+      this.dragSpec.startQuaternion.copy(this.panelPicker.selectPanelSpec.quaternion);
+    }
+  }
   snapshotMap({
     width = 1024,
     height = 1024,
@@ -3079,7 +3172,7 @@ const Metazine3DCanvas = ({
         }
       };
       const _rotate = angleY => {
-        renderer.panelPicker.rotate(angleY);
+        renderer.rotate(angleY);
       };
       const keydown = async e => {
         switch (e.key) {
