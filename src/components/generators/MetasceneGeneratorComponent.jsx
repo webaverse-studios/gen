@@ -166,13 +166,15 @@ const localVector7 = new THREE.Vector3();
 const localVector8 = new THREE.Vector3();
 const localQuaternion = new THREE.Quaternion();
 const localMatrix = new THREE.Matrix4();
-const localMatrix3D = new THREE.Matrix3();
+// const localMatrix3D = new THREE.Matrix3();
 // const localTriangle = new THREE.Triangle();
 // const localTriangle2 = new THREE.Triangle();
+const localPlane = new THREE.Plane();
 // const localBox = new THREE.Box3();
 const localColor = new THREE.Color();
 const localObb = new OBB();
 
+const zeroVector = new THREE.Vector3(0, 0, 0);
 const oneVector = new THREE.Vector3(1, 1, 1);
 const upVector = new THREE.Vector3(0, 1, 0);
 const y180Quaternion = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI);
@@ -2609,12 +2611,27 @@ export class MetazineRenderer extends EventTarget {
     };
     document.addEventListener('keydown', keydown);
 
+    const intersectFloor = (planeTarget, vectorTarget) => {
+      const floorPlane = localPlane.setFromNormalAndCoplanarPoint(
+        upVector,
+        zeroVector
+      );
+      this.panelPicker.raycaster.setFromCamera(
+        this.panelPicker.mouse,
+        this.panelPicker.camera
+      );
+      const floorIntersection = this.panelPicker.raycaster.ray.intersectPlane(floorPlane, vectorTarget);
+      return floorIntersection;
+    };
     const mousedown = e => {
       const isLeftClick = e.button === 0;
       if (isLeftClick) {
+        const floorIntersection = intersectFloor(localPlane, localVector);
+
         this.dragSpec = {
           startX: e.clientX,
           startY: e.clientY,
+          startFloorPosition: floorIntersection && floorIntersection.clone(),
         };
         this.controls.enabled = !this.panelPicker.selectPanelSpec ||
           this.panelPicker.hoverPanelSpec !== this.panelPicker.selectPanelSpec;
@@ -2641,7 +2658,7 @@ export class MetazineRenderer extends EventTarget {
       }
     };
     const mousemove = e => {
-      // set the THREE.js.Raycaster from the mouse event
+      // set the raycaster from mouse event
       const rect = this.canvas.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
