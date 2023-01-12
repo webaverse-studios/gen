@@ -4633,52 +4633,52 @@ export async function compileVirtualScene(imageArrayBuffer) {
 
   console.time('sphericalHarmonics');
   let sphericalHarmonics;
+
+  const skyCutCanvas = getSkyCutCanvas(width, height, segmentMask);
+  skyCutCanvas.classList.add('skyCut');
+  document.body.appendChild(skyCutCanvas);
+
+  const maskBlob = await new Promise((accept, reject) => {
+    skyCutCanvas.toBlob(accept);
+  });
+
+  const formData = new FormData();
+  formData.append('img', blob);
+  formData.append('mask', maskBlob);
   {
-    const skyCutCanvas = document.createElement('canvas');
-    skyCutCanvas.width = width;
-    skyCutCanvas.height = height;
-    skyCutCanvas.classList.add('skyCut');
-    const ctx = skyCutCanvas.getContext('2d');
-    const imageData = ctx.createImageData(width, height);
-    document.body.appendChild(skyCutCanvas);
-
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        const index = y * width + x;
-  
-        const value = segmentMask[index];
-        if (categoryClassIndices.sky.indexOf(value)) {
-          imageData.data[index * 4 + 0] = 255;
-          imageData.data[index * 4 + 1] = 255;
-          imageData.data[index * 4 + 2] = 255;
-          imageData.data[index * 4 + 3] = 255;
-        } else {
-          imageData.data[index * 4 + 0] = 0;
-          imageData.data[index * 4 + 1] = 0;
-          imageData.data[index * 4 + 2] = 0;
-          imageData.data[index * 4 + 3] = 255;
-        }
-      }
-    }
-    // console.log('num skies', numSkies, imageData.data);
-    ctx.putImageData(imageData, 0, 0);
-
-    const maskBlob = await new Promise((accept, reject) => {
-      skyCutCanvas.toBlob(accept);
-    });
-
-    const formData = new FormData();
-    formData.append('img', blob);
-    formData.append('mask', maskBlob);
-
     const res = await fetch(`https://inverse-render-net.webaverse.com/lighting`, {
       method: 'POST',
       body: formData,
     });
     const arrayBuffer = await res.arrayBuffer();
     sphericalHarmonics = new Float32Array(arrayBuffer);
+    // console.log('got spherical harmonics', sphericalHarmonics);
   }
   console.timeEnd('sphericalHarmonics');
+
+  console.time('inverseRender');
+  {
+    const pathNames = [
+      'albedo',
+      'shading',
+      'shadow',
+      'normal',
+    ];
+    for (const pathName of pathNames) {
+      console.log('render pathname 1', {pathName});
+      const res = await fetch(`https://inverse-render-net.webaverse.com/${pathName}`, {
+        method: 'POST',
+        body: formData,
+      });
+      const arrayBuffer = await res.arrayBuffer();
+      console.log('render pathname 2', {pathName, arrayBuffer});
+      const resultBlob = new Blob([arrayBuffer]);
+      const img = await blob2img(resultBlob);
+      img.classList.add(pathName);
+      document.body.appendChild(img);
+    }
+  }
+  console.timeEnd('inverseRender');
 
   const geometry = pointCloudArrayBufferToGeometry(pointCloudArrayBuffer, width, height);
   const semanticSpecs = getSemanticSpecs({
