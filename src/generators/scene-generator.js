@@ -4493,6 +4493,35 @@ export async function getDepth(imageArrayBuffer) {
   return res
 }
 
+const getSkyCutCanvas = (width, height, segmentMask) => {
+  const skyCutCanvas = document.createElement('canvas');
+  skyCutCanvas.width = width;
+  skyCutCanvas.height = height;
+  const ctx = skyCutCanvas.getContext('2d');
+  const imageData = ctx.createImageData(width, height);
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const index = y * width + x;
+
+      const value = segmentMask[index];
+      if (categoryClassIndices.sky.indexOf(value)) {
+        imageData.data[index * 4 + 0] = 255;
+        imageData.data[index * 4 + 1] = 255;
+        imageData.data[index * 4 + 2] = 255;
+        imageData.data[index * 4 + 3] = 255;
+      } else {
+        imageData.data[index * 4 + 0] = 0;
+        imageData.data[index * 4 + 1] = 0;
+        imageData.data[index * 4 + 2] = 0;
+        imageData.data[index * 4 + 3] = 255;
+      }
+    }
+  }
+  ctx.putImageData(imageData, 0, 0);
+  return skyCutCanvas;
+}
+
 export async function compileVirtualScene(imageArrayBuffer) {
   // color
   const blob = new Blob([imageArrayBuffer], {
