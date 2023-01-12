@@ -3065,7 +3065,7 @@ const SideScene = ({
               });
               const settingSpec = await datasetGenerator.generateItem('setting', {
                 // Name: 'Death Mountain',
-                // Description: 'A mountain in the middle of a desert.',
+                Description: panelSpec.description,
               }, {
                 // keys: ['Image'],
               });
