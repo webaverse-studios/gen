@@ -464,6 +464,18 @@ class PanelPicker extends THREE.Object3D {
       type: 'selectchange',
       selectPanelSpec: this.selectPanelSpec,
     });
+
+    if (!this.selectPanelSpec) {
+      this.dragSpec = null;
+    }
+  }
+  drag(newPosition) {
+    this.selectPanelSpec.position.copy(newPosition);
+    this.selectPanelSpec.updateMatrixWorld();
+    
+    this.dispatchEvent({
+      type: 'panelgeometryupdate',
+    });
   }
   rotate(angleY) {
     if (this.selectPanelSpec) {
@@ -2612,7 +2624,7 @@ export class MetazineRenderer extends EventTarget {
     document.addEventListener('keydown', keydown);
 
     const intersectFloor = (planeTarget, vectorTarget) => {
-      const floorPlane = localPlane.setFromNormalAndCoplanarPoint(
+      const floorPlane = planeTarget.setFromNormalAndCoplanarPoint(
         upVector,
         zeroVector
       );
@@ -2620,18 +2632,26 @@ export class MetazineRenderer extends EventTarget {
         this.panelPicker.mouse,
         this.panelPicker.camera
       );
-      const floorIntersection = this.panelPicker.raycaster.ray.intersectPlane(floorPlane, vectorTarget);
-      return floorIntersection;
+      return this.panelPicker.raycaster.ray.intersectPlane(floorPlane, vectorTarget);
     };
     const mousedown = e => {
       const isLeftClick = e.button === 0;
       if (isLeftClick) {
         const floorIntersection = intersectFloor(localPlane, localVector);
 
+        const startPanelSpec = (
+          this.panelPicker.selectPanelSpec &&
+          this.panelPicker.hoverPanelSpec === this.panelPicker.selectPanelSpec
+        ) ?
+          this.panelPicker.selectPanelSpec
+        : null;
+
         this.dragSpec = {
           startX: e.clientX,
           startY: e.clientY,
-          startFloorPosition: floorIntersection && floorIntersection.clone(),
+          panelSpec: startPanelSpec,
+          startPosition: startPanelSpec && startPanelSpec.position.clone(),
+          startFloorIntersection: floorIntersection && floorIntersection.clone(),
         };
         this.controls.enabled = !this.panelPicker.selectPanelSpec ||
           this.panelPicker.hoverPanelSpec !== this.panelPicker.selectPanelSpec;
@@ -2641,15 +2661,21 @@ export class MetazineRenderer extends EventTarget {
       const isLeftClick = e.button === 0;
       if (isLeftClick) {
         if (this.dragSpec) {
-          const {clientX, clientY} = e;
-          const {startX, startY} = this.dragSpec;
+          const {
+            clientX,
+            clientY,
+          } = e;
+          const {
+            startX,
+            startY,
+          } = this.dragSpec;
           const deltaX = clientX - startX;
           const deltaY = clientY - startY;
           if (deltaX === 0 && deltaY === 0) {
             this.panelPicker.select();
           }
         } else {
-          // console.warn('mosue up with no drag spec');
+          // console.warn('mouse up with no drag spec');
           // debugger;
         }
         
@@ -2667,7 +2693,27 @@ export class MetazineRenderer extends EventTarget {
         (x / rect.width) * 2 - 1,
         -(y / rect.height) * 2 + 1
       );
-      this.panelPicker.update();
+      
+      if (!this.dragSpec) {
+        this.panelPicker.update();
+      } else {
+        const {
+          panelSpec,
+          startPosition,
+          startFloorIntersection,
+        } = this.dragSpec;
+
+        if (panelSpec && startFloorIntersection) {
+          const floorIntersection = intersectFloor(localPlane, localVector);
+          if (floorIntersection) {
+            const newPosition = localVector2.copy(startPosition)
+              .add(floorIntersection)
+              .sub(startFloorIntersection);
+
+            this.panelPicker.drag(newPosition);
+          }
+        }
+      }
     };
 
     const canvas = this.renderer.domElement;
