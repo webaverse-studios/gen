@@ -455,13 +455,38 @@ class PanelPicker extends THREE.Object3D {
   }
   rotate(angleY) {
     if (this.selectPanelSpec) {
-      this.selectPanelSpec.quaternion
+      const {
+        floorPlaneLocation,
+        boundingBox,
+        floorBoundingBox,
+      } = this.selectPanelSpec;
+
+      const bbox = new THREE.Box3(
+        new THREE.Vector3().fromArray(boundingBox.min),
+        new THREE.Vector3().fromArray(boundingBox.max)
+      ).applyMatrix4(this.selectPanelSpec.matrix);
+      const center = bbox.getCenter(new THREE.Vector3());
+
+      this.selectPanelSpec.matrix
         .premultiply(
-          new THREE.Quaternion()
-            .setFromAxisAngle(
-              upVector,
-              angleY
-            )
+          new THREE.Matrix4().makeTranslation(-center.x, -center.y, -center.z)
+        )
+        .premultiply(
+          new THREE.Matrix4().makeRotationFromQuaternion(
+            new THREE.Quaternion()
+              .setFromAxisAngle(
+                upVector,
+                angleY
+              )
+          )
+        )
+        .premultiply(
+          new THREE.Matrix4().makeTranslation(center.x, center.y, center.z)
+        )
+        .decompose(
+          this.selectPanelSpec.position,
+          this.selectPanelSpec.quaternion,
+          localVector2
         );
       this.selectPanelSpec.updateMatrixWorld();
     }
