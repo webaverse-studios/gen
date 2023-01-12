@@ -2490,7 +2490,7 @@ export class MetazineRenderer extends EventTarget {
     controls.maxDistance = 100;
     controls.target.set(0, 0, -orbitControlsDistance);
     controls.locked = false;
-    controls.update();
+    // controls.update();
     this.controls = controls;
 
     // mouse
@@ -2511,6 +2511,9 @@ export class MetazineRenderer extends EventTarget {
     scene.add(sceneBatchedMesh);
     sceneBatchedMesh.updateMatrixWorld();
     this.sceneBatchedMesh = sceneBatchedMesh;
+
+    // state
+    this.dragSpec = null;
 
     // bootstrap
     this.#initAux();
@@ -2606,22 +2609,23 @@ export class MetazineRenderer extends EventTarget {
     };
     document.addEventListener('keydown', keydown);
 
-    let dragSpec = null;
     const mousedown = e => {
       const isLeftClick = e.button === 0;
       if (isLeftClick) {
-        dragSpec = {
+        this.dragSpec = {
           startX: e.clientX,
           startY: e.clientY,
         };
+        this.controls.enabled = !this.panelPicker.selectPanelSpec ||
+          this.panelPicker.hoverPanelSpec !== this.panelPicker.selectPanelSpec;
       }
     };
     const mouseup = e => {
       const isLeftClick = e.button === 0;
       if (isLeftClick) {
-        if (dragSpec) {
+        if (this.dragSpec) {
           const {clientX, clientY} = e;
-          const {startX, startY} = dragSpec;
+          const {startX, startY} = this.dragSpec;
           const deltaX = clientX - startX;
           const deltaY = clientY - startY;
           if (deltaX === 0 && deltaY === 0) {
@@ -2632,7 +2636,8 @@ export class MetazineRenderer extends EventTarget {
           // debugger;
         }
         
-        dragSpec = null;
+        this.dragSpec = null;
+        this.controls.enabled = true;
       }
     };
     const mousemove = e => {
@@ -2683,7 +2688,9 @@ export class MetazineRenderer extends EventTarget {
   }
   render() {
     // update
-    !this.controls.locked && this.controls.update();
+    if (!this.controls.locked) {
+      this.controls.update();
+    }
 
     this.storyTargetMesh.position.copy(this.controls.target);
     this.storyTargetMesh.updateMatrixWorld();
@@ -2817,7 +2824,6 @@ export class MetazineRenderer extends EventTarget {
           new THREE.Vector3(0, 0, -orbitControlsDistance)
             .applyQuaternion(this.camera.quaternion)
         );
-      // this.controls.update();
       this.controls.locked = true;
     } else {
       console.warn('no panel spec selected');
