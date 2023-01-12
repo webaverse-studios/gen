@@ -469,9 +469,25 @@ class PanelPicker extends THREE.Object3D {
       this.dragSpec = null;
     }
   }
-  drag(newPosition) {
-    this.selectPanelSpec.position.copy(newPosition);
-    this.selectPanelSpec.updateMatrixWorld();
+  drag(newCenterPosition) {
+    const panelSpec = this.selectPanelSpec;
+    const {
+      floorPlaneLocation,
+      boundingBox,
+      floorBoundingBox,
+    } = panelSpec;
+
+    const bbox = new THREE.Box3(
+      new THREE.Vector3().fromArray(boundingBox.min),
+      new THREE.Vector3().fromArray(boundingBox.max)
+    )//.applyMatrix4(panelSpec.matrix);
+    const center = bbox.getCenter(new THREE.Vector3());
+    const centerOffset = center.clone()
+      .applyQuaternion(panelSpec.quaternion);
+
+    panelSpec.position.copy(newCenterPosition)
+      .sub(centerOffset);
+    panelSpec.updateMatrixWorld();
     
     this.dispatchEvent({
       type: 'panelgeometryupdate',
@@ -2637,21 +2653,39 @@ export class MetazineRenderer extends EventTarget {
     const mousedown = e => {
       const isLeftClick = e.button === 0;
       if (isLeftClick) {
-        const floorIntersection = intersectFloor(localPlane, localVector);
-
-        const startPanelSpec = (
+        let startPanelSpec;
+        let startCenterPosition;
+        if (
           this.panelPicker.selectPanelSpec &&
           this.panelPicker.hoverPanelSpec === this.panelPicker.selectPanelSpec
-        ) ?
-          this.panelPicker.selectPanelSpec
-        : null;
+        ) {
+          startPanelSpec = this.panelPicker.selectPanelSpec;
+          const {
+            // floorPlaneLocation,
+            boundingBox,
+            // floorBoundingBox,
+          } = startPanelSpec;
+
+          const bbox = new THREE.Box3(
+            new THREE.Vector3().fromArray(boundingBox.min),
+            new THREE.Vector3().fromArray(boundingBox.max)
+          ).applyMatrix4(startPanelSpec.matrix);
+          const center = bbox.getCenter(new THREE.Vector3());
+
+          startCenterPosition = center.clone()
+            // .applyMatrix4(startPanelSpec.matrixWorld);
+        } else {
+          startCenterPosition = null;
+        }
+
+        const startFloorIntersection = intersectFloor(localPlane, localVector);
 
         this.dragSpec = {
           startX: e.clientX,
           startY: e.clientY,
           panelSpec: startPanelSpec,
-          startPosition: startPanelSpec && startPanelSpec.position.clone(),
-          startFloorIntersection: floorIntersection && floorIntersection.clone(),
+          startCenterPosition,
+          startFloorIntersection: startFloorIntersection && startFloorIntersection.clone(),
         };
         this.controls.enabled = !this.panelPicker.selectPanelSpec ||
           this.panelPicker.hoverPanelSpec !== this.panelPicker.selectPanelSpec;
@@ -2699,18 +2733,27 @@ export class MetazineRenderer extends EventTarget {
       } else {
         const {
           panelSpec,
-          startPosition,
+          startCenterPosition,
           startFloorIntersection,
         } = this.dragSpec;
 
         if (panelSpec && startFloorIntersection) {
-          const floorIntersection = intersectFloor(localPlane, localVector);
+          let floorIntersection = intersectFloor(localPlane, localVector);
           if (floorIntersection) {
-            const newPosition = localVector2.copy(startPosition)
-              .add(floorIntersection)
-              .sub(startFloorIntersection);
+            floorIntersection = floorIntersection.clone();
 
-            this.panelPicker.drag(newPosition);
+            const delta = floorIntersection.clone()
+              .sub(startFloorIntersection);
+            const length = delta.length();
+            const maxDragLength = 100;
+            if (length > maxDragLength) {
+              delta.multiplyScalar(maxDragLength / length);
+            }
+
+            const newCenterPosition = startCenterPosition.clone()
+              .add(delta);
+
+            this.panelPicker.drag(newCenterPosition);
           }
         }
       }
