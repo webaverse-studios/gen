@@ -159,16 +159,19 @@ import {
 const localVector = new THREE.Vector3();
 const localVector2 = new THREE.Vector3();
 const localVector3 = new THREE.Vector3();
-// const localVector4 = new THREE.Vector3();
-// const localVector5 = new THREE.Vector3();
-// const localVector6 = new THREE.Vector3();
-// const localVector7 = new THREE.Vector3();
+const localVector4 = new THREE.Vector3();
+const localVector5 = new THREE.Vector3();
+const localVector6 = new THREE.Vector3();
+const localVector7 = new THREE.Vector3();
+const localVector8 = new THREE.Vector3();
 const localQuaternion = new THREE.Quaternion();
 const localMatrix = new THREE.Matrix4();
+const localMatrix3D = new THREE.Matrix3();
 // const localTriangle = new THREE.Triangle();
 // const localTriangle2 = new THREE.Triangle();
 // const localBox = new THREE.Box3();
 const localColor = new THREE.Color();
+const localObb = new OBB();
 
 const oneVector = new THREE.Vector3(1, 1, 1);
 const upVector = new THREE.Vector3(0, 1, 0);
@@ -392,46 +395,53 @@ class PanelPicker extends THREE.Object3D {
     let closestIntersectionDistance = Infinity;
     for (let i = 0; i < this.panelSpecs.length; i++) {
       const panelSpec = this.panelSpecs[i];
-      const {
-        floorPlaneLocation,
-        boundingBox,
-        floorBoundingBox,
-      } = panelSpec;
 
-      const p = new THREE.Vector3();
-      const q = new THREE.Quaternion();
-      const s = new THREE.Vector3();
-      panelSpec.matrixWorld.decompose(p, q, s);
+      // console.log('check selected panel spec', this.selectPanelSpec);
+      // if we are selected, only hover over the selected panel
+      if (!this.selectPanelSpec || this.selectPanelSpec === panelSpec) {
+        const {
+          floorPlaneLocation,
+          boundingBox,
+          floorBoundingBox,
+        } = panelSpec;
 
-      const bbox = new THREE.Box3(
-        new THREE.Vector3().fromArray(boundingBox.min),
-        new THREE.Vector3().fromArray(boundingBox.max)
-      );
-      const center = bbox.getCenter(new THREE.Vector3());
-      const size = bbox.getSize(new THREE.Vector3());
+        const p = localVector;
+        const q = localQuaternion;
+        const s = localVector2;
+        panelSpec.matrixWorld.decompose(p, q, s);
 
-      const centerOffset = center.clone()
-        .applyQuaternion(q);
-      const obb = new OBB().set(
-        centerOffset.clone(), // center
-        size.clone().multiplyScalar(0.5), // halfSize
-        new THREE.Matrix3(), // rotation
-      )
-        .applyMatrix4(panelSpec.matrixWorld)
-      const intersection = obb.intersectRay(this.raycaster.ray, new THREE.Vector3());
-      if (intersection) {
-        const distance = this.raycaster.ray.origin.distanceTo(intersection);
-        if (distance < closestIntersectionDistance) {
-          closestIntersectionDistance = distance;
+        const bbox = new THREE.Box3(
+          localVector3.fromArray(boundingBox.min),
+          localVector4.fromArray(boundingBox.max)
+        );
+        const center = bbox.getCenter(localVector5);
+        const size = bbox.getSize(localVector6);
 
-          this.pickerMesh.position.copy(p)
-            .add(centerOffset);
-          this.pickerMesh.quaternion.copy(q);
-          this.pickerMesh.scale.copy(size);
-          this.pickerMesh.updateMatrixWorld();
-          this.pickerMesh.visible = true;
+        const centerOffset = localVector7.copy(center)
+          .applyQuaternion(q);
 
-          this.hover(panelSpec);
+        const obb = localObb;
+        obb.center.copy(centerOffset);
+        obb.halfSize.copy(size)
+          .multiplyScalar(0.5);
+        obb.rotation.identity();
+        obb.applyMatrix4(panelSpec.matrixWorld)
+        
+        const intersection = obb.intersectRay(this.raycaster.ray, localVector8);
+        if (intersection) {
+          const distance = this.raycaster.ray.origin.distanceTo(intersection);
+          if (distance < closestIntersectionDistance) {
+            closestIntersectionDistance = distance;
+
+            this.pickerMesh.position.copy(p)
+              .add(centerOffset);
+            this.pickerMesh.quaternion.copy(q);
+            this.pickerMesh.scale.copy(size);
+            this.pickerMesh.updateMatrixWorld();
+            this.pickerMesh.visible = true;
+
+            this.hover(panelSpec);
+          }
         }
       }
     }
