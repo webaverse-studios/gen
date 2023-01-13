@@ -1008,6 +1008,9 @@ class SceneGraphMesh extends THREE.InstancedMesh {
 
         const float maxRenderPanels = ${maxRenderPanels.toFixed(8)};
         const float matrixWorldTextureWidthInPixels = ${matrixWorldTextureWidthInPixels.toFixed(8)};
+        const float metazineAtlasTextureRowSize = ${metazineAtlasTextureRowSize.toFixed(8)};
+        const float panelSpecTextureSize = ${panelSpecTextureSize.toFixed(8)};
+        const float metazineAtlasTextureSize = ${metazineAtlasTextureSize.toFixed(8)};
 
         //
 
@@ -1022,8 +1025,10 @@ class SceneGraphMesh extends THREE.InstancedMesh {
 
         void main() {
           vUv = uv;
-
-          vec3 p = position;
+          float px = mod(selectIndex, metazineAtlasTextureRowSize) / metazineAtlasTextureRowSize;
+          float py = floor(selectIndex / metazineAtlasTextureRowSize) / metazineAtlasTextureRowSize;
+          vUv.x = vUv.x * panelSpecTextureSize / metazineAtlasTextureSize + px;
+          vUv.y = vUv.y * panelSpecTextureSize / metazineAtlasTextureSize + py;
 
           if (uSelectIndex == -1. || selectIndex == uSelectIndex) {
             vSelected = 1.;
@@ -1031,7 +1036,7 @@ class SceneGraphMesh extends THREE.InstancedMesh {
             vSelected = 0.;
           }
 
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.);
+          gl_Position = projectionMatrix * viewMatrix * modelMatrix * instanceMatrix * vec4(position, 1.);
         }
       `,
       fragmentShader: `\
@@ -1045,8 +1050,6 @@ class SceneGraphMesh extends THREE.InstancedMesh {
             gl_FragColor.rgb *= 0.5;
             gl_FragColor.a = 0.5;
           }
-
-          // gl_FragColor = vec4(vUv, 0., 1.);
         }
       `,
       transparent: true,
