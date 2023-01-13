@@ -562,10 +562,18 @@ class PanelPicker extends THREE.Object3D {
       }
     };
 
+    // unlink entrance/exit indices
+    for (let i = 0; i < panelSpec.entranceExitLocations.length; i++) {
+      const eel = panelSpec.entranceExitLocations[i];
+      eel.panelIndex = -1;
+      eel.entranceIndex = -1;
+    }
+
+    // perform the drag
     const bbox = new THREE.Box3(
       new THREE.Vector3().fromArray(boundingBox.min),
       new THREE.Vector3().fromArray(boundingBox.max)
-    )//.applyMatrix4(panelSpec.matrix);
+    );
     const center = bbox.getCenter(new THREE.Vector3());
     const centerOffset = center.clone()
       .applyQuaternion(newQuaternion);
@@ -575,6 +583,7 @@ class PanelPicker extends THREE.Object3D {
     panelSpec.quaternion.copy(newQuaternion);
     panelSpec.updateMatrixWorld();
 
+    // snap entrance/exit
     const snap = getClosestEntranceExitSnap();
     if (snap) {
       const exitLocation = snap.otherEntranceExitLocation;
@@ -2846,6 +2855,7 @@ export class MetazineRenderer extends EventTarget {
               .add(delta);
 
             this.panelPicker.drag(newCenterPosition, startQuaternion);
+            panelgeometryupdate();
           }
         }
       }
