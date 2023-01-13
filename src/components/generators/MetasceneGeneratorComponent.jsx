@@ -506,6 +506,13 @@ class PanelPicker extends THREE.Object3D {
             .decompose(localVector, localQuaternion, localVector2);
           localVector.y = 0; // snap to floor
 
+          const otherEntrancePosition = localVector;
+          const otherEntranceDirection = localVector2.set(0, 0, -1)
+            .applyQuaternion(localQuaternion);
+          otherEntranceDirection.y = 0;
+          otherEntranceDirection.normalize();
+          otherEntranceDirection.applyQuaternion(y180Quaternion);
+
           for (let k = 0; k < entranceExitLocations.length; k++) {
             const entranceExitLocation = entranceExitLocations[k];
             
@@ -518,15 +525,25 @@ class PanelPicker extends THREE.Object3D {
               .decompose(localVector3, localQuaternion2, localVector4);
             localVector3.y = 0; // snap to floor
 
-            const distance = localVector.distanceTo(localVector3);
-            if (distance < closestDistance) {
-              closestDistance = distance;
+            const entrancePosition = localVector3;
+            const entranceDirection = localVector4.set(0, 0, -1)
+              .applyQuaternion(localQuaternion2);
+            entranceDirection.y = 0;
+            entranceDirection.normalize();
 
-              closestPanelSpec = panelSpec;
-              closestEntranceExitLocation = entranceExitLocation;
+            // only snap to entrance/exit locations that are facing the same quadrant
+            const angle = otherEntranceDirection.angleTo(entranceDirection);
+            if (angle <= Math.PI / 2) {
+              const distance = otherEntrancePosition.distanceTo(entrancePosition);
+              if (distance < closestDistance) {
+                closestDistance = distance;
 
-              closestOtherPanelSpec = otherPanelSpec;
-              closestOtherEntranceExitLocation = otherEntranceExitLocation;
+                closestPanelSpec = panelSpec;
+                closestEntranceExitLocation = entranceExitLocation;
+
+                closestOtherPanelSpec = otherPanelSpec;
+                closestOtherEntranceExitLocation = otherEntranceExitLocation;
+              }
             }
           }
         }
