@@ -2693,22 +2693,20 @@ class UnderfloorMesh extends THREE.Object3D {
 
 //
 
-export class MetazineRenderer extends EventTarget {
+export class Metazine3DRenderer extends EventTarget {
   constructor({
     canvas,
     metazine,
-    viewMode,
   }) {
     super();
 
     this.canvas = canvas;
     this.metazine = metazine;
-    this.viewMode = viewMode;
 
     // canvas
     canvas.width = panelSize;
     canvas.height = panelSize;
-    canvas.classList.add('metazineRendererCanvas');
+    canvas.classList.add('metazine3DRendererCanvas');
 
     // renderer
     const renderer = makeRenderer(canvas);
@@ -2750,20 +2748,9 @@ export class MetazineRenderer extends EventTarget {
     for (const panelSpec of metazine.renderPanelSpecs) {
       sceneBatchedMesh.addPanel(panelSpec);
     }
-    sceneBatchedMesh.visible = viewMode === '3d';
     scene.add(sceneBatchedMesh);
     sceneBatchedMesh.updateMatrixWorld();
     this.sceneBatchedMesh = sceneBatchedMesh;
-
-    // scene graph mesh
-    const sceneGraphMesh = new SceneGraphMesh();
-    for (const panelSpec of metazine.renderPanelSpecs) {
-      sceneGraphMesh.addPanel(panelSpec);
-    }
-    sceneGraphMesh.visible = viewMode === 'graph';
-    scene.add(sceneGraphMesh);
-    sceneGraphMesh.updateMatrixWorld();
-    this.sceneGraphMesh = sceneGraphMesh;
 
     // state
     this.dragSpec = null;
@@ -2771,7 +2758,7 @@ export class MetazineRenderer extends EventTarget {
     // bootstrap
     this.#initAux();
     this.#listen();
-    this.animate();
+    this.#animate();
   }
   #initAux() {
     // panel picker
@@ -3032,7 +3019,7 @@ export class MetazineRenderer extends EventTarget {
     // render
     this.renderer.render(this.scene, this.camera);
   }
-  animate() {
+  #animate() {
     const _startLoop = () => {
       let frame;
       const _loop = () => {
@@ -3215,9 +3202,7 @@ export class MetazineRenderer extends EventTarget {
     ]);
 
     // render
-    {
-      renderer.render(scene, camera);
-    }
+    renderer.render(scene, camera);
 
     // pop meshes
     this.sceneBatchedMesh.material.side = THREE.FrontSide;
@@ -3228,16 +3213,12 @@ export class MetazineRenderer extends EventTarget {
     return canvas;
   }
   destroy() {
-    console.log('destroy MetasceneRenderer');
+    console.log('destroy Metazine3DRenderer');
     this.dispatchEvent(new MessageEvent('destroy'));
   }
-};
-
-//
-
+}
 const Metazine3DCanvas = ({
   metazine,
-  viewMode,
   onPanelSpecChange,
 }) => {
   const canvasRef = useRef();
@@ -3245,10 +3226,9 @@ const Metazine3DCanvas = ({
   useEffect(() => {
     const canvas = canvasRef.current;
     if (canvas) {
-      const renderer = new MetazineRenderer({
+      const renderer = new Metazine3DRenderer({
         canvas,
         metazine,
-        viewMode,
       });
       const selectchange = e => {
         onPanelSpecChange(e.selectPanelSpec);
@@ -3397,7 +3377,7 @@ const Metazine3DCanvas = ({
         window.removeEventListener('keydown', keydown);
       };
     }
-  }, [metazine, viewMode, canvasRef.current]);
+  }, [metazine, canvasRef.current]);
 
   return (
     <canvas
@@ -3409,11 +3389,161 @@ const Metazine3DCanvas = ({
   );
 };
 const Metazine3DCanvasWrapper = React.memo(Metazine3DCanvas, (prevProps, nextProps) => {
-  return [
-    'metazine',
-    'viewMode',
-  ].every(key => prevProps[key] === nextProps[key]);
+  return prevProps.metazine === nextProps.metazine;
 });
+
+//
+
+class MetazineGraphRenderer extends EventTarget {
+  constructor({
+    canvas,
+    metazine,
+  }) {
+    super();
+
+    this.canvas = canvas;
+    this.metazine = metazine;
+
+    // canvas
+    canvas.width = panelSize;
+    canvas.height = panelSize;
+    canvas.classList.add('metazineGraphRendererCanvas');
+
+    // renderer
+    const renderer = makeRenderer(canvas);
+    this.renderer = renderer;
+    this.addEventListener('destroy', e => {
+      this.renderer.dispose();
+    });
+
+    // scene
+    const scene = new THREE.Scene();
+    scene.autoUpdate = false;
+    this.scene = scene;
+    
+    // camera
+    const camera = makeDefaultCamera();
+    this.camera = camera;
+
+    // scene graph mesh
+    const sceneGraphMesh = new SceneGraphMesh();
+    for (const panelSpec of metazine.renderPanelSpecs) {
+      sceneGraphMesh.addPanel(panelSpec);
+    }
+    scene.add(sceneGraphMesh);
+    sceneGraphMesh.updateMatrixWorld();
+    this.sceneGraphMesh = sceneGraphMesh;
+
+    // debug cube mesh at origin
+    const cubeMesh = new THREE.Mesh(
+      new THREE.BoxGeometry(1, 1, 1),
+      new THREE.MeshPhongMaterial({
+        color: 0xff0000,
+      })
+    );
+    this.scene.add(cubeMesh);
+    cubeMesh.updateMatrixWorld();
+
+    // state
+    this.dragSpec = null;
+
+    this.#initAux();
+    this.#animate();
+  }
+  #initAux() {
+    // panel picker
+    const panelPicker = new PanelPicker({
+      mouse: this.mouse,
+      camera: this.camera,
+      panelSpecs: this.metazine.renderPanelSpecs,
+    });
+    this.scene.add(panelPicker);
+    panelPicker.updateMatrixWorld();
+    this.panelPicker = panelPicker;
+    panelPicker.addEventListener('selectchange', e => {
+      this.handlePanelSpecChange(e.selectPanelSpec);
+    });
+
+    // debug cube mesh at origin
+    const cubeMesh = new THREE.Mesh(
+      new THREE.BoxGeometry(1, 1, 1),
+      new THREE.MeshPhongMaterial({
+        color: 0xff0000,
+      })
+    );
+    this.scene.add(cubeMesh);
+    cubeMesh.updateMatrixWorld();
+  }
+  render() {
+    // update
+    if (!this.controls.locked) {
+      this.controls.update();
+    }
+
+    // render
+    this.renderer.render(this.scene, this.camera);
+  }
+  #animate() {
+    const _startLoop = () => {
+      let frame;
+      const _loop = () => {
+        frame = requestAnimationFrame(_loop);
+
+        this.render();
+      };
+      _loop();
+
+      this.addEventListener('destroy', e => {
+        cancelAnimationFrame(frame);
+      });
+    };
+    _startLoop();
+  }
+  destroy() {
+    console.log('destroy MetazineGraphRenderer');
+    this.dispatchEvent(new MessageEvent('destroy'));
+  }
+}
+const MetazineGraphCanvas = ({
+  metazine,
+  onPanelSpecChange,
+}) => {
+  const canvasRef = useRef();
+  
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (canvas) {
+      const renderer = new MetazineGraphRenderer({
+        canvas,
+        metazine,
+      });
+      const selectchange = e => {
+        onPanelSpecChange(e.selectPanelSpec);
+      };
+      renderer.panelPicker.addEventListener('selectchange', selectchange);
+
+      return () => {
+        renderer.destroy();
+        renderer.panelPicker.removeEventListener('selectchange', selectchange);
+      };
+    }
+  }, [metazine, canvasRef.current]);
+
+  return (
+    <canvas
+      className={styles.canvas}
+      width={panelSize}
+      height={panelSize}
+      ref={canvasRef}
+    />
+  );
+};
+const MetazineGraphCanvasWrapper = React.memo(MetazineGraphCanvas, (prevProps, nextProps) => {
+  return prevProps.metazine === nextProps.metazine;
+});
+
+//
+
 const SideScene = ({
   panelSpec,
 }) => {
@@ -3579,7 +3709,7 @@ const SideMetascene = ({
     </div>
   );
 };
-const MetazineCanvas = ({
+const MetazineView = ({
   metazine,
   viewMode,
 }) => {
@@ -3605,11 +3735,29 @@ const MetazineCanvas = ({
       </div> : null}
       <div className={styles.metazineCanvas}>
         {panelSpec ? <SideScene panelSpec={panelSpec} /> : <SideMetascene />}
-        <Metazine3DCanvasWrapper
-          metazine={metazine}
-          viewMode={viewMode}
-          onPanelSpecChange={setPanelSpec}
-        />
+        {(() => {
+          switch (viewMode) {
+            case '3d': {
+              return (
+                <Metazine3DCanvasWrapper
+                  metazine={metazine}
+                  onPanelSpecChange={setPanelSpec}
+                />
+              );
+            }
+            case 'graph': {
+              return (
+                <MetazineGraphCanvasWrapper
+                  metazine={metazine}
+                  onPanelSpecChange={setPanelSpec}
+                />
+              );
+            }
+            default: {
+              throw new Error('unknown view mode: ' + viewMode);
+            }
+          }
+        })()}
       </div>
     </>
   );
@@ -3750,9 +3898,7 @@ const MetasceneGeneratorComponent = () => {
               <input type='button' value='Auto-Connect' className={styles.button} onClick={autoConnect} />
             }
           </div>
-          <MetazineCanvas
-            // width={panelSize}
-            // height={panelSize}
+          <MetazineView
             metazine={metazine}
             viewMode={viewMode}
           />
