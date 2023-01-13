@@ -669,6 +669,21 @@ class PanelPicker extends THREE.Object3D {
     });
   }
 }
+const drawAtlasTexture = async (panelSpec, index, ctx) => {
+  const {imageArrayBuffer} = panelSpec;
+  const blob = new Blob([imageArrayBuffer]);
+  const imageBitmap = await createImageBitmap(blob);
+  
+  const x = (index % metazineAtlasTextureRowSize) * panelSpecTextureSize;
+  let y = Math.floor(index / metazineAtlasTextureRowSize) * panelSpecTextureSize;
+  y = metazineAtlasTextureSize - y - panelSpecTextureSize;
+
+  ctx.drawImage(
+    imageBitmap,
+    x, y,
+    panelSpecTextureSize, panelSpecTextureSize
+  );
+};
 class SceneBatchedMesh extends THREE.Mesh {
   static planeGeometry = new THREE.PlaneGeometry(
     1, 1,
@@ -817,7 +832,6 @@ class SceneBatchedMesh extends THREE.Mesh {
             matrixWorld3.x, matrixWorld3.y, matrixWorld3.z, matrixWorld3.w,
             matrixWorld4.x, matrixWorld4.y, matrixWorld4.z, matrixWorld4.w
           );
-          // matrixWorld = transpose(matrixWorld);
           float scaleOffset = texture2D(scaleOffsetsTexture, baseUv).r;
           float selectIndex = texture2D(selectIndexesTexture, baseUv).r;
 
@@ -833,7 +847,6 @@ class SceneBatchedMesh extends THREE.Mesh {
           }
 
           gl_Position = projectionMatrix * viewMatrix * matrixWorld * vec4(p, 1.0);
-          // gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
         }
       `,
       fragmentShader: `\
@@ -870,7 +883,6 @@ class SceneBatchedMesh extends THREE.Mesh {
   #addPanelSpecToGeometry(panelSpec, index) {
     const {
       sceneChunkMesh,
-      floorPlaneLocation,
       floorBoundingBox,
     } = panelSpec;
     const {
@@ -929,19 +941,7 @@ class SceneBatchedMesh extends THREE.Mesh {
     geometry.drawRange.count += SceneBatchedMesh.planeGeometry.index.count;
   }
   async #addPanelSpecToTextureAtlas(panelSpec, index) {
-    const {imageArrayBuffer} = panelSpec;
-    const blob = new Blob([imageArrayBuffer]);
-    const imageBitmap = await createImageBitmap(blob);
-    
-    const x = (index % metazineAtlasTextureRowSize) * panelSpecTextureSize;
-    let y = Math.floor(index / metazineAtlasTextureRowSize) * panelSpecTextureSize;
-    y = metazineAtlasTextureSize - y - panelSpecTextureSize;
-
-    this.material.uniforms.map.value.image.ctx.drawImage(
-      imageBitmap,
-      x, y,
-      panelSpecTextureSize, panelSpecTextureSize
-    );
+    await drawAtlasTexture(panelSpec, index, this.material.uniforms.map.value.image.ctx);
     this.material.uniforms.map.value.needsUpdate = true;
   }
   updateGeometry() {
@@ -949,10 +949,151 @@ class SceneBatchedMesh extends THREE.Mesh {
     for (let i = 0; i < this.panelSpecs.length; i++) {
       const panelSpec = this.panelSpecs[i];
       matrixWorlds.set(panelSpec.sceneChunkMesh.matrixWorld.elements, i * 16);
-      globalThis.matrixWorlds = matrixWorlds;
-      globalThis.matrixWorldsTexture = this.material.uniforms.matrixWorldsTexture.value;
     }
     this.material.uniforms.matrixWorldsTexture.value.needsUpdate = true;
+  }
+}
+
+//
+
+class SceneGraphMesh extends THREE.InstancedMesh {
+  static planeGeometry = new THREE.PlaneGeometry(1, 1);
+  constructor() {
+    const geometry = new THREE.InstancedBufferGeometry();
+    geometry.copy(SceneGraphMesh.planeGeometry);
+
+    const selectIndex = new Float32Array(maxRenderPanels);
+    const selectIndexAttribute = new THREE.InstancedBufferAttribute(selectIndex, 1);
+    geometry.setAttribute('selectIndex', selectIndexAttribute);
+
+    const atlasCanvas = document.createElement('canvas');
+    atlasCanvas.width = metazineAtlasTextureSize;
+    atlasCanvas.height = metazineAtlasTextureSize;
+    atlasCanvas.ctx = atlasCanvas.getContext('2d');
+    atlasCanvas.cssText = `\
+      position: relative;
+      max-width: 1024px;
+      max-height: 1024px;
+      background: red;
+    `;
+    atlasCanvas.classList.add('atlasCanvas');
+    document.body.appendChild(atlasCanvas);
+
+    const map = new THREE.Texture(atlasCanvas);
+
+    const material = new THREE.ShaderMaterial({
+      uniforms: {
+        map: {
+          value: map,
+          needsUpdate: true,
+        },
+        uSelectIndex: {
+          value: -1,
+          needsUpdate: true,
+        },
+      },
+      vertexShader: `\
+        uniform float uSelectIndex;
+        uniform sampler2D matrixWorldsTexture;
+
+        attribute float selectIndex;
+
+        varying vec2 vUv;
+        flat varying float vSelected;
+
+        //
+
+        const float maxRenderPanels = ${maxRenderPanels.toFixed(8)};
+        const float matrixWorldTextureWidthInPixels = ${matrixWorldTextureWidthInPixels.toFixed(8)};
+
+        //
+
+        vec4 quaternion_inverse(vec4 q) {
+          return vec4(-q.xyz, q.w);
+        }
+        vec3 rotate_vertex_quaternion(vec3 position, vec4 q) {
+          vec3 u = q.xyz;
+          float s = q.w;
+          return position + 2.0 * cross(u, cross(u, position) + s * position);
+        }
+
+        void main() {
+          vUv = uv;
+
+          vec3 p = position;
+
+          if (uSelectIndex == -1. || selectIndex == uSelectIndex) {
+            vSelected = 1.;
+          } else {
+            vSelected = 0.;
+          }
+
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.);
+        }
+      `,
+      fragmentShader: `\
+        uniform sampler2D map;
+        varying vec2 vUv;
+        flat varying float vSelected;
+
+        void main() {
+          gl_FragColor = texture2D(map, vUv);
+          if (vSelected == 0.) {
+            gl_FragColor.rgb *= 0.5;
+            gl_FragColor.a = 0.5;
+          }
+
+          // gl_FragColor = vec4(vUv, 0., 1.);
+        }
+      `,
+      transparent: true,
+    });
+    super(geometry, material, maxRenderPanels);
+
+    this.frustumCulled = false;
+    this.count = 0;
+    
+    this.panelSpecs = [];
+    this.freeList = new FreeList(maxRenderPanels);
+  }
+  addPanel(panelSpec) {
+    this.panelSpecs.push(panelSpec);
+
+    const index = this.freeList.alloc(1);
+    this.#addPanelSpecToGeometry(panelSpec, index);
+    this.#addPanelSpecToTextureAtlas(panelSpec, index);
+  }
+  #addPanelSpecToGeometry(panelSpec, index) {
+    // const {
+    //   sceneChunkMesh,
+    // } = panelSpec;
+    const {
+      geometry,
+    } = this;
+
+    // attributes
+    const selectIndexesAttribute = geometry.attributes.selectIndex;
+    const selectIndexes = selectIndexesAttribute.array;
+    selectIndexes[index] = index;
+    selectIndexesAttribute.needsUpdate = true;
+
+    this.count++;
+  }
+  async #addPanelSpecToTextureAtlas(panelSpec, index) {
+    await drawAtlasTexture(panelSpec, index, this.material.uniforms.map.value.image.ctx);
+    this.material.uniforms.map.value.needsUpdate = true;
+  }
+  updateGeometry() {
+    for (let i = 0; i < this.panelSpecs.length; i++) {
+      const panelSpec = this.panelSpecs[i];
+      const matrix = localMatrix.makeTranslation(
+        panelSpec.position2d.x,
+        0,
+        panelSpec.position2d.z
+      );
+      this.setMatrixAt(i, matrix);
+    }
+    this.instanceMatrix.needsUpdate = true;
   }
 }
 
@@ -1793,9 +1934,9 @@ class MetazineLoader {
       panelSpec.boundingBox = boundingBox;
       panelSpec.floorBoundingBox = floorBoundingBox;
       panelSpec.outlineJson = outlineJson;
-      // panelSpec.depthField = depthFieldArrayBuffer;
       panelSpec.entranceExitLocations = entranceExitLocations;
       panelSpec.floorPlaneLocation = floorPlaneLocation;
+      panelSpec.position2d = new THREE.Vector3();
       panelSpec.resetToFloorTransform = () => {
         panelSpec.position.set(0, 0, 0);
         panelSpec.quaternion.fromArray(floorPlaneLocation.quaternion)
@@ -2553,11 +2694,16 @@ class UnderfloorMesh extends THREE.Object3D {
 //
 
 export class MetazineRenderer extends EventTarget {
-  constructor(canvas, metazine) {
+  constructor({
+    canvas,
+    metazine,
+    viewMode,
+  }) {
     super();
 
     this.canvas = canvas;
     this.metazine = metazine;
+    this.viewMode = viewMode;
 
     // canvas
     canvas.width = panelSize;
@@ -2604,9 +2750,20 @@ export class MetazineRenderer extends EventTarget {
     for (const panelSpec of metazine.renderPanelSpecs) {
       sceneBatchedMesh.addPanel(panelSpec);
     }
+    sceneBatchedMesh.visible = viewMode === '3d';
     scene.add(sceneBatchedMesh);
     sceneBatchedMesh.updateMatrixWorld();
     this.sceneBatchedMesh = sceneBatchedMesh;
+
+    // scene graph mesh
+    const sceneGraphMesh = new SceneGraphMesh();
+    for (const panelSpec of metazine.renderPanelSpecs) {
+      sceneGraphMesh.addPanel(panelSpec);
+    }
+    sceneGraphMesh.visible = viewMode === 'graph';
+    scene.add(sceneGraphMesh);
+    sceneGraphMesh.updateMatrixWorld();
+    this.sceneGraphMesh = sceneGraphMesh;
 
     // state
     this.dragSpec = null;
@@ -2676,7 +2833,6 @@ export class MetazineRenderer extends EventTarget {
         color: 0xff0000,
       })
     );
-    // cubeMesh.position.set(0, 0, -3);
     this.scene.add(cubeMesh);
     cubeMesh.updateMatrixWorld();
   }
@@ -3081,6 +3237,7 @@ export class MetazineRenderer extends EventTarget {
 
 const Metazine3DCanvas = ({
   metazine,
+  viewMode,
   onPanelSpecChange,
 }) => {
   const canvasRef = useRef();
@@ -3088,7 +3245,11 @@ const Metazine3DCanvas = ({
   useEffect(() => {
     const canvas = canvasRef.current;
     if (canvas) {
-      const renderer = new MetazineRenderer(canvas, metazine);
+      const renderer = new MetazineRenderer({
+        canvas,
+        metazine,
+        viewMode,
+      });
       const selectchange = e => {
         onPanelSpecChange(e.selectPanelSpec);
       };
@@ -3236,7 +3397,7 @@ const Metazine3DCanvas = ({
         window.removeEventListener('keydown', keydown);
       };
     }
-  }, [metazine, canvasRef.current]);
+  }, [metazine, viewMode, canvasRef.current]);
 
   return (
     <canvas
@@ -3248,7 +3409,10 @@ const Metazine3DCanvas = ({
   );
 };
 const Metazine3DCanvasWrapper = React.memo(Metazine3DCanvas, (prevProps, nextProps) => {
-  return prevProps.metazine === nextProps.metazine;
+  return [
+    'metazine',
+    'viewMode',
+  ].every(key => prevProps[key] === nextProps[key]);
 });
 const SideScene = ({
   panelSpec,
@@ -3417,6 +3581,7 @@ const SideMetascene = ({
 };
 const MetazineCanvas = ({
   metazine,
+  viewMode,
 }) => {
   const [panelSpec, setPanelSpec] = useState(null);
 
@@ -3442,6 +3607,7 @@ const MetazineCanvas = ({
         {panelSpec ? <SideScene panelSpec={panelSpec} /> : <SideMetascene />}
         <Metazine3DCanvasWrapper
           metazine={metazine}
+          viewMode={viewMode}
           onPanelSpecChange={setPanelSpec}
         />
       </div>
@@ -3585,9 +3751,10 @@ const MetasceneGeneratorComponent = () => {
             }
           </div>
           <MetazineCanvas
-            width={panelSize}
-            height={panelSize}
+            // width={panelSize}
+            // height={panelSize}
             metazine={metazine}
+            viewMode={viewMode}
           />
         </>
       ) :
