@@ -957,7 +957,10 @@ class SceneBatchedMesh extends THREE.Mesh {
 //
 
 class SceneGraphMesh extends THREE.InstancedMesh {
-  static planeGeometry = new THREE.PlaneGeometry(1, 1);
+  static size = 10;
+  static spacing = 0.2;
+  static planeGeometry = new THREE.PlaneGeometry(SceneGraphMesh.size, SceneGraphMesh.size)
+    .rotateX(-Math.PI / 2);
   constructor() {
     const geometry = new THREE.InstancedBufferGeometry();
     geometry.copy(SceneGraphMesh.planeGeometry);
