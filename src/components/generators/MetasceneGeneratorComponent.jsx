@@ -470,9 +470,9 @@ class PanelPicker extends THREE.Object3D {
   drag(newCenterPosition, newQuaternion) {
     const panelSpec = this.selectPanelSpec;
     const {
-      floorPlaneLocation,
+      // floorPlaneLocation,
       boundingBox,
-      floorBoundingBox,
+      // floorBoundingBox,
     } = panelSpec;
 
     const getClosestEntranceExitSnap = () => {
@@ -563,6 +563,7 @@ class PanelPicker extends THREE.Object3D {
       const exitParentMatrixWorld = snap.otherPanelSpec.transformScene.matrixWorld;
       const entranceParentMatrixWorld = snap.panelSpec.transformScene.matrixWorld;
       const entrancePanelSpec = snap.panelSpec;
+      
       connect({
         exitLocation,
         entranceLocation,
@@ -1836,6 +1837,13 @@ class MetazineLoader {
 
 //
 
+// reset transform to identity
+const resetTransform = panelSpec => {
+  panelSpec.position.setScalar(0);
+  panelSpec.quaternion.identity();
+  panelSpec.scale.setScalar(1);
+  panelSpec.updateMatrixWorld();
+};
 const connect = (() => {
   const localVector = new THREE.Vector3();
   const localVector2 = new THREE.Vector3();
@@ -1847,6 +1855,8 @@ const connect = (() => {
     entranceParentMatrixWorld, // targetZineRenderer.transformScene.matrixWorld
     target, // targetZineRenderer.scene
   }) => {
+    resetTransform(target);
+
     const exitMatrixWorld = new THREE.Matrix4().compose(
       localVector.fromArray(exitLocation.position),
       localQuaternion.fromArray(exitLocation.quaternion),
@@ -2003,13 +2013,6 @@ export class Metazine extends EventTarget {
     const panelSpecs = this.renderPanelSpecs;
 
     // helper functions
-    // reset transform to identity
-    const resetTransform = panelSpec => {
-      panelSpec.position.setScalar(0);
-      panelSpec.quaternion.identity();
-      panelSpec.scale.setScalar(1);
-      panelSpec.updateMatrixWorld();
-    };
     // weighted rng
     const probabalisticIndexRng = (weights) => {
       let weightSum = 0;
@@ -2201,8 +2204,6 @@ export class Metazine extends EventTarget {
         // latch fixed exit location
         const exitParentMatrixWorld = exitPanelSpec.transformScene.matrixWorld;
 
-        // reset entrance transform
-        resetTransform(entrancePanelSpec);
         // latch new entrance location
         const entranceParentMatrixWorld = entrancePanelSpec.transformScene.matrixWorld;
 
@@ -2824,10 +2825,8 @@ export class MetazineRenderer extends EventTarget {
         } = this.dragSpec;
 
         if (panelSpec && startFloorIntersection) {
-          let floorIntersection = intersectFloor(localPlane, localVector);
+          const floorIntersection = intersectFloor(localPlane, localVector);
           if (floorIntersection) {
-            floorIntersection = floorIntersection.clone();
-
             const delta = floorIntersection.clone()
               .sub(startFloorIntersection);
             const length = delta.length();
