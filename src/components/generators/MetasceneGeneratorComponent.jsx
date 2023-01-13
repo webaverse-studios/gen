@@ -3521,6 +3521,7 @@ const MetasceneGeneratorComponent = () => {
   const [loaded, setLoaded] = useState(false);
   const [seed, setSeed] = useState('lol');
   const [maxPanels, setMaxPanels] = useState(16);
+  const [viewMode, setViewMode] = useState('3d');
   const [files, _setFiles] = useState([]);
 
   const setFiles = files => {
@@ -3600,6 +3601,15 @@ const MetasceneGeneratorComponent = () => {
           <input type='number' className={styles.numberInput} value={maxPanels} onChange={e => {
             setMaxPanels(e.target.value);
           }} />
+        </label>
+        <label className={styles.label}>
+          View mode:
+          <select className={styles.select} value={viewMode} onChange={e => {
+            setViewMode(e.target.value);
+          }}>
+            <option value='3d'>3d</option>
+            <option value='graph'>graph</option>
+          </select>
         </label>
       </div>
       {loaded ? (
