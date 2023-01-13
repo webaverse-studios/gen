@@ -1080,6 +1080,15 @@ class SceneGraphMesh extends THREE.InstancedMesh {
     selectIndexes[index] = index;
     selectIndexesAttribute.needsUpdate = true;
 
+    // instance matrix
+    const matrix = localMatrix.makeTranslation(
+      panelSpec.position2D.x,
+      0,
+      panelSpec.position2D.z
+    );
+    this.setMatrixAt(index, matrix);
+    this.instanceMatrix.needsUpdate = true;
+
     this.count++;
   }
   async #addPanelSpecToTextureAtlas(panelSpec, index) {
@@ -1090,9 +1099,9 @@ class SceneGraphMesh extends THREE.InstancedMesh {
     for (let i = 0; i < this.panelSpecs.length; i++) {
       const panelSpec = this.panelSpecs[i];
       const matrix = localMatrix.makeTranslation(
-        panelSpec.position2d.x,
+        panelSpec.position2D.x,
         0,
-        panelSpec.position2d.z
+        panelSpec.position2D.z
       );
       this.setMatrixAt(i, matrix);
     }
@@ -1939,7 +1948,7 @@ class MetazineLoader {
       panelSpec.outlineJson = outlineJson;
       panelSpec.entranceExitLocations = entranceExitLocations;
       panelSpec.floorPlaneLocation = floorPlaneLocation;
-      panelSpec.position2d = new THREE.Vector3();
+      panelSpec.position2D = new THREE.Vector3();
       panelSpec.resetToFloorTransform = () => {
         panelSpec.position.set(0, 0, 0);
         panelSpec.quaternion.fromArray(floorPlaneLocation.quaternion)
@@ -2106,7 +2115,27 @@ export class Metazine extends EventTarget {
     this.mapIndex = mapIndexRenderer.getMapIndex();
     this.mapIndexResolution = mapIndexRenderer.getMapIndexResolution();
   }
-  autoConnect() { // automatically connect panel exits to panel entrances 
+  autoConnect({ // automatically connect panel exits to panel entrances
+    viewMode,
+  }) {
+    switch (viewMode) {
+      case '3d': {
+        this.#autoConnect3D();
+        this.#emitUpdate();
+        break;
+      }
+      case 'graph': {
+        this.#autoConnect3D();
+        this.#autoConnectGraph();
+        this.#emitUpdate();
+        break;
+      }
+      default: {
+        throw new Error('invalid view mode');
+      }
+    }
+  }
+  #autoConnect3D() {
     const rng = alea(seed);
     const panelSpecs = this.renderPanelSpecs;
 
@@ -2323,7 +2352,25 @@ export class Metazine extends EventTarget {
       panelSpec.position.set(-50, 0, -50);
       panelSpec.updateMatrixWorld();
     }
-
+  }
+  #autoConnectGraph() {
+    // try to fit into square
+    const width = Math.sqrt(this.renderPanelSpecs.length);
+    const height = width;
+    for (let i = 0; i < this.renderPanelSpecs.length; i++) {
+      const panelSpec = this.renderPanelSpecs[i];
+      
+      const dx = i % width;
+      const dz = Math.floor(i / width);
+      const spacedSize = SceneGraphMesh.size + SceneGraphMesh.spacing;
+      panelSpec.position2D.set(
+        (-width / 2 + 0.5 + dx) * spacedSize,
+        0,
+        (-height / 2 + 0.5 + dz) * spacedSize
+      );
+    }
+  }
+  #emitUpdate() {
     this.dispatchEvent(new MessageEvent('panelgeometryupdate'));
     this.#updateMapIndex();
     this.dispatchEvent(new MessageEvent('mapindexupdate'));
@@ -3261,13 +3308,20 @@ class MetazineGraphRenderer extends EventTarget {
     
     // camera
     const camera = makeDefaultCamera();
+    camera.position.set(0, 10, 0);
+    camera.quaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
     this.camera = camera;
 
     // orbit controls
     const controls = new OrbitControls(this.camera, canvas);
     controls.minDistance = 1;
     controls.maxDistance = 100;
-    controls.target.set(0, 0, -orbitControlsDistance);
+    controls.target.copy(camera.position)
+      .add(
+        new THREE.Vector3(0, 0, -orbitControlsDistance)
+          .applyQuaternion(camera.quaternion)
+      );
+    controls.enableRotate = false;
     controls.locked = false;
     this.controls = controls;
 
@@ -3300,6 +3354,7 @@ class MetazineGraphRenderer extends EventTarget {
     this.dragSpec = null;
 
     this.#initAux();
+    this.#listen();
     this.#animate();
   }
   #initAux() {
@@ -3325,6 +3380,18 @@ class MetazineGraphRenderer extends EventTarget {
     );
     this.scene.add(cubeMesh);
     cubeMesh.updateMatrixWorld();
+  }
+  #listen() {
+    const panelgeometryupdate = e => {
+      this.sceneGraphMesh.updateGeometry();
+    };
+    this.metazine.addEventListener('panelgeometryupdate', panelgeometryupdate);
+    this.panelPicker.addEventListener('panelgeometryupdate', panelgeometryupdate);
+
+    this.addEventListener('destroy', e => {
+      this.metazine.removeEventListener('panelgeometryupdate', panelgeometryupdate);
+      this.panelPicker.removeEventListener('panelgeometryupdate', panelgeometryupdate);
+    });
   }
   render() {
     // update
@@ -3670,7 +3737,9 @@ const MetasceneGeneratorComponent = () => {
     compile(files);
   };
   const autoConnect = () => {
-    metazine.autoConnect();
+    metazine.autoConnect({
+      viewMode,
+    });
   };
 
   useEffect(() => {
