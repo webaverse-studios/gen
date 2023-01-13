@@ -328,32 +328,6 @@ class EntranceExitMesh extends THREE.Mesh {
 
 //
 
-/* const getPanelSpecsAtlasTextureImageAsync = async panelSpecs => {
-  const atlasCanvas = document.createElement('canvas');
-  atlasCanvas.width = metazineAtlasTextureSize;
-  atlasCanvas.height = metazineAtlasTextureSize;
-  const ctx = atlasCanvas.getContext('2d');
-
-  for (let i = 0; i < panelSpecs.length; i++) {
-    const panelSpec = panelSpecs[i];
-    
-    const {imageArrayBuffer} = panelSpec;
-    const blob = new Blob([imageArrayBuffer]);
-    const imageBitmap = await createImageBitmap(blob);
-    
-    const x = (i % metazineAtlasTextureRowSize) * panelSpecTextureSize;
-    let y = Math.floor(i / metazineAtlasTextureRowSize) * panelSpecTextureSize;
-    y = metazineAtlasTextureSize - y - panelSpecTextureSize;
-
-    ctx.drawImage(
-      imageBitmap,
-      x, y,
-      panelSpecTextureSize, panelSpecTextureSize
-    );
-  }
-
-  return atlasCanvas;
-}; */
 class PanelPicker extends THREE.Object3D {
   constructor({
     mouse,
