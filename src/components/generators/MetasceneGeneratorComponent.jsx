@@ -963,31 +963,12 @@ class SceneBatchedMesh extends THREE.Mesh {
     let y = Math.floor(index / metazineAtlasTextureRowSize) * panelSpecTextureSize;
     y = metazineAtlasTextureSize - y - panelSpecTextureSize;
 
-    // console.log('got context', this.material?.uniforms?.map?.value?.ctx.image);
-    // if (!this.material?.uniforms?.map?.value?.ctx) {
-    //   debugger;
-    // }
     this.material.uniforms.map.value.image.ctx.drawImage(
       imageBitmap,
       x, y,
       panelSpecTextureSize, panelSpecTextureSize
     );
     this.material.uniforms.map.value.needsUpdate = true;
-
-    /* (async () => {
-      const atlasTextureImage = await getPanelSpecsAtlasTextureImageAsync(panelSpecs);
-      atlasTextureImage.style.cssText = `\
-        position: relative;
-        max-width: 1024px;
-        max-height: 1024px;
-        background: red;
-      `;
-      atlasTextureImage.classList.add('atlasTextureImage');
-      document.body.appendChild(atlasTextureImage);
-
-      map.image = atlasTextureImage;
-      map.needsUpdate = true;
-    })(); */
   }
   updateGeometry() {
     const matrixWorlds = this.material.uniforms.matrixWorldsTexture.value.image.data;
@@ -998,25 +979,6 @@ class SceneBatchedMesh extends THREE.Mesh {
       globalThis.matrixWorldsTexture = this.material.uniforms.matrixWorldsTexture.value;
     }
     this.material.uniforms.matrixWorldsTexture.value.needsUpdate = true;
-    
-    // this.geometry.dispose();
-    // this.material.uniforms.matrixWorldsTexture.value.dispose();
-    // this.material.uniforms.scaleOffsetsTexture.value.dispose();
-    // this.material.uniforms.selectIndexesTexture.value.dispose();
-
-    // const {
-    //   geometry,
-    //   matrixWorldsTexture,
-    //   scaleOffsetsTexture,
-    //   selectIndexesTexture,
-    // } = getPanelSpecsGeometryTextures(this.panelSpecs);
-    // this.geometry = geometry;
-    // this.material.uniforms.matrixWorldsTexture.value = matrixWorldsTexture;
-    // this.material.uniforms.matrixWorldsTexture.needsUpdate = true;
-    // this.material.uniforms.scaleOffsetsTexture.value = scaleOffsetsTexture;
-    // this.material.uniforms.scaleOffsetsTexture.needsUpdate = true;
-    // this.material.uniforms.selectIndexesTexture.value = selectIndexesTexture;
-    // this.material.uniforms.selectIndexesTexture.needsUpdate = true;
   }
 }
 
