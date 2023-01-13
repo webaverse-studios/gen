@@ -328,7 +328,7 @@ class EntranceExitMesh extends THREE.Mesh {
 
 //
 
-const getPanelSpecsAtlasTextureImageAsync = async panelSpecs => {
+/* const getPanelSpecsAtlasTextureImageAsync = async panelSpecs => {
   const atlasCanvas = document.createElement('canvas');
   atlasCanvas.width = metazineAtlasTextureSize;
   atlasCanvas.height = metazineAtlasTextureSize;
@@ -353,7 +353,7 @@ const getPanelSpecsAtlasTextureImageAsync = async panelSpecs => {
   }
 
   return atlasCanvas;
-};
+}; */
 class PanelPicker extends THREE.Object3D {
   constructor({
     mouse,
