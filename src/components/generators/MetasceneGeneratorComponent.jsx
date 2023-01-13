@@ -2730,7 +2730,6 @@ export class Metazine3DRenderer extends EventTarget {
     controls.maxDistance = 100;
     controls.target.set(0, 0, -orbitControlsDistance);
     controls.locked = false;
-    // controls.update();
     this.controls = controls;
 
     // mouse
@@ -3424,6 +3423,20 @@ class MetazineGraphRenderer extends EventTarget {
     // camera
     const camera = makeDefaultCamera();
     this.camera = camera;
+
+    // orbit controls
+    const controls = new OrbitControls(this.camera, canvas);
+    controls.minDistance = 1;
+    controls.maxDistance = 100;
+    controls.target.set(0, 0, -orbitControlsDistance);
+    controls.locked = false;
+    this.controls = controls;
+
+    // lights
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+    directionalLight.position.set(1, 2, 3);
+    directionalLight.updateMatrixWorld();
+    scene.add(directionalLight);
 
     // scene graph mesh
     const sceneGraphMesh = new SceneGraphMesh();
