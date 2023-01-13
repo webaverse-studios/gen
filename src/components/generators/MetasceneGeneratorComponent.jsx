@@ -564,7 +564,23 @@ class PanelPicker extends THREE.Object3D {
       const entranceLocation = snap.entranceExitLocation;
       const exitParentMatrixWorld = snap.otherPanelSpec.transformScene.matrixWorld;
       const entranceParentMatrixWorld = snap.panelSpec.transformScene.matrixWorld;
+      const exitPanelSpec = snap.otherPanelSpec;
       const entrancePanelSpec = snap.panelSpec;
+      
+      {
+        // exit location
+        const entrancePanelIndex = this.panelSpecs.indexOf(entrancePanelSpec);
+        const entranceLocationIndex = entrancePanelSpec.entranceExitLocations.indexOf(entranceLocation);
+        exitLocation.panelIndex = entrancePanelIndex;
+        exitLocation.entranceIndex = entranceLocationIndex;
+      }
+      {
+        // entrance location
+        const exitPanelIndex = this.panelSpecs.indexOf(exitPanelSpec);
+        const exitLocationIndex = exitPanelSpec.entranceExitLocations.indexOf(exitLocation);
+        entranceLocation.panelIndex = exitPanelIndex;
+        entranceLocation.exitIndex = exitLocationIndex;
+      }
       
       connect({
         exitLocation,
@@ -2163,42 +2179,14 @@ export class Metazine extends EventTarget {
         {
           // exit location
           const entrancePanelIndex = panelSpecs.indexOf(entrancePanelSpec);
-          // if (entrancePanelIndex === -1) {
-          //   console.warn('no entrance panel index', {
-          //     panelSpecs: panelSpecs.slice(),
-          //     entrancePanelSpec,
-          //   });
-          //   debugger;
-          // }
           const entranceLocationIndex = entrancePanelSpec.entranceExitLocations.indexOf(entranceLocation);
-          // if (entranceLocationIndex === -1) {
-          //   console.warn('no entrance location index', {
-          //     entranceExitLocations: entrancePanelSpec.entranceExitLocations.slice(),
-          //     entranceLocation,
-          //   });
-          //   debugger;
-          // }
           exitLocation.panelIndex = entrancePanelIndex;
           exitLocation.entranceIndex = entranceLocationIndex;
         }
         {
           // entrance location
           const exitPanelIndex = panelSpecs.indexOf(exitPanelSpec);
-          // if (exitPanelIndex === -1) {
-          //   console.warn('no exit panel index', {
-          //     panelSpecs: panelSpecs.slice(),
-          //     exitPanelSpec,
-          //   });
-          //   debugger;
-          // }
           const exitLocationIndex = exitPanelSpec.entranceExitLocations.indexOf(exitLocation);
-          // if (exitLocationIndex === -1) {
-          //   console.warn('no exit location index', {
-          //     entranceExitLocations: exitPanelSpec.entranceExitLocations.slice(),
-          //     exitLocation,
-          //   });
-          //   debugger;
-          // }
           entranceLocation.panelIndex = exitPanelIndex;
           entranceLocation.exitIndex = exitLocationIndex;
         }
