@@ -565,6 +565,38 @@ class PanelPicker extends THREE.Object3D {
     // unlink entrance/exit indices
     for (let i = 0; i < panelSpec.entranceExitLocations.length; i++) {
       const eel = panelSpec.entranceExitLocations[i];
+      const {
+        panelIndex,
+        entranceIndex,
+      } = eel;
+
+      if (panelIndex === -1 && entranceIndex !== -1) {
+        console.warn('no panel index', eel);
+        debugger;
+      }
+      if (entranceIndex === -1 && panelIndex !== -1) {
+        console.warn('no entrance index', eel);
+        debugger;
+      }
+
+      // eel.panelIndex = -1;
+      // eel.entranceIndex = -1;
+    }
+    for (let i = 0; i < panelSpec.entranceExitLocations.length; i++) {
+      const eel = panelSpec.entranceExitLocations[i];
+      
+      const {
+        panelIndex,
+        entranceIndex,
+      } = eel;
+
+      if (panelIndex !== -1) {
+        const otherPanel = this.panelSpecs[panelIndex];
+        const otherEel = otherPanel.entranceExitLocations[entranceIndex];
+        otherEel.panelIndex = -1;
+        otherEel.entranceIndex = -1;
+      }
+      
       eel.panelIndex = -1;
       eel.entranceIndex = -1;
     }
@@ -605,7 +637,7 @@ class PanelPicker extends THREE.Object3D {
         const exitPanelIndex = this.panelSpecs.indexOf(exitPanelSpec);
         const exitLocationIndex = exitPanelSpec.entranceExitLocations.indexOf(exitLocation);
         entranceLocation.panelIndex = exitPanelIndex;
-        entranceLocation.exitIndex = exitLocationIndex;
+        entranceLocation.entranceIndex = exitLocationIndex;
       }
       
       connect({
@@ -2091,7 +2123,7 @@ export class Metazine extends EventTarget {
       const panelSpec = panelSpecs[i];
       for (let j = 0; j < panelSpec.entranceExitLocations.length; j++) {
         const eel = panelSpec.entranceExitLocations[j];
-        eel.entrancePanelIndex = -1;
+        eel.panelIndex = -1;
         eel.entranceIndex = -1;
       }
     }
@@ -2214,7 +2246,7 @@ export class Metazine extends EventTarget {
           const exitPanelIndex = panelSpecs.indexOf(exitPanelSpec);
           const exitLocationIndex = exitPanelSpec.entranceExitLocations.indexOf(exitLocation);
           entranceLocation.panelIndex = exitPanelIndex;
-          entranceLocation.exitIndex = exitLocationIndex;
+          entranceLocation.entranceIndex = exitLocationIndex;
         }
 
         // latch fixed exit location
