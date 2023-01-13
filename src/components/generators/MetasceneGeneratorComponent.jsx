@@ -1070,9 +1070,6 @@ class SceneGraphMesh extends THREE.InstancedMesh {
     this.#addPanelSpecToTextureAtlas(panelSpec, index);
   }
   #addPanelSpecToGeometry(panelSpec, index) {
-    // const {
-    //   sceneChunkMesh,
-    // } = panelSpec;
     const {
       geometry,
     } = this;
@@ -2050,11 +2047,9 @@ const connect = (() => {
       );
     const entranceMatrixWorldInverse = entranceMatrixWorld.clone().invert();
 
-    // const matrixWorld = exitMatrixWorld;
     const matrixWorld = entranceMatrixWorldInverse.clone()
       .premultiply(exitMatrixWorld);
 
-    // target.matrixWorld.copy(matrixWorld);
     target.matrix.copy(matrixWorld)
       .decompose(
         target.position,
@@ -2062,62 +2057,6 @@ const connect = (() => {
         target.scale
       );
     target.updateMatrixWorld();
-    // console.log('target parent', target.parent);
-
-    /* // const exitLocation = this.metadata.entranceExitLocations[exitIndex];
-    const exitMatrix = new THREE.Matrix4().compose(
-      new THREE.Vector3().fromArray(exitLocation.position),
-      new THREE.Quaternion().fromArray(exitLocation.quaternion),
-      oneVector
-    );
-    const exitMatrixWorld = exitMatrix.clone()
-      .premultiply(exitParentMatrixWorld);
-    exitMatrixWorld.decompose(
-      localVector,
-      localQuaternion,
-      localVector2
-    );
-    exitMatrixWorld.compose(
-      localVector,
-      localQuaternion,
-      oneVector
-    );
-
-    // const entranceLocation = targetZineRenderer.metadata.entranceExitLocations[entranceIndex];
-    const entranceMatrix = new THREE.Matrix4().compose(
-      localVector.fromArray(entranceLocation.position),
-      localQuaternion.fromArray(entranceLocation.quaternion),
-      oneVector
-    );
-    const entranceMatrixWorld = entranceMatrix.clone()
-      .premultiply(entranceParentMatrixWorld);
-    entranceMatrixWorld.decompose(
-        localVector,
-        localQuaternion,
-        localVector2
-      );
-    entranceMatrixWorld.compose(
-      localVector,
-      localQuaternion,
-      oneVector
-    );
-    const entranceMatrixWorldInverse = entranceMatrixWorld.clone()
-      .invert();
-
-    // undo the target entrance transform
-    // then, apply the exit transform
-    const transformMatrix = new THREE.Matrix4()
-      .copy(entranceMatrixWorldInverse)
-      .premultiply(y180Matrix)
-      .premultiply(exitMatrixWorld)
-    target.matrix
-      .premultiply(transformMatrix)
-      .decompose(
-        target.position,
-        target.quaternion,
-        target.scale
-      );
-    target.updateMatrixWorld(); */
   }
 })();
 export class Metazine extends EventTarget {
@@ -2346,68 +2285,15 @@ export class Metazine extends EventTarget {
           entranceParentMatrixWorld,
           target: entrancePanelSpec,
         });
-        // const attachPanelIndex = this.renderPanelSpecs.length;
-        // const newPanelIndex = attachPanelIndex + 1;
         let intersect = false; // XXX hack
-        // {
-        //   intersect = mapIndexRenderer.intersect(
-        //     entrancePanelSpec,
-        //     attachPanelIndex,
-        //     newPanelIndex
-        //   );
-        // }
-        // if (intersect) {
-        //   console.log('intersect');
-        // } else {
-        //   console.log('no intersect');
-        // }
         if (intersect) {
           if (++numIntersects < maxNumIntersects) {
-            // console.log('intersect', {
-            //   intersect,
-            //   attachPanelIndex,
-            //   newPanelIndex,
-            // });
             continue;
           } else {
             console.warn('too many intersects');
             debugger;
           }
         } else {
-          // draw the map index
-          // {
-          //   mapIndexRenderer.draw(
-          //     entrancePanelSpec,
-          //     MapIndexRenderer.MODE_REPLACE,
-          //     attachPanelIndex,
-          //     newPanelIndex
-          //   );
-          // }
-
-          // log the new panel spec
-          // this.renderPanelSpecs.push(entrancePanelSpec);
-
-          // {
-          //   // for (let i = 0; i < this.renderPanelSpecs.length; i++) {
-          //   //   const panelSpec = this.renderPanelSpecs[i];
-          //     const {entranceExitLocations} = entrancePanelSpec;
-              
-          //     let allNeg1 = true;
-          //     for (let i = 0; i < entranceExitLocations.length; i++) {
-          //       const entranceExitLocation = entranceExitLocations[i];
-          //       const {panelIndex, entranceIndex} = entranceExitLocation;
-          //       if (panelIndex !== -1 || entranceIndex !== -1) {
-          //         allNeg1 = false;
-          //         break;
-          //       }
-          //     }
-          //     console.log('all neg 1', allNeg1, entranceExitLocations);
-          //     if (allNeg1) {
-          //       debugger;
-          //     }
-          //   // }
-          // }
-
           // splice exit spec from candidates
           candidateExitSpecs.splice(exitSpecIndex, 1);
           // splice entrance panel spec from candidates
@@ -2432,7 +2318,6 @@ export class Metazine extends EventTarget {
     }
 
     // set aside remaining candidate entrance panel specs
-    // console.log('set aside remaining panel specs', candidateEntrancePanelSpecs);
     for (let i = 0; i < candidateEntrancePanelSpecs.length; i++) {
       const panelSpec = candidateEntrancePanelSpecs[i];
       panelSpec.position.set(-50, 0, -50);
@@ -2484,41 +2369,11 @@ export class Metazine extends EventTarget {
         ]);
         const layer1Id = layerIds[1];
         
-        // const oldEntranceExitLocations = storyboard.zd.getData([
-        //   panelId,
-        //   layer1Id,
-        //   'entranceExitLocations',
-        // ]);
         storyboard.zd.setData([
           panelId,
           layer1Id,
           'entranceExitLocations',
         ], entranceExitLocations);
-        // {
-        //   // for (let i = 0; i < this.renderPanelSpecs.length; i++) {
-        //   //   const panelSpec = this.renderPanelSpecs[i];
-        //     // const {entranceExitLocations} = entrancePanelSpec;
-            
-        //     const isAllNeg = (entranceExitLocations) => {
-        //       let allNeg = true;
-        //       for (let i = 0; i < entranceExitLocations.length; i++) {
-        //         const entranceExitLocation = entranceExitLocations[i];
-        //         const {panelIndex, entranceIndex} = entranceExitLocation;
-        //         if (panelIndex !== -1 || entranceIndex !== -1) {
-        //           allNeg = false;
-        //           break;
-        //         }
-        //       }
-        //       return allNeg;
-        //     };
-        //     let allNeg1 = isAllNeg(entranceExitLocations);
-        //     let allNeg2 = isAllNeg(oldEntranceExitLocations);
-        //     console.log('all negative', allNeg1, allNeg2, entranceExitLocations, oldEntranceExitLocations);
-        //     // if (allNeg1) {
-        //     //   debugger;
-        //     // }
-        //   // }
-        // }
       }
 
       // export
@@ -2534,28 +2389,6 @@ export class Metazine extends EventTarget {
 
 //
 
-/* const makePositionCubesMesh = (positions) => {
-  // render an instanced cubes mesh to show the depth
-  const positionCubesGeometry = new THREE.BoxGeometry(0.1, 0.1, 0.1);
-  const positionCubesMaterial = new THREE.MeshPhongMaterial({
-    // vertexColors: true,
-    color: 0x0000FF,
-  });
-  const positionCubesMesh = new THREE.InstancedMesh(positionCubesGeometry, positionCubesMaterial, positions.length / 3);
-  positionCubesMesh.name = 'positionCubesMesh';
-  positionCubesMesh.frustumCulled = false;
-
-  // set the matrices by projecting the depth from the perspective camera
-  positionCubesMesh.count = 0;
-  for (let i = 0; i < positions.length; i += 3) {
-    const target = localVector.fromArray(positions, i);
-    localMatrix.makeTranslation(target.x, target.y, target.z);
-    positionCubesMesh.setMatrixAt(i / 3, localMatrix);
-    positionCubesMesh.count++;
-  }
-  positionCubesMesh.instanceMatrix.needsUpdate = true;
-  return positionCubesMesh;
-}; */
 class ChunkEdgeMesh extends THREE.Object3D {
   constructor() {
     super();
