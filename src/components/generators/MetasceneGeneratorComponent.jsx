@@ -504,6 +504,7 @@ class PanelPicker extends THREE.Object3D {
           )
             .premultiply(otherPanelSpec.transformScene.matrixWorld)
             .decompose(localVector, localQuaternion, localVector2);
+          localVector.y = 0; // snap to floor
 
           for (let k = 0; k < entranceExitLocations.length; k++) {
             const entranceExitLocation = entranceExitLocations[k];
@@ -515,6 +516,7 @@ class PanelPicker extends THREE.Object3D {
             )
               .premultiply(panelSpec.transformScene.matrixWorld)
               .decompose(localVector3, localQuaternion2, localVector4);
+            localVector3.y = 0; // snap to floor
 
             const distance = localVector.distanceTo(localVector3);
             if (distance < closestDistance) {
