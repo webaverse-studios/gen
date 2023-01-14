@@ -197,7 +197,7 @@ const panelSpecGeometrySize = 256;
 const panelSpecTextureSize = 256;
 const metazineAtlasTextureSize = 4096;
 const metazineAtlasTextureRowSize = Math.floor(metazineAtlasTextureSize / panelSpecTextureSize);
-const orbitControlsDistance = 30;
+const orbitControlsDistance = 40;
 const maxRenderPanels = 64;
 const matrixWorldTextureWidthInPixels = maxRenderPanels * 16 / 4;
 const controlsMinDistance = 1;
@@ -339,7 +339,7 @@ const intersectFloor = (mouse, camera, vectorTarget) => {
   localRaycaster.setFromCamera(mouse, camera);
   return localRaycaster.ray.intersectPlane(floorPlane, vectorTarget);
 };
-class PanelPicker extends THREE.Object3D {
+class PanelPicker3D extends THREE.Object3D {
   constructor({
     canvas,
     camera,
@@ -353,6 +353,7 @@ class PanelPicker extends THREE.Object3D {
     this.controls = controls;
     this.panelSpecs = panelSpecs;
 
+    // select
     this.hoverPanelSpec = null;
     this.selectPanelSpec = null;
 
@@ -506,7 +507,6 @@ class PanelPicker extends THREE.Object3D {
     for (let i = 0; i < this.panelSpecs.length; i++) {
       const panelSpec = this.panelSpecs[i];
 
-      // console.log('check selected panel spec', this.selectPanelSpec);
       // if we are selected, only hover over the selected panel
       if (!this.selectPanelSpec || this.selectPanelSpec === panelSpec) {
         const {
@@ -667,24 +667,14 @@ class PanelPicker extends THREE.Object3D {
     };
 
     // unlink entrance/exit indices
+    const selectedPanelIndex = this.panelSpecs.indexOf(this.selectPanelSpec);
     for (let i = 0; i < panelSpec.entranceExitLocations.length; i++) {
       const eel = panelSpec.entranceExitLocations[i];
-      const {
-        panelIndex,
-        entranceIndex,
-      } = eel;
 
-      if (panelIndex === -1 && entranceIndex !== -1) {
-        console.warn('no panel index', eel);
-        debugger;
+      if (eel.panelIndex === selectedPanelIndex) {
+        eel.panelIndex = -1;
+        eel.entranceIndex = -1;
       }
-      if (entranceIndex === -1 && panelIndex !== -1) {
-        console.warn('no entrance index', eel);
-        debugger;
-      }
-
-      // eel.panelIndex = -1;
-      // eel.entranceIndex = -1;
     }
     for (let i = 0; i < panelSpec.entranceExitLocations.length; i++) {
       const eel = panelSpec.entranceExitLocations[i];
@@ -801,6 +791,9 @@ class PanelPicker extends THREE.Object3D {
     });
   }
 }
+
+//
+
 const drawAtlasTexture = async (panelSpec, index, ctx) => {
   const {imageArrayBuffer} = panelSpec;
   const blob = new Blob([imageArrayBuffer]);
@@ -1083,6 +1076,37 @@ class SceneBatchedMesh extends THREE.Mesh {
       matrixWorlds.set(panelSpec.sceneChunkMesh.matrixWorld.elements, i * 16);
     }
     this.material.uniforms.matrixWorldsTexture.value.needsUpdate = true;
+  }
+}
+
+//
+
+class PanelPickerGraph extends THREE.Object3D {
+  constructor({
+    canvas,
+    camera,
+    controls,
+    panelSpecs,
+  }) {
+    super();
+
+    this.canvas = canvas;
+    this.camera = camera;
+    this.controls = controls;
+    this.panelSpecs = panelSpecs;
+
+    // select
+    this.hoverPanelSpec = null;
+    this.selectPanelSpec = null;
+  }
+  handleMousedown(e) {
+    // XXX
+  }
+  handleMouseup(e) {
+    // XXX
+  }
+  handleMousemove(e) {
+    // XXX
   }
 }
 
@@ -2740,14 +2764,14 @@ export class Metazine3DRenderer extends EventTarget {
     
     // camera
     const camera = makeDefaultCamera();
-    camera.position.set(0, 0, orbitControlsDistance);
+    camera.position.set(0, orbitControlsDistance / 2, orbitControlsDistance);
     this.camera = camera;
 
     // orbit controls
     const controls = new OrbitControls(this.camera, canvas);
     controls.minDistance = controlsMinDistance;
     controls.maxDistance = controlsMaxDistance;
-    controls.target.set(0, 0, -orbitControlsDistance);
+    controls.target.set(0, 0, 0);
     controls.update();
     controls.locked = false;
     this.controls = controls;
@@ -2782,7 +2806,7 @@ export class Metazine3DRenderer extends EventTarget {
   } */
   #initAux() {
     // panel picker
-    const panelPicker = new PanelPicker({
+    const panelPicker = new PanelPicker3D({
       canvas: this.canvas,
       camera: this.camera,
       controls: this.controls,
@@ -3369,7 +3393,7 @@ class MetazineGraphRenderer extends EventTarget {
   }
   #initAux() {
     // panel picker
-    const panelPicker = new PanelPicker({
+    const panelPicker = new PanelPickerGraph({
       canvas: this.canvas,
       camera: this.camera,
       controls: this.controls,
@@ -3399,9 +3423,30 @@ class MetazineGraphRenderer extends EventTarget {
     this.metazine.addEventListener('panelgeometryupdate', panelgeometryupdate);
     this.panelPicker.addEventListener('panelgeometryupdate', panelgeometryupdate);
 
+    const mousedown = e => {
+      this.panelPicker.handleMousedown(e);
+    };
+    const mouseup = e => {
+      this.panelPicker.handleMouseup(e);
+    };
+    const mousemove = e => {
+      this.panelPicker.handleMousemove(e);
+    };
+
+    const canvas = this.renderer.domElement;
+    canvas.addEventListener('mousedown', mousedown);
+    document.addEventListener('mouseup', mouseup);
+    canvas.addEventListener('mousemove', mousemove);
+    canvas.addEventListener('click', blockEvent);
+
     this.addEventListener('destroy', e => {
       this.metazine.removeEventListener('panelgeometryupdate', panelgeometryupdate);
       this.panelPicker.removeEventListener('panelgeometryupdate', panelgeometryupdate);
+
+      canvas.removeEventListener('mousedown', mousedown);
+      document.removeEventListener('mouseup', mouseup);
+      canvas.removeEventListener('mousemove', mousemove);
+      canvas.removeEventListener('click', blockEvent);
     });
   }
   render() {
