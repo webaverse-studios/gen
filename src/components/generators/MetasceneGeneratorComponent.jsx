@@ -1098,6 +1098,7 @@ class PanelPickerGraph extends THREE.Object3D {
     // select
     this.hoverPanelSpec = null;
     this.selectPanelSpec = null;
+    this.hoverEntranceExitLocation = null;
 
     // mouse
     const mouse = new THREE.Vector2();
@@ -1115,9 +1116,18 @@ class PanelPickerGraph extends THREE.Object3D {
   handleMousedown(e) {
     const isLeftClick = e.button === 0;
     if (isLeftClick) {
+      const startFloorIntersection = intersectFloor(this.mouse, this.camera, localVector);
+
+      const panelSpec = this.hoverPanelSpec;
+      const startCenterPosition = panelSpec && panelSpec.position.clone();
+
       this.dragSpec = {
         startX: e.clientX,
         startY: e.clientY,
+        panelSpec,
+        startCenterPosition,
+        entranceExitLocation: this.hoverEntranceExitLocation,
+        startFloorIntersection: startFloorIntersection && startFloorIntersection.clone(),
       };
     }
   }
@@ -1152,7 +1162,27 @@ class PanelPickerGraph extends THREE.Object3D {
       -(y / rect.height) * 2 + 1
     );
 
-    this.update();
+    if (!this.dragSpec) { // not dragging
+      this.update();
+    } else { // dragging
+      const {
+        panelSpec,
+        entranceExitLocation,
+        startFloorIntersection,
+      } = this.dragSpec;
+
+      if (panelSpec && startFloorIntersection) {
+        const floorIntersection = intersectFloor(this.mouse, this.camera, localVector);
+        const delta = localVector2.copy(floorIntersection)
+          .sub(startFloorIntersection);
+
+        if (!entranceExitLocation) { // panel drag
+          console.log('panel drag', panelSpec);
+        } else { // link drag
+          console.log('link drag', entranceExitLocation);
+        }
+      }
+    }
   }
   hoverPanel(panelSpec) {
     this.hoverPanelSpec = panelSpec;
@@ -1165,6 +1195,9 @@ class PanelPickerGraph extends THREE.Object3D {
       selectPanelSpec: this.selectPanelSpec,
     });
   }
+  hoverEntranceExit(entranceExitLocation) {
+    this.hoverEntranceExitLocation = entranceExitLocation;
+  }
   update() {
     localRaycaster.setFromCamera(this.mouse, this.camera);
 
@@ -1172,6 +1205,7 @@ class PanelPickerGraph extends THREE.Object3D {
 
     const oldHoverPanelSpec = this.hoverPanelSpec;
     this.hoverPanelSpec = null;
+    this.hoverEntranceExitLocation = null;
 
     this.pickerMesh.visible = false;
 
@@ -1180,38 +1214,42 @@ class PanelPickerGraph extends THREE.Object3D {
       for (let i = 0; i < this.panelSpecs.length; i++) {
         const panelSpec = this.panelSpecs[i];
 
-        for (let j = 0; j < panelSpec.entranceExitLocations.length; j++) {
-          const eel = panelSpec.entranceExitLocations[j];
+        // if we are selected, only hover over the selected panel
+        if (!this.selectPanelSpec || this.selectPanelSpec === panelSpec) {
+          for (let j = 0; j < panelSpec.entranceExitLocations.length; j++) {
+            const eel = panelSpec.entranceExitLocations[j];
 
-          const positionNdc = localVector.fromArray(eel.position)
-            .project(panelSpec.camera);
+            const positionNdc = localVector.fromArray(eel.position)
+              .project(panelSpec.camera);
+            
+            const positionWorld = localVector2.set(
+              panelSpec.position2D.x + (positionNdc.x * SceneGraphMesh.size / 2),
+              labelFloatOffset,
+              panelSpec.position2D.z - (positionNdc.y * SceneGraphMesh.size / 2)
+            );
+
+            const floorPlane = localPlane.setFromNormalAndCoplanarPoint(
+              upVector,
+              zeroVector
+            );
+
+            const intersection = localRaycaster.ray.intersectPlane(floorPlane, localVector);
+            if (intersection) {
+              const distance = intersection.distanceTo(positionWorld);
+              if (distance < entrancePointWidth) {
+                this.hoverPanel(panelSpec);
+                this.hoverEntranceExit(eel);
+
+                this.pickerMesh.position.copy(positionWorld);
+                this.pickerMesh.updateMatrixWorld();
           
-          const positionWorld = localVector2.set(
-            panelSpec.position2D.x + (positionNdc.x * SceneGraphMesh.size / 2),
-            labelFloatOffset,
-            panelSpec.position2D.z - (positionNdc.y * SceneGraphMesh.size / 2)
-          );
+                this.pickerMesh.material.uniforms.scale.value.setScalar(entrancePointWidth);
+                this.pickerMesh.material.uniforms.scale.needsUpdate = true;
 
-          const floorPlane = localPlane.setFromNormalAndCoplanarPoint(
-            upVector,
-            zeroVector
-          );
+                this.pickerMesh.visible = true;
 
-          const intersection = localRaycaster.ray.intersectPlane(floorPlane, localVector);
-          if (intersection) {
-            const distance = intersection.distanceTo(positionWorld);
-            if (distance < entrancePointWidth) {
-              this.hoverPanel(panelSpec);
-
-              this.pickerMesh.position.copy(positionWorld);
-              this.pickerMesh.updateMatrixWorld();
-        
-              this.pickerMesh.material.uniforms.scale.value.setScalar(entrancePointWidth);
-              this.pickerMesh.material.uniforms.scale.needsUpdate = true;
-
-              this.pickerMesh.visible = true;
-
-              return true;
+                return true;
+              }
             }
           }
         }
