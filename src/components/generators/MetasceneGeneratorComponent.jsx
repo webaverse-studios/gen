@@ -1135,7 +1135,7 @@ class PanelPickerGraph extends THREE.Object3D {
       const deltaX = clientX - startX;
       const deltaY = clientY - startY;
       if (deltaX === 0 && deltaY === 0) {
-        this.select();
+        this.selectPanel();
       }
     
       this.dragSpec = null;
@@ -1154,10 +1154,10 @@ class PanelPickerGraph extends THREE.Object3D {
 
     this.update();
   }
-  hover(panelSpec) {
+  hoverPanel(panelSpec) {
     this.hoverPanelSpec = panelSpec;
   }
-  select() {
+  selectPanel() {
     this.selectPanelSpec = this.hoverPanelSpec;
 
     this.dispatchEvent({
@@ -1201,7 +1201,7 @@ class PanelPickerGraph extends THREE.Object3D {
           if (intersection) {
             const distance = intersection.distanceTo(positionWorld);
             if (distance < entrancePointWidth) {
-              this.hover(panelSpec);
+              this.hoverPanel(panelSpec);
 
               this.pickerMesh.position.copy(positionWorld);
               this.pickerMesh.updateMatrixWorld();
@@ -1246,7 +1246,7 @@ class PanelPickerGraph extends THREE.Object3D {
           if (intersection) {
             const intersection2D = localVector2D.set(intersection.x, intersection.z);
             if (bbox.containsPoint(intersection2D)) {
-              this.hover(panelSpec);
+              this.hoverPanel(panelSpec);
 
               this.pickerMesh.position.set(
                 panelSpec.position2D.x,
