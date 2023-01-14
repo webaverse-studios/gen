@@ -172,6 +172,7 @@ const localMatrix2 = new THREE.Matrix4();
 // const localTriangle = new THREE.Triangle();
 // const localTriangle2 = new THREE.Triangle();
 const localPlane = new THREE.Plane();
+const localRaycaster = new THREE.Raycaster();
 // const localBox = new THREE.Box3();
 const localColor = new THREE.Color();
 const localObb = new OBB();
@@ -199,6 +200,8 @@ const metazineAtlasTextureRowSize = Math.floor(metazineAtlasTextureSize / panelS
 const orbitControlsDistance = 10;
 const maxRenderPanels = 64;
 const matrixWorldTextureWidthInPixels = maxRenderPanels * 16 / 4;
+const controlsMinDistance = 1;
+const controlsMaxDistance = 300;
 
 //
 
@@ -328,21 +331,36 @@ class EntranceExitMesh extends THREE.Mesh {
 
 //
 
+const intersectFloor = (mouse, camera, vectorTarget) => {
+  const floorPlane = localPlane.setFromNormalAndCoplanarPoint(
+    upVector,
+    zeroVector
+  );
+  localRaycaster.setFromCamera(mouse, camera);
+  return localRaycaster.ray.intersectPlane(floorPlane, vectorTarget);
+};
 class PanelPicker extends THREE.Object3D {
   constructor({
-    mouse,
+    canvas,
     camera,
+    controls,
     panelSpecs,
   }) {
     super();
 
-    this.mouse = mouse;
+    this.canvas = canvas;
     this.camera = camera;
+    this.controls = controls;
     this.panelSpecs = panelSpecs;
 
     this.hoverPanelSpec = null;
     this.selectPanelSpec = null;
 
+    // mouse
+    const mouse = new THREE.Vector2();
+    this.mouse = mouse;
+
+    // raycaster
     this.raycaster = new THREE.Raycaster();
 
     // picker mesh
@@ -360,6 +378,120 @@ class PanelPicker extends THREE.Object3D {
     this.add(pickerMesh);
     pickerMesh.updateMatrixWorld();
     this.pickerMesh = pickerMesh;
+
+    // state
+    this.dragSpec = null;
+  }
+  handleMousedown(e) {
+    const isLeftClick = e.button === 0;
+    if (isLeftClick) {
+      let startPanelSpec;
+      let startCenterPosition;
+      let startQuaternion;
+      if (
+        this.selectPanelSpec &&
+        this.hoverPanelSpec === this.selectPanelSpec
+      ) {
+        startPanelSpec = this.selectPanelSpec;
+        const {
+          // floorPlaneLocation,
+          boundingBox,
+          // floorBoundingBox,
+        } = startPanelSpec;
+
+        const bbox = new THREE.Box3(
+          new THREE.Vector3().fromArray(boundingBox.min),
+          new THREE.Vector3().fromArray(boundingBox.max)
+        ).applyMatrix4(startPanelSpec.matrix);
+        const center = bbox.getCenter(new THREE.Vector3());
+
+        startCenterPosition = center.clone()
+          // .applyMatrix4(startPanelSpec.matrixWorld);
+        startQuaternion = startPanelSpec.quaternion.clone();
+      } else {
+        startCenterPosition = null;
+        startQuaternion = null;
+      }
+
+      const startFloorIntersection = intersectFloor(this.mouse, this.camera, localVector);
+
+      this.dragSpec = {
+        startX: e.clientX,
+        startY: e.clientY,
+        panelSpec: startPanelSpec,
+        startCenterPosition,
+        startQuaternion,
+        startFloorIntersection: startFloorIntersection && startFloorIntersection.clone(),
+      };
+      this.controls.enabled = !this.selectPanelSpec ||
+        this.hoverPanelSpec !== this.selectPanelSpec;
+    }
+  }
+  handleMouseup(e) {
+    const isLeftClick = e.button === 0;
+    if (isLeftClick) {
+      if (this.dragSpec) {
+        const {
+          clientX,
+          clientY,
+        } = e;
+        const {
+          startX,
+          startY,
+        } = this.dragSpec;
+        const deltaX = clientX - startX;
+        const deltaY = clientY - startY;
+        if (deltaX === 0 && deltaY === 0) {
+          this.select();
+        }
+      }
+      
+      this.dragSpec = null;
+      this.controls.enabled = true;
+    }
+  }
+  handleMousemove(e) {
+    // set the raycaster from mouse event
+    const rect = this.canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    this.mouse.set(
+      (x / rect.width) * 2 - 1,
+      -(y / rect.height) * 2 + 1
+    );
+    
+    if (!this.dragSpec) { // not dragging
+      this.update();
+    } else { // dragging
+      const {
+        panelSpec,
+        startCenterPosition,
+        startQuaternion,
+        startFloorIntersection,
+      } = this.dragSpec;
+
+      if (panelSpec && startFloorIntersection) {
+        const floorIntersection = intersectFloor(this.mouse, this.camera, localVector);
+        if (floorIntersection) {
+          const delta = floorIntersection.clone()
+            .sub(startFloorIntersection);
+          const length = delta.length();
+          const maxDragLength = 100;
+          if (length > maxDragLength) {
+            delta.multiplyScalar(maxDragLength / length);
+          }
+
+          const newCenterPosition = startCenterPosition.clone()
+            .add(delta);
+
+          this.drag(newCenterPosition, startQuaternion);
+          this.dispatchEvent({
+            type: 'panelgeometryupdate',
+          });
+        }
+      }
+    }
   }
   update() {
     this.raycaster.setFromCamera(this.mouse, this.camera);
@@ -444,9 +576,7 @@ class PanelPicker extends THREE.Object3D {
   drag(newCenterPosition, newQuaternion) {
     const panelSpec = this.selectPanelSpec;
     const {
-      // floorPlaneLocation,
       boundingBox,
-      // floorBoundingBox,
     } = panelSpec;
 
     const getClosestEntranceExitSnap = () => {
@@ -630,9 +760,7 @@ class PanelPicker extends THREE.Object3D {
   rotate(angleY) {
     if (this.selectPanelSpec) {
       const {
-        floorPlaneLocation,
         boundingBox,
-        floorBoundingBox,
       } = this.selectPanelSpec;
 
       const bbox = new THREE.Box3(
@@ -663,6 +791,10 @@ class PanelPicker extends THREE.Object3D {
           localVector2
         );
       this.selectPanelSpec.updateMatrixWorld();
+
+      if (this.dragSpec) {
+        this.dragSpec.startQuaternion.copy(this.selectPanelSpec.quaternion);
+      }
     }
     this.dispatchEvent({
       type: 'panelgeometryupdate',
@@ -2612,15 +2744,11 @@ export class Metazine3DRenderer extends EventTarget {
 
     // orbit controls
     const controls = new OrbitControls(this.camera, canvas);
-    controls.minDistance = 1;
-    controls.maxDistance = 100;
+    controls.minDistance = controlsMinDistance;
+    controls.maxDistance = controlsMaxDistance;
     controls.target.set(0, 0, -orbitControlsDistance);
     controls.locked = false;
     this.controls = controls;
-
-    // mouse
-    const mouse = new THREE.Vector2();
-    this.mouse = mouse;
 
     // lights
     const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
@@ -2637,19 +2765,25 @@ export class Metazine3DRenderer extends EventTarget {
     sceneBatchedMesh.updateMatrixWorld();
     this.sceneBatchedMesh = sceneBatchedMesh;
 
-    // state
-    this.dragSpec = null;
-
     // bootstrap
     this.#initAux();
     this.#listen();
     this.#animate();
   }
+  /* get dragSpec() {
+    console.warn('get drag spec', new Error().stack);
+    debugger;
+  }
+  set dragSpec(dragSpec) {
+    console.warn('set drag spec', dragSpec, new Error().stack);
+    debugger;
+  } */
   #initAux() {
     // panel picker
     const panelPicker = new PanelPicker({
-      mouse: this.mouse,
+      canvas: this.canvas,
       camera: this.camera,
+      controls: this.controls,
       panelSpecs: this.metazine.renderPanelSpecs,
     });
     this.scene.add(panelPicker);
@@ -2733,128 +2867,14 @@ export class Metazine3DRenderer extends EventTarget {
     };
     document.addEventListener('keydown', keydown);
 
-    const intersectFloor = (planeTarget, vectorTarget) => {
-      const floorPlane = planeTarget.setFromNormalAndCoplanarPoint(
-        upVector,
-        zeroVector
-      );
-      this.panelPicker.raycaster.setFromCamera(
-        this.panelPicker.mouse,
-        this.panelPicker.camera
-      );
-      return this.panelPicker.raycaster.ray.intersectPlane(floorPlane, vectorTarget);
-    };
     const mousedown = e => {
-      const isLeftClick = e.button === 0;
-      if (isLeftClick) {
-        let startPanelSpec;
-        let startCenterPosition;
-        let startQuaternion;
-        if (
-          this.panelPicker.selectPanelSpec &&
-          this.panelPicker.hoverPanelSpec === this.panelPicker.selectPanelSpec
-        ) {
-          startPanelSpec = this.panelPicker.selectPanelSpec;
-          const {
-            // floorPlaneLocation,
-            boundingBox,
-            // floorBoundingBox,
-          } = startPanelSpec;
-
-          const bbox = new THREE.Box3(
-            new THREE.Vector3().fromArray(boundingBox.min),
-            new THREE.Vector3().fromArray(boundingBox.max)
-          ).applyMatrix4(startPanelSpec.matrix);
-          const center = bbox.getCenter(new THREE.Vector3());
-
-          startCenterPosition = center.clone()
-            // .applyMatrix4(startPanelSpec.matrixWorld);
-          startQuaternion = startPanelSpec.quaternion.clone();
-        } else {
-          startCenterPosition = null;
-          startQuaternion = null;
-        }
-
-        const startFloorIntersection = intersectFloor(localPlane, localVector);
-
-        this.dragSpec = {
-          startX: e.clientX,
-          startY: e.clientY,
-          panelSpec: startPanelSpec,
-          startCenterPosition,
-          startQuaternion,
-          startFloorIntersection: startFloorIntersection && startFloorIntersection.clone(),
-        };
-        this.controls.enabled = !this.panelPicker.selectPanelSpec ||
-          this.panelPicker.hoverPanelSpec !== this.panelPicker.selectPanelSpec;
-      }
+      this.panelPicker.handleMousedown(e);
     };
     const mouseup = e => {
-      const isLeftClick = e.button === 0;
-      if (isLeftClick) {
-        if (this.dragSpec) {
-          const {
-            clientX,
-            clientY,
-          } = e;
-          const {
-            startX,
-            startY,
-          } = this.dragSpec;
-          const deltaX = clientX - startX;
-          const deltaY = clientY - startY;
-          if (deltaX === 0 && deltaY === 0) {
-            this.panelPicker.select();
-          }
-        } else {
-          // console.warn('mouse up with no drag spec');
-          // debugger;
-        }
-        
-        this.dragSpec = null;
-        this.controls.enabled = true;
-      }
+      this.panelPicker.handleMouseup(e);
     };
     const mousemove = e => {
-      // set the raycaster from mouse event
-      const rect = this.canvas.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-
-      this.mouse.set(
-        (x / rect.width) * 2 - 1,
-        -(y / rect.height) * 2 + 1
-      );
-      
-      if (!this.dragSpec) {
-        this.panelPicker.update();
-      } else {
-        const {
-          panelSpec,
-          startCenterPosition,
-          startQuaternion,
-          startFloorIntersection,
-        } = this.dragSpec;
-
-        if (panelSpec && startFloorIntersection) {
-          const floorIntersection = intersectFloor(localPlane, localVector);
-          if (floorIntersection) {
-            const delta = floorIntersection.clone()
-              .sub(startFloorIntersection);
-            const length = delta.length();
-            const maxDragLength = 100;
-            if (length > maxDragLength) {
-              delta.multiplyScalar(maxDragLength / length);
-            }
-
-            const newCenterPosition = startCenterPosition.clone()
-              .add(delta);
-
-            this.panelPicker.drag(newCenterPosition, startQuaternion);
-            panelgeometryupdate();
-          }
-        }
-      }
+      this.panelPicker.handleMousemove(e);
     };
 
     const canvas = this.renderer.domElement;
@@ -3043,10 +3063,6 @@ export class Metazine3DRenderer extends EventTarget {
   snapshotMap({
     width = 1024,
     height = 1024,
-    // boundingBox = new THREE.Box3(
-    //   new THREE.Vector3(-1, -1, -1),
-    //   new THREE.Vector3(1, 1, 1)
-    // ),
   } = {}) {
     const canvas = document.createElement('canvas');
     canvas.width = width;
@@ -3064,10 +3080,6 @@ export class Metazine3DRenderer extends EventTarget {
     const worldWidth = boundingBox.max.x - boundingBox.min.x;
     const worldHeight = boundingBox.max.z - boundingBox.min.z;
     const center = boundingBox.getCenter(new THREE.Vector3());
-    // console.log('got bounding box', {
-    //   worldWidth,
-    //   worldHeight,
-    // });
 
     const camera = makeFloorNetCamera();
     camera.position.x = center.x;
@@ -3314,8 +3326,8 @@ class MetazineGraphRenderer extends EventTarget {
 
     // orbit controls
     const controls = new OrbitControls(this.camera, canvas);
-    controls.minDistance = 1;
-    controls.maxDistance = 100;
+    controls.minDistance = controlsMinDistance;
+    controls.maxDistance = controlsMaxDistance;
     controls.target.copy(camera.position)
       .add(
         new THREE.Vector3(0, 0, -orbitControlsDistance)
@@ -3360,8 +3372,9 @@ class MetazineGraphRenderer extends EventTarget {
   #initAux() {
     // panel picker
     const panelPicker = new PanelPicker({
-      mouse: this.mouse,
+      canvas: this.canvas,
       camera: this.camera,
+      controls: this.controls,
       panelSpecs: this.metazine.renderPanelSpecs,
     });
     this.scene.add(panelPicker);
