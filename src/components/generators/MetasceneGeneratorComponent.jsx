@@ -3329,11 +3329,6 @@ class MetazineGraphRenderer extends EventTarget {
     controls.minDistance = controlsMinDistance;
     controls.maxDistance = controlsMaxDistance;
     controls.target.set(0, 0, 0);
-    // controls.target.copy(camera.position)
-      // .add(
-      //   new THREE.Vector3(0, 0, -orbitControlsDistance)
-      //     .applyQuaternion(camera.quaternion)
-      // );
     controls.enableRotate = false;
     controls.locked = false;
     this.controls = controls;
