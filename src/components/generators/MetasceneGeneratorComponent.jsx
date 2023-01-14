@@ -1175,52 +1175,101 @@ class PanelPickerGraph extends THREE.Object3D {
 
     this.pickerMesh.visible = false;
 
-    // find panel spec intersections
-    for (let i = 0; i < this.panelSpecs.length; i++) {
-      const panelSpec = this.panelSpecs[i];
+    // find entrance/exit intersections
+    const intersectEntranceExit = () => {
+      for (let i = 0; i < this.panelSpecs.length; i++) {
+        const panelSpec = this.panelSpecs[i];
 
-      // if we are selected, only hover over the selected panel
-      if (!this.selectPanelSpec || this.selectPanelSpec === panelSpec) {
-        // compute the 2d bounding box of the panel spec
-        const bbox = localBox2D.set(
-          localVector2D.set(
-            panelSpec.position2D.x - SceneGraphMesh.size / 2,
-            panelSpec.position2D.z - SceneGraphMesh.size / 2
-          ),
-          localVector2D2.set(
-            panelSpec.position2D.x + SceneGraphMesh.size / 2,
-            panelSpec.position2D.z + SceneGraphMesh.size / 2
-          )
-        );
+        for (let j = 0; j < panelSpec.entranceExitLocations.length; j++) {
+          const eel = panelSpec.entranceExitLocations[j];
 
-        const floorPlane = localPlane.setFromNormalAndCoplanarPoint(
-          upVector,
-          zeroVector
-        );
+          const positionNdc = localVector.fromArray(eel.position)
+            .project(panelSpec.camera);
+          
+          const positionWorld = localVector2.set(
+            panelSpec.position2D.x + (positionNdc.x * SceneGraphMesh.size / 2),
+            labelFloatOffset,
+            panelSpec.position2D.z - (positionNdc.y * SceneGraphMesh.size / 2)
+          );
 
-        const intersection = localRaycaster.ray.intersectPlane(floorPlane, localVector);
-        if (intersection) {
-          const intersection2D = localVector2D.set(intersection.x, intersection.z);
-          if (bbox.containsPoint(intersection2D)) {
-            this.hover(panelSpec);
+          const floorPlane = localPlane.setFromNormalAndCoplanarPoint(
+            upVector,
+            zeroVector
+          );
 
-            this.pickerMesh.position.set(
-              panelSpec.position2D.x,
-              labelFloatOffset,
-              panelSpec.position2D.z
-            );
-            // this.pickerMesh.quaternion.copy(quaternion);
-            this.pickerMesh.updateMatrixWorld();
-      
-            this.pickerMesh.material.uniforms.scale.value.setScalar(SceneGraphMesh.size);
-            this.pickerMesh.material.uniforms.scale.needsUpdate = true;
+          const intersection = localRaycaster.ray.intersectPlane(floorPlane, localVector);
+          if (intersection) {
+            const distance = intersection.distanceTo(positionWorld);
+            if (distance < entrancePointWidth) {
+              this.hover(panelSpec);
 
-            this.pickerMesh.visible = true;
-            break;
+              this.pickerMesh.position.copy(positionWorld);
+              this.pickerMesh.updateMatrixWorld();
+        
+              this.pickerMesh.material.uniforms.scale.value.setScalar(entrancePointWidth);
+              this.pickerMesh.material.uniforms.scale.needsUpdate = true;
+
+              this.pickerMesh.visible = true;
+
+              return true;
+            }
           }
         }
       }
-    }
+      return false;
+    };
+    // find panel spec intersections
+    const intersectPanel = () => {
+      for (let i = 0; i < this.panelSpecs.length; i++) {
+        const panelSpec = this.panelSpecs[i];
+
+        // if we are selected, only hover over the selected panel
+        if (!this.selectPanelSpec || this.selectPanelSpec === panelSpec) {
+          // compute the 2d bounding box of the panel spec
+          const bbox = localBox2D.set(
+            localVector2D.set(
+              panelSpec.position2D.x - SceneGraphMesh.size / 2,
+              panelSpec.position2D.z - SceneGraphMesh.size / 2
+            ),
+            localVector2D2.set(
+              panelSpec.position2D.x + SceneGraphMesh.size / 2,
+              panelSpec.position2D.z + SceneGraphMesh.size / 2
+            )
+          );
+
+          const floorPlane = localPlane.setFromNormalAndCoplanarPoint(
+            upVector,
+            zeroVector
+          );
+
+          const intersection = localRaycaster.ray.intersectPlane(floorPlane, localVector);
+          if (intersection) {
+            const intersection2D = localVector2D.set(intersection.x, intersection.z);
+            if (bbox.containsPoint(intersection2D)) {
+              this.hover(panelSpec);
+
+              this.pickerMesh.position.set(
+                panelSpec.position2D.x,
+                labelFloatOffset,
+                panelSpec.position2D.z
+              );
+              this.pickerMesh.updateMatrixWorld();
+        
+              this.pickerMesh.material.uniforms.scale.value.setScalar(SceneGraphMesh.size);
+              this.pickerMesh.material.uniforms.scale.needsUpdate = true;
+
+              this.pickerMesh.visible = true;
+              
+              return true;
+            }
+          }
+        }
+      }
+      return false;
+    };
+
+    intersectEntranceExit() || intersectPanel();
+
     if (this.hoverPanelSpec !== oldHoverPanelSpec) {
       this.dispatchEvent({
         type: 'hoverchange',
@@ -3432,6 +3481,7 @@ const Metazine3DCanvasWrapper = React.memo(Metazine3DCanvas, (prevProps, nextPro
 //
 
 const entrancePointSize = 0.2;
+const entrancePointWidth = 0.6;
 const entrancePointEdges = 32;
 const entrancePointGeometry = (() => {
   // front geometry
