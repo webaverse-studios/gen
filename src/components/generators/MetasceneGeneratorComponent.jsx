@@ -3611,17 +3611,12 @@ class EntranceLinkMesh extends THREE.InstancedMesh {
           float numSegments = ceil(deltaLength / segmentLength);
           float currentSegment = linkIndex;
           if (currentSegment < numSegments) {
-            vec3 centerPosition = start + direction * (currentSegment + 0.5) * segmentLength;
-
+            vec3 p = start + direction * (currentSegment + 0.5) * segmentLength;
             vec4 q = makeQuaternion(direction, up);
-            // vec4 q = vec4(0., 0., 0., 1.);
+            vec3 s = vec3(0.1, 0., segmentLength / 2.); // half depth for gap
 
-            vec3 scale = vec3(0.1, 0., segmentLength / 2.); // half depth for gap
-            // vec3 scale = vec3(1.);
-
-            mat4 localMatrix = composeMatrix(centerPosition, q, scale);
-            vec3 p = position;
-            gl_Position = projectionMatrix * viewMatrix * modelMatrix * localMatrix * vec4(p, 1.);
+            mat4 localMatrix = composeMatrix(p, q, s);
+            gl_Position = projectionMatrix * viewMatrix * modelMatrix * localMatrix * vec4(position, 1.);
           } else {
             gl_Position = vec4(0., 0., 0., 0.);
           }
