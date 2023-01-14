@@ -164,16 +164,15 @@ const localVector5 = new THREE.Vector3();
 const localVector6 = new THREE.Vector3();
 const localVector7 = new THREE.Vector3();
 const localVector8 = new THREE.Vector3();
+const localVector2D = new THREE.Vector2();
+const localVector2D2 = new THREE.Vector2();
 const localQuaternion = new THREE.Quaternion();
 const localQuaternion2 = new THREE.Quaternion();
 const localMatrix = new THREE.Matrix4();
 const localMatrix2 = new THREE.Matrix4();
-// const localMatrix3D = new THREE.Matrix3();
-// const localTriangle = new THREE.Triangle();
-// const localTriangle2 = new THREE.Triangle();
 const localPlane = new THREE.Plane();
 const localRaycaster = new THREE.Raycaster();
-// const localBox = new THREE.Box3();
+const localBox2D = new THREE.Box2();
 const localColor = new THREE.Color();
 const localObb = new OBB();
 
@@ -339,6 +338,20 @@ const intersectFloor = (mouse, camera, vectorTarget) => {
   localRaycaster.setFromCamera(mouse, camera);
   return localRaycaster.ray.intersectPlane(floorPlane, vectorTarget);
 };
+class PickerMesh3D extends THREE.Mesh {
+  constructor() {
+    const geometry = new THREE.BoxGeometry(1, 1, 1);
+    const material = new THREE.MeshPhongMaterial({
+      color: 0x808080,
+      opacity: 0.5,
+      transparent: true,
+    });
+    
+    super(geometry, material);
+    
+    this.frustumCulled = false;
+  }
+}
 class PanelPicker3D extends THREE.Object3D {
   constructor({
     canvas,
@@ -361,21 +374,8 @@ class PanelPicker3D extends THREE.Object3D {
     const mouse = new THREE.Vector2();
     this.mouse = mouse;
 
-    // raycaster
-    this.raycaster = new THREE.Raycaster();
-
     // picker mesh
-    const pickerMesh = (() => {
-      const geometry = new THREE.BoxGeometry(1, 1, 1);
-      const material = new THREE.MeshPhongMaterial({
-        color: 0x808080,
-        opacity: 0.5,
-        transparent: true,
-      });
-      const mesh = new THREE.Mesh(geometry, material);
-      mesh.frustumCulled = false;
-      return mesh;
-    })();
+    const pickerMesh = new PickerMesh3D();
     this.add(pickerMesh);
     pickerMesh.updateMatrixWorld();
     this.pickerMesh = pickerMesh;
@@ -495,7 +495,7 @@ class PanelPicker3D extends THREE.Object3D {
     }
   }
   update() {
-    this.raycaster.setFromCamera(this.mouse, this.camera);
+    localRaycaster.setFromCamera(this.mouse, this.camera);
 
     this.pickerMesh.visible = false;
 
@@ -510,9 +510,7 @@ class PanelPicker3D extends THREE.Object3D {
       // if we are selected, only hover over the selected panel
       if (!this.selectPanelSpec || this.selectPanelSpec === panelSpec) {
         const {
-          floorPlaneLocation,
           boundingBox,
-          floorBoundingBox,
         } = panelSpec;
 
         const p = localVector;
@@ -537,9 +535,9 @@ class PanelPicker3D extends THREE.Object3D {
         obb.rotation.identity();
         obb.applyMatrix4(panelSpec.matrixWorld)
         
-        const intersection = obb.intersectRay(this.raycaster.ray, localVector8);
+        const intersection = obb.intersectRay(localRaycaster.ray, localVector8);
         if (intersection) {
-          const distance = this.raycaster.ray.origin.distanceTo(intersection);
+          const distance = localRaycaster.ray.origin.distanceTo(intersection);
           if (distance < closestIntersectionDistance) {
             closestIntersectionDistance = distance;
 
@@ -1098,15 +1096,137 @@ class PanelPickerGraph extends THREE.Object3D {
     // select
     this.hoverPanelSpec = null;
     this.selectPanelSpec = null;
+
+    // mouse
+    const mouse = new THREE.Vector2();
+    this.mouse = mouse;
+
+    const pickerMesh = new FloorTargetMesh();
+    this.add(pickerMesh);
+    pickerMesh.updateMatrixWorld();
+    this.pickerMesh = pickerMesh;
   }
   handleMousedown(e) {
     // XXX
   }
   handleMouseup(e) {
-    // XXX
+    this.select();
   }
   handleMousemove(e) {
-    // XXX
+    // set the raycaster from mouse event
+    const rect = this.canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    this.mouse.set(
+      (x / rect.width) * 2 - 1,
+      -(y / rect.height) * 2 + 1
+    );
+
+    this.update();
+  }
+  hover(panelSpec) {
+    this.hoverPanelSpec = panelSpec;
+  }
+  select() {
+    this.selectPanelSpec = this.hoverPanelSpec;
+
+    this.dispatchEvent({
+      type: 'selectchange',
+      selectPanelSpec: this.selectPanelSpec,
+    });
+  }
+  update() {
+    localRaycaster.setFromCamera(this.mouse, this.camera);
+
+    this.pickerMesh.visible = false;
+
+    const oldHoverPanelSpec = this.hoverPanelSpec;
+    this.hoverPanelSpec = null;
+
+    // find panel spec intersections
+    for (let i = 0; i < this.panelSpecs.length; i++) {
+      const panelSpec = this.panelSpecs[i];
+
+      // if we are selected, only hover over the selected panel
+      if (!this.selectPanelSpec || this.selectPanelSpec === panelSpec) {
+        // compute the 2d bounding box of the panel spec
+        const bbox = localBox2D.set(
+          localVector2D.set(
+            panelSpec.position2D.x - SceneGraphMesh.size / 2,
+            panelSpec.position2D.z - SceneGraphMesh.size / 2
+          ),
+          localVector2D2.set(
+            panelSpec.position2D.x + SceneGraphMesh.size / 2,
+            panelSpec.position2D.z + SceneGraphMesh.size / 2
+          )
+        );
+
+        const floorPlane = localPlane.setFromNormalAndCoplanarPoint(
+          upVector,
+          zeroVector
+        );
+
+        const intersection = localRaycaster.ray.intersectPlane(floorPlane, localVector);
+        if (intersection) {
+          const intersection2D = localVector2D.set(intersection.x, intersection.z);
+          if (bbox.containsPoint(intersection2D)) {
+            this.hover(panelSpec);
+            console.log('got intersection', panelSpec);
+            break;
+          }
+        }
+
+        // const {
+        //   boundingBox,
+        // } = panelSpec;
+
+        // const p = localVector;
+        // const q = localQuaternion;
+        // const s = localVector2;
+        // panelSpec.matrixWorld.decompose(p, q, s);
+
+        // const bbox = new THREE.Box3(
+        //   localVector3.fromArray(boundingBox.min),
+        //   localVector4.fromArray(boundingBox.max)
+        // );
+        // const center = bbox.getCenter(localVector5);
+        // const size = bbox.getSize(localVector6);
+
+        // const centerOffset = localVector7.copy(center)
+        //   .applyQuaternion(q);
+
+        // const obb = localObb;
+        // obb.center.copy(centerOffset);
+        // obb.halfSize.copy(size)
+        //   .multiplyScalar(0.5);
+        // obb.rotation.identity();
+        // obb.applyMatrix4(panelSpec.matrixWorld)
+        
+        // const intersection = obb.intersectRay(localRaycaster.ray, localVector8);
+        // if (intersection) {
+        //   const distance = localRaycaster.ray.origin.distanceTo(intersection);
+        //   if (distance < closestIntersectionDistance) {
+        //     closestIntersectionDistance = distance;
+
+        //     this.pickerMesh.position.copy(p)
+        //       .add(centerOffset);
+        //     this.pickerMesh.quaternion.copy(q);
+        //     this.pickerMesh.scale.copy(size);
+        //     this.pickerMesh.updateMatrixWorld();
+        //     this.pickerMesh.visible = true;
+
+        //     this.hover(panelSpec);
+        //   }
+        // }
+      }
+    }
+    if (this.hoverPanelSpec !== oldHoverPanelSpec) {
+      this.dispatchEvent({
+        type: 'hoverchange',
+        hoverPanelSpec: this.hoverPanelSpec,
+      });
+    }
   }
 }
 
@@ -2511,18 +2631,18 @@ export class Metazine extends EventTarget {
   }
   #autoConnectGraph() {
     // try to fit into square
-    const width = Math.sqrt(this.renderPanelSpecs.length);
-    const height = width;
+    const fullWidth = Math.sqrt(this.renderPanelSpecs.length);
+    const fullHeight = fullWidth;
     for (let i = 0; i < this.renderPanelSpecs.length; i++) {
       const panelSpec = this.renderPanelSpecs[i];
       
-      const dx = i % width;
-      const dz = Math.floor(i / width);
+      const dx = i % fullWidth;
+      const dz = Math.floor(i / fullWidth);
       const spacedSize = SceneGraphMesh.size + SceneGraphMesh.spacing;
       panelSpec.position2D.set(
-        (-width / 2 + 0.5 + dx) * spacedSize,
+        (-fullWidth / 2 + 0.5 + dx) * spacedSize,
         0,
-        (-height / 2 + 0.5 + dz) * spacedSize
+        (-fullHeight / 2 + 0.5 + dz) * spacedSize
       );
     }
   }
