@@ -3434,13 +3434,41 @@ const Metazine3DCanvasWrapper = React.memo(Metazine3DCanvas, (prevProps, nextPro
 const entrancePointSize = 0.2;
 const entrancePointEdges = 32;
 const entrancePointGeometry = (() => {
+  // front geometry
   const circleGeometry = new THREE.CircleGeometry(entrancePointSize, entrancePointEdges);
   const ringGeometry = new THREE.RingGeometry(entrancePointSize * 1.4, entrancePointSize * 1.7, entrancePointEdges);
-  const geometry = BufferGeometryUtils.mergeBufferGeometries([
+  const geometryFront = BufferGeometryUtils.mergeBufferGeometries([
     circleGeometry,
     ringGeometry,
   ]);
-  geometry.rotateX(-Math.PI / 2);
+  geometryFront.rotateX(-Math.PI / 2);
+  // color black
+  const colorsFront = new Float32Array(geometryFront.attributes.position.count * 3);
+  geometryFront.setAttribute('color', new THREE.BufferAttribute(colorsFront, 3));
+  
+  // back geometry
+  const geometryBack = geometryFront.clone();
+  // invert positions
+  const positionsBack = geometryBack.attributes.position.array;
+  for (let i = 0; i < positionsBack.length; i += 3) {
+    positionsBack[i + 1] *= -1;
+  }
+  // scale
+  const scaleFactor = 1.15;
+  for (let i = 0; i < positionsBack.length; i += 3) {
+    positionsBack[i + 0] *= scaleFactor;
+    positionsBack[i + 1] *= scaleFactor;
+    positionsBack[i + 2] *= scaleFactor;
+  }
+  // color white
+  const colorsBack = geometryBack.attributes.color.array;
+  colorsBack.fill(1);
+
+  // merge geometries
+  const geometry = BufferGeometryUtils.mergeBufferGeometries([
+    geometryBack,
+    geometryFront,
+  ]);
   return geometry;
 })();
 class EntrancePointMesh extends THREE.InstancedMesh {
@@ -3450,8 +3478,23 @@ class EntrancePointMesh extends THREE.InstancedMesh {
     const geometry = new THREE.InstancedBufferGeometry();
     geometry.copy(entrancePointGeometry);
 
-    const material = new THREE.MeshBasicMaterial({
-      color: 0x000000,
+    const material = new THREE.ShaderMaterial({
+      vertexShader: `\
+        attribute vec3 color;
+        varying vec3 vColor;
+
+        void main() {
+          vColor = color;
+          gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `\
+        varying vec3 vColor;
+
+        void main() {
+          gl_FragColor = vec4(vColor, 1.0);
+        }
+      `,
     });
     super(geometry, material, maxRenderEntranceExits);
 
@@ -3492,23 +3535,57 @@ class EntrancePointMesh extends THREE.InstancedMesh {
 
 const maxLinkSegments = 64;
 const entranceLinkGeometry = (() => {
-  const rectangleGeometry = new THREE.BoxGeometry(1, 1, 1);
-  const geometries = [];
-  for (let i = 0; i < maxLinkSegments; i++) {
-    geometries.push(rectangleGeometry);
-  }
-  const geometry = BufferGeometryUtils.mergeBufferGeometries(geometries);
-  
-  // link indices
-  const linkIndices = new Float32Array(rectangleGeometry.attributes.position.count * maxLinkSegments);
-  for (let i = 0; i < maxLinkSegments; i++) {
-    const baseIndex = i * rectangleGeometry.attributes.position.count;
-    for (let j = 0; j < rectangleGeometry.attributes.position.count; j++) {
-      linkIndices[baseIndex + j] = i;
-    }
-  }
-  geometry.setAttribute('linkIndex', new THREE.BufferAttribute(linkIndices, 1));
+  const width = 0.1;
+  const rectangleGeometry = new THREE.BoxGeometry(width, 0, 1);
 
+  // front geometry
+  const geometriesFront = [];
+  for (let i = 0; i < maxLinkSegments; i++) {
+    geometriesFront.push(rectangleGeometry);
+  }
+  const geometryFront = BufferGeometryUtils.mergeBufferGeometries(geometriesFront);
+  {
+    // link indices
+    const linkIndices = new Float32Array(rectangleGeometry.attributes.position.count * maxLinkSegments);
+    for (let i = 0; i < maxLinkSegments; i++) {
+      const baseIndex = i * rectangleGeometry.attributes.position.count;
+      for (let j = 0; j < rectangleGeometry.attributes.position.count; j++) {
+        linkIndices[baseIndex + j] = i;
+      }
+    }
+    geometryFront.setAttribute('linkIndex', new THREE.BufferAttribute(linkIndices, 1));
+
+    // color black
+    const colorsFront = new Float32Array(rectangleGeometry.attributes.position.count * maxLinkSegments * 3);
+    geometryFront.setAttribute('color', new THREE.BufferAttribute(colorsFront, 3));
+  }
+
+  // back geometry
+  const geometryBack = geometryFront.clone();
+  {
+    // invert positions
+    const positionsBack = geometryBack.attributes.position.array;
+    for (let i = 0; i < positionsBack.length; i += 3) {
+      positionsBack[i + 1] *= -1;
+    }
+    // scale positions
+    const scaleOffset = 0.05;
+    for (let i = 0; i < positionsBack.length; i += 3) {
+      positionsBack[i + 0] += scaleOffset * Math.sign(positionsBack[i + 0]);
+      positionsBack[i + 1] += scaleOffset * Math.sign(positionsBack[i + 1]);
+      positionsBack[i + 2] += scaleOffset * Math.sign(positionsBack[i + 2]);
+    }
+
+    // color white
+    const colorBack = geometryBack.attributes.color.array;
+    colorBack.fill(1);
+  }
+
+  // merge geometries
+  const geometry = BufferGeometryUtils.mergeBufferGeometries([
+    geometryBack,
+    geometryFront,
+  ]);
   return geometry;
 })();
 class EntranceLinkMesh extends THREE.InstancedMesh {
@@ -3530,6 +3607,9 @@ class EntranceLinkMesh extends THREE.InstancedMesh {
         attribute float linkIndex;
         attribute vec3 start;
         attribute vec3 end;
+        attribute vec3 color;
+
+        varying vec3 vColor;
 
         const float maxLinkSegments = ${maxLinkSegments.toFixed(8)};
         const float segmentLength = 1.;
@@ -3604,6 +3684,8 @@ class EntranceLinkMesh extends THREE.InstancedMesh {
         }
 
         void main() {
+          vColor = color;
+
           vec3 delta = end - start;
           vec3 direction = normalize(delta);
           float deltaLength = length(delta);
@@ -3613,7 +3695,7 @@ class EntranceLinkMesh extends THREE.InstancedMesh {
           if (currentSegment < numSegments) {
             vec3 p = start + direction * (currentSegment + 0.5) * segmentLength;
             vec4 q = makeQuaternion(direction, up);
-            vec3 s = vec3(0.1, 0., segmentLength / 2.); // half depth for gap
+            vec3 s = vec3(1., 1., segmentLength / 2.); // half depth for gap
 
             mat4 localMatrix = composeMatrix(p, q, s);
             gl_Position = projectionMatrix * viewMatrix * modelMatrix * localMatrix * vec4(position, 1.);
@@ -3623,8 +3705,10 @@ class EntranceLinkMesh extends THREE.InstancedMesh {
         }
       `,
       fragmentShader: `\
+        varying vec3 vColor;
+
         void main() {
-          gl_FragColor = vec4(1., 1., 1., 1.);
+          gl_FragColor = vec4(vColor, 1.);
         }
       `,
     });
