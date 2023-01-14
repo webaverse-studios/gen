@@ -3320,7 +3320,7 @@ class MetazineGraphRenderer extends EventTarget {
     
     // camera
     const camera = makeDefaultCamera();
-    camera.position.set(0, 10, 0);
+    camera.position.set(0, 40, 0);
     camera.quaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
     this.camera = camera;
 
@@ -3328,11 +3328,12 @@ class MetazineGraphRenderer extends EventTarget {
     const controls = new OrbitControls(this.camera, canvas);
     controls.minDistance = controlsMinDistance;
     controls.maxDistance = controlsMaxDistance;
-    controls.target.copy(camera.position)
-      .add(
-        new THREE.Vector3(0, 0, -orbitControlsDistance)
-          .applyQuaternion(camera.quaternion)
-      );
+    controls.target.set(0, 0, 0);
+    // controls.target.copy(camera.position)
+      // .add(
+      //   new THREE.Vector3(0, 0, -orbitControlsDistance)
+      //     .applyQuaternion(camera.quaternion)
+      // );
     controls.enableRotate = false;
     controls.locked = false;
     this.controls = controls;
