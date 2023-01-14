@@ -1119,13 +1119,13 @@ class PanelPickerGraph extends THREE.Object3D {
       const startFloorIntersection = intersectFloor(this.mouse, this.camera, localVector);
 
       const panelSpec = this.hoverPanelSpec;
-      const startCenterPosition = panelSpec && panelSpec.position.clone();
+      const panelStartPosition2D = panelSpec && panelSpec.position2D.clone();
 
       this.dragSpec = {
         startX: e.clientX,
         startY: e.clientY,
         panelSpec,
-        startCenterPosition,
+        panelStartPosition2D,
         entranceExitLocation: this.hoverEntranceExitLocation,
         startFloorIntersection: startFloorIntersection && startFloorIntersection.clone(),
       };
@@ -1149,6 +1149,13 @@ class PanelPickerGraph extends THREE.Object3D {
       }
     
       this.dragSpec = null;
+      this.dispatchEvent({
+        type: 'linkchange',
+        panelSpec: null,
+        entranceExitLocation: null,
+        startPosition: null,
+        endPosition: null,
+      });
     }
   }
   handleMousemove(e) {
@@ -1167,19 +1174,50 @@ class PanelPickerGraph extends THREE.Object3D {
     } else { // dragging
       const {
         panelSpec,
+        panelStartPosition2D,
         entranceExitLocation,
         startFloorIntersection,
       } = this.dragSpec;
 
       if (panelSpec && startFloorIntersection) {
         const floorIntersection = intersectFloor(this.mouse, this.camera, localVector);
-        const delta = localVector2.copy(floorIntersection)
-          .sub(startFloorIntersection);
 
         if (!entranceExitLocation) { // panel drag
-          console.log('panel drag', panelSpec);
+          // console.log('panel drag', panelSpec);
+          
+          const delta = floorIntersection.clone()
+            .sub(startFloorIntersection);
+          panelSpec.position2D.copy(panelStartPosition2D)
+            .add(delta);
+          
+          this.dispatchEvent({
+            type: 'panelgeometryupdate',
+          });
         } else { // link drag
-          console.log('link drag', entranceExitLocation);
+          // console.log('link drag', entranceExitLocation);
+
+          localMatrix.compose(
+            localVector2.fromArray(entranceExitLocation.position),
+            localQuaternion.fromArray(entranceExitLocation.quaternion),
+            oneVector
+          )
+            .premultiply(panelSpec.transformScene.matrixWorld)
+            .decompose(
+              localVector2,
+              localQuaternion,
+              localVector3
+            );
+
+          const startPosition = localVector2.clone();
+          const endPosition = floorIntersection.clone();
+          
+          this.dispatchEvent({
+            type: 'linkchange',
+            panelSpec,
+            entranceExitLocation,
+            startPosition,
+            endPosition,
+          });
         }
       }
     }
@@ -3778,7 +3816,7 @@ class EntranceLinkMesh extends THREE.InstancedMesh {
           vec3 direction = normalize(delta);
           float deltaLength = length(delta);
 
-          float numSegments = ceil(deltaLength / segmentLength);
+          float numSegments = floor(deltaLength / segmentLength);
           float currentSegment = linkIndex;
           if (currentSegment < numSegments) {
             vec3 p = start + direction * (currentSegment + 0.5) * segmentLength;
@@ -3807,6 +3845,21 @@ class EntranceLinkMesh extends THREE.InstancedMesh {
 
     this.panelSpecs = panelSpecs;
 
+    this.dragSpec = null;
+
+    this.updateGeometry();
+  }
+  updateDrag(panelSpec, entranceExitLocation, endPosition) {
+    if (panelSpec) {
+      this.dragSpec = {
+        panelSpec,
+        entranceExitLocation,
+        endPosition,
+      };
+    } else {
+      this.dragSpec = null;
+    }
+
     this.updateGeometry();
   }
   updateGeometry() {
@@ -3817,52 +3870,84 @@ class EntranceLinkMesh extends THREE.InstancedMesh {
     const endsAttribute = this.geometry.attributes.end;
     const ends = endsAttribute.array;
 
-    const getKey = (panelIndex, entranceIndex) => [panelIndex, entranceIndex].join(',');
-    const seenKeys = new Set();
+    const _drawEntranceExits = () => {
+      const getKey = (panelIndex, entranceIndex) => [panelIndex, entranceIndex].join(',');
+      const seenKeys = new Set();
 
-    for (let i = 0; i < this.panelSpecs.length; i++) {
-      const panelSpec = this.panelSpecs[i];
-      for (let j = 0; j < panelSpec.entranceExitLocations.length; j++) {
-        const eel = panelSpec.entranceExitLocations[j];
-        const key1 = getKey(i, j);
+      for (let i = 0; i < this.panelSpecs.length; i++) {
+        const panelSpec = this.panelSpecs[i];
+        for (let j = 0; j < panelSpec.entranceExitLocations.length; j++) {
+          const eel = panelSpec.entranceExitLocations[j];
+          const key1 = getKey(i, j);
 
-        const {
-          panelIndex,
-          entranceIndex,
-        } = eel;
-        if (panelIndex !== -1) {
-          const otherPanel = this.panelSpecs[panelIndex];
-          const otherEel = otherPanel.entranceExitLocations[entranceIndex];
-          const key2 = getKey(panelIndex, entranceIndex);
+          const {
+            panelIndex,
+            entranceIndex,
+          } = eel;
+          if (panelIndex !== -1) {
+            const otherPanel = this.panelSpecs[panelIndex];
+            const otherEel = otherPanel.entranceExitLocations[entranceIndex];
+            const key2 = getKey(panelIndex, entranceIndex);
 
-          if (!seenKeys.has(key1) && !seenKeys.has(key2)) {
-            seenKeys.add(key1);
-            seenKeys.add(key2);
+            if (!seenKeys.has(key1) && !seenKeys.has(key2)) {
+              seenKeys.add(key1);
+              seenKeys.add(key2);
 
-            const startPositionNdc = localVector.fromArray(eel.position)
-              .project(panelSpec.camera);
-            const endPositionNdc = localVector2.fromArray(otherEel.position)
-              .project(otherPanel.camera);
+              const startPositionNdc = localVector.fromArray(eel.position)
+                .project(panelSpec.camera);
+              const endPositionNdc = localVector2.fromArray(otherEel.position)
+                .project(otherPanel.camera);
 
-            startPositionNdc.set(
-              panelSpec.position2D.x + (startPositionNdc.x * SceneGraphMesh.size / 2),
-              0,
-              panelSpec.position2D.z - (startPositionNdc.y * SceneGraphMesh.size / 2)
-            );
-            endPositionNdc.set(
-              otherPanel.position2D.x + (endPositionNdc.x * SceneGraphMesh.size / 2),
-              0,
-              otherPanel.position2D.z - (endPositionNdc.y * SceneGraphMesh.size / 2)
-            );
+              const startPositionWorld = localVector3.set(
+                panelSpec.position2D.x + (startPositionNdc.x * SceneGraphMesh.size / 2),
+                0,
+                panelSpec.position2D.z - (startPositionNdc.y * SceneGraphMesh.size / 2)
+              );
+              const endPositionWorld = localVector4.set(
+                otherPanel.position2D.x + (endPositionNdc.x * SceneGraphMesh.size / 2),
+                0,
+                otherPanel.position2D.z - (endPositionNdc.y * SceneGraphMesh.size / 2)
+              );
 
-            startPositionNdc.toArray(starts, this.count * 3);
-            endPositionNdc.toArray(ends, this.count * 3);
+              startPositionWorld.toArray(starts, this.count * 3);
+              endPositionWorld.toArray(ends, this.count * 3);
 
-            this.count++;
+              this.count++;
+            }
           }
         }
       }
-    }
+    };
+    _drawEntranceExits();
+
+    const _drawDrag = () => {
+      if (this.dragSpec) {
+        const {
+          panelSpec,
+          entranceExitLocation,
+          endPosition: endPositionWorld,
+        } = this.dragSpec;
+
+        if (!panelSpec) {
+          console.warn('no panel spec');
+          debugger;
+        }
+        
+        const startPositionNdc = localVector.fromArray(entranceExitLocation.position)
+          .project(panelSpec.camera);
+        const startPositionWorld = localVector2.set(
+          panelSpec.position2D.x + (startPositionNdc.x * SceneGraphMesh.size / 2),
+          0,
+          panelSpec.position2D.z - (startPositionNdc.y * SceneGraphMesh.size / 2)
+        );
+
+        startPositionWorld.toArray(starts, this.count * 3);
+        endPositionWorld.toArray(ends, this.count * 3);
+
+        this.count++;
+      }
+    };
+    _drawDrag();
 
     startsAttribute.needsUpdate = true;
     endsAttribute.needsUpdate = true;
@@ -3949,6 +4034,14 @@ class MetazineGraphRenderer extends EventTarget {
     panelPicker.addEventListener('selectchange', e => {
       this.handlePanelSpecChange(e.selectPanelSpec);
     });
+    panelPicker.addEventListener('linkchange', e => {
+      const {
+        panelSpec,
+        entranceExitLocation,
+        endPosition,
+      } = e;
+      this.entranceLinkMesh.updateDrag(panelSpec, entranceExitLocation, endPosition);
+    });
 
     // entrance point mesh
     const entrancePointMesh = new EntrancePointMesh({
@@ -3982,6 +4075,7 @@ class MetazineGraphRenderer extends EventTarget {
     const panelgeometryupdate = e => {
       this.sceneGraphMesh.updateGeometry();
       this.entrancePointMesh.updateGeometry();
+      this.entranceLinkMesh.updateGeometry();
     };
     this.metazine.addEventListener('panelgeometryupdate', panelgeometryupdate);
     this.panelPicker.addEventListener('panelgeometryupdate', panelgeometryupdate);
