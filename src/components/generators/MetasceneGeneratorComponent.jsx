@@ -1126,7 +1126,8 @@ class PanelPickerGraph extends THREE.Object3D {
         startY: e.clientY,
         panelSpec,
         panelStartPosition2D,
-        entranceExitLocation: this.hoverEntranceExitLocation,
+        entranceLocation: this.hoverEntranceExitLocation,
+        exitLocation: null,
         startFloorIntersection: startFloorIntersection && startFloorIntersection.clone(),
       };
     }
@@ -1152,7 +1153,8 @@ class PanelPickerGraph extends THREE.Object3D {
       this.dispatchEvent({
         type: 'linkchange',
         panelSpec: null,
-        entranceExitLocation: null,
+        entranceLocation: null,
+        exitLocation: null,
         startPosition: null,
         endPosition: null,
       });
@@ -1175,14 +1177,15 @@ class PanelPickerGraph extends THREE.Object3D {
       const {
         panelSpec,
         panelStartPosition2D,
-        entranceExitLocation,
+        entranceLocation,
+        exitLocation,
         startFloorIntersection,
       } = this.dragSpec;
 
       if (panelSpec && startFloorIntersection) {
         const floorIntersection = intersectFloor(this.mouse, this.camera, localVector);
 
-        if (!entranceExitLocation) { // panel drag
+        if (!entranceLocation) { // panel drag
           // console.log('panel drag', panelSpec);
           
           const delta = floorIntersection.clone()
@@ -1194,11 +1197,11 @@ class PanelPickerGraph extends THREE.Object3D {
             type: 'panelgeometryupdate',
           });
         } else { // link drag
-          // console.log('link drag', entranceExitLocation);
+          // console.log('link drag', entranceLocation, exitLocation);
 
           localMatrix.compose(
-            localVector2.fromArray(entranceExitLocation.position),
-            localQuaternion.fromArray(entranceExitLocation.quaternion),
+            localVector2.fromArray(entranceLocation.position),
+            localQuaternion.fromArray(entranceLocation.quaternion),
             oneVector
           )
             .premultiply(panelSpec.transformScene.matrixWorld)
@@ -1214,7 +1217,8 @@ class PanelPickerGraph extends THREE.Object3D {
           this.dispatchEvent({
             type: 'linkchange',
             panelSpec,
-            entranceExitLocation,
+            entranceLocation,
+            exitLocation,
             startPosition,
             endPosition,
           });
@@ -3849,11 +3853,12 @@ class EntranceLinkMesh extends THREE.InstancedMesh {
 
     this.updateGeometry();
   }
-  updateDrag(panelSpec, entranceExitLocation, endPosition) {
+  updateDrag(panelSpec, entranceLocation, exitLocation, endPosition) {
     if (panelSpec) {
       this.dragSpec = {
         panelSpec,
-        entranceExitLocation,
+        entranceLocation,
+        exitLocation,
         endPosition,
       };
     } else {
@@ -3924,7 +3929,8 @@ class EntranceLinkMesh extends THREE.InstancedMesh {
       if (this.dragSpec) {
         const {
           panelSpec,
-          entranceExitLocation,
+          entranceLocation,
+          exitLocation,
           endPosition: endPositionWorld,
         } = this.dragSpec;
 
@@ -3933,7 +3939,7 @@ class EntranceLinkMesh extends THREE.InstancedMesh {
           debugger;
         }
         
-        const startPositionNdc = localVector.fromArray(entranceExitLocation.position)
+        const startPositionNdc = localVector.fromArray(entranceLocation.position)
           .project(panelSpec.camera);
         const startPositionWorld = localVector2.set(
           panelSpec.position2D.x + (startPositionNdc.x * SceneGraphMesh.size / 2),
@@ -4037,10 +4043,11 @@ class MetazineGraphRenderer extends EventTarget {
     panelPicker.addEventListener('linkchange', e => {
       const {
         panelSpec,
-        entranceExitLocation,
+        entranceLocation,
+        exitLocation,
         endPosition,
       } = e;
-      this.entranceLinkMesh.updateDrag(panelSpec, entranceExitLocation, endPosition);
+      this.entranceLinkMesh.updateDrag(panelSpec, entranceLocation, exitLocation, endPosition);
     });
 
     // entrance point mesh
