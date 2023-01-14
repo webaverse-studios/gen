@@ -3490,6 +3490,222 @@ class EntrancePointMesh extends THREE.InstancedMesh {
 
 //
 
+const maxLinkSegments = 64;
+const entranceLinkGeometry = (() => {
+  const rectangleGeometry = new THREE.BoxGeometry(1, 1, 1);
+  const geometries = [];
+  for (let i = 0; i < maxLinkSegments; i++) {
+    geometries.push(rectangleGeometry);
+  }
+  const geometry = BufferGeometryUtils.mergeBufferGeometries(geometries);
+  
+  // link indices
+  const linkIndices = new Float32Array(rectangleGeometry.attributes.position.count * maxLinkSegments);
+  for (let i = 0; i < maxLinkSegments; i++) {
+    const baseIndex = i * rectangleGeometry.attributes.position.count;
+    for (let j = 0; j < rectangleGeometry.attributes.position.count; j++) {
+      linkIndices[baseIndex + j] = i;
+    }
+  }
+  geometry.setAttribute('linkIndex', new THREE.BufferAttribute(linkIndices, 1));
+
+  return geometry;
+})();
+class EntranceLinkMesh extends THREE.InstancedMesh {
+  constructor({
+    panelSpecs,
+  }) {
+    // geometry
+    const geometry = new THREE.InstancedBufferGeometry();
+    geometry.copy(entranceLinkGeometry);
+    // attributes
+    const starts = new Float32Array(maxRenderEntranceExits * 3);
+    geometry.setAttribute('start', new THREE.InstancedBufferAttribute(starts, 3));
+    const ends = new Float32Array(maxRenderEntranceExits * 3);
+    geometry.setAttribute('end', new THREE.InstancedBufferAttribute(ends, 3));
+
+    // material
+    const material = new THREE.ShaderMaterial({
+      vertexShader: `\
+        attribute float linkIndex;
+        attribute vec3 start;
+        attribute vec3 end;
+
+        const float maxLinkSegments = ${maxLinkSegments.toFixed(8)};
+        const float segmentLength = 1.;
+        const vec3 up = vec3(0., 1., 0.);
+
+        // make a quaternion from a direction and up vector
+        vec4 makeQuaternion(vec3 dir, vec3 up) {
+          vec3 right = normalize(cross(up, dir));
+          up = normalize(cross(dir, right));
+          float trace = right.x + up.y + dir.z;
+          if (trace > 0.) {
+            float s = 0.5 / sqrt(trace + 1.);
+            return vec4(
+              (up.z - dir.y) * s,
+              (dir.x - right.z) * s,
+              (right.y - up.x) * s,
+              0.25 / s
+            );
+          } else if (right.x > up.y && right.x > dir.z) {
+            float s = 2. * sqrt(1. + right.x - up.y - dir.z);
+            return vec4(
+              0.25 * s,
+              (right.y + up.x) / s,
+              (dir.x + right.z) / s,
+              (up.z - dir.y) / s
+            );
+          } else if (up.y > dir.z) {
+            float s = 2. * sqrt(1. + up.y - right.x - dir.z);
+            return vec4(
+              (right.y + up.x) / s,
+              0.25 * s,
+              (up.z + dir.y) / s,
+              (dir.x - right.z) / s
+            );
+          } else {
+            float s = 2. * sqrt(1. + dir.z - right.x - up.y);
+            return vec4(
+              (dir.x + right.z) / s,
+              (up.z + dir.y) / s,
+              0.25 * s,
+              (right.y - up.x) / s
+            );
+          }
+        }
+
+        // compose matrix from position, quaternion, and scale
+        mat4 composeMatrix(vec3 position, vec4 quaternion, vec3 scale) {
+          float x = quaternion.x, y = quaternion.y, z = quaternion.z, w = quaternion.w;
+          float x2 = x + x, y2 = y + y, z2 = z + z;
+          float xx = x * x2, xy = x * y2, xz = x * z2;
+          float yy = y * y2, yz = y * z2, zz = z * z2;
+          float wx = w * x2, wy = w * y2, wz = w * z2;
+
+          mat4 m = mat4(
+            1. - (yy + zz), xy + wz, xz - wy, 0.,
+            xy - wz, 1. - (xx + zz), yz + wx, 0.,
+            xz + wy, yz - wx, 1. - (xx + yy), 0.,
+            position.x, position.y, position.z, 1.
+          );
+
+          m[0][0] *= scale.x;
+          m[0][1] *= scale.x;
+          m[0][2] *= scale.x;
+          m[1][0] *= scale.y;
+          m[1][1] *= scale.y;
+          m[1][2] *= scale.y;
+          m[2][0] *= scale.z;
+          m[2][1] *= scale.z;
+          m[2][2] *= scale.z;
+
+          return m;
+        }
+
+        void main() {
+          vec3 delta = end - start;
+          vec3 direction = normalize(delta);
+          float deltaLength = length(delta);
+
+          float numSegments = ceil(deltaLength / segmentLength);
+          float currentSegment = linkIndex;
+          if (currentSegment < numSegments) {
+            vec3 centerPosition = start + direction * (currentSegment + 0.5) * segmentLength;
+
+            vec4 q = makeQuaternion(direction, up);
+            // vec4 q = vec4(0., 0., 0., 1.);
+
+            vec3 scale = vec3(0.1, 0., segmentLength / 2.); // half depth for gap
+            // vec3 scale = vec3(1.);
+
+            mat4 localMatrix = composeMatrix(centerPosition, q, scale);
+            vec3 p = position;
+            gl_Position = projectionMatrix * viewMatrix * modelMatrix * localMatrix * vec4(p, 1.);
+          } else {
+            gl_Position = vec4(0., 0., 0., 0.);
+          }
+        }
+      `,
+      fragmentShader: `\
+        void main() {
+          // gl_FragColor = vec4(0., 0., 0., 1.);
+          // gl_FragColor = vec4(1., 0., 0., 1.);
+          gl_FragColor = vec4(1., 1., 1., 1.);
+        }
+      `,
+    });
+    super(geometry, material, maxRenderEntranceExits);
+
+    this.frustrumCulled = false;
+    this.count = 0;
+
+    this.panelSpecs = panelSpecs;
+
+    this.updateGeometry();
+  }
+  updateGeometry() {
+    this.count = 0;
+
+    const startsAttribute = this.geometry.attributes.start;
+    const starts = startsAttribute.array;
+    const endsAttribute = this.geometry.attributes.end;
+    const ends = endsAttribute.array;
+
+    const getKey = (panelIndex, entranceIndex) => [panelIndex, entranceIndex].join(',');
+    const seenKeys = new Set();
+
+    for (let i = 0; i < this.panelSpecs.length; i++) {
+      const panelSpec = this.panelSpecs[i];
+      for (let j = 0; j < panelSpec.entranceExitLocations.length; j++) {
+        const eel = panelSpec.entranceExitLocations[j];
+        const key1 = getKey(i, j);
+
+        const {
+          panelIndex,
+          entranceIndex,
+        } = eel;
+        if (panelIndex !== -1) {
+          const otherPanel = this.panelSpecs[panelIndex];
+          const otherEel = otherPanel.entranceExitLocations[entranceIndex];
+          const key2 = getKey(panelIndex, entranceIndex);
+
+          if (!seenKeys.has(key1) && !seenKeys.has(key2)) {
+            seenKeys.add(key1);
+            seenKeys.add(key2);
+
+            const startPositionNdc = localVector.fromArray(eel.position)
+              .project(panelSpec.camera);
+            const endPositionNdc = localVector2.fromArray(otherEel.position)
+              .project(otherPanel.camera);
+
+            startPositionNdc.set(
+              panelSpec.position2D.x + (startPositionNdc.x * SceneGraphMesh.size / 2),
+              0,
+              panelSpec.position2D.z - (startPositionNdc.y * SceneGraphMesh.size / 2)
+            );
+            endPositionNdc.set(
+              otherPanel.position2D.x + (endPositionNdc.x * SceneGraphMesh.size / 2),
+              0,
+              otherPanel.position2D.z - (endPositionNdc.y * SceneGraphMesh.size / 2)
+            );
+
+            startPositionNdc.toArray(starts, this.count * 3);
+            endPositionNdc.toArray(ends, this.count * 3);
+
+            this.count++;
+          }
+        }
+      }
+    }
+
+    startsAttribute.needsUpdate = true;
+    endsAttribute.needsUpdate = true;
+  }
+}
+
+//
+
 class MetazineGraphRenderer extends EventTarget {
   constructor({
     canvas,
@@ -3577,6 +3793,15 @@ class MetazineGraphRenderer extends EventTarget {
     this.scene.add(entrancePointMesh);
     entrancePointMesh.updateMatrixWorld();
     this.entrancePointMesh = entrancePointMesh;
+
+    // entrance link mesh
+    const entranceLinkMesh = new EntranceLinkMesh({
+      panelSpecs: this.metazine.renderPanelSpecs,
+    });
+    entranceLinkMesh.position.set(0, labelFloatOffset, 0);
+    this.scene.add(entranceLinkMesh);
+    entranceLinkMesh.updateMatrixWorld();
+    this.entranceLinkMesh = entranceLinkMesh;
 
     // // debug cube mesh at origin
     // const cubeMesh = new THREE.Mesh(
