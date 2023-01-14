@@ -3078,7 +3078,7 @@ export class Metazine3DRenderer extends EventTarget {
     };
     _startLoop();
   }
-  handlePanelSpecChange(panelSpec = null) {
+  handlePanelSpecChange(panelSpec) {
     // update member
     this.selectedPanelSpec = panelSpec;
     
@@ -3553,9 +3553,9 @@ class MetazineGraphRenderer extends EventTarget {
     this.scene.add(panelPicker);
     panelPicker.updateMatrixWorld();
     this.panelPicker = panelPicker;
-    // panelPicker.addEventListener('selectchange', e => {
-    //   this.handlePanelSpecChange(e.selectPanelSpec);
-    // });
+    panelPicker.addEventListener('selectchange', e => {
+      this.handlePanelSpecChange(e.selectPanelSpec);
+    });
 
     // entrance point mesh
     const entrancePointMesh = new EntrancePointMesh({
@@ -3608,6 +3608,11 @@ class MetazineGraphRenderer extends EventTarget {
       canvas.removeEventListener('mousemove', mousemove);
       canvas.removeEventListener('click', blockEvent);
     });
+  }
+  handlePanelSpecChange(panelSpec) {
+    const panelIndex = this.metazine.renderPanelSpecs.indexOf(panelSpec);
+    this.sceneGraphMesh.material.uniforms.uSelectIndex.value = panelIndex;
+    this.sceneGraphMesh.material.uniforms.uSelectIndex.needsUpdate = true;
   }
   render() {
     // update
