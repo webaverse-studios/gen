@@ -3476,7 +3476,7 @@ class EntrancePointMesh extends THREE.InstancedMesh {
         const matrix = localMatrix
           .makeTranslation(
             panelSpec.position2D.x + (positionNdc.x * SceneGraphMesh.size / 2),
-            labelFloatOffset,
+            0,
             panelSpec.position2D.z - (positionNdc.y * SceneGraphMesh.size / 2)
           );
         this.setMatrixAt(this.count, matrix);
@@ -3573,6 +3573,7 @@ class MetazineGraphRenderer extends EventTarget {
     const entrancePointMesh = new EntrancePointMesh({
       panelSpecs: this.metazine.renderPanelSpecs,
     });
+    entrancePointMesh.position.set(0, labelFloatOffset, 0);
     this.scene.add(entrancePointMesh);
     entrancePointMesh.updateMatrixWorld();
     this.entrancePointMesh = entrancePointMesh;
