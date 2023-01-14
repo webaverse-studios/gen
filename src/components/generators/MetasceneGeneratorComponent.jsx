@@ -198,7 +198,9 @@ const metazineAtlasTextureSize = 4096;
 const metazineAtlasTextureRowSize = Math.floor(metazineAtlasTextureSize / panelSpecTextureSize);
 const orbitControlsDistance = 40;
 const maxRenderPanels = 64;
+const maxRenderEntranceExits = maxRenderPanels * 8;
 const matrixWorldTextureWidthInPixels = maxRenderPanels * 16 / 4;
+const labelFloatOffset = 0.1;
 const controlsMinDistance = 1;
 const controlsMaxDistance = 300;
 
@@ -430,21 +432,19 @@ class PanelPicker3D extends THREE.Object3D {
   }
   handleMouseup(e) {
     const isLeftClick = e.button === 0;
-    if (isLeftClick) {
-      if (this.dragSpec) {
-        const {
-          clientX,
-          clientY,
-        } = e;
-        const {
-          startX,
-          startY,
-        } = this.dragSpec;
-        const deltaX = clientX - startX;
-        const deltaY = clientY - startY;
-        if (deltaX === 0 && deltaY === 0) {
-          this.select();
-        }
+    if (isLeftClick && this.dragSpec) {
+      const {
+        clientX,
+        clientY,
+      } = e;
+      const {
+        startX,
+        startY,
+      } = this.dragSpec;
+      const deltaX = clientX - startX;
+      const deltaY = clientY - startY;
+      if (deltaX === 0 && deltaY === 0) {
+        this.select();
       }
       
       this.dragSpec = null;
@@ -1101,16 +1101,43 @@ class PanelPickerGraph extends THREE.Object3D {
     const mouse = new THREE.Vector2();
     this.mouse = mouse;
 
+    // picker mesh
     const pickerMesh = new FloorTargetMesh();
     this.add(pickerMesh);
     pickerMesh.updateMatrixWorld();
     this.pickerMesh = pickerMesh;
+
+    // state
+    this.dragSpec = null;
   }
   handleMousedown(e) {
-    // XXX
+    const isLeftClick = e.button === 0;
+    if (isLeftClick) {
+      this.dragSpec = {
+        startX: e.clientX,
+        startY: e.clientY,
+      };
+    }
   }
   handleMouseup(e) {
-    this.select();
+    const isLeftClick = e.button === 0;
+    if (isLeftClick && this.dragSpec) {
+      const {
+        clientX,
+        clientY,
+      } = e;
+      const {
+        startX,
+        startY,
+      } = this.dragSpec;
+      const deltaX = clientX - startX;
+      const deltaY = clientY - startY;
+      if (deltaX === 0 && deltaY === 0) {
+        this.select();
+      }
+    
+      this.dragSpec = null;
+    }
   }
   handleMousemove(e) {
     // set the raycaster from mouse event
@@ -1144,6 +1171,8 @@ class PanelPickerGraph extends THREE.Object3D {
     const oldHoverPanelSpec = this.hoverPanelSpec;
     this.hoverPanelSpec = null;
 
+    this.pickerMesh.visible = false;
+
     // find panel spec intersections
     for (let i = 0; i < this.panelSpecs.length; i++) {
       const panelSpec = this.panelSpecs[i];
@@ -1172,53 +1201,22 @@ class PanelPickerGraph extends THREE.Object3D {
           const intersection2D = localVector2D.set(intersection.x, intersection.z);
           if (bbox.containsPoint(intersection2D)) {
             this.hover(panelSpec);
-            console.log('got intersection', panelSpec);
+
+            this.pickerMesh.position.set(
+              panelSpec.position2D.x,
+              labelFloatOffset,
+              panelSpec.position2D.z
+            );
+            // this.pickerMesh.quaternion.copy(quaternion);
+            this.pickerMesh.updateMatrixWorld();
+      
+            this.pickerMesh.material.uniforms.scale.value.setScalar(SceneGraphMesh.size);
+            this.pickerMesh.material.uniforms.scale.needsUpdate = true;
+
+            this.pickerMesh.visible = true;
             break;
           }
         }
-
-        // const {
-        //   boundingBox,
-        // } = panelSpec;
-
-        // const p = localVector;
-        // const q = localQuaternion;
-        // const s = localVector2;
-        // panelSpec.matrixWorld.decompose(p, q, s);
-
-        // const bbox = new THREE.Box3(
-        //   localVector3.fromArray(boundingBox.min),
-        //   localVector4.fromArray(boundingBox.max)
-        // );
-        // const center = bbox.getCenter(localVector5);
-        // const size = bbox.getSize(localVector6);
-
-        // const centerOffset = localVector7.copy(center)
-        //   .applyQuaternion(q);
-
-        // const obb = localObb;
-        // obb.center.copy(centerOffset);
-        // obb.halfSize.copy(size)
-        //   .multiplyScalar(0.5);
-        // obb.rotation.identity();
-        // obb.applyMatrix4(panelSpec.matrixWorld)
-        
-        // const intersection = obb.intersectRay(localRaycaster.ray, localVector8);
-        // if (intersection) {
-        //   const distance = localRaycaster.ray.origin.distanceTo(intersection);
-        //   if (distance < closestIntersectionDistance) {
-        //     closestIntersectionDistance = distance;
-
-        //     this.pickerMesh.position.copy(p)
-        //       .add(centerOffset);
-        //     this.pickerMesh.quaternion.copy(q);
-        //     this.pickerMesh.scale.copy(size);
-        //     this.pickerMesh.updateMatrixWorld();
-        //     this.pickerMesh.visible = true;
-
-        //     this.hover(panelSpec);
-        //   }
-        // }
       }
     }
     if (this.hoverPanelSpec !== oldHoverPanelSpec) {
@@ -2391,25 +2389,27 @@ export class Metazine extends EventTarget {
     this.mapIndex = mapIndexRenderer.getMapIndex();
     this.mapIndexResolution = mapIndexRenderer.getMapIndexResolution();
   }
-  autoConnect({ // automatically connect panel exits to panel entrances
-    viewMode,
-  }) {
-    switch (viewMode) {
-      case '3d': {
-        this.#autoConnect3D();
-        this.#emitUpdate();
-        break;
-      }
-      case 'graph': {
-        this.#autoConnect3D();
-        this.#autoConnectGraph();
-        this.#emitUpdate();
-        break;
-      }
-      default: {
-        throw new Error('invalid view mode');
-      }
-    }
+  autoConnect() { // automatically connect panel exits to panel entrances
+    this.#autoConnect3D();
+    this.#autoConnectGraph();
+    this.#emitUpdate();
+
+    // switch (viewMode) {
+    //   case '3d': {
+    //     this.#autoConnect3D();
+    //     this.#emitUpdate();
+    //     break;
+    //   }
+    //   case 'graph': {
+    //     this.#autoConnect3D();
+    //     this.#autoConnectGraph();
+    //     this.#emitUpdate();
+    //     break;
+    //   }
+    //   default: {
+    //     throw new Error('invalid view mode');
+    //   }
+    // }
   }
   #autoConnect3D() {
     const rng = alea(seed);
@@ -2916,14 +2916,6 @@ export class Metazine3DRenderer extends EventTarget {
     this.#listen();
     this.#animate();
   }
-  /* get dragSpec() {
-    console.warn('get drag spec', new Error().stack);
-    debugger;
-  }
-  set dragSpec(dragSpec) {
-    console.warn('set drag spec', dragSpec, new Error().stack);
-    debugger;
-  } */
   #initAux() {
     // panel picker
     const panelPicker = new PanelPicker3D({
@@ -2978,15 +2970,15 @@ export class Metazine3DRenderer extends EventTarget {
     storyTargetMesh.updateMatrixWorld();
     this.storyTargetMesh = storyTargetMesh;
 
-    // debug cube mesh at origin
-    const cubeMesh = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshPhongMaterial({
-        color: 0xff0000,
-      })
-    );
-    this.scene.add(cubeMesh);
-    cubeMesh.updateMatrixWorld();
+    // // debug cube mesh at origin
+    // const cubeMesh = new THREE.Mesh(
+    //   new THREE.BoxGeometry(1, 1, 1),
+    //   new THREE.MeshPhongMaterial({
+    //     color: 0xff0000,
+    //   })
+    // );
+    // this.scene.add(cubeMesh);
+    // cubeMesh.updateMatrixWorld();
   }
   #listen() {
     const keydown = e => {
@@ -3437,6 +3429,55 @@ const Metazine3DCanvasWrapper = React.memo(Metazine3DCanvas, (prevProps, nextPro
 
 //
 
+const entrancePointSize = 0.2;
+const entrancePointEdges = 32;
+const entrancePointGeometry = (() => {
+  const circleGeometry = new THREE.CircleGeometry(entrancePointSize, entrancePointEdges);
+  const ringGeometry = new THREE.RingGeometry(entrancePointSize * 1.4, entrancePointSize * 1.7, entrancePointEdges);
+  const geometry = BufferGeometryUtils.mergeBufferGeometries([
+    circleGeometry,
+    ringGeometry,
+  ]);
+  geometry.rotateX(-Math.PI / 2);
+  return geometry;
+})();
+class EntrancePointMesh extends THREE.InstancedMesh {
+  constructor({
+    panelSpecs,
+  }) {
+
+    const geometry = new THREE.InstancedBufferGeometry();
+    geometry.copy(entrancePointGeometry);
+
+    const material = new THREE.MeshBasicMaterial({
+      color: 0x000000,
+    })
+    super(geometry, material, maxRenderEntranceExits);
+
+    this.frustrumCulled = false;
+    this.count = 0;
+
+    this.panelSpecs = panelSpecs;
+
+    this.updateGeometry();
+  }
+  updateGeometry() {
+    for (let i = 0; i < this.panelSpecs.length; i++) {
+      const panelSpec = this.panelSpecs[i];
+      const matrix = localMatrix
+        .makeTranslation(
+          panelSpec.position2D.x,
+          labelFloatOffset,
+          panelSpec.position2D.z
+        );
+      this.setMatrixAt(i, matrix);
+    }
+    this.count = this.panelSpecs.length;
+  }
+}
+
+//
+
 class MetazineGraphRenderer extends EventTarget {
   constructor({
     canvas,
@@ -3494,16 +3535,6 @@ class MetazineGraphRenderer extends EventTarget {
     sceneGraphMesh.updateMatrixWorld();
     this.sceneGraphMesh = sceneGraphMesh;
 
-    // debug cube mesh at origin
-    const cubeMesh = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshPhongMaterial({
-        color: 0xff0000,
-      })
-    );
-    this.scene.add(cubeMesh);
-    cubeMesh.updateMatrixWorld();
-
     // state
     this.dragSpec = null;
 
@@ -3522,23 +3553,32 @@ class MetazineGraphRenderer extends EventTarget {
     this.scene.add(panelPicker);
     panelPicker.updateMatrixWorld();
     this.panelPicker = panelPicker;
-    panelPicker.addEventListener('selectchange', e => {
-      this.handlePanelSpecChange(e.selectPanelSpec);
-    });
+    // panelPicker.addEventListener('selectchange', e => {
+    //   this.handlePanelSpecChange(e.selectPanelSpec);
+    // });
 
-    // debug cube mesh at origin
-    const cubeMesh = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshPhongMaterial({
-        color: 0xff0000,
-      })
-    );
-    this.scene.add(cubeMesh);
-    cubeMesh.updateMatrixWorld();
+    // entrance point mesh
+    const entrancePointMesh = new EntrancePointMesh({
+      panelSpecs: this.metazine.renderPanelSpecs,
+    });
+    this.scene.add(entrancePointMesh);
+    entrancePointMesh.updateMatrixWorld();
+    this.entrancePointMesh = entrancePointMesh;
+
+    // // debug cube mesh at origin
+    // const cubeMesh = new THREE.Mesh(
+    //   new THREE.BoxGeometry(1, 1, 1),
+    //   new THREE.MeshPhongMaterial({
+    //     color: 0xff0000,
+    //   })
+    // );
+    // this.scene.add(cubeMesh);
+    // cubeMesh.updateMatrixWorld();
   }
   #listen() {
     const panelgeometryupdate = e => {
       this.sceneGraphMesh.updateGeometry();
+      this.entrancePointMesh.updateGeometry();
     };
     this.metazine.addEventListener('panelgeometryupdate', panelgeometryupdate);
     this.panelPicker.addEventListener('panelgeometryupdate', panelgeometryupdate);
@@ -3913,9 +3953,10 @@ const MetasceneGeneratorComponent = () => {
     compile(files);
   };
   const autoConnect = () => {
-    metazine.autoConnect({
-      viewMode,
-    });
+    // metazine.autoConnect({
+    //   viewMode,
+    // });
+    metazine.autoConnect();
   };
 
   useEffect(() => {
