@@ -4665,13 +4665,13 @@ export async function compileVirtualScene(imageArrayBuffer) {
       'normal',
     ];
     for (const pathName of pathNames) {
-      console.log('render pathname 1', {pathName});
+      // console.log('inverse render 1', {pathName});
       const res = await fetch(`https://inverse-render-net.webaverse.com/${pathName}`, {
         method: 'POST',
         body: formData,
       });
       const arrayBuffer = await res.arrayBuffer();
-      console.log('render pathname 2', {pathName, arrayBuffer});
+      // console.log('inverse render 2', {pathName, arrayBuffer});
       const resultBlob = new Blob([arrayBuffer]);
       const img = await blob2img(resultBlob);
       img.classList.add(pathName);

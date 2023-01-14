@@ -1,4 +1,5 @@
 import {
+  devServerUrl,
   devServerTmpUrl,
 } from '../constants/generator-constants.js';
 
@@ -40,7 +41,7 @@ export async function openZineFile(file) {
   const u = await zineFile2Url(file);
 
   // compute open url
-  const u2 = new URL(`https://local.webaverse.com/`);
+  const u2 = new URL(devServerUrl);
   u2.searchParams.set('src', u);
   
   // open in new tab

@@ -21,6 +21,9 @@ import {
 } from '../../zine/zine-constants.js';
 import {zineMagicBytes} from '../../zine/zine-format.js';
 import {useRouter} from '../../generators/router.js';
+import {
+  devServerUrl,
+} from '../../constants/generator-constants.js';
 
 //
 
@@ -117,17 +120,18 @@ export const Storyboard3DRendererComponent = ({
           <button className={styles.button} onClick={async e => {
             const blob = await getZineFileBlob();
             openZineFile(blob);
-          }}>Zine2app</button>
+          }}>Send to app</button>
           <button className={styles.button} onClick={async e => {
             const blob = await getZineFileBlob();
             const src = await zineFile2Url(blob);
+
             const u = new URL(globalThis.location.href);
             u.search = '';
             u.searchParams.set('tab', 'metasceneGenerator');
             u.searchParams.set('src', src);
             const router = useRouter();
             router.pushUrl(u.href);
-          }}>Zine2multi</button>
+          }}>Send to multi</button>
           <button className={styles.button} onClick={async e => {
             await panel.collectData();
           }}>Submit Scale</button>

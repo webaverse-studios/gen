@@ -97,6 +97,7 @@ import {
 import {
   downloadFile,
   openZineFile,
+  zineFile2Url,
 } from '../../utils/http-utils.js';
 import {
   DropTarget,
@@ -175,6 +176,7 @@ const localRaycaster = new THREE.Raycaster();
 const localBox2D = new THREE.Box2();
 const localColor = new THREE.Color();
 const localObb = new OBB();
+const localCamera = new THREE.Camera();
 
 const zeroVector = new THREE.Vector3(0, 0, 0);
 const oneVector = new THREE.Vector3(1, 1, 1);
@@ -3445,7 +3447,6 @@ class EntrancePointMesh extends THREE.InstancedMesh {
   constructor({
     panelSpecs,
   }) {
-
     const geometry = new THREE.InstancedBufferGeometry();
     geometry.copy(entrancePointGeometry);
 
@@ -3462,17 +3463,28 @@ class EntrancePointMesh extends THREE.InstancedMesh {
     this.updateGeometry();
   }
   updateGeometry() {
+    this.count = 0;
+
     for (let i = 0; i < this.panelSpecs.length; i++) {
       const panelSpec = this.panelSpecs[i];
-      const matrix = localMatrix
-        .makeTranslation(
-          panelSpec.position2D.x,
-          labelFloatOffset,
-          panelSpec.position2D.z
-        );
-      this.setMatrixAt(i, matrix);
+      for (let j = 0; j < panelSpec.entranceExitLocations.length; j++) {
+        const eel = panelSpec.entranceExitLocations[j];
+
+        const positionNdc = localVector.fromArray(eel.position)
+          .project(panelSpec.camera);
+
+        const matrix = localMatrix
+          .makeTranslation(
+            panelSpec.position2D.x + (positionNdc.x * SceneGraphMesh.size / 2),
+            labelFloatOffset,
+            panelSpec.position2D.z - (positionNdc.y * SceneGraphMesh.size / 2)
+          );
+        this.setMatrixAt(this.count, matrix);
+        this.instanceMatrix.needsUpdate = true;
+        
+        this.count++;
+      }
     }
-    this.count = this.panelSpecs.length;
   }
 }
 
@@ -3870,8 +3882,22 @@ const MetazineView = ({
           e.stopPropagation();
 
           const {file} = panelSpec;
+          const src = await zineFile2Url(file);
+          
+          const u = new URL(globalThis.location.href);
+          u.search = '';
+          u.searchParams.set('tab', 'sceneGenerator');
+          u.searchParams.set('src', src);
+          const router = useRouter();
+          router.pushUrl(u.href);
+        }}>Zine to single</button>
+        <button className={styles.button} onClick={async e => {
+          e.preventDefault();
+          e.stopPropagation();
+
+          const {file} = panelSpec;
           openZineFile(file);
-        }}>Zine2app</button>
+        }}>Zine to app</button>
       </div> : null}
       <div className={styles.metazineCanvas}>
         {panelSpec ? <SideScene panelSpec={panelSpec} /> : <SideMetascene />}
@@ -3943,15 +3969,6 @@ const MetasceneGeneratorComponent = () => {
       setLoaded(true);
     }
   };
-  const setSrc = async src => {
-    if (src) {
-      const res = await fetch(src);
-      const blob = await res.blob();
-      const files = [blob];
-      setFiles(files);
-      compile(files);
-    }
-  };
   const drop = async e => {
     const files = Array.from(e.dataTransfer.files);
     setFiles(files);
@@ -3964,6 +3981,15 @@ const MetasceneGeneratorComponent = () => {
     metazine.autoConnect();
   };
 
+  const setSrc = async src => {
+    if (src) {
+      const res = await fetch(src);
+      const blob = await res.blob();
+      const files = [blob];
+      setFiles(files);
+      compile(files);
+    }
+  };
   useEffect(() => {
     const router = useRouter();
     if (router.currentSrc) {
@@ -4032,7 +4058,7 @@ const MetasceneGeneratorComponent = () => {
                 type: 'application/octet-stream',
               });
               openZineFile(blob);
-            }}>Metazine2app</button>
+            }}>Metazine to app</button>
           </div>
           <div className={styles.sidebar}>
             {loading ?

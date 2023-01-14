@@ -174,10 +174,10 @@ export const StoryboardComponent = ({
               (async () => {
                 const arrayBuffer = await file.arrayBuffer();
                 // check magic bytes
-                const firstBytes = new Uint8Array(arrayBuffer, 0, 4);
+                const firstBytes = new Uint8Array(arrayBuffer, 0, zineMagicBytes.length);
                 const firstBytesString = textDecoder.decode(firstBytes);
                 if (firstBytesString === zineMagicBytes) {
-                  const uint8Array = new Uint8Array(arrayBuffer, 4);
+                  const uint8Array = new Uint8Array(arrayBuffer, zineMagicBytes.length);
                   onPanelsLoad(uint8Array);
                 } else {
                   console.warn('got invalid file', {file, firstBytesString});

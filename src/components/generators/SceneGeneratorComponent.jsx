@@ -6,10 +6,21 @@ import {useState, useEffect} from 'react';
 import {StoryboardComponent} from './StoryboardComponent.jsx';
 import {StoryboardRendererComponent} from './StoryboardRendererComponent.jsx';
 import {
+  zineMagicBytes,
+} from '../../zine/zine-constants.js';
+import {
   Storyboard,
 } from '../../generators/sg-storyboard.js';
+import {
+  useRouter,
+} from '../../generators/router.js';
+import physx from '../../../physx.js';
 
 import styles from '../../../styles/SceneGenerator.module.css';
+
+//
+
+const textDecoder = new TextDecoder();
 
 //
 
@@ -17,6 +28,13 @@ const SceneGeneratorComponent = () => {
   const [storyboard, setStoryboard] = useState(() => new Storyboard());
   const [panel, setPanel] = useState(null);
   const [panels, setPanels] = useState([]);
+
+  // load physx
+  useEffect(() => {
+    (async () => {
+      await physx.waitForLoad();
+    })();
+  }, []);
 
   useEffect(() => {
     const paneladd = e => {
@@ -64,6 +82,37 @@ const SceneGeneratorComponent = () => {
       document.removeEventListener('keydown', keydown);
     };
   }, [storyboard, panel, panels]);
+
+  const setSrc = async src => {
+    if (src) {
+      const res = await fetch(src);
+      const arrayBuffer = await res.arrayBuffer();
+
+      // check magic bytes
+      const firstBytes = new Uint8Array(arrayBuffer, 0, zineMagicBytes.length);
+      const firstBytesString = textDecoder.decode(firstBytes);
+      if (firstBytesString === zineMagicBytes) {
+        const uint8Array = new Uint8Array(arrayBuffer, zineMagicBytes.length);
+        await onPanelsLoad(uint8Array);
+      } else {
+        console.warn('got invalid file', {firstBytes, firstBytesString});
+      }
+    }
+  };
+  useEffect(() => {
+    const router = useRouter();
+    if (router.currentSrc) {
+      setSrc(router.currentSrc);
+    }
+    const srcchange = e => {
+      const {src} = e.data;
+      setSrc(src);
+    };
+    router.addEventListener('srcchange', srcchange);
+    return () => {
+      router.removeEventListener('srcchange', srcchange);
+    };
+  }, []);
 
   const onPanelSelect = panel => {
     setPanel(panel);
