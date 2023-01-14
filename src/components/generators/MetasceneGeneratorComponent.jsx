@@ -3452,7 +3452,7 @@ class EntrancePointMesh extends THREE.InstancedMesh {
 
     const material = new THREE.MeshBasicMaterial({
       color: 0x000000,
-    })
+    });
     super(geometry, material, maxRenderEntranceExits);
 
     this.frustrumCulled = false;
