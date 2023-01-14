@@ -197,7 +197,7 @@ const panelSpecGeometrySize = 256;
 const panelSpecTextureSize = 256;
 const metazineAtlasTextureSize = 4096;
 const metazineAtlasTextureRowSize = Math.floor(metazineAtlasTextureSize / panelSpecTextureSize);
-const orbitControlsDistance = 10;
+const orbitControlsDistance = 30;
 const maxRenderPanels = 64;
 const matrixWorldTextureWidthInPixels = maxRenderPanels * 16 / 4;
 const controlsMinDistance = 1;
@@ -2740,6 +2740,7 @@ export class Metazine3DRenderer extends EventTarget {
     
     // camera
     const camera = makeDefaultCamera();
+    camera.position.set(0, 0, orbitControlsDistance);
     this.camera = camera;
 
     // orbit controls
@@ -2747,6 +2748,7 @@ export class Metazine3DRenderer extends EventTarget {
     controls.minDistance = controlsMinDistance;
     controls.maxDistance = controlsMaxDistance;
     controls.target.set(0, 0, -orbitControlsDistance);
+    controls.update();
     controls.locked = false;
     this.controls = controls;
 
