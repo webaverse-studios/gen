@@ -2992,6 +2992,7 @@ class RootMesh extends THREE.Object3D {
     dimension = 3,
     offset = new THREE.Vector3(0, labelHeightOffset, 0),
     quaternion = new THREE.Quaternion(),
+    scale = new THREE.Vector3(1, 1, 1),
   }) {
     super();
 
@@ -3000,6 +3001,7 @@ class RootMesh extends THREE.Object3D {
     this.add(backgroundCircleMesh);
     backgroundCircleMesh.position.copy(offset);
     backgroundCircleMesh.quaternion.copy(quaternion);
+    backgroundCircleMesh.scale.copy(scale);
     backgroundCircleMesh.updateMatrixWorld();
     this.backgroundCircleMesh = backgroundCircleMesh;
 
@@ -3012,6 +3014,7 @@ class RootMesh extends THREE.Object3D {
           .applyQuaternion(quaternion)
       );
     checkmarkMesh.quaternion.copy(quaternion);
+    checkmarkMesh.scale.copy(scale);
     checkmarkMesh.updateMatrixWorld();
     this.checkmarkMesh = checkmarkMesh;
     
@@ -3220,6 +3223,7 @@ export class Metazine3DRenderer extends EventTarget {
     // root mesh
     const rootMesh = new RootMesh({
       panelSpecs: this.metazine.renderPanelSpecs,
+      scale: new THREE.Vector3(2, 2, 2),
     });
     this.scene.add(rootMesh);
     rootMesh.updateMatrixWorld();
