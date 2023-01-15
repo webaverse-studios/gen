@@ -45,35 +45,49 @@ const StoryboardLayerComponent = ({
 
 //
 
+const cancelEvent = e => {
+  e.preventDefault();
+  e.stopPropagation();
+};
 const StoryboardPlaceholderComponent = ({
   storyboard,
   onPanelSelect,
 }) => {
-  const [files, setFiles] = useState([]);
+  // const [files, setFiles] = useState([]);
 
   const onNew = e => {
-    e.preventDefault();
-    e.stopPropagation();
+    cancelEvent(e);
+
     const panel = storyboard.addPanel();
     onPanelSelect(panel);
   };
-  const drop = async e => {
-    const files = e.dataTransfer.files;
-    const file = files[0];
+  const addFiles = newFiles => {
+    // const allFiles = files.concat(newFiles);
+    // setFiles(allFiles);
+
+    const file = newFiles[0];
     if (file) {
       const panel = storyboard.addPanelFromFile(file);
       onPanelSelect(panel);
     }
   };
+  // const drop = async e => {
+  //   const files = e.dataTransfer.files;
+  //   const file = files[0];
+  //   if (file) {
+  //     const panel = storyboard.addPanelFromFile(file);
+  //     onPanelSelect(panel);
+  //   }
+  // };
 
   return (
     <DropTarget
       className={styles.panelPlaceholder}
       newLabel='Create New Panel'
-      files={files}
-      onFilesChange={setFiles}
+      // files={files}
+      onFilesAdd={addFiles}
       onNew={onNew}
-      onDrop={drop}
+      // onDrop={drop}
     />
   );
 }

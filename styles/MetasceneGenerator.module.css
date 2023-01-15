@@ -4,7 +4,10 @@
   flex-direction: column;
 }
 
-.metasceneGenerator .panelPlaceholder,
+.metasceneGenerator .panelPlaceholder {
+  margin-bottom: 30px;
+}
+
 .metasceneGenerator .metasceneRenderer
 {
   position: relative;
@@ -111,4 +114,20 @@
   color: #FFF;
   /* border-left: 1px solid #000; */
   /* overflow-y: auto; */
+}
+
+/* */
+
+.metasceneGenerator .files {
+  display: flex;
+  flex-direction: column;
+  max-width: 640px;
+}
+.metasceneGenerator .files .file {
+  display: flex;
+}
+.metasceneGenerator .files .file .fileName {
+  margin-right: auto;
+}
+.metasceneGenerator .files .file .closeX {
 }

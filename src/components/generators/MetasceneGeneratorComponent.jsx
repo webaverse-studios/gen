@@ -2483,6 +2483,12 @@ export class Metazine extends EventTarget {
   getPanels() {
     return this.panels;
   }
+  removePanel(panelSpec) {
+    const index = this.renderPanelSpecs.indexOf(panelSpec);
+    this.renderPanelSpecs.splice(index, 1);
+
+    this.dispatchEvent(new MessageEvent('panelgeometryupdate'));
+  }
   
   clear() {
     this.zs.clear();
@@ -2516,24 +2522,8 @@ export class Metazine extends EventTarget {
     this.#autoConnect3D();
     this.#autoConnectGraph();
     this.#emitUpdate();
-
-    // switch (viewMode) {
-    //   case '3d': {
-    //     this.#autoConnect3D();
-    //     this.#emitUpdate();
-    //     break;
-    //   }
-    //   case 'graph': {
-    //     this.#autoConnect3D();
-    //     this.#autoConnectGraph();
-    //     this.#emitUpdate();
-    //     break;
-    //   }
-    //   default: {
-    //     throw new Error('invalid view mode');
-    //   }
-    // }
   }
+
   #autoConnect3D() {
     const rng = alea(seed);
     const panelSpecs = this.renderPanelSpecs;
@@ -2602,7 +2592,6 @@ export class Metazine extends EventTarget {
     let numIntersects = 0;
     const maxNumIntersects = 100;
     while (
-      // this.renderPanelSpecs.length < numPanels &&
       candidateExitSpecs.length > 0 &&
       candidateEntrancePanelSpecs.length > 0
     ) {
@@ -2789,6 +2778,7 @@ export class Metazine extends EventTarget {
       );
     }
   }
+
   async exportAsync() {
     const exportStoryboard = new ZineStoryboardBase();
     for (let i = 0; i < this.renderPanelSpecs.length; i++) {
@@ -4121,6 +4111,24 @@ class MetazineGraphRenderer extends EventTarget {
     canvas.addEventListener('mousemove', mousemove);
     canvas.addEventListener('click', blockEvent);
 
+    const keydown = async e => {
+      switch (e.key) {
+        case 'Delete': {
+          // console.log('del');
+          if (this.panelPicker.selectPanelSpec) {
+            this.metazine.removePanel(this.panelPicker.selectPanelSpec);
+          }
+          break;
+        }
+        case 'Escape': {
+          this.panelPicker.hover(null);
+          this.panelPicker.select();
+          break;
+        }
+      }
+    };
+    window.addEventListener('keydown', keydown);
+
     this.addEventListener('destroy', e => {
       this.metazine.removeEventListener('panelgeometryupdate', panelgeometryupdate);
       this.panelPicker.removeEventListener('panelgeometryupdate', panelgeometryupdate);
@@ -4129,6 +4137,8 @@ class MetazineGraphRenderer extends EventTarget {
       document.removeEventListener('mouseup', mouseup);
       canvas.removeEventListener('mousemove', mousemove);
       canvas.removeEventListener('click', blockEvent);
+
+      window.removeEventListener('keydown', keydown);
     });
   }
   handlePanelSpecChange(panelSpec) {
@@ -4451,15 +4461,20 @@ const MetasceneGeneratorComponent = () => {
   const [files, _setFiles] = useState([]);
 
   const setFiles = files => {
-    const sortedFiles = files.slice().sort((a, b) => a.name.localeCompare(b.name));
+    const sortedFiles = files.slice()
+      .sort((a, b) => a.name.localeCompare(b.name));
     _setFiles(sortedFiles);
     
-    if (sortedFiles.length === 0) {
-      setLoading(false);
-    }
+    // if (sortedFiles.length === 0) {
+    //   setLoading(false);
+    // }
   };
-  const compile = async files => {
-    if (files.length > 0) {
+  const addFiles = newFiles => {
+    const allFiles = files.concat(newFiles);
+    setFiles(allFiles);
+  };
+  const compile = async () => {
+    // if (files.length > 0) {
       initCompressor({
         numWorkers: defaultMaxWorkers,
       });
@@ -4477,17 +4492,14 @@ const MetasceneGeneratorComponent = () => {
       }
 
       setLoaded(true);
-    }
+    // }
   };
-  const drop = async e => {
-    const files = Array.from(e.dataTransfer.files);
-    setFiles(files);
-    compile(files);
-  };
+  // const drop = async e => {
+  //   const files = Array.from(e.dataTransfer.files);
+  //   setFiles(files);
+  //   compile(files);
+  // };
   const autoConnect = () => {
-    // metazine.autoConnect({
-    //   viewMode,
-    // });
     metazine.autoConnect();
   };
 
@@ -4517,85 +4529,134 @@ const MetasceneGeneratorComponent = () => {
 
   return (
     <div className={styles.metasceneGenerator}>
-      <div className={styles.header}>
-        <label className={styles.label}>
-          View mode:
-          <select className={styles.select} value={viewMode} onChange={e => {
-            setViewMode(e.target.value);
-          }}>
-            <option value='3d'>3d</option>
-            <option value='graph'>graph</option>
-          </select>
-        </label>
-        <label className={styles.label}>
-          Seed:
-          <input type='text' value={seed} onChange={e => {
-            setSeed(e.target.value);
-          }} />
-        </label>
-        <label className={styles.label}>
-          Max panels:
-          <input type='number' className={styles.numberInput} value={maxPanels} onChange={e => {
-            setMaxPanels(e.target.value);
-          }} />
-        </label>
-      </div>
-      {loaded ? (
-        <>
-          <div className={styles.header}>
-            <button className={styles.button} onClick={async e => {
-              e.preventDefault();
-              e.stopPropagation();
-    
-              const uint8Array = await metazine.exportAsync();
-              const blob = new Blob([
-                zineMagicBytes,
-                uint8Array,
-              ], {
-                type: 'application/octet-stream',
-              });
-              downloadFile(blob, 'metazine.zine');
-            }}>Download metazine</button>
-            <button className={styles.button} onClick={async e => {
-              e.preventDefault();
-              e.stopPropagation();
+      {loading ?
+        <div className={styles.header}>
+          compiling...
+        </div>
+      :
+        loaded ? (
+          <>
+            <div className={styles.header}>
+              <label className={styles.label}>
+                View mode:
+                <select className={styles.select} value={viewMode} onChange={e => {
+                  setViewMode(e.target.value);
+                }}>
+                  <option value='3d'>3d</option>
+                  <option value='graph'>graph</option>
+                </select>
+              </label>
+              <label className={styles.label}>
+                Seed:
+                <input type='text' value={seed} onChange={e => {
+                  setSeed(e.target.value);
+                }} />
+              </label>
+              <label className={styles.label}>
+                Max panels:
+                <input type='number' className={styles.numberInput} value={maxPanels} onChange={e => {
+                  setMaxPanels(e.target.value);
+                }} />
+              </label>
+            </div>
+            <div className={styles.header}>
+              <button className={styles.button} onClick={async e => {
+                e.preventDefault();
+                e.stopPropagation();
+      
+                const uint8Array = await metazine.exportAsync();
+                const blob = new Blob([
+                  zineMagicBytes,
+                  uint8Array,
+                ], {
+                  type: 'application/octet-stream',
+                });
+                downloadFile(blob, 'metazine.zine');
+              }}>Download metazine</button>
+              <button className={styles.button} onClick={async e => {
+                e.preventDefault();
+                e.stopPropagation();
 
-              const uint8Array = await metazine.exportAsync();
-              const blob = new Blob([
-                zineMagicBytes,
-                uint8Array,
-              ], {
-                type: 'application/octet-stream',
-              });
-              openZineFile(blob);
-            }}>Metazine to app</button>
-          </div>
-          <div className={styles.sidebar}>
-            {loading ?
-              <div>building...</div>
-            :
-              <input type='button' value='Auto-Connect' className={styles.button} onClick={autoConnect} />
-            }
-          </div>
-          <MetazineView
-            metazine={metazine}
-            viewMode={viewMode}
-          />
-        </>
-      ) :
-        <>
-          <div className={styles.main}>
-            {loading ?
-              null
-            : <DropTarget
-                className={styles.panelPlaceholder}
-                files={files}
-                onFilesChange={setFiles}
-                onDrop={drop}
-                multiple
-              />}
-          </div>
-        </>
+                const uint8Array = await metazine.exportAsync();
+                const blob = new Blob([
+                  zineMagicBytes,
+                  uint8Array,
+                ], {
+                  type: 'application/octet-stream',
+                });
+                openZineFile(blob);
+              }}>Metazine to app</button>
+            </div>
+            <div className={styles.sidebar}>
+              {loading ?
+                <div>building...</div>
+              :
+                <input type='button' value='Auto-Connect' className={styles.button} onClick={autoConnect} />
+              }
+            </div>
+            <MetazineView
+              metazine={metazine}
+              viewMode={viewMode}
+            />
+          </>
+        ) : (
+          <>
+            <div className={styles.header}>
+              <label className={styles.label}>
+                Seed:
+                <input type='text' value={seed} onChange={e => {
+                  setSeed(e.target.value);
+                }} />
+              </label>
+              <label className={styles.label}>
+                Max panels:
+                <input type='number' className={styles.numberInput} value={maxPanels} onChange={e => {
+                  setMaxPanels(e.target.value);
+                }} />
+              </label>
+              {files.length > 0 ? (
+                <button
+                  className={styles.button}
+                  onClick={compile}
+                >Compile</button>
+              ) : null}
+            </div>
+            <div className={styles.main}>
+              {loading ?
+                null
+              : <DropTarget
+                  className={styles.panelPlaceholder}
+                  // files={files}
+                  onFilesAdd={addFiles}
+                  // onDrop={drop}
+                  multiple
+                />
+              }
+              {files.length > 0 ?
+                <div className={styles.files}>
+                  <div className={styles.filesHeader}>Files ({files.length}):</div>
+                  {files.map((file, i) => {
+                    return (
+                      <div className={styles.file} key={i}>
+                        <div className={styles.fileName}>{file.name}</div>
+                        <a className={styles.closeX} onClick={e => {
+                          e.preventDefault();
+                          e.stopPropagation();
+
+                          const newFiles = files.slice();
+                          newFiles.splice(i, 1);
+                          setFiles(newFiles);
+                        }}>x</a>
+                      </div>
+                    );
+                  })}
+                </div>
+              :
+                null
+              }
+            </div>
+          </>
+        )
       }
     </div>
   );

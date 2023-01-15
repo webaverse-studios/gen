@@ -1,15 +1,2 @@
 .dropTarget {
 }
-.dropTarget .files {
-  display: flex;
-  flex-direction: column;
-  max-width: 640px;
-}
-.dropTarget .files .file {
-  display: flex;
-}
-.dropTarget .files .file .fileName {
-  margin-right: auto;
-}
-.dropTarget .files .file .closeX {
-}
