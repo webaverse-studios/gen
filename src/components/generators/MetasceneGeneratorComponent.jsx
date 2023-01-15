@@ -1157,6 +1157,10 @@ class PanelPickerGraph extends THREE.Object3D {
       const deltaY = clientY - startY;
       if (deltaX === 0 && deltaY === 0) {
         this.selectPanel();
+      } else {
+        this.dispatchEvent({
+          type: 'linkend',
+        });
       }
     
       this.dragSpec = null;
