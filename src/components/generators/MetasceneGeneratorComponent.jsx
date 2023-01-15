@@ -4007,7 +4007,7 @@ class EntranceLinkMesh extends THREE.InstancedMesh {
             const otherEel = otherPanel.entranceExitLocations[entranceIndex];
             const key2 = getKey(panelIndex, entranceIndex);
 
-            if (key1 !== key2 && !seenKeys.has(key1) && !seenKeys.has(key2)) {
+            if (!seenKeys.has(key1) && !seenKeys.has(key2)) {
               seenKeys.add(key1);
               seenKeys.add(key2);
               const startPositionNdc = localVector.fromArray(eel.position)
