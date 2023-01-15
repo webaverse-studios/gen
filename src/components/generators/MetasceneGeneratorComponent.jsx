@@ -443,7 +443,7 @@ class PanelPicker3D extends THREE.Object3D {
       const deltaX = clientX - startX;
       const deltaY = clientY - startY;
       if (deltaX === 0 && deltaY === 0) {
-        this.select();
+        this.selectPanel();
       }
       
       this.dragSpec = null;
@@ -547,7 +547,7 @@ class PanelPicker3D extends THREE.Object3D {
             this.pickerMesh.updateMatrixWorld();
             this.pickerMesh.visible = true;
 
-            this.hover(panelSpec);
+            this.hoverPanel(panelSpec);
           }
         }
       }
@@ -559,10 +559,11 @@ class PanelPicker3D extends THREE.Object3D {
       });
     }
   }
-  hover(panelSpec) {
+
+  hoverPanel(panelSpec) {
     this.hoverPanelSpec = panelSpec;
   }
-  select() {
+  selectPanel() {
     this.selectPanelSpec = this.hoverPanelSpec;
 
     this.dispatchEvent({
@@ -570,6 +571,16 @@ class PanelPicker3D extends THREE.Object3D {
       selectPanelSpec: this.selectPanelSpec,
     });
   }
+  clearSelect() {
+    this.hoverPanelSpec = null;
+    this.selectPanelSpec = null;
+  
+    this.dispatchEvent({
+      type: 'selectchange',
+      selectPanelSpec: this.selectPanelSpec,
+    });
+  }
+
   drag(newCenterPosition, newQuaternion) {
     const panelSpec = this.selectPanelSpec;
     const {
@@ -811,7 +822,9 @@ class SceneBatchedMesh extends THREE.Mesh {
     1, 1,
     panelSpecGeometrySize - 1, panelSpecGeometrySize - 1
   );
-  constructor() {
+  constructor({
+    panelSpecs = [],
+  }) {
     const geometry = new THREE.BufferGeometry();
 
     // attributes
@@ -992,15 +1005,16 @@ class SceneBatchedMesh extends THREE.Mesh {
 
     this.frustumCulled = false;
     
-    this.panelSpecs = [];
+    this.panelSpecs = panelSpecs;
     this.freeList = new FreeList(maxRenderPanels);
-  }
-  addPanel(panelSpec) {
-    this.panelSpecs.push(panelSpec);
 
-    const index = this.freeList.alloc(1);
-    this.#addPanelSpecToGeometry(panelSpec, index);
-    this.#addPanelSpecToTextureAtlas(panelSpec, index);
+    // initaialize
+    for (let i = 0 ; i < this.panelSpecs.length; i++) {
+      const panelSpec = this.panelSpecs[i];
+      const index = this.freeList.alloc(1);
+      this.#addPanelSpecToGeometry(panelSpec, index);
+      this.#addPanelSpecToTextureAtlas(panelSpec, index);
+    }
   }
   #addPanelSpecToGeometry(panelSpec, index) {
     const {
@@ -1234,6 +1248,16 @@ class PanelPickerGraph extends THREE.Object3D {
       selectPanelSpec: this.selectPanelSpec,
     });
   }
+  clearSelect() {
+    this.hoverPanelSpec = null;
+    this.selectPanelSpec = null;
+    this.hoverEntranceLocation = null;
+  
+    this.dispatchEvent({
+      type: 'selectchange',
+      selectPanelSpec: this.selectPanelSpec,
+    });
+  }
   update() {
     localRaycaster.setFromCamera(this.mouse, this.camera);
 
@@ -1358,7 +1382,9 @@ class SceneGraphMesh extends THREE.InstancedMesh {
   static spacing = 0.2;
   static planeGeometry = new THREE.PlaneGeometry(SceneGraphMesh.size, SceneGraphMesh.size)
     .rotateX(-Math.PI / 2);
-  constructor() {
+  constructor({
+    panelSpecs = [],
+  }) {
     const geometry = new THREE.InstancedBufferGeometry();
     geometry.copy(SceneGraphMesh.planeGeometry);
 
@@ -1456,15 +1482,15 @@ class SceneGraphMesh extends THREE.InstancedMesh {
     this.frustumCulled = false;
     this.count = 0;
     
-    this.panelSpecs = [];
+    this.panelSpecs = panelSpecs;
     this.freeList = new FreeList(maxRenderPanels);
-  }
-  addPanel(panelSpec) {
-    this.panelSpecs.push(panelSpec);
 
-    const index = this.freeList.alloc(1);
-    this.#addPanelSpecToGeometry(panelSpec, index);
-    this.#addPanelSpecToTextureAtlas(panelSpec, index);
+    for (let i = 0; i < this.panelSpecs.length; i++) {
+      const panelSpec = this.panelSpecs[i];
+      const index = this.freeList.alloc(1);
+      this.#addPanelSpecToGeometry(panelSpec, index);
+      this.#addPanelSpecToTextureAtlas(panelSpec, index);
+    }
   }
   #addPanelSpecToGeometry(panelSpec, index) {
     const {
@@ -3040,13 +3066,9 @@ export class Metazine3DRenderer extends EventTarget {
     scene.add(directionalLight);
 
     // scene batched mesh
-    const sceneBatchedMesh = new SceneBatchedMesh();
-    // XXX for this and the graph mesh,
-    // XXX we should probably keep a direct refernece to metazine.renderPanelSpecs,
-    // XX so that we can update when it changes
-    for (const panelSpec of metazine.renderPanelSpecs) {
-      sceneBatchedMesh.addPanel(panelSpec);
-    }
+    const sceneBatchedMesh = new SceneBatchedMesh({
+      panelSpecs: metazine.renderPanelSpecs,
+    });
     scene.add(sceneBatchedMesh);
     sceneBatchedMesh.updateMatrixWorld();
     this.sceneBatchedMesh = sceneBatchedMesh;
@@ -3467,8 +3489,8 @@ const Metazine3DCanvas = ({
           });
         if (panelSpecCentersSweep.length > 0) {
           const closestPanelSpec = panelSpecCentersSweep[0].panelSpec;
-          renderer.panelPicker.hover(closestPanelSpec);
-          renderer.panelPicker.select();
+          renderer.panelPicker.hoverPanel(closestPanelSpec);
+          renderer.panelPicker.selectPanel();
         }
       };
       const _rotate = angleY => {
@@ -3505,8 +3527,7 @@ const Metazine3DCanvas = ({
             break;
           }
           case 'Escape': {
-            renderer.panelPicker.hover(null);
-            renderer.panelPicker.select();
+            renderer.panelPicker.clearSelect();
             break;
           }
           case 'm': {
@@ -4039,10 +4060,9 @@ class MetazineGraphRenderer extends EventTarget {
     scene.add(directionalLight);
 
     // scene graph mesh
-    const sceneGraphMesh = new SceneGraphMesh();
-    for (const panelSpec of metazine.renderPanelSpecs) {
-      sceneGraphMesh.addPanel(panelSpec);
-    }
+    const sceneGraphMesh = new SceneGraphMesh({
+      panelSpecs: metazine.renderPanelSpecs,
+    });
     scene.add(sceneGraphMesh);
     sceneGraphMesh.updateMatrixWorld();
     this.sceneGraphMesh = sceneGraphMesh;
@@ -4141,15 +4161,14 @@ class MetazineGraphRenderer extends EventTarget {
     const keydown = async e => {
       switch (e.key) {
         case 'Delete': {
-          // console.log('del');
           if (this.panelPicker.selectPanelSpec) {
             this.metazine.removePanel(this.panelPicker.selectPanelSpec);
+            this.panelPicker.clearSelect();
           }
           break;
         }
         case 'Escape': {
-          this.panelPicker.hover(null);
-          this.panelPicker.select();
+          this.panelPicker.clearSelect();
           break;
         }
       }
