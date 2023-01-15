@@ -7,6 +7,10 @@
 .metasceneGenerator .panelPlaceholder {
   margin-bottom: 30px;
 }
+.metasceneGenerator .panelPlaceholder.hidden {
+  display: none;
+  /* visibility: hidden; */
+}
 
 .metasceneGenerator .metasceneRenderer
 {
@@ -127,7 +131,13 @@
   display: flex;
 }
 .metasceneGenerator .files .file .fileName {
-  margin-right: auto;
+  flex: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
 }
 .metasceneGenerator .files .file .closeX {
+  display: flex;
+  width: 30px;
+  justify-content: center;
 }
