@@ -3928,6 +3928,7 @@ class EntranceLinkMesh extends THREE.InstancedMesh {
   }
   endDrag() {
     if (this.dragSpec) {
+      // console.log('end drag 1');
       const {
         startPanelSpec,
         entranceLocation,
@@ -3935,7 +3936,24 @@ class EntranceLinkMesh extends THREE.InstancedMesh {
         exitLocation,
       } = this.dragSpec;
       if (startPanelSpec && entranceLocation) {
-        if (endPanelSpec && exitLocation) {
+        // console.log('end drag 2');
+        if (entranceLocation.panelIndex !== -1) {
+          // console.log('end drag 2.5');
+          const otherPanelSpec = this.panelSpecs[entranceLocation.panelIndex];
+          const otherEntranceLocation = otherPanelSpec.entranceExitLocations[entranceLocation.entranceIndex];
+          otherEntranceLocation.panelIndex = -1;
+          otherEntranceLocation.entranceIndex = -1;
+        }
+        if (exitLocation && exitLocation.panelIndex !== -1) {
+          // console.log('end drag 2.6');
+          const otherPanelSpec = this.panelSpecs[exitLocation.panelIndex];
+          const otherExitLocation = otherPanelSpec.entranceExitLocations[exitLocation.entranceIndex];
+          otherExitLocation.panelIndex = -1;
+          otherExitLocation.entranceIndex = -1;
+        }
+
+        if (endPanelSpec && exitLocation && endPanelSpec !== startPanelSpec) {
+          // console.log('end drag 3');
           const entranceLocations = startPanelSpec.entranceExitLocations;
           const exitLocations = endPanelSpec.entranceExitLocations;
 
@@ -3948,14 +3966,14 @@ class EntranceLinkMesh extends THREE.InstancedMesh {
           entranceLocation.entranceIndex = exitIndex;
           exitLocation.panelIndex = startPanelIndex;
           exitLocation.entranceIndex = entranceIndex;
+          // console.log('set', {
+          //   endPanelIndex,
+          //   exitIndex,
+          //   startPanelIndex,
+          //   entranceIndex,
+          // });
         } else {
-          if (entranceLocation.panelIndex !== -1) {
-            const otherPanelSpec = this.panelSpecs[entranceLocation.panelIndex];
-            const otherEntranceLocation = otherPanelSpec.entranceExitLocations[entranceLocation.entranceIndex];
-            otherEntranceLocation.panelIndex = -1;
-            otherEntranceLocation.entranceIndex = -1;
-          }
-
+          // console.log('end drag 4');
           entranceLocation.panelIndex = -1;
           entranceLocation.entranceIndex = -1;
         }
@@ -3984,15 +4002,14 @@ class EntranceLinkMesh extends THREE.InstancedMesh {
             panelIndex,
             entranceIndex,
           } = eel;
-          if (panelIndex !== -1) {
+          if (panelIndex !== -1 && entranceIndex !== -1) {
             const otherPanel = this.panelSpecs[panelIndex];
             const otherEel = otherPanel.entranceExitLocations[entranceIndex];
             const key2 = getKey(panelIndex, entranceIndex);
 
-            if (!seenKeys.has(key1) && !seenKeys.has(key2)) {
+            if (key1 !== key2 && !seenKeys.has(key1) && !seenKeys.has(key2)) {
               seenKeys.add(key1);
               seenKeys.add(key2);
-
               const startPositionNdc = localVector.fromArray(eel.position)
                 .project(panelSpec.camera);
               const endPositionNdc = localVector2.fromArray(otherEel.position)
