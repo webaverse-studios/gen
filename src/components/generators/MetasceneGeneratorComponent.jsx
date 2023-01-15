@@ -1098,7 +1098,7 @@ class PanelPickerGraph extends THREE.Object3D {
     // select
     this.hoverPanelSpec = null;
     this.selectPanelSpec = null;
-    this.hoverEntranceExitLocation = null;
+    this.hoverEntranceLocation = null;
 
     // mouse
     const mouse = new THREE.Vector2();
@@ -1126,8 +1126,7 @@ class PanelPickerGraph extends THREE.Object3D {
         startY: e.clientY,
         panelSpec,
         panelStartPosition2D,
-        entranceLocation: this.hoverEntranceExitLocation,
-        exitLocation: null,
+        entranceLocation: this.hoverEntranceLocation,
         startFloorIntersection: startFloorIntersection && startFloorIntersection.clone(),
       };
     }
@@ -1150,10 +1149,12 @@ class PanelPickerGraph extends THREE.Object3D {
       }
     
       this.dragSpec = null;
+
       this.dispatchEvent({
         type: 'linkchange',
-        panelSpec: null,
+        startPanelSpec: null,
         entranceLocation: null,
+        endPanelSpec: null,
         exitLocation: null,
         startPosition: null,
         endPosition: null,
@@ -1171,14 +1172,13 @@ class PanelPickerGraph extends THREE.Object3D {
       -(y / rect.height) * 2 + 1
     );
 
-    if (!this.dragSpec) { // not dragging
-      this.update();
-    } else { // dragging
+    this.update();
+
+    if (this.dragSpec) {
       const {
         panelSpec,
         panelStartPosition2D,
         entranceLocation,
-        exitLocation,
         startFloorIntersection,
       } = this.dragSpec;
 
@@ -1213,12 +1213,13 @@ class PanelPickerGraph extends THREE.Object3D {
 
           const startPosition = localVector2.clone();
           const endPosition = floorIntersection.clone();
-          
+
           this.dispatchEvent({
             type: 'linkchange',
-            panelSpec,
+            startPanelSpec: panelSpec,
             entranceLocation,
-            exitLocation,
+            endPanelSpec: this.hoverPanelSpec,
+            exitLocation: this.hoverEntranceLocation,
             startPosition,
             endPosition,
           });
@@ -1229,6 +1230,9 @@ class PanelPickerGraph extends THREE.Object3D {
   hoverPanel(panelSpec) {
     this.hoverPanelSpec = panelSpec;
   }
+  hoverEntrance(entranceLocation) {
+    this.hoverEntranceLocation = entranceLocation;
+  }
   selectPanel() {
     this.selectPanelSpec = this.hoverPanelSpec;
 
@@ -1237,9 +1241,9 @@ class PanelPickerGraph extends THREE.Object3D {
       selectPanelSpec: this.selectPanelSpec,
     });
   }
-  hoverEntranceExit(entranceExitLocation) {
-    this.hoverEntranceExitLocation = entranceExitLocation;
-  }
+  // hoverExit(exitLocation) {
+  //   this.hoverExitLocation = exitLocation;
+  // }
   update() {
     localRaycaster.setFromCamera(this.mouse, this.camera);
 
@@ -1247,7 +1251,8 @@ class PanelPickerGraph extends THREE.Object3D {
 
     const oldHoverPanelSpec = this.hoverPanelSpec;
     this.hoverPanelSpec = null;
-    this.hoverEntranceExitLocation = null;
+    this.hoverEntranceLocation = null;
+    // this.hoverExitLocation = null;
 
     this.pickerMesh.visible = false;
 
@@ -1275,12 +1280,12 @@ class PanelPickerGraph extends THREE.Object3D {
               zeroVector
             );
 
-            const intersection = localRaycaster.ray.intersectPlane(floorPlane, localVector);
+            const intersection = localRaycaster.ray.intersectPlane(floorPlane, localVector3);
             if (intersection) {
               const distance = intersection.distanceTo(positionWorld);
               if (distance < entrancePointWidth) {
                 this.hoverPanel(panelSpec);
-                this.hoverEntranceExit(eel);
+                this.hoverEntrance(eel);
 
                 this.pickerMesh.position.copy(positionWorld);
                 this.pickerMesh.updateMatrixWorld();
@@ -3853,11 +3858,18 @@ class EntranceLinkMesh extends THREE.InstancedMesh {
 
     this.updateGeometry();
   }
-  updateDrag(panelSpec, entranceLocation, exitLocation, endPosition) {
-    if (panelSpec) {
+  updateDrag({
+    startPanelSpec,
+    entranceLocation,
+    endPanelSpec,
+    exitLocation,
+    endPosition,
+  }) {
+    if (startPanelSpec) {
       this.dragSpec = {
-        panelSpec,
+        startPanelSpec,
         entranceLocation,
+        endPanelSpec,
         exitLocation,
         endPosition,
       };
@@ -3928,24 +3940,36 @@ class EntranceLinkMesh extends THREE.InstancedMesh {
     const _drawDrag = () => {
       if (this.dragSpec) {
         const {
-          panelSpec,
+          startPanelSpec,
           entranceLocation,
+          endPanelSpec,
           exitLocation,
-          endPosition: endPositionWorld,
+          endPosition,
         } = this.dragSpec;
-
-        if (!panelSpec) {
-          console.warn('no panel spec');
-          debugger;
-        }
         
         const startPositionNdc = localVector.fromArray(entranceLocation.position)
-          .project(panelSpec.camera);
+          .project(startPanelSpec.camera);
         const startPositionWorld = localVector2.set(
-          panelSpec.position2D.x + (startPositionNdc.x * SceneGraphMesh.size / 2),
+          startPanelSpec.position2D.x + (startPositionNdc.x * SceneGraphMesh.size / 2),
           0,
-          panelSpec.position2D.z - (startPositionNdc.y * SceneGraphMesh.size / 2)
+          startPanelSpec.position2D.z - (startPositionNdc.y * SceneGraphMesh.size / 2)
         );
+
+        let endPositionWorld;
+        if (
+          (startPanelSpec && endPanelSpec && startPanelSpec !== endPanelSpec) &&
+          (entranceLocation && exitLocation && entranceLocation !== exitLocation)
+        ) {
+          const endPositionWorldNdc = localVector3.fromArray(exitLocation.position)
+            .project(endPanelSpec.camera);
+          endPositionWorld = localVector4.set(
+            endPanelSpec.position2D.x + (endPositionWorldNdc.x * SceneGraphMesh.size / 2),
+            0,
+            endPanelSpec.position2D.z - (endPositionWorldNdc.y * SceneGraphMesh.size / 2)
+          );
+        } else {
+          endPositionWorld = endPosition;
+        }
 
         startPositionWorld.toArray(starts, this.count * 3);
         endPositionWorld.toArray(ends, this.count * 3);
@@ -4042,12 +4066,19 @@ class MetazineGraphRenderer extends EventTarget {
     });
     panelPicker.addEventListener('linkchange', e => {
       const {
-        panelSpec,
+        startPanelSpec,
         entranceLocation,
+        endPanelSpec,
         exitLocation,
         endPosition,
       } = e;
-      this.entranceLinkMesh.updateDrag(panelSpec, entranceLocation, exitLocation, endPosition);
+      this.entranceLinkMesh.updateDrag({
+        startPanelSpec,
+        entranceLocation,
+        endPanelSpec,
+        exitLocation,
+        endPosition,
+      });
     });
 
     // entrance point mesh
