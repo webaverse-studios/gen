@@ -4546,18 +4546,6 @@ const MetasceneGeneratorComponent = () => {
                   <option value='graph'>graph</option>
                 </select>
               </label>
-              <label className={styles.label}>
-                Seed:
-                <input type='text' value={seed} onChange={e => {
-                  setSeed(e.target.value);
-                }} />
-              </label>
-              <label className={styles.label}>
-                Max panels:
-                <input type='number' className={styles.numberInput} value={maxPanels} onChange={e => {
-                  setMaxPanels(e.target.value);
-                }} />
-              </label>
             </div>
             <div className={styles.header}>
               <button className={styles.button} onClick={async e => {
