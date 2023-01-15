@@ -1186,8 +1186,6 @@ class PanelPickerGraph extends THREE.Object3D {
         const floorIntersection = intersectFloor(this.mouse, this.camera, localVector);
 
         if (!entranceLocation) { // panel drag
-          // console.log('panel drag', panelSpec);
-          
           const delta = floorIntersection.clone()
             .sub(startFloorIntersection);
           panelSpec.position2D.copy(panelStartPosition2D)
@@ -1197,8 +1195,6 @@ class PanelPickerGraph extends THREE.Object3D {
             type: 'panelgeometryupdate',
           });
         } else { // link drag
-          // console.log('link drag', entranceLocation, exitLocation);
-
           localMatrix.compose(
             localVector2.fromArray(entranceLocation.position),
             localQuaternion.fromArray(entranceLocation.quaternion),
@@ -1241,9 +1237,6 @@ class PanelPickerGraph extends THREE.Object3D {
       selectPanelSpec: this.selectPanelSpec,
     });
   }
-  // hoverExit(exitLocation) {
-  //   this.hoverExitLocation = exitLocation;
-  // }
   update() {
     localRaycaster.setFromCamera(this.mouse, this.camera);
 
@@ -1252,7 +1245,6 @@ class PanelPickerGraph extends THREE.Object3D {
     const oldHoverPanelSpec = this.hoverPanelSpec;
     this.hoverPanelSpec = null;
     this.hoverEntranceLocation = null;
-    // this.hoverExitLocation = null;
 
     this.pickerMesh.visible = false;
 
