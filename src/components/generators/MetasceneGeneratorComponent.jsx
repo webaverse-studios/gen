@@ -3041,6 +3041,9 @@ export class Metazine3DRenderer extends EventTarget {
 
     // scene batched mesh
     const sceneBatchedMesh = new SceneBatchedMesh();
+    // XXX for this and the graph mesh,
+    // XXX we should probably keep a direct refernece to metazine.renderPanelSpecs,
+    // XX so that we can update when it changes
     for (const panelSpec of metazine.renderPanelSpecs) {
       sceneBatchedMesh.addPanel(panelSpec);
     }
