@@ -3926,6 +3926,42 @@ class EntranceLinkMesh extends THREE.InstancedMesh {
 
     this.updateGeometry();
   }
+  endDrag() {
+    if (this.dragSpec) {
+      const {
+        startPanelSpec,
+        entranceLocation,
+        endPanelSpec,
+        exitLocation,
+      } = this.dragSpec;
+      if (startPanelSpec && entranceLocation) {
+        if (endPanelSpec && exitLocation) {
+          const entranceLocations = startPanelSpec.entranceExitLocations;
+          const exitLocations = endPanelSpec.entranceExitLocations;
+
+          const startPanelIndex = this.panelSpecs.indexOf(startPanelSpec);
+          const entranceIndex = entranceLocations.indexOf(entranceLocation);
+          const endPanelIndex = this.panelSpecs.indexOf(endPanelSpec);
+          const exitIndex = exitLocations.indexOf(exitLocation);
+          
+          entranceLocation.panelIndex = endPanelIndex;
+          entranceLocation.entranceIndex = exitIndex;
+          exitLocation.panelIndex = startPanelIndex;
+          exitLocation.entranceIndex = entranceIndex;
+        } else {
+          if (entranceLocation.panelIndex !== -1) {
+            const otherPanelSpec = this.panelSpecs[entranceLocation.panelIndex];
+            const otherEntranceLocation = otherPanelSpec.entranceExitLocations[entranceLocation.entranceIndex];
+            otherEntranceLocation.panelIndex = -1;
+            otherEntranceLocation.entranceIndex = -1;
+          }
+
+          entranceLocation.panelIndex = -1;
+          entranceLocation.entranceIndex = -1;
+        }
+      }
+    }
+  }
   updateGeometry() {
     this.count = 0;
 
@@ -4125,6 +4161,9 @@ class MetazineGraphRenderer extends EventTarget {
         exitLocation,
         endPosition,
       });
+    });
+    panelPicker.addEventListener('linkend', e => {
+      this.entranceLinkMesh.endDrag();
     });
 
     // entrance point mesh
