@@ -3526,6 +3526,13 @@ const Metazine3DCanvas = ({
             renderer.setCameraToPanelSpec();
             break;
           }
+          case 'Delete': {
+            if (renderer.panelPicker.selectPanelSpec) {
+              renderer.metazine.removePanel(renderer.panelPicker.selectPanelSpec);
+              renderer.panelPicker.clearSelect();
+            }
+            break;
+          }
           case 'Escape': {
             renderer.panelPicker.clearSelect();
             break;
