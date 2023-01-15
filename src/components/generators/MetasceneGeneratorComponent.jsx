@@ -2484,10 +2484,34 @@ export class Metazine extends EventTarget {
     return this.panels;
   }
   removePanel(panelSpec) {
+    this.removeEntranceExitLinks(panelSpec);
+
     const index = this.renderPanelSpecs.indexOf(panelSpec);
     this.renderPanelSpecs.splice(index, 1);
 
     this.dispatchEvent(new MessageEvent('panelgeometryupdate'));
+  }
+  removeEntranceExitLinks(panelSpec) {
+    const index = this.renderPanelSpecs.indexOf(panelSpec);
+    
+    for (let i = 0; i < this.renderPanelSpecs.length; i++) {
+      const otherPanelSpec = this.renderPanelSpecs[i];
+      const {entranceExitLocations} = otherPanelSpec;
+      
+      for (let j = 0; j < entranceExitLocations.length; j++) {
+        const eel = entranceExitLocations[j];
+        const {
+          panelIndex,
+          entranceIndex,
+        } = eel;
+        if (panelIndex === index) {
+          eel.panelIndex = -1;
+          eel.entranceIndex = -1;
+        } else if (panelIndex > index) {
+          eel.panelIndex--;
+        }
+      }
+    }
   }
   
   clear() {
