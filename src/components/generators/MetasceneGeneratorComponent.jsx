@@ -399,9 +399,7 @@ class PanelPicker3D extends THREE.Object3D {
       ) {
         startPanelSpec = this.selectPanelSpec;
         const {
-          // floorPlaneLocation,
           boundingBox,
-          // floorBoundingBox,
         } = startPanelSpec;
 
         const bbox = new THREE.Box3(
@@ -410,8 +408,7 @@ class PanelPicker3D extends THREE.Object3D {
         ).applyMatrix4(startPanelSpec.matrix);
         const center = bbox.getCenter(new THREE.Vector3());
 
-        startCenterPosition = center.clone()
-          // .applyMatrix4(startPanelSpec.matrixWorld);
+        startCenterPosition = center.clone();
         startQuaternion = startPanelSpec.quaternion.clone();
       } else {
         startCenterPosition = null;
@@ -1254,7 +1251,7 @@ class PanelPickerGraph extends THREE.Object3D {
         const panelSpec = this.panelSpecs[i];
 
         // if we are selected, only hover over the selected panel
-        if (!this.selectPanelSpec || this.selectPanelSpec === panelSpec) {
+        // if (!this.selectPanelSpec || this.selectPanelSpec === panelSpec) {
           for (let j = 0; j < panelSpec.entranceExitLocations.length; j++) {
             const eel = panelSpec.entranceExitLocations[j];
 
@@ -1291,7 +1288,7 @@ class PanelPickerGraph extends THREE.Object3D {
               }
             }
           }
-        }
+        // }
       }
       return false;
     };
