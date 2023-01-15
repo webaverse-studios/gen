@@ -2184,7 +2184,7 @@ class MapIndexRenderer {
       this.renderer.render(this.intersectScene, this.camera);
       this.renderer.setRenderTarget(null);
       
-      // XXX read intermediate result for debugging
+      /* // XXX read intermediate result for debugging
       let debugUint8Array;
       let debugUint8Array2;
       {
@@ -2204,7 +2204,7 @@ class MapIndexRenderer {
         for (let i = 0; i < debugUint8Array2.length; i++) {
           debugUint8Array2[i] = debugUint8Array[i * 4];
         }
-      }
+      } */
 
       // set up check scene
       this.checkScene.checkMesh.material.uniforms.map.value = this.renderTargets[1].texture;
