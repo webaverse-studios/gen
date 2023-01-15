@@ -154,6 +154,7 @@ import {
 import {
   FreeList,
 } from '../../utils/allocator-utils.js';
+import {loadImage} from '../../../utils.js';
 
 //
 
@@ -169,6 +170,7 @@ const localVector2D = new THREE.Vector2();
 const localVector2D2 = new THREE.Vector2();
 const localQuaternion = new THREE.Quaternion();
 const localQuaternion2 = new THREE.Quaternion();
+const localEuler = new THREE.Euler();
 const localMatrix = new THREE.Matrix4();
 const localMatrix2 = new THREE.Matrix4();
 const localPlane = new THREE.Plane();
@@ -176,7 +178,7 @@ const localRaycaster = new THREE.Raycaster();
 const localBox2D = new THREE.Box2();
 const localColor = new THREE.Color();
 const localObb = new OBB();
-const localCamera = new THREE.Camera();
+// const localCamera = new THREE.Camera();
 
 const zeroVector = new THREE.Vector3(0, 0, 0);
 const oneVector = new THREE.Vector3(1, 1, 1);
@@ -202,6 +204,7 @@ const orbitControlsDistance = 40;
 const maxRenderPanels = 64;
 const maxRenderEntranceExits = maxRenderPanels * 8;
 const matrixWorldTextureWidthInPixels = maxRenderPanels * 16 / 4;
+const labelHeightOffset = 20;
 const labelFloatOffset = 0.1;
 const controlsMinDistance = 1;
 const controlsMaxDistance = 300;
@@ -2948,6 +2951,89 @@ class ChunkEdgeMesh extends THREE.Object3D {
 
 //
 
+class BackgroundCircleMesh extends THREE.Mesh {
+  constructor() {
+    const geometry = new THREE.CircleGeometry(0.6, entrancePointEdges);
+
+    const material = new THREE.MeshBasicMaterial({
+      color: 0x40FF40,
+      side: THREE.DoubleSide,
+      // transparent: true,
+      // opacity: 0.5,
+    });
+
+    super(geometry, material);
+  }
+}
+class CheckmarkMesh extends THREE.Mesh {
+  constructor() {
+    const geometry = new THREE.PlaneGeometry(1, 1);
+
+    const map = new THREE.Texture();
+    (async () => {
+      const img = await loadImage('/images/root.svg');
+      map.image = img;
+      map.needsUpdate = true;
+    })();
+    const material = new THREE.MeshBasicMaterial({
+      map,
+      color: 0x00FF00,
+      // side: THREE.DoubleSide,
+      alphaTest: 0.5,
+      transparent: true,
+    });
+    
+    super(geometry, material);
+  }
+}
+class RootMesh extends THREE.Object3D {
+  constructor({
+    panelSpecs,
+    dimension = 3,
+    offset = new THREE.Vector3(0, labelHeightOffset, 0),
+    quaternion = new THREE.Quaternion(),
+  }) {
+    super();
+
+    // background circle mesh
+    const backgroundCircleMesh = new BackgroundCircleMesh();
+    this.add(backgroundCircleMesh);
+    backgroundCircleMesh.position.copy(offset);
+    backgroundCircleMesh.quaternion.copy(quaternion);
+    backgroundCircleMesh.updateMatrixWorld();
+    this.backgroundCircleMesh = backgroundCircleMesh;
+
+    // checkmark mesh
+    const checkmarkMesh = new CheckmarkMesh();
+    this.add(checkmarkMesh);
+    checkmarkMesh.position.copy(offset)
+      .add(
+        new THREE.Vector3(0, 0, labelFloatOffset)
+          .applyQuaternion(quaternion)
+      );
+    checkmarkMesh.quaternion.copy(quaternion);
+    checkmarkMesh.updateMatrixWorld();
+    this.checkmarkMesh = checkmarkMesh;
+    
+    this.panelSpecs = panelSpecs;
+    this.dimension = dimension;
+
+    // initialize
+    this.updateGeometry();
+  }
+  updateGeometry() {
+    const panelSpec = this.panelSpecs[0];
+    this.position.copy(this.dimension === 3 ? panelSpec.position : panelSpec.position2D);
+    localEuler.setFromQuaternion(panelSpec.quaternion, 'YXZ');
+    localEuler.x = 0;
+    localEuler.y = 0;
+    this.quaternion.setFromEuler(localEuler);
+    this.updateMatrixWorld();
+  }
+}
+
+//
+
 class UnderfloorMesh extends THREE.Object3D {
   constructor() {
     super();
@@ -2965,7 +3051,7 @@ class UnderfloorMesh extends THREE.Object3D {
     const arrowMesh = new ArrowMesh();
     arrowMesh.geometry = arrowMesh.geometry.clone()
       .rotateX(Math.PI)
-      .translate(0, 20, 0)
+      .translate(0, labelHeightOffset, 0)
     arrowMesh.frustumCulled = false;
     this.add(arrowMesh);
     arrowMesh.updateMatrixWorld();
@@ -3131,6 +3217,14 @@ export class Metazine3DRenderer extends EventTarget {
     mapIndexMesh.updateMatrixWorld();
     this.mapIndexMesh = mapIndexMesh;
 
+    // root mesh
+    const rootMesh = new RootMesh({
+      panelSpecs: this.metazine.renderPanelSpecs,
+    });
+    this.scene.add(rootMesh);
+    rootMesh.updateMatrixWorld();
+    this.rootMesh = rootMesh;
+
     // underfloor mesh
     const underfloorMesh = new UnderfloorMesh();
     underfloorMesh.visible = false;
@@ -3202,6 +3296,7 @@ export class Metazine3DRenderer extends EventTarget {
     const panelgeometryupdate = e => {
       this.sceneBatchedMesh.updateGeometry();
       this.entranceExitMesh.updateGeometry();
+      this.rootMesh.updateGeometry();
     };
     this.metazine.addEventListener('panelgeometryupdate', panelgeometryupdate);
     this.panelPicker.addEventListener('panelgeometryupdate', panelgeometryupdate);
@@ -4183,6 +4278,24 @@ class MetazineGraphRenderer extends EventTarget {
       this.entranceLinkMesh.endDrag();
     });
 
+    // root mesh
+    const rootMesh = new RootMesh({
+      panelSpecs: this.metazine.renderPanelSpecs,
+      dimension: 2,
+      offset: new THREE.Vector3(
+        -SceneGraphMesh.size / 2,
+        labelFloatOffset * 2,
+        -SceneGraphMesh.size / 2
+      ),
+      quaternion: new THREE.Quaternion().setFromAxisAngle(
+        new THREE.Vector3(1, 0, 0),
+        -Math.PI / 2
+      ),
+    });
+    this.scene.add(rootMesh);
+    rootMesh.updateMatrixWorld();
+    this.rootMesh = rootMesh;
+
     // entrance point mesh
     const entrancePointMesh = new EntrancePointMesh({
       panelSpecs: this.metazine.renderPanelSpecs,
@@ -4216,6 +4329,7 @@ class MetazineGraphRenderer extends EventTarget {
       this.sceneGraphMesh.updateGeometry();
       this.entrancePointMesh.updateGeometry();
       this.entranceLinkMesh.updateGeometry();
+      this.rootMesh.updateGeometry();
     };
     this.metazine.addEventListener('panelgeometryupdate', panelgeometryupdate);
     this.panelPicker.addEventListener('panelgeometryupdate', panelgeometryupdate);
@@ -4514,6 +4628,12 @@ const MetazineView = ({
   return (
     <>
       {panelSpec ? <div className={styles.header}>
+        <button className={styles.button} onClick={async e => {
+          e.preventDefault();
+          e.stopPropagation();
+
+          console.log('set root'); // XXX
+        }}>Set root</button>
         <button className={styles.button} onClick={async e => {
           e.preventDefault();
           e.stopPropagation();
