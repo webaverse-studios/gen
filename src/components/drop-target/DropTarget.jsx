@@ -44,7 +44,7 @@ export const DropTarget = ({
       document.removeEventListener('dragover', dragover);
       document.removeEventListener('drop', drop);
     };
-  }, []);
+  }, [onFilesAdd]);
 
   return (
     <div
