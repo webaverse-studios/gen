@@ -2496,7 +2496,11 @@ export class Metazine extends EventTarget {
     super();
     
     this.renderPanelSpecs = [];
-    this.mapIndexRenderer = null;
+
+    const mapIndexRenderer = new MapIndexRenderer();
+    this.mapIndexRenderer = mapIndexRenderer;
+    this.mapIndex = mapIndexRenderer.getMapIndex();
+    this.mapIndexResolution = mapIndexRenderer.getMapIndexResolution();
 
     this.#listen();
   }
@@ -2545,7 +2549,6 @@ export class Metazine extends EventTarget {
   }
   async compileZineFiles(zineFiles) {
     console.time('loadPanels');
-    let panelSpecs;
     {
       const metazineLoader = new MetazineLoader({
         total: zineFiles.length,
@@ -2556,17 +2559,25 @@ export class Metazine extends EventTarget {
           metazineLoader.loadFile(zineFile, index)
         )
       );
-      panelSpecs = panelSpecsArray.flat();
+      const newPanelSpecs = panelSpecsArray.flat();
+      this.renderPanelSpecs.push(...newPanelSpecs);
     }
     console.timeEnd('loadPanels');
+  }
+  async addAndCompileZineFiles(zineFiles) {
+    const metazineLoader = new MetazineLoader({
+      total: zineFiles.length,
+    });
 
-    // get the render panel specs
-    this.renderPanelSpecs = panelSpecs;
-    
-    const mapIndexRenderer = new MapIndexRenderer();
-    this.mapIndexRenderer = mapIndexRenderer;
-    this.mapIndex = mapIndexRenderer.getMapIndex();
-    this.mapIndexResolution = mapIndexRenderer.getMapIndexResolution();
+    const panelSpecsArray = await Promise.all(
+      zineFiles.map((zineFile, index) =>
+        metazineLoader.loadFile(zineFile, index)
+      )
+    );
+    const newPanelSpecs = panelSpecsArray.flat();
+    this.renderPanelSpecs.push(...newPanelSpecs);
+
+    this.#emitUpdate();
   }
   autoConnect() { // automatically connect panel exits to panel entrances
     this.#autoConnect3D();
@@ -4511,47 +4522,52 @@ const MetasceneGeneratorComponent = () => {
   const [viewMode, setViewMode] = useState('3d');
   const [seed, setSeed] = useState('lol');
   const [maxPanels, setMaxPanels] = useState(16);
-  const [files, _setFiles] = useState([]);
+  const [files, setFiles] = useState([]);
 
-  const setFiles = files => {
-    const sortedFiles = files.slice()
-      .sort((a, b) => a.name.localeCompare(b.name));
-    _setFiles(sortedFiles);
-    
-    // if (sortedFiles.length === 0) {
-    //   setLoading(false);
-    // }
-  };
-  const addFiles = newFiles => {
-    const allFiles = files.concat(newFiles);
-    setFiles(allFiles);
+  const addFiles = async newFiles => {
+    if (!loading) {
+      if (files.length === 0) {
+        const initialFiles = shuffle(newFiles.slice(), seed)
+          .slice(0, maxPanels)
+          .sort((a, b) => a.name.localeCompare(b.name));
+        setFiles(initialFiles);
+      } else {
+        const nextFiles = files.concat(newFiles);
+        if (nextFiles.length < maxPanels) {
+          setFiles(nextFiles);
+
+          // dynamically add and compile files
+          if (loaded) {
+            setLoading(true);
+            try {
+              await metazine.addAndCompileZineFiles(newFiles);
+            } finally {
+              setLoading(false);
+            }
+          }
+        }
+      }
+    }
   };
   const compile = async () => {
-    // if (files.length > 0) {
-      initCompressor({
-        numWorkers: defaultMaxWorkers,
+    initCompressor({
+      numWorkers: defaultMaxWorkers,
+    });
+
+    setLoading(true);
+    try {
+      const filesSorted = shuffle(files.slice(), seed)
+        .slice(0, maxPanels);
+
+      await metazine.compileZineFiles(filesSorted, {
+        seed,
       });
+    } finally {
+      setLoading(false);
+    }
 
-      setLoading(true);
-      try {
-        const filesSorted = shuffle(files.slice(), seed)
-          .slice(0, maxPanels);
-
-        await metazine.compileZineFiles(filesSorted, {
-          seed,
-        });
-      } finally {
-        setLoading(false);
-      }
-
-      setLoaded(true);
-    // }
+    setLoaded(true);
   };
-  // const drop = async e => {
-  //   const files = Array.from(e.dataTransfer.files);
-  //   setFiles(files);
-  //   compile(files);
-  // };
   const autoConnect = () => {
     metazine.autoConnect();
   };
@@ -4662,42 +4678,38 @@ const MetasceneGeneratorComponent = () => {
                 >Compile</button>
               ) : null}
             </div>
-            <div className={styles.main}>
-              {loading ?
-                null
-              : <DropTarget
-                  className={styles.panelPlaceholder}
-                  // files={files}
-                  onFilesAdd={addFiles}
-                  // onDrop={drop}
-                  multiple
-                />
-              }
-              {files.length > 0 ?
-                <div className={styles.files}>
-                  <div className={styles.filesHeader}>Files ({files.length}):</div>
-                  {files.map((file, i) => {
-                    return (
-                      <div className={styles.file} key={i}>
-                        <div className={styles.fileName}>{file.name}</div>
-                        <a className={styles.closeX} onClick={e => {
-                          e.preventDefault();
-                          e.stopPropagation();
-
-                          const newFiles = files.slice();
-                          newFiles.splice(i, 1);
-                          setFiles(newFiles);
-                        }}>x</a>
-                      </div>
-                    );
-                  })}
-                </div>
-              :
-                null
-              }
-            </div>
           </>
         )
+      }
+      <DropTarget
+        className={classnames(
+          styles.panelPlaceholder,
+          (loaded || loading) ? styles.hidden : null,
+        )}
+        onFilesAdd={addFiles}
+        multiple
+      />
+      {(!loaded && !loading && files.length > 0) ?
+        <div className={styles.files}>
+          <div className={styles.filesHeader}>Files ({files.length}):</div>
+          {files.map((file, i) => {
+            return (
+              <div className={styles.file} key={i}>
+                <div className={styles.fileName}>{file.name}</div>
+                <a className={styles.closeX} onClick={e => {
+                  e.preventDefault();
+                  e.stopPropagation();
+
+                  const newFiles = files.slice();
+                  newFiles.splice(i, 1);
+                  setFiles(newFiles);
+                }}>x</a>
+              </div>
+            );
+          })}
+        </div>
+      :
+        null
       }
     </div>
   );
