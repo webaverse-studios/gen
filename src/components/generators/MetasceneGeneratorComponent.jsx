@@ -1104,6 +1104,18 @@ class SceneBatchedMesh extends THREE.Mesh {
     }
     this.material.uniforms.matrixWorldsTexture.value.needsUpdate = true;
   }
+  async updateTextureAtlas() {
+    const canvas = this.material.uniforms.map.value.image;
+
+    const promises = [];
+    for (let index = 0; index < this.panelSpecs.length; index++) {
+      const panelSpec = this.panelSpecs[index];
+      const p = drawAtlasTexture(panelSpec, index, canvas.ctx);
+      promises.push(p);
+    }
+    await Promise.all(promises);
+    this.material.uniforms.map.value.needsUpdate = true;
+  }
 }
 
 //
