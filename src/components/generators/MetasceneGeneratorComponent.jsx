@@ -4803,11 +4803,15 @@ const MetazineView = ({
 
 //
 
+const viewModes = [
+  '3d',
+  'graph',
+];
 const MetasceneGeneratorComponent = () => {
   const [metazine, setMetazine] = useState(() => new Metazine());
   const [loading, setLoading] = useState(false);
   const [loaded, setLoaded] = useState(false);
-  const [viewMode, setViewMode] = useState('3d');
+  const [viewMode, setViewMode] = useState(viewModes[0]);
   const [seed, setSeed] = useState('lol');
   const [maxPanels, setMaxPanels] = useState(16);
   const [files, setFiles] = useState([]);
@@ -4874,15 +4878,36 @@ const MetasceneGeneratorComponent = () => {
     if (router.currentSrc) {
       setSrc(router.currentSrc);
     }
+  }, []);
+  useEffect(() => {
+    const router = useRouter();
+    
     const srcchange = e => {
       const {src} = e.data;
       setSrc(src);
     };
     router.addEventListener('srcchange', srcchange);
+
+    const keydown = e => {
+      switch (e.key) {
+        case 'v': {
+          e.preventDefault();
+          e.stopPropagation();
+
+          const viewModeIndex = viewModes.indexOf(viewMode);
+          const nextViewMode = viewModes[(viewModeIndex + 1) % viewModes.length];
+          setViewMode(nextViewMode);
+          break;
+        }
+      }
+    };
+    window.addEventListener('keydown', keydown);
+    
     return () => {
       router.removeEventListener('srcchange', srcchange);
+      window.removeEventListener('keydown', keydown);
     };
-  }, []);
+  }, [viewMode]);
 
   return (
     <div className={styles.metasceneGenerator}>
