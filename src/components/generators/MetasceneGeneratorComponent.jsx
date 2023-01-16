@@ -1306,7 +1306,6 @@ class PanelPickerGraph extends THREE.Object3D {
       for (let i = 0; i < this.panelSpecs.length; i++) {
         const panelSpec = this.panelSpecs[i];
 
-        // if we are selected, only hover over the selected panel
         for (let j = 0; j < panelSpec.entranceExitLocations.length; j++) {
           const eel = panelSpec.entranceExitLocations[j];
 
