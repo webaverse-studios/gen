@@ -486,9 +486,6 @@ class PanelPicker3D extends THREE.Object3D {
             .add(delta);
 
           this.drag(newCenterPosition, startQuaternion);
-          this.dispatchEvent({
-            type: 'panelgeometryupdate',
-          });
         }
       }
     }
