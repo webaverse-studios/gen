@@ -396,11 +396,7 @@ class PanelPicker3D extends THREE.Object3D {
       let startPanelSpec;
       let startCenterPosition;
       let startQuaternion;
-      if (
-        // this.selectPanelSpec &&
-        // this.hoverPanelSpec === this.selectPanelSpec
-        this.hoverPanelSpec
-      ) {
+      if (this.hoverPanelSpec) {
         startPanelSpec = this.hoverPanelSpec;
         const {
           boundingBox,
