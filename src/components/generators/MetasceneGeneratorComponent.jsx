@@ -326,7 +326,7 @@ class EntranceExitMesh extends THREE.Mesh {
         !!(this.geometry.attributes?.position.count > 0);
     };
   }
-  updateGeometry() {
+  updateTransform() {
     this.geometry.dispose();
 
     const entranceExitLocations = collectEntranceExits(this.panelSpecs);
@@ -495,7 +495,7 @@ class PanelPicker3D extends THREE.Object3D {
 
     this.pickerMesh.visible = false;
 
-    const oldHoverPanelSpec = this.hoverPanelSpec;
+    // const oldHoverPanelSpec = this.hoverPanelSpec;
     this.hoverPanelSpec = null;
 
     // find panel spec intersections
@@ -676,7 +676,7 @@ class PanelPicker3D extends THREE.Object3D {
     };
 
     // unlink entrance/exit indices
-    const selectedPanelIndex = this.panelSpecs.indexOf(panelSpec);
+    const selectedPanelIndex = panelSpec.index;
     for (let i = 0; i < panelSpec.entranceExitLocations.length; i++) {
       const eel = panelSpec.entranceExitLocations[i];
 
@@ -694,7 +694,7 @@ class PanelPicker3D extends THREE.Object3D {
       } = eel;
 
       if (panelIndex !== -1) {
-        const otherPanel = this.panelSpecs[panelIndex];
+        const otherPanel = this.panelSpecs.find(panelSpec => panelSpec.index === panelIndex);
         const otherEel = otherPanel.entranceExitLocations[entranceIndex];
         otherEel.panelIndex = -1;
         otherEel.entranceIndex = -1;
@@ -730,14 +730,14 @@ class PanelPicker3D extends THREE.Object3D {
       
       {
         // exit location
-        const entrancePanelIndex = this.panelSpecs.indexOf(entrancePanelSpec);
+        const entrancePanelIndex = entrancePanelSpec.index;
         const entranceLocationIndex = entrancePanelSpec.entranceExitLocations.indexOf(entranceLocation);
         exitLocation.panelIndex = entrancePanelIndex;
         exitLocation.entranceIndex = entranceLocationIndex;
       }
       {
         // entrance location
-        const exitPanelIndex = this.panelSpecs.indexOf(exitPanelSpec);
+        const exitPanelIndex = exitPanelSpec.index;
         const exitLocationIndex = exitPanelSpec.entranceExitLocations.indexOf(exitLocation);
         entranceLocation.panelIndex = exitPanelIndex;
         entranceLocation.entranceIndex = exitLocationIndex;
@@ -753,7 +753,7 @@ class PanelPicker3D extends THREE.Object3D {
     }
 
     this.dispatchEvent({
-      type: 'panelgeometryupdate',
+      type: 'paneltransformupdate',
     });
   }
   rotate(angleY) {
@@ -803,15 +803,18 @@ class PanelPicker3D extends THREE.Object3D {
       }
     }
     this.dispatchEvent({
-      type: 'panelgeometryupdate',
+      type: 'paneltransformupdate',
     });
   }
 }
 
 //
 
-const drawAtlasTexture = async (panelSpec, index, ctx) => {
-  const {imageArrayBuffer} = panelSpec;
+const drawAtlasTexture = async (panelSpec, ctx) => {
+  const {
+    index,
+    imageArrayBuffer,
+  } = panelSpec;
   const blob = new Blob([imageArrayBuffer]);
   const imageBitmap = await createImageBitmap(blob);
   
@@ -1014,18 +1017,18 @@ class SceneBatchedMesh extends THREE.Mesh {
     this.frustumCulled = false;
     
     this.panelSpecs = panelSpecs;
-    this.freeList = new FreeList(maxRenderPanels);
+    // this.freeList = new FreeList(maxRenderPanels);
 
     // initaialize
     for (let i = 0 ; i < this.panelSpecs.length; i++) {
       const panelSpec = this.panelSpecs[i];
-      const index = this.freeList.alloc(1);
-      this.#addPanelSpecToGeometry(panelSpec, index);
-      this.#addPanelSpecToTextureAtlas(panelSpec, index);
+      this.#addPanelSpecToGeometry(panelSpec);
+      this.#addPanelSpecToTextureAtlas(panelSpec);
     }
   }
-  #addPanelSpecToGeometry(panelSpec, index) {
+  #addPanelSpecToGeometry(panelSpec) {
     const {
+      index,
       sceneChunkMesh,
       floorBoundingBox,
     } = panelSpec;
@@ -1084,15 +1087,16 @@ class SceneBatchedMesh extends THREE.Mesh {
 
     geometry.drawRange.count += SceneBatchedMesh.planeGeometry.index.count;
   }
-  async #addPanelSpecToTextureAtlas(panelSpec, index) {
-    await drawAtlasTexture(panelSpec, index, this.material.uniforms.map.value.image.ctx);
+  async #addPanelSpecToTextureAtlas(panelSpec) {
+    await drawAtlasTexture(panelSpec, this.material.uniforms.map.value.image.ctx);
     this.material.uniforms.map.value.needsUpdate = true;
   }
-  updateGeometry() {
+  updateTransform() {
     const matrixWorlds = this.material.uniforms.matrixWorldsTexture.value.image.data;
     for (let i = 0; i < this.panelSpecs.length; i++) {
       const panelSpec = this.panelSpecs[i];
-      matrixWorlds.set(panelSpec.sceneChunkMesh.matrixWorld.elements, i * 16);
+      const {index} = panelSpec;
+      matrixWorlds.set(panelSpec.sceneChunkMesh.matrixWorld.elements, index * 16);
     }
     this.material.uniforms.matrixWorldsTexture.value.needsUpdate = true;
   }
@@ -1100,9 +1104,9 @@ class SceneBatchedMesh extends THREE.Mesh {
     const canvas = this.material.uniforms.map.value.image;
 
     const promises = [];
-    for (let index = 0; index < this.panelSpecs.length; index++) {
-      const panelSpec = this.panelSpecs[index];
-      const p = drawAtlasTexture(panelSpec, index, canvas.ctx);
+    for (let i = 0; i < this.panelSpecs.length; i++) {
+      const panelSpec = this.panelSpecs[i];
+      const p = drawAtlasTexture(panelSpec, canvas.ctx);
       promises.push(p);
     }
     await Promise.all(promises);
@@ -1227,7 +1231,7 @@ class PanelPickerGraph extends THREE.Object3D {
             .add(delta);
           
           this.dispatchEvent({
-            type: 'panelgeometryupdate',
+            type: 'paneltransformupdate',
           });
         } else { // link drag
           localMatrix.compose(
@@ -1506,16 +1510,18 @@ class SceneGraphMesh extends THREE.InstancedMesh {
     this.count = 0;
     
     this.panelSpecs = panelSpecs;
-    this.freeList = new FreeList(maxRenderPanels);
+    // this.freeList = new FreeList(maxRenderPanels);
 
     for (let i = 0; i < this.panelSpecs.length; i++) {
       const panelSpec = this.panelSpecs[i];
-      const index = this.freeList.alloc(1);
-      this.#addPanelSpecToGeometry(panelSpec, index);
-      this.#addPanelSpecToTextureAtlas(panelSpec, index);
+      this.#addPanelSpecToGeometry(panelSpec);
+      this.#addPanelSpecToTextureAtlas(panelSpec);
     }
   }
-  #addPanelSpecToGeometry(panelSpec, index) {
+  #addPanelSpecToGeometry(panelSpec) {
+    const {
+      index,
+    } = panelSpec;
     const {
       geometry,
     } = this;
@@ -1537,19 +1543,21 @@ class SceneGraphMesh extends THREE.InstancedMesh {
 
     this.count++;
   }
-  async #addPanelSpecToTextureAtlas(panelSpec, index) {
-    await drawAtlasTexture(panelSpec, index, this.material.uniforms.map.value.image.ctx);
+  async #addPanelSpecToTextureAtlas(panelSpec) {
+    await drawAtlasTexture(panelSpec, this.material.uniforms.map.value.image.ctx);
     this.material.uniforms.map.value.needsUpdate = true;
   }
-  updateGeometry() {
+  updateTransform() {
     for (let i = 0; i < this.panelSpecs.length; i++) {
       const panelSpec = this.panelSpecs[i];
+      const {index} = panelSpec;
+      
       const matrix = localMatrix.makeTranslation(
         panelSpec.position2D.x,
         0,
         panelSpec.position2D.z
       );
-      this.setMatrixAt(i, matrix);
+      this.setMatrixAt(index, matrix);
     }
     this.instanceMatrix.needsUpdate = true;
   }
@@ -1557,9 +1565,9 @@ class SceneGraphMesh extends THREE.InstancedMesh {
     const canvas = this.material.uniforms.map.value.image;
 
     const promises = [];
-    for (let index = 0; index < this.panelSpecs.length; index++) {
-      const panelSpec = this.panelSpecs[index];
-      const p = drawAtlasTexture(panelSpec, index, canvas.ctx);
+    for (let i = 0; i < this.panelSpecs.length; i++) {
+      const panelSpec = this.panelSpecs[i];
+      const p = drawAtlasTexture(panelSpec, canvas.ctx);
       promises.push(p);
     }
     await Promise.all(promises);
@@ -2096,7 +2104,7 @@ class MapIndexRenderer {
     this.renderTargets[0] = this.renderTargets[1];
     this.renderTargets[1] = temp;
   } */
-  draw(panelSpec, mode, attachPanelIndex, newPanelIndex) {
+  draw(panelSpec, mode, /*attachPanelIndex,*/ newPanelIndex) {
     const meshes = [panelSpec];
 
     // console.log('draw panel spec', {
@@ -2241,9 +2249,11 @@ class MapIndexRenderer {
 
 class MetazineLoader {
   constructor({
-    total = 1,
-  } = {}) {
+    total,
+    freeList,
+  }) {
     this.total = total;
+    this.freeList = freeList;
 
     this.semaphoreValue = defaultMaxWorkers;
     this.queue = [];
@@ -2319,6 +2329,9 @@ class MetazineLoader {
       const panelSpec = new THREE.Object3D();
       panelSpec.name = fileName;
       panelSpec.description = prompt;
+      const isRoot = this.freeList.isEmpty();
+      panelSpec.index = this.freeList.alloc(1);
+      panelSpec.isRoot = isRoot;
       // NOTE: the file is needed during export
       // the alternative is to keep the data in memory, but that seems worse
       panelSpec.file = zineFile;
@@ -2458,6 +2471,7 @@ export class Metazine extends EventTarget {
     super();
     
     this.renderPanelSpecs = [];
+    this.freeList = new FreeList(maxRenderPanels);
 
     const mapIndexRenderer = new MapIndexRenderer();
     this.mapIndexRenderer = mapIndexRenderer;
@@ -2467,7 +2481,7 @@ export class Metazine extends EventTarget {
     this.#listen();
   }
   #listen() {
-    this.addEventListener('panelgeometryupdate', e => {
+    this.addEventListener('paneltransformupdate', e => {
       this.#updateMapIndex();
     });
   }
@@ -2481,26 +2495,20 @@ export class Metazine extends EventTarget {
     const index = this.renderPanelSpecs.indexOf(panelSpec);
     this.renderPanelSpecs.splice(index, 1);
 
-    this.dispatchEvent(new MessageEvent('panelgeometryupdate'));
+    this.dispatchEvent(new MessageEvent('panelgeometryupdate')); // XXX needs to be handled
     this.dispatchEvent(new MessageEvent('paneltextureupdate'));
   }
 
   setRoot(panelSpec) {
-    const index = this.renderPanelSpecs.indexOf(panelSpec);
-    if (index !== 0) {
-      const panelSpec0 = this.renderPanelSpecs[0];
-      this.swapEntranceExitLinks(panelSpec, panelSpec0); // do this first to maintain indices
-
-      this.renderPanelSpecs[0] = panelSpec;
-      this.renderPanelSpecs[index] = panelSpec0;
-
-      this.dispatchEvent(new MessageEvent('panelgeometryupdate'));
-      this.dispatchEvent(new MessageEvent('paneltextureupdate'));
+    for (let i = 0; i < this.renderPanelSpecs.length; i++) {
+      const ps = this.renderPanelSpecs[i];
+      ps.isRoot = ps === panelSpec;
     }
+    this.dispatchEvent(new MessageEvent('paneltransformupdate'));
   }
 
   removeEntranceExitLinks(panelSpec) {
-    const index = this.renderPanelSpecs.indexOf(panelSpec);
+    const {index} = panelSpec;
     
     for (let i = 0; i < this.renderPanelSpecs.length; i++) {
       const otherPanelSpec = this.renderPanelSpecs[i];
@@ -2510,35 +2518,10 @@ export class Metazine extends EventTarget {
         const eel = entranceExitLocations[j];
         const {
           panelIndex,
-          // entranceIndex,
         } = eel;
         if (panelIndex === index) {
           eel.panelIndex = -1;
           eel.entranceIndex = -1;
-        } else if (panelIndex > index) {
-          eel.panelIndex--;
-        }
-      }
-    }
-  }
-  swapEntranceExitLinks(panelSpec, otherPanelSpec) {
-    const panelSpecIndex = this.renderPanelSpecs.indexOf(panelSpec);
-    const otherPanelSpecIndex = this.renderPanelSpecs.indexOf(otherPanelSpec);
-
-    for (let i = 0; i < this.renderPanelSpecs.length; i++) {
-      const panelSpec = this.renderPanelSpecs[i];
-      const {entranceExitLocations} = panelSpec;
-      
-      for (let j = 0; j < entranceExitLocations.length; j++) {
-        const eel = entranceExitLocations[j];
-        const {
-          panelIndex,
-          // entranceIndex,
-        } = eel;
-        if (panelIndex === panelSpecIndex) {
-          eel.panelIndex = otherPanelSpecIndex;
-        } else if (panelIndex === otherPanelSpecIndex) {
-          eel.panelIndex = panelSpecIndex;
         }
       }
     }
@@ -2549,6 +2532,7 @@ export class Metazine extends EventTarget {
     {
       const metazineLoader = new MetazineLoader({
         total: zineFiles.length,
+        freeList: this.freeList,
       });
 
       const panelSpecsArray = await Promise.all(
@@ -2564,6 +2548,7 @@ export class Metazine extends EventTarget {
   async addAndCompileZineFiles(zineFiles) {
     const metazineLoader = new MetazineLoader({
       total: zineFiles.length,
+      freeList: this.freeList,
     });
 
     const panelSpecsArray = await Promise.all(
@@ -2736,14 +2721,14 @@ export class Metazine extends EventTarget {
         // remember indices in both directions
         {
           // exit location
-          const entrancePanelIndex = panelSpecs.indexOf(entrancePanelSpec);
+          const entrancePanelIndex = entrancePanelSpec.index;
           const entranceLocationIndex = entrancePanelSpec.entranceExitLocations.indexOf(entranceLocation);
           exitLocation.panelIndex = entrancePanelIndex;
           exitLocation.entranceIndex = entranceLocationIndex;
         }
         {
           // entrance location
-          const exitPanelIndex = panelSpecs.indexOf(exitPanelSpec);
+          const exitPanelIndex = exitPanelSpec.index;
           const exitLocationIndex = exitPanelSpec.entranceExitLocations.indexOf(exitLocation);
           entranceLocation.panelIndex = exitPanelIndex;
           entranceLocation.entranceIndex = exitLocationIndex;
@@ -2820,7 +2805,7 @@ export class Metazine extends EventTarget {
     }
   }
   #emitUpdate() {
-    this.dispatchEvent(new MessageEvent('panelgeometryupdate'));
+    this.dispatchEvent(new MessageEvent('paneltransformupdate'));
     this.#updateMapIndex();
     this.dispatchEvent(new MessageEvent('mapindexupdate'));
   }
@@ -2829,13 +2814,13 @@ export class Metazine extends EventTarget {
 
     for (let i = 0; i < this.renderPanelSpecs.length; i++) {
       const panelSpec = this.renderPanelSpecs[i];
-      const attachPanelIndex = i;
-      const newPanelIndex = i + 1;
+      // const attachPanelIndex = i;
+      // const newPanelIndex = i + 1;
       this.mapIndexRenderer.draw(
         panelSpec,
         MapIndexRenderer.MODE_REPLACE,
-        attachPanelIndex,
-        newPanelIndex
+        // attachPanelIndex,
+        panelSpec.index
       );
     }
   }
@@ -3015,16 +3000,22 @@ class RootMesh extends THREE.Object3D {
     this.dimension = dimension;
 
     // initialize
-    this.updateGeometry();
+    this.updateTransform();
   }
-  updateGeometry() {
-    const panelSpec = this.panelSpecs[0];
-    this.position.copy(this.dimension === 3 ? panelSpec.position : panelSpec.position2D);
-    localEuler.setFromQuaternion(panelSpec.quaternion, 'YXZ');
-    localEuler.x = 0;
-    localEuler.y = 0;
-    this.quaternion.setFromEuler(localEuler);
-    this.updateMatrixWorld();
+  updateTransform() {
+    // if (this.panelSpecs.length > 0) {
+      const rootPanelSpec = this.panelSpecs.find(panelSpec => panelSpec.isRoot);
+      const position = this.dimension === 3 ? rootPanelSpec.position : rootPanelSpec.position2D;
+      
+      this.position.copy(position);
+      
+      localEuler.setFromQuaternion(rootPanelSpec.quaternion, 'YXZ');
+      localEuler.x = 0;
+      localEuler.y = 0;
+      this.quaternion.setFromEuler(localEuler);
+      
+      this.updateMatrixWorld();
+    // }
   }
 }
 
@@ -3277,22 +3268,19 @@ export class Metazine3DRenderer extends EventTarget {
     canvas.addEventListener('click', blockEvent);
     canvas.addEventListener('wheel', blockEvent);
 
-    const panelgeometryupdate = e => {
-      this.sceneBatchedMesh.updateGeometry();
-      this.entranceExitMesh.updateGeometry();
-      this.rootMesh.updateGeometry();
+    const paneltransformupdate = e => {
+      this.sceneBatchedMesh.updateTransform();
+      this.entranceExitMesh.updateTransform();
+      this.rootMesh.updateTransform();
 
       this.handlePanelSpecChange(this.selectedPanelSpec);
     };
-    this.metazine.addEventListener('panelgeometryupdate', panelgeometryupdate);
-    this.panelPicker.addEventListener('panelgeometryupdate', panelgeometryupdate);
-    const paneltextureupdate = e => {
-      // XXX need to rebuild the geometry, or else setting the root changes the geometry
-      // XXX we need to do more than just panelgeometryupdate, which is more like paneltransformupdate
-      // XXX perhaps panels could be identified by id instead of index, which would solve a lot of problems...
-      this.sceneBatchedMesh.updateTextureAtlas();
-    };
-    this.metazine.addEventListener('paneltextureupdate', paneltextureupdate);
+    this.metazine.addEventListener('paneltransformupdate', paneltransformupdate);
+    this.panelPicker.addEventListener('paneltransformupdate', paneltransformupdate);
+    // const paneltextureupdate = e => {
+    //   this.sceneBatchedMesh.updateTextureAtlas();
+    // };
+    // this.metazine.addEventListener('paneltextureupdate', paneltextureupdate);
     this.panelPicker.addEventListener('selectchange', e => {
       this.handlePanelSpecChange(e.selectPanelSpec);
     });
@@ -3312,9 +3300,9 @@ export class Metazine3DRenderer extends EventTarget {
       canvas.removeEventListener('click', blockEvent);
       canvas.removeEventListener('wheel', blockEvent);
 
-      this.metazine.removeEventListener('panelgeometryupdate', panelgeometryupdate);
-      this.panelPicker.removeEventListener('panelgeometryupdate', panelgeometryupdate);
-      this.metazine.removeEventListener('paneltextureupdate', paneltextureupdate);
+      this.metazine.removeEventListener('paneltransformupdate', paneltransformupdate);
+      this.panelPicker.removeEventListener('paneltransformupdate', paneltransformupdate);
+      // this.metazine.removeEventListener('paneltextureupdate', paneltextureupdate);
       this.metazine.removeEventListener('mapindexupdate', mapIndexUpdate);
     });
   }
@@ -3354,7 +3342,7 @@ export class Metazine3DRenderer extends EventTarget {
     
     // update meshes
     {
-      const selectIndex = this.metazine.renderPanelSpecs.indexOf(panelSpec);
+      const selectIndex = panelSpec ? panelSpec.index : -1;
       this.sceneBatchedMesh.material.uniforms.uSelectIndex.value = selectIndex;
       this.sceneBatchedMesh.material.uniforms.uSelectIndex.needsUpdate = true;
     }
@@ -3782,9 +3770,9 @@ class EntrancePointMesh extends THREE.InstancedMesh {
 
     this.panelSpecs = panelSpecs;
 
-    this.updateGeometry();
+    this.updateTransform();
   }
-  updateGeometry() {
+  updateTransform() {
     this.count = 0;
 
     for (let i = 0; i < this.panelSpecs.length; i++) {
@@ -4000,7 +3988,7 @@ class EntranceLinkMesh extends THREE.InstancedMesh {
 
     this.dragSpec = null;
 
-    this.updateGeometry();
+    this.updateTransform();
   }
   updateDrag({
     startPanelSpec,
@@ -4021,7 +4009,7 @@ class EntranceLinkMesh extends THREE.InstancedMesh {
       this.dragSpec = null;
     }
 
-    this.updateGeometry();
+    this.updateTransform();
   }
   endDrag() {
     if (this.dragSpec) {
@@ -4036,14 +4024,14 @@ class EntranceLinkMesh extends THREE.InstancedMesh {
         // console.log('end drag 2');
         if (entranceLocation.panelIndex !== -1) {
           // console.log('end drag 2.5');
-          const otherPanelSpec = this.panelSpecs[entranceLocation.panelIndex];
+          const otherPanelSpec = this.panelSpecs.find(ps => ps.index === entranceLocation.panelIndex);
           const otherEntranceLocation = otherPanelSpec.entranceExitLocations[entranceLocation.entranceIndex];
           otherEntranceLocation.panelIndex = -1;
           otherEntranceLocation.entranceIndex = -1;
         }
         if (exitLocation && exitLocation.panelIndex !== -1) {
           // console.log('end drag 2.6');
-          const otherPanelSpec = this.panelSpecs[exitLocation.panelIndex];
+          const otherPanelSpec = this.panelSpecs.find(ps => ps.index === exitLocation.panelIndex);
           const otherExitLocation = otherPanelSpec.entranceExitLocations[exitLocation.entranceIndex];
           otherExitLocation.panelIndex = -1;
           otherExitLocation.entranceIndex = -1;
@@ -4054,9 +4042,9 @@ class EntranceLinkMesh extends THREE.InstancedMesh {
           const entranceLocations = startPanelSpec.entranceExitLocations;
           const exitLocations = endPanelSpec.entranceExitLocations;
 
-          const startPanelIndex = this.panelSpecs.indexOf(startPanelSpec);
+          const startPanelIndex = startPanelSpec.index;
           const entranceIndex = entranceLocations.indexOf(entranceLocation);
-          const endPanelIndex = this.panelSpecs.indexOf(endPanelSpec);
+          const endPanelIndex = endPanelSpec.index;
           const exitIndex = exitLocations.indexOf(exitLocation);
           
           entranceLocation.panelIndex = endPanelIndex;
@@ -4077,7 +4065,7 @@ class EntranceLinkMesh extends THREE.InstancedMesh {
       }
     }
   }
-  updateGeometry() {
+  updateTransform() {
     this.count = 0;
 
     const startsAttribute = this.geometry.attributes.start;
@@ -4100,7 +4088,7 @@ class EntranceLinkMesh extends THREE.InstancedMesh {
             entranceIndex,
           } = eel;
           if (panelIndex !== -1 && entranceIndex !== -1) {
-            const otherPanel = this.panelSpecs[panelIndex];
+            const otherPanel = this.panelSpecs.find(ps => ps.index === panelIndex);
             const otherEel = otherPanel.entranceExitLocations[entranceIndex];
             const key2 = getKey(panelIndex, entranceIndex);
 
@@ -4314,20 +4302,20 @@ class MetazineGraphRenderer extends EventTarget {
     this.entranceLinkMesh = entranceLinkMesh;
   }
   #listen() {
-    const panelgeometryupdate = e => {
-      this.sceneGraphMesh.updateGeometry();
-      this.entrancePointMesh.updateGeometry();
-      this.entranceLinkMesh.updateGeometry();
-      this.rootMesh.updateGeometry();
+    const paneltransformupdate = e => {
+      this.sceneGraphMesh.updateTransform();
+      this.entrancePointMesh.updateTransform();
+      this.entranceLinkMesh.updateTransform();
+      this.rootMesh.updateTransform();
 
       this.handlePanelSpecChange(this.panelPicker.selectPanelSpec);
     };
-    this.metazine.addEventListener('panelgeometryupdate', panelgeometryupdate);
-    this.panelPicker.addEventListener('panelgeometryupdate', panelgeometryupdate);
-    const paneltextureupdate = e => {
-      this.sceneGraphMesh.updateTextureAtlas();
-    };
-    this.metazine.addEventListener('paneltextureupdate', paneltextureupdate);
+    this.metazine.addEventListener('paneltransformupdate', paneltransformupdate);
+    this.panelPicker.addEventListener('paneltransformupdate', paneltransformupdate);
+    // const paneltextureupdate = e => {
+    //   this.sceneGraphMesh.updateTextureAtlas();
+    // };
+    // this.metazine.addEventListener('paneltextureupdate', paneltextureupdate);
     this.panelPicker.addEventListener('selectchange', e => {
       this.handlePanelSpecChange(e.selectPanelSpec);
     });
@@ -4366,10 +4354,10 @@ class MetazineGraphRenderer extends EventTarget {
     window.addEventListener('keydown', keydown);
 
     this.addEventListener('destroy', e => {
-      this.metazine.removeEventListener('panelgeometryupdate', panelgeometryupdate);
-      this.panelPicker.removeEventListener('panelgeometryupdate', panelgeometryupdate);
+      this.metazine.removeEventListener('paneltransformupdate', paneltransformupdate);
+      this.panelPicker.removeEventListener('paneltransformupdate', paneltransformupdate);
 
-      this.metazine.removeEventListener('paneltextureupdate', paneltextureupdate);
+      // this.metazine.removeEventListener('paneltextureupdate', paneltextureupdate);
 
       canvas.removeEventListener('mousedown', mousedown);
       document.removeEventListener('mouseup', mouseup);
@@ -4380,8 +4368,7 @@ class MetazineGraphRenderer extends EventTarget {
     });
   }
   handlePanelSpecChange(panelSpec) {
-    const panelIndex = this.metazine.renderPanelSpecs.indexOf(panelSpec);
-    this.sceneGraphMesh.material.uniforms.uSelectIndex.value = panelIndex;
+    this.sceneGraphMesh.material.uniforms.uSelectIndex.value = panelSpec ? panelSpec.index : -1;
     this.sceneGraphMesh.material.uniforms.uSelectIndex.needsUpdate = true;
   }
   render() {
@@ -4627,7 +4614,7 @@ const MetazineView = ({
 
   // XXX this needs to update when the root changes, or the Set root button will not update
   // XXX does that mean we need to track the selected panel spec here?
-  const rootSelected = metazine.renderPanelSpecs.indexOf(panelSpec) === 0;
+  const rootSelected = panelSpec ? panelSpec.isRoot : -1;
 
   return (
     <>
