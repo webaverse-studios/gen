@@ -589,7 +589,9 @@ class PanelPicker3D extends THREE.Object3D {
   }
 
   drag(newCenterPosition, newQuaternion) {
-    const panelSpec = this.selectPanelSpec;
+    const {
+      panelSpec,
+    } = this.dragSpec;
     const {
       boundingBox,
     } = panelSpec;
@@ -682,7 +684,7 @@ class PanelPicker3D extends THREE.Object3D {
     };
 
     // unlink entrance/exit indices
-    const selectedPanelIndex = this.panelSpecs.indexOf(this.selectPanelSpec);
+    const selectedPanelIndex = this.panelSpecs.indexOf(panelSpec);
     for (let i = 0; i < panelSpec.entranceExitLocations.length; i++) {
       const eel = panelSpec.entranceExitLocations[i];
 
