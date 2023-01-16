@@ -2170,28 +2170,6 @@ class MapIndexRenderer {
       this.renderer.clear(); // clear previous result
       this.renderer.render(this.intersectScene, this.camera);
       this.renderer.setRenderTarget(null);
-      
-      /* // XXX read intermediate result for debugging
-      let debugUint8Array;
-      let debugUint8Array2;
-      {
-        debugUint8Array = new Uint8Array(
-          this.renderTargets[1].width * this.renderTargets[1].height * 4
-        );
-        this.renderer.readRenderTargetPixels(
-          this.renderTargets[1],
-          0, 0,
-          this.renderTargets[1].width, this.renderTargets[1].height,
-          debugUint8Array
-        );
-        // get red only
-        debugUint8Array2 = new Uint8Array(
-          this.renderTargets[1].width * this.renderTargets[1].height
-        );
-        for (let i = 0; i < debugUint8Array2.length; i++) {
-          debugUint8Array2[i] = debugUint8Array[i * 4];
-        }
-      } */
 
       // set up check scene
       this.checkScene.checkMesh.material.uniforms.map.value = this.renderTargets[1].texture;
@@ -2209,13 +2187,6 @@ class MapIndexRenderer {
         this.checkResultUint8Array
       );
       intersect = this.checkResultUint8Array[0] > 0;
-
-      // // XXX debug logging
-      // console.log('check intermediate result', debugUint8Array2.filter(n => n !== 0).length, intersect, {
-      //   attachPanelIndex,
-      //   newPanelIndex,
-      //   debugUint8Array2,
-      // });
     }
 
     popMeshes();
