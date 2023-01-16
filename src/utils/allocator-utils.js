@@ -114,9 +114,11 @@ export class FreeListArray {
 }
 export class FreeList {
   constructor(size, alignment = 1) {
+    this.size = size;
+    this.alignment = alignment;
+    
     this.freeStart = 0;
     this.freeEnd = size;
-    this.alignment = alignment;
 
     this.slots = new Map(); // Map<slotSize, FreeListArray>
     this.slotSizes = new Map(); // Map<index, slotSize>
