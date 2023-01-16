@@ -1,4 +1,8 @@
-import {alignN, getClosestPowerOf2} from './memory-utils.js';
+import {
+  mod,
+  alignN,
+  getClosestPowerOf2,
+} from './memory-utils.js';
 
 export class Allocator {
   constructor(moduleInstance) {
@@ -122,6 +126,10 @@ export class FreeList {
 
     this.slots = new Map(); // Map<slotSize, FreeListArray>
     this.slotSizes = new Map(); // Map<index, slotSize>
+  }
+
+  isEmpty() {
+    return mod(this.freeEnd - this.freeStart, this.size) === 0;
   }
 
   allocIndex(slotSize) {
