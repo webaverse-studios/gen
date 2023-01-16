@@ -1351,7 +1351,7 @@ class PanelPickerGraph extends THREE.Object3D {
         const panelSpec = this.panelSpecs[i];
 
         // if we are selected, only hover over the selected panel
-        if (!this.selectPanelSpec || this.selectPanelSpec === panelSpec) {
+        // if (!this.selectPanelSpec || this.selectPanelSpec === panelSpec) {
           // compute the 2d bounding box of the panel spec
           const bbox = localBox2D.set(
             localVector2D.set(
@@ -1390,7 +1390,7 @@ class PanelPickerGraph extends THREE.Object3D {
               return true;
             }
           }
-        }
+        // }
       }
       return false;
     };
