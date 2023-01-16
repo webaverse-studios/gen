@@ -3263,16 +3263,6 @@ export class Metazine3DRenderer extends EventTarget {
     this.scene.add(storyTargetMesh);
     storyTargetMesh.updateMatrixWorld();
     this.storyTargetMesh = storyTargetMesh;
-
-    // // debug cube mesh at origin
-    // const cubeMesh = new THREE.Mesh(
-    //   new THREE.BoxGeometry(1, 1, 1),
-    //   new THREE.MeshPhongMaterial({
-    //     color: 0xff0000,
-    //   })
-    // );
-    // this.scene.add(cubeMesh);
-    // cubeMesh.updateMatrixWorld();
   }
   #listen() {
     const keydown = e => {
@@ -4351,16 +4341,6 @@ class MetazineGraphRenderer extends EventTarget {
     this.scene.add(entranceLinkMesh);
     entranceLinkMesh.updateMatrixWorld();
     this.entranceLinkMesh = entranceLinkMesh;
-
-    // // debug cube mesh at origin
-    // const cubeMesh = new THREE.Mesh(
-    //   new THREE.BoxGeometry(1, 1, 1),
-    //   new THREE.MeshPhongMaterial({
-    //     color: 0xff0000,
-    //   })
-    // );
-    // this.scene.add(cubeMesh);
-    // cubeMesh.updateMatrixWorld();
   }
   #listen() {
     const panelgeometryupdate = e => {
