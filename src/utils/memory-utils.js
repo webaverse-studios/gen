@@ -1,3 +1,9 @@
+export function mod(v, n) {
+  return ((v % n) + n) % n;
+}
+
+//
+
 export const alignN = n => index => {
   const r = index % n;
   return r === 0 ? index : (index + n - r);
