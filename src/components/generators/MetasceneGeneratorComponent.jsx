@@ -397,10 +397,11 @@ class PanelPicker3D extends THREE.Object3D {
       let startCenterPosition;
       let startQuaternion;
       if (
-        this.selectPanelSpec &&
-        this.hoverPanelSpec === this.selectPanelSpec
+        // this.selectPanelSpec &&
+        // this.hoverPanelSpec === this.selectPanelSpec
+        this.hoverPanelSpec
       ) {
-        startPanelSpec = this.selectPanelSpec;
+        startPanelSpec = this.hoverPanelSpec;
         const {
           boundingBox,
         } = startPanelSpec;
@@ -555,12 +556,15 @@ class PanelPicker3D extends THREE.Object3D {
         }
       }
     }
+    
     if (this.hoverPanelSpec !== oldHoverPanelSpec) {
       this.dispatchEvent({
         type: 'hoverchange',
         hoverPanelSpec: this.hoverPanelSpec,
       });
     }
+
+    this.controls.enableRotate = this.hoverPanelSpec === null;
   }
 
   hoverPanel(panelSpec) {
