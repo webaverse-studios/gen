@@ -765,18 +765,25 @@ class PanelPicker3D extends THREE.Object3D {
     });
   }
   rotate(angleY) {
+    let panelSpec;
     if (this.selectPanelSpec) {
+      panelSpec = this.selectPanelSpec;
+    } else if (this.dragSpec) {
+      panelSpec = this.dragSpec.panelSpec;
+    }
+    
+    if (panelSpec) {
       const {
         boundingBox,
-      } = this.selectPanelSpec;
+      } = panelSpec;
 
       const bbox = new THREE.Box3(
         new THREE.Vector3().fromArray(boundingBox.min),
         new THREE.Vector3().fromArray(boundingBox.max)
-      ).applyMatrix4(this.selectPanelSpec.matrix);
+      ).applyMatrix4(panelSpec.matrix);
       const center = bbox.getCenter(new THREE.Vector3());
 
-      this.selectPanelSpec.matrix
+      panelSpec.matrix
         .premultiply(
           new THREE.Matrix4().makeTranslation(-center.x, -center.y, -center.z)
         )
@@ -793,14 +800,14 @@ class PanelPicker3D extends THREE.Object3D {
           new THREE.Matrix4().makeTranslation(center.x, center.y, center.z)
         )
         .decompose(
-          this.selectPanelSpec.position,
-          this.selectPanelSpec.quaternion,
+          panelSpec.position,
+          panelSpec.quaternion,
           localVector2
         );
-      this.selectPanelSpec.updateMatrixWorld();
+      panelSpec.updateMatrixWorld();
 
       if (this.dragSpec) {
-        this.dragSpec.startQuaternion.copy(this.selectPanelSpec.quaternion);
+        this.dragSpec.startQuaternion.copy(panelSpec.quaternion);
       }
     }
     this.dispatchEvent({
