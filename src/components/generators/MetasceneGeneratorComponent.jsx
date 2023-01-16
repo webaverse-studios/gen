@@ -533,8 +533,7 @@ class PanelPicker3D extends THREE.Object3D {
 
         const obb = localObb;
         obb.center.copy(centerOffset);
-        obb.halfSize.copy(size)
-          .multiplyScalar(0.5);
+        obb.halfSize.copy(size).multiplyScalar(0.5);
         obb.rotation.identity();
         obb.applyMatrix4(panelSpec.matrixWorld)
         
