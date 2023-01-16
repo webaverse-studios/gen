@@ -2591,7 +2591,7 @@ export class Metazine extends EventTarget {
         const eel = entranceExitLocations[j];
         const {
           panelIndex,
-          entranceIndex,
+          // entranceIndex,
         } = eel;
         if (panelIndex === index) {
           eel.panelIndex = -1;
