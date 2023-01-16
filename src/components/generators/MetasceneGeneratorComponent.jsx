@@ -2565,6 +2565,21 @@ export class Metazine extends EventTarget {
     this.dispatchEvent(new MessageEvent('panelgeometryupdate'));
     this.dispatchEvent(new MessageEvent('paneltextureupdate'));
   }
+
+  setRoot(panelSpec) {
+    const index = this.renderPanelSpecs.indexOf(panelSpec);
+    if (index !== 0) {
+      const panelSpec0 = this.renderPanelSpecs[0];
+      this.swapEntranceExitLinks(panelSpec, panelSpec0); // do this first to maintain indices
+
+      this.renderPanelSpecs[0] = panelSpec;
+      this.renderPanelSpecs[index] = panelSpec0;
+
+      this.dispatchEvent(new MessageEvent('panelgeometryupdate'));
+      this.dispatchEvent(new MessageEvent('paneltextureupdate'));
+    }
+  }
+
   removeEntranceExitLinks(panelSpec) {
     const index = this.renderPanelSpecs.indexOf(panelSpec);
     
