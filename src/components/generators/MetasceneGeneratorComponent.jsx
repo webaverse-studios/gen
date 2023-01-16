@@ -1772,7 +1772,7 @@ const flipUint8ArrayX = (uint8Array, width, height) => {
   const mapIndexSpec = renderMeshesMapIndexFull(meshes, width, height, camera);
   return mapIndexSpec;
 } */
-export function renderMapIndexAdd({
+/* export function renderMapIndexAdd({
   oldMapIndex,
   newRenderSpecs,
   attachPanelIndex,
@@ -1782,7 +1782,7 @@ export function renderMapIndexAdd({
   const height = floorNetPixelSize;
   debugger;
   const meshes = getMapIndexSpecsMeshes(newRenderSpecs);
-}
+} */
 
 //
 
@@ -1860,7 +1860,7 @@ const getRenderSpecsFromZineRenderers = zineRenderers => {
     mapIndexResolution,
   };
 }; */
-const getMapIndexFromZineRenderersAdd = ({
+/* const getMapIndexFromZineRenderersAdd = ({
   oldMapIndex, // old map index
   newZineRenderer, // new zine renderer to add
   attachPanelIndex, // we are ok with the new zine renderer clobbering this panel index only
@@ -1882,7 +1882,7 @@ const getMapIndexFromZineRenderersAdd = ({
     mapIndex,
     mapIndexResolution,
   };
-};
+}; */
 
 //
 
