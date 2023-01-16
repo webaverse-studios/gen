@@ -2602,10 +2602,29 @@ export class Metazine extends EventTarget {
       }
     }
   }
-  
-  clear() {
-    this.zs.clear();
+  swapEntranceExitLinks(panelSpec, otherPanelSpec) {
+    const panelSpecIndex = this.renderPanelSpecs.indexOf(panelSpec);
+    const otherPanelSpecIndex = this.renderPanelSpecs.indexOf(otherPanelSpec);
+
+    for (let i = 0; i < this.renderPanelSpecs.length; i++) {
+      const panelSpec = this.renderPanelSpecs[i];
+      const {entranceExitLocations} = panelSpec;
+      
+      for (let j = 0; j < entranceExitLocations.length; j++) {
+        const eel = entranceExitLocations[j];
+        const {
+          panelIndex,
+          // entranceIndex,
+        } = eel;
+        if (panelIndex === panelSpecIndex) {
+          eel.panelIndex = otherPanelSpecIndex;
+        } else if (panelIndex === otherPanelSpecIndex) {
+          eel.panelIndex = panelSpecIndex;
+        }
+      }
+    }
   }
+
   async compileZineFiles(zineFiles) {
     console.time('loadPanels');
     {
@@ -2638,12 +2657,15 @@ export class Metazine extends EventTarget {
 
     this.#emitUpdate();
   }
+  clear() {
+    this.zs.clear();
+  }
+
   autoConnect() { // automatically connect panel exits to panel entrances
     this.#autoConnect3D();
     this.#autoConnectGraph();
     this.#emitUpdate();
   }
-
   #autoConnect3D() {
     const rng = alea(seed);
     const panelSpecs = this.renderPanelSpecs;
