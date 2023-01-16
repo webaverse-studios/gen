@@ -1813,30 +1813,8 @@ const getRenderSpecsFromZineRenderers = zineRenderers => {
       pointCloudArrayBuffer = pointCloudFloat32Array.buffer;
     }
 
-    let geometry = pointCloudArrayBufferToGeometry(pointCloudArrayBuffer, width, height);
-    // const panelIndex = new Uint8Array(geometry.attributes.position.count)
-    //   .fill(index + 1);
-    // geometry.setAttribute('panelIndex', new THREE.BufferAttribute(panelIndex, 1, true));
-    // geometry = geometry.toNonIndexed();
-    // // add barycentric coordinates
-    // const barycentric = new Float32Array(geometry.attributes.position.count * 3);
-    // for (let i = 0; i < barycentric.length; i += 9) {
-    //   barycentric[i + 0] = 1;
-    //   barycentric[i + 1] = 0;
-    //   barycentric[i + 2] = 0;
-
-    //   barycentric[i + 3] = 0;
-    //   barycentric[i + 4] = 1;
-    //   barycentric[i + 5] = 0;
-
-    //   barycentric[i + 6] = 0;
-    //   barycentric[i + 7] = 0;
-    //   barycentric[i + 8] = 1;
-    // }
-    // geometry.setAttribute('barycentric', new THREE.BufferAttribute(barycentric, 3));
-
+    const geometry = pointCloudArrayBufferToGeometry(pointCloudArrayBuffer, width, height);
     const matrixWorld = zineRenderer.transformScene.matrixWorld.clone();
-    
     return {
       geometry,
       matrixWorld,
@@ -1930,7 +1908,6 @@ class MapIndexMaterial extends THREE.ShaderMaterial {
       `,
       fragmentShader: `\
         uniform sampler2D mapIndexMap;
-        // uniform float lastPanelIndex;
         uniform vec2 resolution;
         uniform float newPanelIndex;
         uniform int mode;
@@ -1976,9 +1953,6 @@ class MapIndexMaterial extends THREE.ShaderMaterial {
       depthTest: false,
       depthWrite: false,
       side: THREE.BackSide,
-      // extensions: {
-      //   fragDepth: true,
-      // },
     });
   }
 }
