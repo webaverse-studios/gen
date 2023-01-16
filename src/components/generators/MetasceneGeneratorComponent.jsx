@@ -2563,6 +2563,7 @@ export class Metazine extends EventTarget {
     this.renderPanelSpecs.splice(index, 1);
 
     this.dispatchEvent(new MessageEvent('panelgeometryupdate'));
+    this.dispatchEvent(new MessageEvent('paneltextureupdate'));
   }
   removeEntranceExitLinks(panelSpec) {
     const index = this.renderPanelSpecs.indexOf(panelSpec);
