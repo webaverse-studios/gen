@@ -1649,22 +1649,8 @@ class MapIndexMesh extends THREE.Mesh {
 const getMapIndexSpecsMeshes = (renderSpecs) => {
   const meshes = [];
 
-  // let vertexShader = depthVertexShader;
-  // let fragmentShader = depthFragmentShader;
   const material = new THREE.ShaderMaterial({
     uniforms: {
-      // cameraNear: {
-      //   value: camera.near,
-      //   needsUpdate: true,
-      // },
-      // cameraFar: {
-      //   value: camera.far,
-      //   needsUpdate: true,
-      // },
-      // isPerspective: {
-      //   value: +camera.isPerspectiveCamera,
-      //   needsUpdate: true,
-      // },
     },
     vertexShader: `\
       attribute float panelIndex;
