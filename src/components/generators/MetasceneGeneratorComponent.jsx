@@ -1924,10 +1924,6 @@ class MapIndexMaterial extends THREE.ShaderMaterial {
           value: new THREE.Vector2(),
           needsUpdate: false,
         },
-        // lastPanelIndex: {
-        //   value: 0,
-        //   needsUpdate: false,
-        // },
         newPanelIndex: {
           value: 0,
           needsUpdate: false,
