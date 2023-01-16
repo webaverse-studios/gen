@@ -2792,7 +2792,7 @@ export class Metazine extends EventTarget {
           entranceParentMatrixWorld,
           target: entrancePanelSpec,
         });
-        let intersect = false; // XXX hack
+        /* let intersect = false; // XXX hack
         if (intersect) {
           if (++numIntersects < maxNumIntersects) {
             continue;
@@ -2800,7 +2800,7 @@ export class Metazine extends EventTarget {
             console.warn('too many intersects');
             debugger;
           }
-        } else {
+        } else */{
           // splice exit spec from candidates
           candidateExitSpecs.splice(exitSpecIndex, 1);
           // splice entrance panel spec from candidates
