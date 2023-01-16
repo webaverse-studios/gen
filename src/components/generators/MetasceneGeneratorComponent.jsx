@@ -3267,9 +3267,6 @@ export class Metazine3DRenderer extends EventTarget {
     this.scene.add(panelPicker);
     panelPicker.updateMatrixWorld();
     this.panelPicker = panelPicker;
-    panelPicker.addEventListener('selectchange', e => {
-      this.handlePanelSpecChange(e.selectPanelSpec);
-    });
 
     // entrance exit mesh
     const entranceExitMesh = new EntranceExitMesh({
@@ -3375,9 +3372,22 @@ export class Metazine3DRenderer extends EventTarget {
       this.sceneBatchedMesh.updateGeometry();
       this.entranceExitMesh.updateGeometry();
       this.rootMesh.updateGeometry();
+
+      this.handlePanelSpecChange(this.selectedPanelSpec);
     };
     this.metazine.addEventListener('panelgeometryupdate', panelgeometryupdate);
     this.panelPicker.addEventListener('panelgeometryupdate', panelgeometryupdate);
+    const paneltextureupdate = e => {
+      // XXX need to rebuild the geometry, or else setting the root changes the geometry
+      // XXX we need to do more than just panelgeometryupdate, which is more like paneltransformupdate
+      // XXX perhaps panels could be identified by id instead of index, which would solve a lot of problems...
+      this.sceneBatchedMesh.updateTextureAtlas();
+    };
+    this.metazine.addEventListener('paneltextureupdate', paneltextureupdate);
+    this.panelPicker.addEventListener('selectchange', e => {
+      this.handlePanelSpecChange(e.selectPanelSpec);
+    });
+
     const mapIndexUpdate = e => {
       const mapIndex = this.metazine.mapIndexRenderer.getMapIndex();
       this.mapIndexMesh.setMapIndex(mapIndex);
@@ -3395,6 +3405,7 @@ export class Metazine3DRenderer extends EventTarget {
 
       this.metazine.removeEventListener('panelgeometryupdate', panelgeometryupdate);
       this.panelPicker.removeEventListener('panelgeometryupdate', panelgeometryupdate);
+      this.metazine.removeEventListener('paneltextureupdate', paneltextureupdate);
       this.metazine.removeEventListener('mapindexupdate', mapIndexUpdate);
     });
   }
@@ -3484,36 +3495,39 @@ export class Metazine3DRenderer extends EventTarget {
       const targetCameraDistance = this.controls.target
         .distanceTo(this.camera.position);
 
+      // XXX this needs to happen on WASD keys
       // set camera
-      this.camera.position.copy(worldCenter);
-      this.camera.quaternion.copy(transformQuaternion);
-      this.camera.position
-        .add(
-          backOffsetVector.clone()
-            .normalize()
-            .multiplyScalar(targetCameraDistance)
-            .applyQuaternion(transformQuaternionFlat)
-        );
-      this.camera.quaternion.setFromRotationMatrix(
-        new THREE.Matrix4().lookAt(
-          this.camera.position,
-          worldCenter,
-          upVector
-        )
-      );
-      this.camera.updateMatrixWorld();
+      // this.camera.position.copy(worldCenter);
+      // this.camera.quaternion.copy(transformQuaternion);
+      // this.camera.position
+      //   .add(
+      //     backOffsetVector.clone()
+      //       .normalize()
+      //       .multiplyScalar(targetCameraDistance)
+      //       .applyQuaternion(transformQuaternionFlat)
+      //   );
+      // this.camera.quaternion.setFromRotationMatrix(
+      //   new THREE.Matrix4().lookAt(
+      //     this.camera.position,
+      //     worldCenter,
+      //     upVector
+      //   )
+      // );
+      // this.camera.updateMatrixWorld();
+
+      // XXX this needs to happen on G key
       // reset fov
-      this.camera.fov = defaultCameraFov;
-      this.camera.updateProjectionMatrix();
+      // this.camera.fov = defaultCameraFov;
+      // this.camera.updateProjectionMatrix();
 
       // set controls
-      this.controls.target.copy(worldCenter);
-      this.controls.addEventListener('change', e => {
-        if (this.controls.locked) {
-          this.controls.locked = false;
-          this.controls.update();
-        }
-      });
+      // this.controls.target.copy(worldCenter);
+      // this.controls.addEventListener('change', e => {
+      //   if (this.controls.locked) {
+      //     this.controls.locked = false;
+      //     this.controls.update();
+      //   }
+      // });
 
       // set underfloor
       const underfloorPosition = worldCenter.clone();
@@ -3714,6 +3728,7 @@ const Metazine3DCanvas = ({
             renderer.setCameraToPanelSpec();
             break;
           }
+          // XXX add shift multi-select support
           case 'Delete': {
             if (renderer.panelPicker.selectPanelSpec) {
               renderer.metazine.removePanel(renderer.panelPicker.selectPanelSpec);
@@ -4333,9 +4348,6 @@ class MetazineGraphRenderer extends EventTarget {
     this.scene.add(panelPicker);
     panelPicker.updateMatrixWorld();
     this.panelPicker = panelPicker;
-    panelPicker.addEventListener('selectchange', e => {
-      this.handlePanelSpecChange(e.selectPanelSpec);
-    });
     panelPicker.addEventListener('linkchange', e => {
       const {
         startPanelSpec,
@@ -4408,9 +4420,18 @@ class MetazineGraphRenderer extends EventTarget {
       this.entrancePointMesh.updateGeometry();
       this.entranceLinkMesh.updateGeometry();
       this.rootMesh.updateGeometry();
+
+      this.handlePanelSpecChange(this.panelPicker.selectPanelSpec);
     };
     this.metazine.addEventListener('panelgeometryupdate', panelgeometryupdate);
     this.panelPicker.addEventListener('panelgeometryupdate', panelgeometryupdate);
+    const paneltextureupdate = e => {
+      this.sceneGraphMesh.updateTextureAtlas();
+    };
+    this.metazine.addEventListener('paneltextureupdate', paneltextureupdate);
+    this.panelPicker.addEventListener('selectchange', e => {
+      this.handlePanelSpecChange(e.selectPanelSpec);
+    });
 
     const mousedown = e => {
       this.panelPicker.handleMousedown(e);
@@ -4448,6 +4469,8 @@ class MetazineGraphRenderer extends EventTarget {
     this.addEventListener('destroy', e => {
       this.metazine.removeEventListener('panelgeometryupdate', panelgeometryupdate);
       this.panelPicker.removeEventListener('panelgeometryupdate', panelgeometryupdate);
+
+      this.metazine.removeEventListener('paneltextureupdate', paneltextureupdate);
 
       canvas.removeEventListener('mousedown', mousedown);
       document.removeEventListener('mouseup', mouseup);
@@ -4703,14 +4726,21 @@ const MetazineView = ({
 }) => {
   const [panelSpec, setPanelSpec] = useState(null);
 
+  // XXX this needs to update when the root changes, or the Set root button will not update
+  // XXX does that mean we need to track the selected panel spec here?
+  const rootSelected = metazine.renderPanelSpecs.indexOf(panelSpec) === 0;
+
   return (
     <>
-      {panelSpec ? <div className={styles.header}>
-        <button className={styles.button} onClick={async e => {
+      <div className={classnames(
+        styles.header,
+        panelSpec ? null : styles.hidden,
+      )}>
+        <button className={styles.button} disabled={rootSelected} onClick={async e => {
           e.preventDefault();
           e.stopPropagation();
 
-          console.log('set root'); // XXX
+          metazine.setRoot(panelSpec);
         }}>Set root</button>
         <button className={styles.button} onClick={async e => {
           e.preventDefault();
@@ -4740,7 +4770,7 @@ const MetazineView = ({
           const {file} = panelSpec;
           openZineFile(file);
         }}>Zine to app</button>
-      </div> : null}
+      </div>
       <div className={styles.metazineCanvas}>
         {panelSpec ? <SideScene panelSpec={panelSpec} /> : <SideMetascene />}
         {(() => {
