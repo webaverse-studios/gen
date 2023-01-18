@@ -1,7 +1,7 @@
+import {useState, useRef, useEffect} from 'react';
 import * as THREE from 'three';
 import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import {OBB} from 'three/examples/jsm/math/OBB.js';
-import {useState, useRef, useEffect} from 'react';
 import React from 'react';
 import classnames from 'classnames';
 import alea from 'alea';

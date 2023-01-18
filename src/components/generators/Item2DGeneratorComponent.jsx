@@ -12,7 +12,7 @@ const itemGenerator = new ItemGenerator();
 
 //
 
-const ItemGeneratorComponent = () => {
+const Item2DGeneratorComponent = () => {
   const [prompt, setPrompt] = useState(prompts.item);
   const [itemInstance, setItemInstance] = useState(null);
 
@@ -41,4 +41,4 @@ const ItemGeneratorComponent = () => {
     </div>
   );
 };
-export default ItemGeneratorComponent;
+export default Item2DGeneratorComponent;
