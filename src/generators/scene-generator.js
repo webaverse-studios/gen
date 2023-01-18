@@ -43,10 +43,6 @@ import {
   portalExtrusion,
   entranceExitEmptyDiameter,
 } from '../zine/zine-constants.js';
-// import {
-//   depthVertexShader,
-//   depthFragmentShader,
-// } from '../utils/sg-shaders.js';
 import {
   makeRenderer,
   makeGltfLoader,
@@ -54,17 +50,9 @@ import {
   makeFloorNetCamera,
   normalToQuaternion,
 } from '../zine/zine-utils.js';
-// import {
-//   ZineStoryboard,
-//   ZinePanel,
-//   ZineData,
-// } from '../zine/zine-format.js';
 import {
   ZineRenderer,
 } from '../zine/zine-renderer.js';
-// import {
-//   ZineStoryboardCompressor,
-// } from '../zine/zine-compression.js'
 import {
   reconstructPointCloudFromDepthField,
   pointCloudArrayBufferToGeometry,
@@ -210,32 +198,11 @@ const imageAiClient = new ImageAiClient();
 const abortError = new Error();
 abortError.isAbortError = true;
 
-// const zSymbol = Symbol('z');
-
 //
 
 const defaultCameraMatrix = new THREE.Matrix4();
 
 //
-
-/* const forwardizeQuaternion = (() => {
-  const localVector = new THREE.Vector3();
-  const localMatrix = new THREE.Matrix4();
-  
-  return quaternion => {
-    const forwardDirection = localVector.set(0, 0, -1)
-      .applyQuaternion(quaternion);
-    forwardDirection.y = 0;
-    forwardDirection.normalize();
-    return quaternion.setFromRotationMatrix(
-      localMatrix.lookAt(
-        zeroVector,
-        forwardDirection,
-        upVector,
-      )
-    );
-  };
-})(); */
 
 const depthRenderSkipRatio = 8;
 const makeDepthCubesMesh = (depthFloats, width, height, camera) => {
