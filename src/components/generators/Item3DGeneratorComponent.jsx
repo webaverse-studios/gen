@@ -55,7 +55,7 @@ const Item3DGeneratorComponent = () => {
         </div>
       :
         <>
-          {files.length > 0 ?
+          {(files.length > 0 && !loaded) ?
             <>
               <div className={styles.button} onClick={async () => {
                 const chunkSize = 32;
@@ -518,13 +518,13 @@ const Item3DGeneratorComponent = () => {
           :
             null
           }
-          <DropTarget
+          {!loaded ? <DropTarget
             className={classnames(
               styles.panelPlaceholder,
             )}
             onFilesAdd={addFiles}
             // multiple
-          />
+          /> : null}
         </>
       }
       <canvas className={classnames(

@@ -6,7 +6,7 @@ import {prompts} from '../constants/prompts.js';
 import {ColorScheme} from '../utils/color-scheme.js';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 import {
-  img2img,
+  img2imgBlob,
 } from '../clients/image-client.js';
 import {img2canvas} from '../utils/convert-utils.js';
 
@@ -89,51 +89,18 @@ const createSeedImage = (
   };
 };
 
-const previewCanvasSize = 1024;
 const colorDistance = 32;
 
 export class ItemGenerator {
-  async generate(prompt = prompts.item) {
-    // const {
-    //   canvas: imgCanvas,
-    //   maskCanvas,
-    // } = createSeedImage(
-    //   512, // w
-    //   512, // h
-    //   100, // rw
-    //   100, // rh
-    //   1, // p
-    //   256, // n
-    //   'rectangle', // shape
-    // );
-
-    const canvas = document.createElement('canvas');
-    canvas.classList.add('canvas');
-    canvas.width = previewCanvasSize;
-    canvas.height = previewCanvasSize;
-    document.body.appendChild(canvas);
-  
-    // imgCanvas.classList.add('imgCanvas');
-    // imgCanvas.style.cssText = `\
-    //   background: red;
-    // `;
-    // const imgContext = imgCanvas.getContext('2d');
-    // document.body.appendChild(imgCanvas);
-    
-    // maskCanvas.classList.add('maskCanvas');
-    // maskCanvas.style.cssText = `\
-    //   background: red;
-    // `;
-    // document.body.appendChild(maskCanvas);
-  
+  async generateImage(prompt = prompts.item) {
     const blobCanvas = document.createElement('canvas');
     blobCanvas.classList.add('blobCanvas');
     blobCanvas.width = 512;
     blobCanvas.height = 512;
-    blobCanvas.style.cssText = `\
-      background: red;
-    `;
-    document.body.appendChild(blobCanvas);
+    // blobCanvas.style.cssText = `\
+    //   background: red;
+    // `;
+    // document.body.appendChild(blobCanvas);
 
     // draw full canvas rect white
     const blobCtx = blobCanvas.getContext('2d');
@@ -156,38 +123,20 @@ export class ItemGenerator {
       blobCanvas.toBlob(accept, 'image/png');
     });
 
-    // const [
-    //   blob,
-    //   maskBlob,
-    // ] = await Promise.all([
-    //   new Promise((accept, reject) => {
-    //     imgCanvas.toBlob(accept, 'image/png');
-    //   }),
-    //   await new Promise((accept, reject) => {
-    //     maskCanvas.toBlob(accept, 'image/png');
-    //   }),
-    // ]);
-    // this.blob = blob;
-    // this.maskBlob = maskBlob;
-  
-    // const img = await imageAiClient.createImage(prompt);
-    // img.classList.add('img');
-    // document.body.appendChild(img);
-
-    // console.log('get image', {
-    //   prompt,
-    //   blob,
-    //   maskBlob,
-    // });
-
-    const img = await img2img({
+    console.log('get blob', {
       prompt,
       blob,
       maskBlob,
     });
-    img.classList.add('img');
-    document.body.appendChild(img);
 
+    const imgBlob = await img2imgBlob({
+      prompt,
+      blob,
+      maskBlob,
+    });
+    return imgBlob;
+  }
+  async compileMesh(img) {
     // image canvas (transparent)
     const pixelSize = 32;
     const imgCanvasTransparent = document.createElement('canvas');
@@ -379,123 +328,8 @@ export class ItemGenerator {
       });
     })();
 
-    // start renderer
-    const _startRender = () => {
-      const renderer = new THREE.WebGLRenderer({
-        canvas,
-        alpha: true,
-        antialias: true,
-      });
-
-      // set up high quality shadow map (2048px)
-      renderer.shadowMap.enabled = true;
-      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-
-      const scene = new THREE.Scene();
-      
-      // scene.background = new THREE.Color(0x000000);
-      const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
-      camera.position.x = 0.5;
-      camera.position.y = 1;
-      camera.position.z = 2;
-      // camera.lookAt(new THREE.Vector3(0, 0.5, 0));
-      camera.updateMatrixWorld();
-
-      // lights
-      const directionalLight = new THREE.DirectionalLight(0xffffff, 3);
-      directionalLight.position.set(3, 2, 3);
-      directionalLight.castShadow = true;
-      scene.add(directionalLight);
-
-      // receive shadow on the floor
-      const floorMesh = new THREE.Mesh(
-        new THREE.PlaneBufferGeometry(10, 10),
-        new THREE.MeshStandardMaterial({
-          color: 0xFFFFFF,
-          roughness: 0.5,
-          metalness: 0.5,
-        })
-      );
-      floorMesh.receiveShadow = true;
-      floorMesh.rotation.x = -Math.PI / 2;
-      floorMesh.frustumCulled = false;
-      floorMesh.updateMatrixWorld();
-      scene.add(floorMesh);
-
-      // collect the pixels into a flat voxel grid along the x-y plane
-      sceneMesh.castShadow = true;
-      sceneMesh.frustumCulled = false;
-      scene.add(sceneMesh);
-
-      /* const cubeMesh = new THREE.Mesh(
-        new THREE.BoxBufferGeometry(0.1, 0.1, 0.1),
-        new THREE.MeshPhongMaterial({
-          color: 0x00ff00,
-        }),
-      );
-      cubeMesh.castShadow = true;
-      cubeMesh.frustumCulled = false;
-      scene.add(cubeMesh); */
-
-      // add THREE.js orbit controls
-      const controls = new OrbitControls(camera, canvas);
-      controls.enableDamping = true;
-      controls.dampingFactor = 0.05;
-      // controls.screenSpacePanning = false;
-      controls.minDistance = 0.001;
-      controls.maxDistance = 2;
-      controls.maxPolarAngle = Math.PI / 2;
-      // set the target
-      controls.target.set(0, 1, 0);
-
-      const blockEvent = e => {
-        e.preventDefault();
-        e.stopPropagation();
-      };
-      canvas.addEventListener('mousedown', blockEvent);
-      canvas.addEventListener('mouseup', blockEvent);
-      canvas.addEventListener('click', blockEvent);
-      canvas.addEventListener('wheel', blockEvent);
-      document.addEventListener('keydown', e => {
-        if (!e.repeat) {
-          // page up
-          if (e.key === 'PageUp') {
-            material.uniforms.uColorEnabled.value = 1;
-            material.uniforms.uColorEnabled.needsUpdate = true;
-            blockEvent(e);
-          } else if (e.key === 'PageDown') {
-            material.uniforms.uColorEnabled.value = 0;
-            material.uniforms.uColorEnabled.needsUpdate = true;
-            blockEvent(e);
-          }
-        }
-      });
-
-      const _startLoop = () => {
-        const _render = () => {
-          // update orbit controls
-          controls.update();
-          camera.updateMatrixWorld();
-
-          const now = performance.now();
-          sceneMesh.position.y = Math.sin(now / 1000) * 0.3 + 0.5;
-          sceneMesh.rotation.y = now / 500;
-          sceneMesh.updateMatrixWorld();
-
-          // render
-          renderer.render(scene, camera);
-        };
-        const _loop = () => {
-          requestAnimationFrame(_loop);
-          _render();
-        };
-        _loop();
-      };
-      _startLoop();
-    };
-    const renderManager = _startRender();
-
     return {
+      sceneMesh,
       imgBlob,
       glbBlob,
     };
