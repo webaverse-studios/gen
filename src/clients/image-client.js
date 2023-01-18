@@ -189,7 +189,7 @@ export class ImageAiServer {
   }
 }
 
-export const img2img = async ({
+export const img2imgBlob = async ({
   prompt = 'test',
   // negativePrompt = '',
   // width = 512,
@@ -214,6 +214,25 @@ export const img2img = async ({
     body: fd,
   });
   const resultBlob = await res.blob();
+  return resultBlob;
+};
+export const img2img = async ({
+  prompt = 'test',
+  // negativePrompt = '',
+  // width = 512,
+  // height = 512,
+  blob,
+  maskBlob,
+  // maskBlur = 4, // default 4
+  // maskTransparency = 0,
+  // falloffExponent = 1, // default 1
+  // randomness = 0, // default 0
+} = {}) => {
+  const resultBlob = await img2imgBlob({
+    prompt,
+    blob,
+    maskBlob,
+  });
   const img = await blob2img(resultBlob);
   return img;
 };
