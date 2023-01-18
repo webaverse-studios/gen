@@ -155,6 +155,10 @@ import {
   FreeList,
 } from '../../utils/allocator-utils.js';
 import {loadImage} from '../../../utils.js';
+import {
+  controlsMinDistance,
+  controlsMaxDistance,
+} from '../../constants/generator-constants.js';
 
 //
 
@@ -206,8 +210,6 @@ const maxRenderEntranceExits = maxRenderPanels * 8;
 const matrixWorldTextureWidthInPixels = maxRenderPanels * 16 / 4;
 const labelHeightOffset = 20;
 const labelFloatOffset = 0.1;
-const controlsMinDistance = 1;
-const controlsMaxDistance = 300;
 
 //
 
