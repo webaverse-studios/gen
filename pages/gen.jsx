@@ -6,7 +6,8 @@ import MetasceneGeneratorComponent from '../src/components/generators/MetasceneG
 import AvatarGeneratorComponent from '../src/components/generators/AvatarGeneratorComponent.jsx';
 import MobGeneratorComponent from '../src/components/generators/MobGeneratorComponent.jsx';
 import CharacterGeneratorComponent from '../src/components/generators/CharacterGeneratorComponent.jsx';
-import ItemGeneratorComponent from '../src/components/generators/ItemGeneratorComponent.jsx';
+import Item2DGeneratorComponent from '../src/components/generators/Item2DGeneratorComponent.jsx';
+import Item3DGeneratorComponent from '../src/components/generators/Item3DGeneratorComponent.jsx';
 
 import {useRouter} from '../src/generators/router.js';
 
@@ -36,8 +37,12 @@ const tabs = [
     label: 'Character',
   },
   {
-    tab: 'itemGenerator',
-    label: 'Item',
+    tab: 'item3DGenerator',
+    label: 'Item3D',
+  },
+  {
+    tab: 'item2DGenerator',
+    label: 'Item2D',
   },
 ];
 const defaultTab = tabs[0].tab;
@@ -72,30 +77,6 @@ export const Gen = () => {
   return (
     <div className={styles.gen}>
       <div className={styles.tabs}>
-        {/* <div className={classnames(
-          styles.tab,
-          tab === 'sceneGenerator' ? styles.selected : '',
-        )} onClick={_setTab('sceneGenerator')}>Scene</div>
-        <div className={classnames(
-          styles.tab,
-          tab === 'metasceneGenerator' ? styles.selected : '',
-        )} onClick={_setTab('metasceneGenerator')}>Metascene</div>
-        <div className={classnames(
-          styles.tab,
-          tab === 'avatarGenerator' ? styles.selected : '',
-        )} onClick={_setTab('avatarGenerator')}>Avatar</div>
-        <div className={classnames(
-          styles.tab,
-          tab === 'mobGenerator' ? styles.selected : '',
-        )} onClick={_setTab('mobGenerator')}>Mob</div>
-        <div className={classnames(
-          styles.tab,
-          tab === 'characterGenerator' ? styles.selected : '',
-        )} onClick={_setTab('characterGenerator')}>Character</div>
-        <div className={classnames(
-          styles.tab,
-          tab === 'itemGenerator' ? styles.selected : '',
-        )} onClick={_setTab('itemGenerator')}>Item</div> */}
         {tabs.map(t => {
           const {tab: tabName, label} = t;
           return (
@@ -130,8 +111,11 @@ export const Gen = () => {
             case 'characterGenerator': {
               return <CharacterGeneratorComponent />
             }
-            case 'itemGenerator': {
-              return <ItemGeneratorComponent />
+            case 'item2DGenerator': {
+              return <Item2DGeneratorComponent />
+            }
+            case 'item3DGenerator': {
+              return <Item3DGeneratorComponent />
             }
             default:
               return null;
