@@ -6,7 +6,6 @@ import {OBB} from 'three/examples/jsm/math/OBB.js';
 import React from 'react';
 import classnames from 'classnames';
 import alea from 'alea';
-// import {createNoise2D} from 'simplex-noise';
 import concaveman from 'concaveman';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 // import {Text} from 'troika-three-text';
@@ -239,57 +238,11 @@ class PortalMesh extends THREE.Mesh {
       iChannel0.needsUpdate = true;
     })();
 
-    // const noiseSize = 1024;
-    // const noiseData = new Uint8Array(noiseSize * noiseSize * 4);
-    // const noiseDataRaw = new Float32Array(noiseSize * noiseSize);
-    // const rng = alea('lol');
-    // // const simplexNoie = alea('lol');
-    // const noise2D = createNoise2D(rng);
-    // for (let i = 0; i < noiseData.length; i += 4) {
-    //   // const v = Math.floor(rng() * 255);
-    //   const index = i / 4;
-    //   const x = index % noiseSize;
-    //   const y = Math.floor(index / noiseSize);
-    //   // let v = 0;
-    //   // for (let dx = 0; dx < 1; dx++) {
-    //   //   for (let dy = 0; dy < 1; dy++) {
-    //   //     const x2 = (x + dx * noiseSize * 0.5) % noiseSize;
-    //   //     const y2 = (y + dy * noiseSize * 0.5) % noiseSize;
-    //   //     let raw = noise2D(x2 * 0.1, y2 * 0.1);
-    //   //     raw = (raw + 1) / 2;
-    //   //     v += raw;
-    //   //   }
-    //   // }
-    //   // v /= 4;
-    //   let v = noise2D(x * 0.1, y * 0.1);
-    //   noiseDataRaw[index] = v;
-    //   v = Math.floor(v * 255);
-    //   noiseData[i + 0] = v;
-    //   noiseData[i + 1] = v;
-    //   noiseData[i + 2] = v;
-    //   noiseData[i + 3] = 255;
-    // }
-    // globalThis.noiseData = noiseData;
-    // globalThis.noiseDataRaw = noiseDataRaw;
-    
-    // // get the min/max of noiseDataRaw
-    // let min = Infinity;
-    // let max = -Infinity;
-    // for (let i = 0; i < noiseDataRaw.length; i++) {
-    //   const v = noiseDataRaw[i];
-    //   min = Math.min(min, v);
-    //   max = Math.max(max, v);
-    // }
-    // console.log('min/max', min, max);
-
-    // const iChannel0 = new THREE.DataTexture(noiseData, noiseSize, noiseSize, THREE.RGBAFormat);
-    // iChannel0.needsUpdate = true;
-
     const portalSceneRenderTarget = new THREE.WebGLRenderTarget(portalSize, portalSize, {
       minFilter: THREE.LinearFilter,
       magFilter: THREE.LinearFilter,
       format: THREE.RGBAFormat,
-      // stencilBuffer: false,
+      stencilBuffer: false,
     });
     const iChannel1 = portalSceneRenderTarget.texture;
     
