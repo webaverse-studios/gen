@@ -342,7 +342,7 @@ class PortalMesh extends THREE.Mesh {
             p3 = p3*2.;
             p4 = p4*2.;
           }
-          return dot(rz,tr)*0.125;
+          return dot(rz,tr)*0.25;
         }
         float dualfbm(in vec2 p) {
           //get two rotated fbm calls and displace the domain
@@ -391,7 +391,7 @@ class PortalMesh extends THREE.Mesh {
           // final color
           vec4 mainColor = vec4(.15, 0.1, 0.1, 0.05);
           mainColor.rgb = hueShift(mainColor.rgb, mod(time * tau * 2., tau));
-          float darkenFactor = 0.05;
+          float darkenFactor = 0.1;
             
           vec4 col = mainColor/rz;
           col = pow(abs(col),vec4(.99));
