@@ -1,6 +1,7 @@
 import {useState, useRef, useEffect} from 'react';
 import * as THREE from 'three';
 import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader.js';
 import {OBB} from 'three/examples/jsm/math/OBB.js';
 import React from 'react';
 import classnames from 'classnames';
@@ -64,6 +65,7 @@ import {
   depthFloats2Canvas,
 } from '../../generators/sg-debug.js';
 import {
+  pushMeshes,
   makeRenderer,
   makeGltfLoader,
   makeDefaultCamera,
@@ -89,9 +91,6 @@ import {colors} from '../../zine/zine-colors.js';
 //   getDepthRenderSpecsMeshes,
 //   renderMeshesDepth,
 // } from '../../clients/reconstruction-client.js';
-import {
-  pushMeshes,
-} from '../../zine/zine-utils.js';
 import {
   shuffle,
 } from '../../utils/rng-utils.js';
@@ -197,6 +196,7 @@ const fakeMaterial = new THREE.MeshBasicMaterial({
 
 const aiClient = new AiClient();
 const imageAiClient = new ImageAiClient();
+const gltfLoader = new GLTFLoader();
 
 //
 
@@ -223,10 +223,14 @@ const blockEvent = e => {
 
 class PortalMesh extends THREE.Mesh {
   constructor({
+    renderer,
     portalScene,
+    portalCamera,
   }) {
-    const size = 10;
-    const geometry = new THREE.PlaneGeometry(size / 1.5, size);
+    const portalWorldSize = 10;
+    const portalSize = 1024;
+    
+    const geometry = new THREE.PlaneGeometry(portalWorldSize / 1.5, portalWorldSize);
 
     const iChannel0 = new THREE.Texture();
     (async () => {
@@ -280,6 +284,14 @@ class PortalMesh extends THREE.Mesh {
 
     // const iChannel0 = new THREE.DataTexture(noiseData, noiseSize, noiseSize, THREE.RGBAFormat);
     // iChannel0.needsUpdate = true;
+
+    const portalSceneRenderTarget = new THREE.WebGLRenderTarget(portalSize, portalSize, {
+      minFilter: THREE.LinearFilter,
+      magFilter: THREE.LinearFilter,
+      format: THREE.RGBAFormat,
+      // stencilBuffer: false,
+    });
+    const iChannel1 = portalSceneRenderTarget.texture;
     
     const material = new THREE.ShaderMaterial({
       uniforms: {
@@ -291,13 +303,24 @@ class PortalMesh extends THREE.Mesh {
           value: iChannel0,
           needsUpdate: true,
         },
+        iChannel1: {
+          value: iChannel1,
+          needsUpdate: true,
+        },
+        iResolution: {
+          value: new THREE.Vector2(portalSize, portalSize),
+          needsUpdate: true,
+        },
       },
       vertexShader: `\
         varying vec2 vUv;
+        // varying vec2 vScreenSpaceUv;
 
         void main() {
-          vUv = uv;
           gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+
+          vUv = uv;
+          // vScreenSpaceUv = (gl_Position.xy / gl_Position.w) * 0.5 + 0.5;
         }
       `,
       fragmentShader: `\
@@ -311,8 +334,11 @@ class PortalMesh extends THREE.Mesh {
         
         uniform float iTime;
         uniform sampler2D iChannel0;
+        uniform sampler2D iChannel1;
+        uniform vec2 iResolution;
 
         varying vec2 vUv;
+        // varying vec2 vScreenSpaceUv;
         
         #define PI 3.1415926535897932384626433832795
         #define tau (PI * 2.)
@@ -391,11 +417,13 @@ class PortalMesh extends THREE.Mesh {
         
         void main() {
           // setup system
-          // vec2 uv = fragCoord.xy / iResolution.xy-0.5;
           vec2 uv = vUv;
-          // uv.x *= iResolution.x/iResolution.y;
+
+          // vScreenSpaceUv based on iResolution, in the range [0, 1]
+          vec2 vScreenSpaceUv = gl_FragCoord.xy / iResolution.xy;
+
           vec2 p = (uv - 0.5) * 4.;
-          
+
           float rz = dualfbm(p);
           
           // rings
@@ -416,16 +444,16 @@ class PortalMesh extends THREE.Mesh {
           col = pow(abs(col),vec4(.99));
           col.rgb *= darkenFactor;
 
-          // vec4 bg = texture(iChannel1, uv);
-          // vec4 bg = vec4(0., 0., 1., 1.);
-          vec4 bg = vec4(0., 0., 0., 0.);
+          vec4 bgInner = texture(iChannel1, vScreenSpaceUv);
+          // vec4 bgInner = vec4(vScreenSpaceUv, 0., 0.);
+          vec4 bgOuter = vec4(0., 0., 0., 0.);
 
-          // gl_FragColor = vec4((col.rgb*col.a + bg.rgb*(1.0-col.a)),1.0);
-          gl_FragColor = mix(vec4(col.rgb, 1.), bg, 1.- col.a);
+          // gl_FragColor = vec4((col.rgb*col.a + bgOuter.rgb*(1.0-col.a)),1.0);
+          gl_FragColor = mix(vec4(col.rgb, 1.), bgOuter, 1.- col.a);
 
           float factor = circ2(vec2(p.x / dx, p.y / dy));
           if (factor > 1.) {
-            gl_FragColor.rgb = mix(gl_FragColor.rgb, vec3(1., 0., 0.), 1.-col.a);
+            gl_FragColor.rgb = mix(gl_FragColor.rgb, bgInner.rgb, 1. - col.a);
             gl_FragColor.a = 1.;
           }
 
@@ -439,12 +467,23 @@ class PortalMesh extends THREE.Mesh {
 
     super(geometry, material);
 
+    this.renderer = renderer;
     this.portalScene = portalScene;
+    this.portalCamera = portalCamera;
+
+    this.portalSceneRenderTarget = portalSceneRenderTarget;
   }
   update() {
     const maxTime = 1000;
     this.material.uniforms.iTime.value = performance.now() / maxTime;
     this.material.uniforms.iTime.needsUpdate = true;
+
+    this.material.uniforms.iResolution.value.set(this.portalSceneRenderTarget.width, this.portalSceneRenderTarget.height);
+    this.material.uniforms.iResolution.needsUpdate = true;
+
+    this.renderer.setRenderTarget(this.portalSceneRenderTarget);
+    this.renderer.render(this.portalScene, this.portalCamera);
+    this.renderer.setRenderTarget(null);
   }
 }
 
@@ -3422,8 +3461,28 @@ export class Metazine3DRenderer extends EventTarget {
 
     // portal mesh
     const portalScene = new THREE.Scene();
+    portalScene.autoUpdate = false;
+    {
+      gltfLoader.load('public/models/skybox.glb', gltf => {
+        const skyboxMesh = gltf.scene;
+        // skyboxMesh.scale.multiplyScalar(0.2);
+
+        // skyboxMesh.material = skyboxMesh.material.clone();
+        // skyboxMesh.material.side = THREE.BackSide;
+        
+        // this.scene.add(skyboxMesh);
+        portalScene.add(skyboxMesh);
+        globalThis.skyboxMesh = skyboxMesh;
+
+        skyboxMesh.updateMatrixWorld();
+      }, undefined, err => {
+        console.warn(err);
+      });
+    }
     const portalMesh = new PortalMesh({
+      renderer: this.renderer,
       portalScene,
+      portalCamera: this.camera,
     });
     portalMesh.position.set(0, 30, 0);
     this.scene.add(portalMesh);
