@@ -6,19 +6,14 @@ import styles from "../../../styles/AvatarGenerator.module.css";
 import {getMeshes} from "./CleanedAvatarGenerator.jsx";
 import {makeNoiseCanvas} from "../../utils/model-utils.js";
 import {loadImage} from "../../../utils.js";
-import {img_inpainting} from "../../clients/sd-image-client.js";
 import {GLTFExporter} from 'three/examples/jsm/exporters/GLTFExporter';
 import {MTLLoader} from "three/examples/jsm/loaders/MTLLoader.js";
-import ProjectedMaterial from 'three-projected-material'
 import {editTexture} from "../../generators/avatar-generator.js";
 
 // 3D Canvas to render avatar
 
 const size = 512;
 const baseUrl = `https://stable-diffusion.webaverse.com/`;
-var loader = new THREE.TextureLoader();
-const test_texture = loader.load("assets/uv.jpg")
-console.log("Test Texture", test_texture);
 const test_camera = new THREE.PerspectiveCamera(45, 1, 0.01, 3)
 test_camera.position.set(0, 0, -1.5)
 test_camera.lookAt(0, 0, 0)
