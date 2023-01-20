@@ -318,17 +318,16 @@ export const img2img = async ({
 };
 
 export const img_inpainting = async ({
-                                  prompt = 'test',
-                                  negativePrompt = '',
-                                  width = 512,
-                                  height = 512,
-                                  imageDataUrl = '',
-                                  maskImageDataUrl = '',
-                                  maskBlur = 4, // default 4
-                                  maskTransparency = 1,
-                                  falloffExponent = 1, // default 1
-                                  randomness = 0, // default 0
-                              } = {}) => {
+                                         prompt = 'test',
+                                         negativePrompt = '',
+                                         width = 512,
+                                         height = 512,
+                                         noiseImgDataUrl = "",
+                                         maskBlur = 4, // default 4
+                                         maskTransparency = 1,
+                                         falloffExponent = 1, // default 1
+                                         randomness = 0, // default 0
+                                     } = {}) => {
     // console.log('img2img', {
     //   prompt,
     //   negativePrompt,
@@ -429,23 +428,23 @@ export const img_inpainting = async ({
                 negativePrompt, // negative prompt
                 "None", // style 1
                 "None", // style 2
-                imageDataUrl, // image for img2img
+                noiseImgDataUrl, // image for img2img
                 null, // image for inpainting with mask
                 null, // state
-                imageDataUrl, // image for img2img
-                maskImageDataUrl, // mask
+                noiseImgDataUrl, // image for img2img
+                noiseImgDataUrl, // mask
                 "Upload mask", // mask mode
-                20, // sampling steps
+                50, // sampling steps
                 "Euler a", // sampling method
-                maskBlur, // mask blur
-                0, // mask transparency
-                "fill", // masked content {"fill", "original", "latent noise", "latent nothing"}
+                0, // mask blur
+                1, // mask transparency
+                "latent noise", // masked content {"fill", "original", "latent noise", "latent nothing"}
                 false, // restore faces
                 false, // tiling
                 1, // batch count
                 1, // batch size
-                7, // cfg scale
-                0.75, // denoising strength
+                8, // cfg scale
+                0.7, // denoising strength
                 -1, // seed
                 -1, // variation seed
                 0, // variation strength
@@ -456,7 +455,7 @@ export const img_inpainting = async ({
                 width, // width
                 "Just resize", // resize mode
                 false, // inpaint at full resolution
-                32, // inpaint at full resolution padding, pixels
+                0, // inpaint at full resolution padding, pixels
                 "Inpaint masked", // masking mode
                 "", // input directory
                 "", // output directory
@@ -473,10 +472,10 @@ export const img_inpainting = async ({
                 0, // randomness
                 false, // sigma adjustment for finding noise for image
                 4, // loops
-                1, // denoising strength change factor
+                0.7, // denoising strength change factor
                 "<p style=\"margin-bottom:0.75em\">Recommended settings: Sampling Steps: 80-100, Sampler: Euler a, Denoising strength: 0.8</p>", // html
-                pixelsToExpand, // pixels to expand
-                maskBlur, // mask blur
+                0, // pixels to expand
+                0, // mask blur
                 [ // outpainting direction
                     "left",
                     "right",
@@ -485,8 +484,8 @@ export const img_inpainting = async ({
                 ],
                 falloffExponent, // fall-off exponent (lower=higher detail)
                 0.05, // color variation
-                pixelsToExpand, // pixels to expand
-                maskBlur, // mask blur
+                0, // pixels to expand
+                0, // mask blur
                 "fill", // masked content
                 [ // outpainting direction
                     "left",
@@ -524,7 +523,78 @@ export const img_inpainting = async ({
     //   top: 0;
     //   left: 0;
     // `;
-    document.body.appendChild(img);
+    // document.body.appendChild(img);
+    // return j;
+    return img;
+};
+
+export const new_img_inpainting = async ({
+                                         prompt = 'test',
+                                         negativePrompt = '',
+                                         width = 512,
+                                         height = 512,
+                                         ImgDataUrl = "",
+                                         maskDataUrl = "",
+                                         seed = -1,
+                                     } = {}) => {
+
+    // console.log("ImgDataUrl", ImgDataUrl);
+    // console.log("maskDataUrl", maskDataUrl);
+
+    const res = await fetch(`${baseUrl}sdapi/v1/img2img`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            "init_images": [
+                ImgDataUrl
+            ],
+            "resize_mode": 0,
+            "denoising_strength": 0.75,
+            "mask": maskDataUrl,
+            "mask_blur": 4,
+            "inpainting_fill": 2,
+            "inpaint_full_res": true,
+            "inpaint_full_res_padding": 32,
+            "inpainting_mask_invert": 0,
+            "prompt": prompt,
+            "styles": [
+                ""
+            ],
+            "seed": seed,
+            "subseed": -1,
+            "subseed_strength": 0,
+            "seed_resize_from_h": -1,
+            "seed_resize_from_w": -1,
+            "sampler_name": "Euler a",
+            "batch_size": 1,
+            "n_iter": 1,
+            "steps": 20,
+            "cfg_scale": 7.5,
+            "width": 512,
+            "height": 512,
+            "restore_faces": false,
+            "tiling": false,
+            "negative_prompt": negativePrompt,
+            "eta": 0,
+            "s_churn": 0,
+            "s_tmax": 0,
+            "s_tmin": 0,
+            "s_noise": 1,
+            "override_settings": {},
+            "include_init_images": true,
+        }
+        )}
+    )
+    const r = await res.json();
+    const images = r.images;
+    const base64img= images[0];
+    const img = new Image();
+    img.src = "data:image/png;base64,"+base64img;
+    // img.style.cssText = `\
+    //   position: absolute;
+    //   top: 0;
+    //   left: 0;
+    // `;\
     // return j;
     return img;
 };

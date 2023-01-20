@@ -467,3 +467,205 @@ export const editMeshTextures = async (mesh, {
   mesh2.frustumCulled = false;
   return mesh2;
 };
+
+// apply noise to a mesh's texture
+export const applyNoise = (mesh) => {
+  const {material} = mesh;
+  const canvas = document.createElement('canvas');
+  const width = 512;
+  const height = 512;
+  canvas.width = 512;
+  canvas.height = 512;
+  const renderer = makeRenderer(canvas);
+  renderer.setSize(width, height)
+  renderer.autoClear = false;
+  const noise = makeNoiseCanvas(512, 512);
+  const noise_texture = new THREE.CanvasTexture(noise);
+
+
+  // background scene
+  const backgroundScene = new THREE.Scene();
+  backgroundScene.autoUpdate = false;
+
+  // background mesh -> fullscreen geometry
+  const backgroundGeometry = new THREE.PlaneBufferGeometry(2, 2);
+
+  // fullscreen material
+  const backgroundMaterial = new THREE.ShaderMaterial({
+    uniforms: {
+      uMap : { value: material.map },
+    },
+    vertexShader: `\
+    varying vec2 vUv;
+
+    void main() {
+      vUv = uv;
+      gl_Position = vec4(position.xy, 0., 1.0);
+    }
+  `,
+    fragmentShader: `\
+    uniform sampler2D uMap;
+    varying vec2 vUv;
+
+    void main() {
+
+      gl_FragColor = texture2D(uMap, vUv);
+    }
+  `,
+    depthTest: false,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
+
+  const backgroundMesh = new THREE.Mesh(backgroundGeometry, backgroundMaterial);
+  backgroundMesh.frustumCulled = false;
+  backgroundScene.add(backgroundMesh);
+
+  // setting up foreground
+  const foregroundScene = new THREE.Scene();
+  foregroundScene.autoUpdate = false;
+
+  const overrideMaterial = new THREE.ShaderMaterial({
+    uniforms: {
+      uNoiseMap: {value: noise_texture},
+    },
+    vertexShader: `
+    varying vec2 vUv;
+
+        void main() {
+          vUv = uv;
+          // gl_Position = vec4(position, 1.0);
+          vec2 duv = (uv - 0.5) * 2.;
+          gl_Position = vec4(duv.x, duv.y, 0., 1.0);
+        }
+      `,
+    fragmentShader: `
+    uniform sampler2D uNoiseMap;
+    varying vec2 vUv;
+    
+    void main() {
+          vec4 color = texture2D(uNoiseMap, vUv);
+          gl_FragColor = vec4(color.rgb, 1);
+        }
+    `,
+    depthTest: false,
+    depthWrite: false,
+    // blending: THREE.NoBlending,
+    side: THREE.DoubleSide,
+    });
+
+  foregroundScene.overrideMaterial = overrideMaterial;
+
+  // push mesh to foreground scene
+  const popMeshes = pushMeshes(foregroundScene, [mesh], {
+    frustumCulled: false,
+  });
+  const camera = makeDefaultCamera();
+  renderer.render(backgroundScene, camera);
+  renderer.render(foregroundScene, camera);
+  // pop meshes
+  popMeshes();
+
+  // document.body.appendChild(renderer.domElement);
+  return (renderer.domElement);
+};
+
+export const applyMask = (mesh) => {
+  const {material} = mesh;
+  const canvas = document.createElement('canvas');
+  const width = 512;
+  const height = 512;
+  canvas.width = 512;
+  canvas.height = 512;
+  const renderer = makeRenderer(canvas);
+  renderer.setSize(width, height)
+  renderer.autoClear = false;
+
+  // background scene
+  const backgroundScene = new THREE.Scene();
+  backgroundScene.autoUpdate = false;
+
+  // background mesh -> fullscreen geometry
+  const backgroundGeometry = new THREE.PlaneBufferGeometry(2, 2);
+
+  // fullscreen material
+  const backgroundMaterial = new THREE.ShaderMaterial({
+    uniforms: {
+      uMap : { value: material.map },
+    },
+    vertexShader: `\
+    varying vec2 vUv;
+
+    void main() {
+      vUv = uv;
+      gl_Position = vec4(position.xy, 0., 1.0);
+    }
+  `,
+    fragmentShader: `\
+    uniform sampler2D uMap;
+    varying vec2 vUv;
+
+    void main() {
+
+      gl_FragColor = texture2D(uMap, vUv);
+    }
+  `,
+    depthTest: false,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
+
+  const backgroundMesh = new THREE.Mesh(backgroundGeometry, backgroundMaterial);
+  backgroundMesh.frustumCulled = false;
+  backgroundScene.add(backgroundMesh);
+
+  // setting up foreground
+  const foregroundScene = new THREE.Scene();
+  foregroundScene.autoUpdate = false;
+
+  const overrideMaterial = new THREE.ShaderMaterial({
+    uniforms: {
+      uColor: {value: new THREE.Color(0xffffff)},
+    },
+    vertexShader: `
+    varying vec2 vUv;
+
+        void main() {
+          vUv = uv;
+          // gl_Position = vec4(position, 1.0);
+          vec2 duv = (uv - 0.5) * 2.;
+          gl_Position = vec4(duv.x, duv.y, 0., 1.0);
+        }
+      `,
+    fragmentShader: `
+    uniform vec3 uColor;
+    varying vec2 vUv;
+    
+    void main() {
+          vec4 color = vec4(uColor, 1.);
+          gl_FragColor = vec4(color.rgb, 1);
+        }
+    `,
+    depthTest: false,
+    depthWrite: false,
+    // blending: THREE.NoBlending,
+    side: THREE.DoubleSide,
+  });
+
+  foregroundScene.overrideMaterial = overrideMaterial;
+
+  // push mesh to foreground scene
+  const popMeshes = pushMeshes(foregroundScene, [mesh], {
+    frustumCulled: false,
+  });
+  const camera = makeDefaultCamera();
+  renderer.render(backgroundScene, camera);
+  renderer.render(foregroundScene, camera);
+  // pop meshes
+  popMeshes();
+
+  // document.body.appendChild(renderer.domElement);
+  return (renderer.domElement);
+
+
+};
