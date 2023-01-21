@@ -1,6 +1,7 @@
 import {useState, useEffect, useRef} from 'react';
 import * as THREE from 'three';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
+import classnames from 'classnames';
 import alea from '../../utils/alea.js';
 import {
   img2img,
@@ -39,29 +40,1004 @@ import {
 import {
   optimizeAvatarModel,
 } from '../../utils/avatar-optimizer.js';
-import {
-  preprocessMeshForTextureEdit,
-  editMeshTextures,
-} from '../../utils/model-utils.js';
-import {downloadFile} from '../../utils/http-utils.js';
+// import {
+//   preprocessMeshForTextureEdit,
+//   editMeshTextures,
+// } from '../../utils/model-utils.js';
+// import {downloadFile} from '../../utils/http-utils.js';
 
-import styles from '../../../styles/MobGenerator.module.css';
+import styles from '../../../styles/AvatarGenerator.module.css';
 
 //
 
-const avatarUrls = [
-  `/models/Avatar_Bases/Hacker Class/HackerClassMaster_v2.1_Guilty.vrm`,
-  `/models/Avatar_Bases/Drophunter Class/DropHunter_Master_v2_Guilty.vrm`,
+const localColor = new THREE.Color();
+
+//
+
+/* const colors = [
+  `Black`,
+  `Blue`,
+  `Cyan`,
+  `Green`,
+  `Original`,
+  `Pink`,
+  `Yellow`,
+]; */
+const avatarSpecs = [
+  {
+    name: 'hacker',
+    base: `/models/Avatar_Bases/Hacker Class/HackerClassMaster_v2.1_Guilty.vrm`,
+    eye: [
+      `IMG_2857.png`,
+      `IMG_2858.png`,
+      `IMG_2859.png`,
+      `IMG_2860.png`,
+      `IMG_2861.png`,
+      `IMG_2862.png`,
+      `IMG_2863.png`,
+      `IMG_2864.png`,
+      `IMG_2865.png`,
+      `IMG_2866.png`,
+      `IMG_2867.png`,
+      `IMG_2868.png`,
+      `IMG_2869.png`,
+      `IMG_2870.png`,
+      `IMG_2871.png`,
+      `IMG_2872.png`,
+      `IMG_2874.png`,
+      `IMG_2875.png`,
+      `IMG_2876.png`,
+      `IMG_2877.png`,
+      `IMG_2878.png`,
+      `IMG_2879.png`,
+      `IMG_2880.png`,
+      `IMG_2881.png`,
+      `IMG_2882.png`,
+      `IMG_2883.png`,
+      `IMG_2884.png`,
+      `IMG_2885.png`,
+      `IMG_2886.png`,
+      `IMG_2887.png`,
+      `IMG_2888.png`,
+      `IMG_2889.png`,
+    ].map(name => `/models/Avatar_Bases/Hacker Class/Hacker variant textures/Eye_Color/${name}`),
+    skin: [
+      // ./Arm sleeves
+      // ./Arm sleeves/ArmSleeves_Original.png
+      // ./Arm sleeves/ArmSleeves_Original_alt.png
+      // ./Arm sleeves/ArmSleeves_Tone_1.png
+      // ./Arm sleeves/ArmSleeves_Tone_2.png
+      // ./Arm sleeves/ArmSleeves_Tone_3.png
+      // ./Arm sleeves/ArmSleeves_Tone_4.png
+      // ./Knee highs
+      // ./Knee highs/KneeHighs_Original.png
+      // ./Knee highs/KneeHighs_Original_alt.png
+      // ./Knee highs/KneeHighs_Tone_1.png
+      // ./Knee highs/KneeHighs_Tone_2.png
+      // ./Knee highs/KneeHighs_Tone_3.png
+      // ./Knee highs/KneeHighs_Tone_4.png
+      // ./Original
+      // ./Original/Hacker.png_BASE_Body_BaseColor.png
+      // ./Original/Hacker.png_BASE_Body_alt2.png
+      // ./Original/Hacker.png_BASE_Head_BaseColor.png
+      // ./Original/Hacker.png_BASE_Head_BaseColor_alt2.png
+      // ./Original/Hacker.png_BASE_Mouth_BaseColor.png
+      // ./Skin tone 1
+      // ./Skin tone 1/Hacker.png_BASE_Body_BaseColor.png
+      // ./Skin tone 1/Hacker.png_BASE_Head_BaseColor.png
+      // ./Skin tone 1/Hacker.png_BASE_Mouth_BaseColor.png
+      // ./Skin tone 2
+      // ./Skin tone 2/Hacker.png_BASE_Body_BaseColor.png
+      // ./Skin tone 2/Hacker.png_BASE_Head_BaseColor.png
+      // ./Skin tone 2/Hacker.png_BASE_Mouth_BaseColor.png
+      // ./Skin tone 3
+      // ./Skin tone 3/Hacker.png_BASE_Body_BaseColor.png
+      // ./Skin tone 3/Hacker.png_BASE_Head_BaseColor.png
+      // ./Skin tone 3/Hacker.png_BASE_Mouth_BaseColor.png
+      // ./Skin tone 4
+      // ./Skin tone 4/Hacker.png_BASE_Body_BaseColor.png
+      // ./Skin tone 4/Hacker.png_BASE_Head_BaseColor.png
+      // ./Skin tone 4/Hacker.png_BASE_Mouth_BaseColor.png
+      // ./Thigh highs
+      // ./Thigh highs/ThighHighs_Original.png
+      // ./Thigh highs/ThighHighs_Original_alt.png
+      // ./Thigh highs/ThighHighs_Tone_1.png
+      // ./Thigh highs/ThighHighs_Tone_2.png
+      // ./Thigh highs/ThighHighs_Tone_3.png
+      // ./Thigh highs/ThighHighs_Tone_4.png
+      [
+        'face',
+        [
+          `Original/Hacker.png_BASE_Body_BaseColor.png`,
+          `Original/Hacker.png_BASE_Head_BaseColor_alt2.png`,
+          `Skin tone 1/Hacker.png_BASE_Head_BaseColor.png`,
+          `Skin tone 2/Hacker.png_BASE_Head_BaseColor.png`,
+          `Skin tone 3/Hacker.png_BASE_Head_BaseColor.png`,
+          `Skin tone 4/Hacker.png_BASE_Head_BaseColor.png`,
+
+          `Original/Hacker.png_BASE_Body_BaseColor.png`,
+          `Original/Hacker.png_BASE_Head_BaseColor_alt2.png`,
+          `Skin tone 1/Hacker.png_BASE_Head_BaseColor.png`,
+          `Skin tone 2/Hacker.png_BASE_Head_BaseColor.png`,
+          `Skin tone 3/Hacker.png_BASE_Head_BaseColor.png`,
+          `Skin tone 4/Hacker.png_BASE_Head_BaseColor.png`,
+
+          `Original/Hacker.png_BASE_Body_BaseColor.png`,
+          `Original/Hacker.png_BASE_Head_BaseColor_alt2.png`,
+          `Skin tone 1/Hacker.png_BASE_Head_BaseColor.png`,
+          `Skin tone 2/Hacker.png_BASE_Head_BaseColor.png`,
+          `Skin tone 3/Hacker.png_BASE_Head_BaseColor.png`,
+          `Skin tone 4/Hacker.png_BASE_Head_BaseColor.png`,
+
+          `Original/Hacker.png_BASE_Body_BaseColor.png`,
+          `Original/Hacker.png_BASE_Head_BaseColor_alt2.png`,
+          `Skin tone 1/Hacker.png_BASE_Head_BaseColor.png`,
+          `Skin tone 2/Hacker.png_BASE_Head_BaseColor.png`,
+          `Skin tone 3/Hacker.png_BASE_Head_BaseColor.png`,
+          `Skin tone 4/Hacker.png_BASE_Head_BaseColor.png`,
+        ].map(n => `/models/Avatar_Bases/Hacker Class/Hacker variant textures/Skin variations/${n}`),
+      ],
+      [
+        'body',
+        [
+          `Original/Hacker.png_BASE_Body_BaseColor.png`,
+          `Original/Hacker.png_BASE_Body_alt2.png`,
+          `Skin tone 1/Hacker.png_BASE_Body_BaseColor.png`,
+          `Skin tone 2/Hacker.png_BASE_Body_BaseColor.png`,
+          `Skin tone 3/Hacker.png_BASE_Body_BaseColor.png`,
+          `Skin tone 4/Hacker.png_BASE_Body_BaseColor.png`,
+
+          `Arm sleeves/ArmSleeves_Original.png`,
+          `Arm sleeves/ArmSleeves_Original_alt.png`,
+          `Arm sleeves/ArmSleeves_Tone_1.png`,
+          `Arm sleeves/ArmSleeves_Tone_2.png`,
+          `Arm sleeves/ArmSleeves_Tone_3.png`,
+          `Arm sleeves/ArmSleeves_Tone_4.png`,
+
+          `Knee highs/KneeHighs_Original.png`,
+          `Knee highs/KneeHighs_Original_alt.png`,
+          `Knee highs/KneeHighs_Tone_1.png`,
+          `Knee highs/KneeHighs_Tone_2.png`,
+          `Knee highs/KneeHighs_Tone_3.png`,
+          `Knee highs/KneeHighs_Tone_4.png`,
+
+          `Thigh highs/ThighHighs_Original.png`,
+          `Thigh highs/ThighHighs_Original_alt.png`,
+          `Thigh highs/ThighHighs_Tone_1.png`,
+          `Thigh highs/ThighHighs_Tone_2.png`,
+          `Thigh highs/ThighHighs_Tone_3.png`,
+          `Thigh highs/ThighHighs_Tone_4.png`,
+        ].map(n => `/models/Avatar_Bases/Hacker Class/Hacker variant textures/Skin variations/${n}`),
+      ],
+      [
+        'mouth',
+        [
+          `Original/Hacker.png_BASE_Mouth_BaseColor.png`,
+          `Original/Hacker.png_BASE_Mouth_BaseColor.png`, // alt
+          `Skin tone 1/Hacker.png_BASE_Mouth_BaseColor.png`,
+          `Skin tone 2/Hacker.png_BASE_Mouth_BaseColor.png`,
+          `Skin tone 3/Hacker.png_BASE_Mouth_BaseColor.png`,
+          `Skin tone 4/Hacker.png_BASE_Mouth_BaseColor.png`,
+
+          `Original/Hacker.png_BASE_Mouth_BaseColor.png`,
+          `Original/Hacker.png_BASE_Mouth_BaseColor.png`, // alt
+          `Skin tone 1/Hacker.png_BASE_Mouth_BaseColor.png`,
+          `Skin tone 2/Hacker.png_BASE_Mouth_BaseColor.png`,
+          `Skin tone 3/Hacker.png_BASE_Mouth_BaseColor.png`,
+          `Skin tone 4/Hacker.png_BASE_Mouth_BaseColor.png`,
+
+          `Original/Hacker.png_BASE_Mouth_BaseColor.png`,
+          `Original/Hacker.png_BASE_Mouth_BaseColor.png`, // alt
+          `Skin tone 1/Hacker.png_BASE_Mouth_BaseColor.png`,
+          `Skin tone 2/Hacker.png_BASE_Mouth_BaseColor.png`,
+          `Skin tone 3/Hacker.png_BASE_Mouth_BaseColor.png`,
+          `Skin tone 4/Hacker.png_BASE_Mouth_BaseColor.png`,
+
+          `Original/Hacker.png_BASE_Mouth_BaseColor.png`,
+          `Original/Hacker.png_BASE_Mouth_BaseColor.png`, // alt
+          `Skin tone 1/Hacker.png_BASE_Mouth_BaseColor.png`,
+          `Skin tone 2/Hacker.png_BASE_Mouth_BaseColor.png`,
+          `Skin tone 3/Hacker.png_BASE_Mouth_BaseColor.png`,
+          `Skin tone 4/Hacker.png_BASE_Mouth_BaseColor.png`,
+        ].map(n => `/models/Avatar_Bases/Hacker Class/Hacker variant textures/Skin variations/${n}`),
+      ],
+    ],
+    clothing: {
+      'Hacker_Dress_1_1_BaseColor': [
+        `Hacker_Dress_1_1_BaseColor.jpg`,
+        // `Hacker_Dress_1_1_Normal.jpg`,
+        `Hacker_Dress_1_2_BaseColor.jpg`,
+        // `Hacker_Dress_1_2_Normal.jpg`,
+        `Hacker_Dress_1_3_BaseColor.jpg`,
+        // `Hacker_Dress_1_3_Normal.jpg`,
+        `Hacker_Dress_1_4_BaseColor.jpg`,
+        // `Hacker_Dress_1_4_Normal.jpg`,
+        `Hacker_Dress_1_5_BaseColor.jpg`,
+        // `Hacker_Dress_1_5_Normal.jpg`,
+        `Hacker_Dress_1_6_BaseColor.jpg`,
+        // `Hacker_Dress_1_6_Normal.jpg`,
+        `Hacker_Dress_1_7_BaseColor.jpg`,
+        // `Hacker_Dress_1_7_Normal.jpg`,
+        `Hacker_Dress_1_8_BaseColor.jpg`,
+        // `Hacker_Dress_1_8_Normal.jpg`,
+        `Hacker_Dress_1_9_BaseColor.jpg`,
+        // `Hacker_Dress_1_9_Normal.jpg`,
+        `Hacker_Dress_1_10_BaseColor.jpg`,
+        // `Hacker_Dress_1_10_Normal.jpg`,
+        `Hacker_Dress_1_11_BaseColor.jpg`,
+        // `Hacker_Dress_1_11_Normal.jpg`,
+      ],
+      'Hacker_Dress_2_1_BaseColor': [
+        `Hacker_Dress_2_1_BaseColor.jpg`,
+        // `Hacker_Dress_2_1_Normal.jpg`,
+        `Hacker_Dress_2_2_BaseColor.jpg`,
+        // `Hacker_Dress_2_2_Normal.jpg`,
+        `Hacker_Dress_2_3_BaseColor.jpg`,
+        // `Hacker_Dress_2_3_Normal.jpg`,
+        `Hacker_Dress_2_4_BaseColor.jpg`,
+        // `Hacker_Dress_2_4_Normal.jpg`,
+        `Hacker_Dress_2_5_BaseColor.jpg`,
+        // `Hacker_Dress_2_5_Normal.jpg`,
+        `Hacker_Dress_2_6_BaseColor.jpg`,
+        // `Hacker_Dress_2_6_Normal.jpg`,
+        `Hacker_Dress_2_7_BaseColor.jpg`,
+        // `Hacker_Dress_2_7_Normal.jpg`,
+        `Hacker_Dress_2_8_BaseColor.jpg`,
+        // `Hacker_Dress_2_8_Normal.jpg`,
+        `Hacker_Dress_2_9_BaseColor.jpg`,
+        // `Hacker_Dress_2_9_Normal.jpg`,
+        `Hacker_Dress_2_10_BaseColor.jpg`,
+        // `Hacker_Dress_2_10_Normal.jpg`,
+        `Hacker_Dress_2_11_BaseColor.jpg`,
+        // `Hacker_Dress_2_11_Normal.jpg`,
+      ],
+      'Hacker_Dress_3_1_BaseColor': [
+        `Hacker_Dress_3_1_BaseColor.jpg`,
+        // `Hacker_Dress_3_1_Normal.jpg`,
+        `Hacker_Dress_3_2_BaseColor.jpg`,
+        // `Hacker_Dress_3_2_Normal.jpg`,
+        `Hacker_Dress_3_3_BaseColor.jpg`,
+        // `Hacker_Dress_3_3_Normal.jpg`,
+        `Hacker_Dress_3_4_BaseColor.jpg`,
+        // `Hacker_Dress_3_4_Normal.jpg`,
+        `Hacker_Dress_3_5_BaseColor.jpg`,
+        // `Hacker_Dress_3_5_Normal.jpg`,
+        `Hacker_Dress_3_6_BaseColor.jpg`,
+        // `Hacker_Dress_3_6_Normal.jpg`,
+        `Hacker_Dress_3_7_BaseColor.jpg`,
+        // `Hacker_Dress_3_7_Normal.jpg`,
+        `Hacker_Dress_3_8_BaseColor.jpg`,
+        // `Hacker_Dress_3_8_Normal.jpg`,
+        `Hacker_Dress_3_9_BaseColor.jpg`,
+        // `Hacker_Dress_3_9_Normal.jpg`,
+        `Hacker_Dress_3_10_BaseColor.jpg`,
+        // `Hacker_Dress_3_10_Normal.jpg`,
+      ],
+      'Hacker_Dress_4_1_BaseColor': [
+        `Hacker_Dress_4_1_BaseColor.jpg`,
+        // `Hacker_Dress_4_1_Normal.jpg`,
+        `Hacker_Dress_4_2_BaseColor.jpg`,
+        // `Hacker_Dress_4_2_Normal.jpg`,
+        `Hacker_Dress_4_3_BaseColor.jpg`,
+        // `Hacker_Dress_4_3_Normal.jpg`,
+        `Hacker_Dress_4_4_BaseColor.jpg`,
+        // `Hacker_Dress_4_4_Normal.jpg`,
+        `Hacker_Dress_4_5_BaseColor.jpg`,
+        // `Hacker_Dress_4_5_Normal.jpg`,
+        `Hacker_Dress_4_6_BaseColor.jpg`,
+        // `Hacker_Dress_4_6_Normal.jpg`,
+        `Hacker_Dress_4_7_BaseColor.jpg`,
+        // `Hacker_Dress_4_7_Normal.jpg`,
+        `Hacker_Dress_4_8_BaseColor.jpg`,
+        // `Hacker_Dress_4_8_Normal.jpg`,
+        `Hacker_Dress_4_9_BaseColor.jpg`,
+        // `Hacker_Dress_4_9_Normal.jpg`,
+        `Hacker_Dress_4_10_BaseColor.jpg`,
+        // `Hacker_Dress_4_10_Normal.jpg`,
+        `Hacker_Dress_4_11_BaseColor.jpg`,
+        // `Hacker_Dress_4_11_Normal.jpg`,
+        // `Hacker_Dress_4_Mixed_AO.jpg`,
+      ],
+      'Hacker_Dress_5_1_BaseColor': [
+        `Hacker_Dress_5_1_BaseColor.jpg`,
+        // `Hacker_Dress_5_1_Normal.jpg`,
+        `Hacker_Dress_5_2_BaseColor.jpg`,
+        // `Hacker_Dress_5_2_Normal.jpg`,
+        `Hacker_Dress_5_3_BaseColor.jpg`,
+        // `Hacker_Dress_5_3_Normal.jpg`,
+        `Hacker_Dress_5_4_BaseColor.jpg`,
+        // `Hacker_Dress_5_4_Normal.jpg`,
+        `Hacker_Dress_5_5_BaseColor.jpg`,
+        // `Hacker_Dress_5_5_Normal.jpg`,
+        `Hacker_Dress_5_6_BaseColor.jpg`,
+        // `Hacker_Dress_5_6_Normal.jpg`,
+        `Hacker_Dress_5_7_BaseColor.jpg`,
+        // `Hacker_Dress_5_7_Normal.jpg`,
+        `Hacker_Dress_5_8_BaseColor.jpg`,
+        // `Hacker_Dress_5_8_Normal.jpg`,
+        `Hacker_Dress_5_9_BaseColor.jpg`,
+        // `Hacker_Dress_5_9_Normal.jpg`,
+        `Hacker_Dress_5_10_BaseColor.jpg`,
+        // `Hacker_Dress_5_10_Normal.jpg`,
+        `Hacker_Dress_5_11_BaseColor.jpg`,
+        // `Hacker_Dress_5_11_Normal.jpg`,
+        // `Hacker_Dress_5_Mixed_AO.jpg`,
+      ],
+      'Hacker_Dress_6_1_BaseColor': [
+        `Hacker_Dress_6_1_BaseColor.jpg`,
+        // `Hacker_Dress_6_1_Normal.jpg`,
+        `Hacker_Dress_6_2_BaseColor.jpg`,
+        // `Hacker_Dress_6_2_Mixed_AO.png`,
+        // `Hacker_Dress_6_2_Normal.jpg`,
+        `Hacker_Dress_6_3_BaseColor.jpg`,
+        // `Hacker_Dress_6_3_Normal.jpg`,
+        `Hacker_Dress_6_4_BaseColor.jpg`,
+        // `Hacker_Dress_6_4_Normal.jpg`,
+        `Hacker_Dress_6_5_BaseColor.jpg`,
+        // `Hacker_Dress_6_5_Normal.jpg`,
+        `Hacker_Dress_6_6_BaseColor.jpg`,
+        // `Hacker_Dress_6_6_Normal.jpg`,
+        `Hacker_Dress_6_7_BaseColor.jpg`,
+        // `Hacker_Dress_6_7_Normal.jpg`,
+        `Hacker_Dress_6_8_BaseColor.jpg`,
+        // `Hacker_Dress_6_8_Normal.jpg`,
+        `Hacker_Dress_6_9_BaseColor.jpg`,
+        // `Hacker_Dress_6_9_Normal.jpg`,
+        `Hacker_Dress_6_10_BaseColor.jpg`,
+        // `Hacker_Dress_6_10_Normal.jpg`,
+        `Hacker_Dress_6_11_BaseColor.jpg`,
+        // `Hacker_Dress_6_11_Normal.jpg`,
+        // `Hacker_Dress_6_Mixed_AO.png`,
+      ],
+      'Hacker_Dress_7_1_BaseColor': [
+        `Hacker_Dress_7_1_BaseColor.jpg`,
+        // `Hacker_Dress_7_1_Normal.jpg`,
+        `Hacker_Dress_7_2_BaseColor.jpg`,
+        // `Hacker_Dress_7_2_Normal.jpg`,
+        `Hacker_Dress_7_3_BaseColor.jpg`,
+        // `Hacker_Dress_7_3_Normal.jpg`,
+        `Hacker_Dress_7_4_BaseColor.jpg`,
+        // `Hacker_Dress_7_4_Normal.jpg`,
+        `Hacker_Dress_7_5_BaseColor.jpg`,
+        // `Hacker_Dress_7_5_Normal.jpg`,
+        `Hacker_Dress_7_6_BaseColor.jpg`,
+        // `Hacker_Dress_7_6_Normal.jpg`,
+        `Hacker_Dress_7_7_BaseColor.jpg`,
+        // `Hacker_Dress_7_7_Normal.jpg`,
+        `Hacker_Dress_7_8_BaseColor.jpg`,
+        // `Hacker_Dress_7_8_Normal.jpg`,
+        `Hacker_Dress_7_9_BaseColor.jpg`,
+        // `Hacker_Dress_7_9_Normal.jpg`,
+        `Hacker_Dress_7_10_BaseColor.jpg`,
+        // `Hacker_Dress_7_10_Normal.jpg`,
+        `Hacker_Dress_7_11_BaseColor.jpg`,
+        // `Hacker_Dress_7_11_Normal.jpg`,
+      ],
+      'Hacker_Dress_7_Normal': [
+        // `Hacker_Dress_7_1_BaseColor.jpg`,
+        `Hacker_Dress_7_1_Normal.jpg`,
+        // `Hacker_Dress_7_2_BaseColor.jpg`,
+        `Hacker_Dress_7_2_Normal.jpg`,
+        // `Hacker_Dress_7_3_BaseColor.jpg`,
+        `Hacker_Dress_7_3_Normal.jpg`,
+        // `Hacker_Dress_7_4_BaseColor.jpg`,
+        `Hacker_Dress_7_4_Normal.jpg`,
+        // `Hacker_Dress_7_5_BaseColor.jpg`,
+        `Hacker_Dress_7_5_Normal.jpg`,
+        // `Hacker_Dress_7_6_BaseColor.jpg`,
+        `Hacker_Dress_7_6_Normal.jpg`,
+        // `Hacker_Dress_7_7_BaseColor.jpg`,
+        `Hacker_Dress_7_7_Normal.jpg`,
+        // `Hacker_Dress_7_8_BaseColor.jpg`,
+        `Hacker_Dress_7_8_Normal.jpg`,
+        // `Hacker_Dress_7_9_BaseColor.jpg`,
+        `Hacker_Dress_7_9_Normal.jpg`,
+        // `Hacker_Dress_7_10_BaseColor.jpg`,
+        `Hacker_Dress_7_10_Normal.jpg`,
+        // `Hacker_Dress_7_11_BaseColor.jpg`,
+        `Hacker_Dress_7_11_Normal.jpg`,
+      ],
+      'Hacker_Dress_8_1_BaseColor': [
+        `Hacker_Dress_8_1_BaseColor.jpg`,
+        // `Hacker_Dress_8_1_Normal.jpg`,
+        `Hacker_Dress_8_2_BaseColor.jpg`,
+        // `Hacker_Dress_8_2_Normal.jpg`,
+        `Hacker_Dress_8_3_BaseColor.jpg`,
+        // `Hacker_Dress_8_3_Normal.jpg`,
+        `Hacker_Dress_8_4_BaseColor.jpg`,
+        // `Hacker_Dress_8_4_Normal.jpg`,
+        `Hacker_Dress_8_5_BaseColor.jpg`,
+        // `Hacker_Dress_8_5_Normal.jpg`,
+        `Hacker_Dress_8_6_BaseColor.jpg`,
+        // `Hacker_Dress_8_6_Normal.jpg`,
+        `Hacker_Dress_8_7_BaseColor.jpg`,
+        // `Hacker_Dress_8_7_Normal.jpg`,
+        `Hacker_Dress_8_8_BaseColor.jpg`,
+        // `Hacker_Dress_8_8_Normal.jpg`,
+        `Hacker_Dress_8_9_BaseColor.jpg`,
+        // `Hacker_Dress_8_9_Normal.jpg`,
+        `Hacker_Dress_8_10_BaseColor.jpg`,
+        // `Hacker_Dress_8_10_Normal.jpg`,
+        `Hacker_Dress_8_11_BaseColor.jpg`,
+        // `Hacker_Dress_8_11_Normal.jpg`,
+      ],
+      'Hacker_Dress_8_Normal': [
+        // `Hacker_Dress_8_1_BaseColor.jpg`,
+        `Hacker_Dress_8_1_Normal.jpg`,
+        // `Hacker_Dress_8_2_BaseColor.jpg`,
+        `Hacker_Dress_8_2_Normal.jpg`,
+        // `Hacker_Dress_8_3_BaseColor.jpg`,
+        `Hacker_Dress_8_3_Normal.jpg`,
+        // `Hacker_Dress_8_4_BaseColor.jpg`,
+        `Hacker_Dress_8_4_Normal.jpg`,
+        // `Hacker_Dress_8_5_BaseColor.jpg`,
+        `Hacker_Dress_8_5_Normal.jpg`,
+        // `Hacker_Dress_8_6_BaseColor.jpg`,
+        `Hacker_Dress_8_6_Normal.jpg`,
+        // `Hacker_Dress_8_7_BaseColor.jpg`,
+        `Hacker_Dress_8_7_Normal.jpg`,
+        // `Hacker_Dress_8_8_BaseColor.jpg`,
+        `Hacker_Dress_8_8_Normal.jpg`,
+        // `Hacker_Dress_8_9_BaseColor.jpg`,
+        `Hacker_Dress_8_9_Normal.jpg`,
+        // `Hacker_Dress_8_10_BaseColor.jpg`,
+        `Hacker_Dress_8_10_Normal.jpg`,
+        // `Hacker_Dress_8_11_BaseColor.jpg`,
+        `Hacker_Dress_8_11_Normal.jpg`,
+      ],
+      'Hacker_Dress_9_1_BaseColor': [
+        `Hacker_Dress_9_1_BaseColor.jpg`,
+        // `Hacker_Dress_9_1_Normal.jpg`,
+        `Hacker_Dress_9_2_BaseColor.jpg`,
+        // `Hacker_Dress_9_2_Normal.jpg`,
+        `Hacker_Dress_9_3_BaseColor.jpg`,
+        // `Hacker_Dress_9_3_Normal.jpg`,
+        `Hacker_Dress_9_4_BaseColor.jpg`,
+        // `Hacker_Dress_9_4_Normal.jpg`,
+        `Hacker_Dress_9_5_BaseColor.jpg`,
+        // `Hacker_Dress_9_5_Normal.jpg`,
+        `Hacker_Dress_9_6_BaseColor.jpg`,
+        // `Hacker_Dress_9_6_Normal.jpg`,
+        `Hacker_Dress_9_7_BaseColor.jpg`,
+        // `Hacker_Dress_9_7_Normal.jpg`,
+        `Hacker_Dress_9_8_BaseColor.jpg`,
+        // `Hacker_Dress_9_8_Normal.jpg`,
+        `Hacker_Dress_9_9_BaseColor.jpg`,
+        // `Hacker_Dress_9_9_Normal.jpg`,
+        `Hacker_Dress_9_10_BaseColor.jpg`,
+        // `Hacker_Dress_9_10_Normal.jpg`,
+        `Hacker_Dress_9_11_BaseColor.jpg`,
+        // `Hacker_Dress_9_11_Normal.jpg`,
+      ],
+      'Hacker_Dress_9_Normal': [
+        // `Hacker_Dress_9_1_BaseColor.jpg`,
+        `Hacker_Dress_9_1_Normal.jpg`,
+        // `Hacker_Dress_9_2_BaseColor.jpg`,
+        `Hacker_Dress_9_2_Normal.jpg`,
+        // `Hacker_Dress_9_3_BaseColor.jpg`,
+        `Hacker_Dress_9_3_Normal.jpg`,
+        // `Hacker_Dress_9_4_BaseColor.jpg`,
+        `Hacker_Dress_9_4_Normal.jpg`,
+        // `Hacker_Dress_9_5_BaseColor.jpg`,
+        `Hacker_Dress_9_5_Normal.jpg`,
+        // `Hacker_Dress_9_6_BaseColor.jpg`,
+        `Hacker_Dress_9_6_Normal.jpg`,
+        // `Hacker_Dress_9_7_BaseColor.jpg`,
+        `Hacker_Dress_9_7_Normal.jpg`,
+        // `Hacker_Dress_9_8_BaseColor.jpg`,
+        `Hacker_Dress_9_8_Normal.jpg`,
+        // `Hacker_Dress_9_9_BaseColor.jpg`,
+        `Hacker_Dress_9_9_Normal.jpg`,
+        // `Hacker_Dress_9_10_BaseColor.jpg`,
+        `Hacker_Dress_9_10_Normal.jpg`,
+        // `Hacker_Dress_9_11_BaseColor.jpg`,
+        `Hacker_Dress_9_11_Normal.jpg`,
+      ],
+      'Hacker_Dress_10_1_BaseColor': [
+        `Hacker_Dress_10_1_BaseColor.jpg`,
+        // `Hacker_Dress_10_1_Normal.jpg`,
+        `Hacker_Dress_10_2_BaseColor.jpg`,
+        // `Hacker_Dress_10_2_Normal.jpg`,
+        `Hacker_Dress_10_3_BaseColor.jpg`,
+        // `Hacker_Dress_10_3_Normal.jpg`,
+        `Hacker_Dress_10_4_BaseColor.jpg`,
+        // `Hacker_Dress_10_4_Normal.jpg`,
+        `Hacker_Dress_10_5_BaseColor.jpg`,
+        // `Hacker_Dress_10_5_Normal.jpg`,
+        `Hacker_Dress_10_6_BaseColor.jpg`,
+        // `Hacker_Dress_10_6_Normal.jpg`,
+        `Hacker_Dress_10_7_BaseColor.jpg`,
+        // `Hacker_Dress_10_7_Normal.jpg`,
+        `Hacker_Dress_10_8_BaseColor.jpg`,
+        // `Hacker_Dress_10_8_Normal.jpg`,
+        `Hacker_Dress_10_9_BaseColor.jpg`,
+        // `Hacker_Dress_10_9_Normal.jpg`,
+        `Hacker_Dress_10_10_BaseColor.jpg`,
+        // `Hacker_Dress_10_10_Normal.jpg`,
+        `Hacker_Dress_10_11_BaseColor.jpg`,
+        // `Hacker_Dress_10_11_Normal.jpg`,
+      ],
+      'Hacker_Dress_10_Normal': [
+        // `Hacker_Dress_10_1_BaseColor.jpg`,
+        `Hacker_Dress_10_1_Normal.jpg`,
+        // `Hacker_Dress_10_2_BaseColor.jpg`,
+        `Hacker_Dress_10_2_Normal.jpg`,
+        // `Hacker_Dress_10_3_BaseColor.jpg`,
+        `Hacker_Dress_10_3_Normal.jpg`,
+        // `Hacker_Dress_10_4_BaseColor.jpg`,
+        `Hacker_Dress_10_4_Normal.jpg`,
+        // `Hacker_Dress_10_5_BaseColor.jpg`,
+        `Hacker_Dress_10_5_Normal.jpg`,
+        // `Hacker_Dress_10_6_BaseColor.jpg`,
+        `Hacker_Dress_10_6_Normal.jpg`,
+        // `Hacker_Dress_10_7_BaseColor.jpg`,
+        `Hacker_Dress_10_7_Normal.jpg`,
+        // `Hacker_Dress_10_8_BaseColor.jpg`,
+        `Hacker_Dress_10_8_Normal.jpg`,
+        // `Hacker_Dress_10_9_BaseColor.jpg`,
+        `Hacker_Dress_10_9_Normal.jpg`,
+        // `Hacker_Dress_10_10_BaseColor.jpg`,
+        `Hacker_Dress_10_10_Normal.jpg`,
+        // `Hacker_Dress_10_11_BaseColor.jpg`,
+        `Hacker_Dress_10_11_Normal.jpg`,
+      ],
+    },
+  },
+  {
+    name: 'dropHunter',
+    base: `/models/Avatar_Bases/Drophunter Class/DropHunter_Master_v3_Guilty.vrm`,
+    // base: `/models/Avatar_Bases/Drophunter Class/DropHunter_Master_v3.1_Guilty.glb`,
+    eye: [
+      `IMG_2817.png`,
+      `IMG_2818.png`,
+      `IMG_2819.png`,
+      `IMG_2820.png`,
+      `IMG_2821.png`,
+      `IMG_2822.png`,
+      `IMG_2823.png`,
+      `IMG_2824.png`,
+      `IMG_2826.png`,
+      `IMG_2827.png`,
+      `IMG_2828.png`,
+      `IMG_2829.png`,
+      `IMG_2830.png`,
+      `IMG_2831.png`,
+      `IMG_2833.png`,
+      `IMG_2834.png`,
+      `IMG_2836.png`,
+      `IMG_2837.png`,
+      `IMG_2838.png`,
+      `IMG_2839.png`,
+      `IMG_2840.png`,
+      `IMG_2841.png`,
+      `IMG_2842.png`,
+      `IMG_2843.png`,
+      `IMG_2844.png`,
+      `IMG_2845.png`,
+      `IMG_2846.png`,
+      `IMG_2847.png`,
+      `IMG_2848.png`,
+      `IMG_2849.png`,
+      `IMG_2850.png`,
+      `IMG_2851.png`,
+      `IMG_2853.png`,
+      `IMG_2854.png`,
+      `IMG_2855.png`,
+    ].map(name => `/models/Avatar_Bases/Drophunter Class/Variation textures/Eye_Colors/${name}`),
+    skin: [
+      [
+        'face',
+        [
+          `Skin variations/Original skin/Anime_Proj_base_NoClothes_Face_BaseColor.png`,
+          `Skin variations/Original skin/Anime_Proj_base_NoClothes_Face_BaseColor_alt.png`,
+          `Skin variations/Skin tone 1/Anime_Proj_base_NoClothes_Face_BaseColor.png`,
+          `Skin variations/Skin tone 2/Anime_Proj_base_NoClothes_Face_BaseColor.png`,
+          `Skin variations/Skin tone 3/Anime_Proj_base_NoClothes_Face_BaseColor.png`,
+          `Skin variations/Skin tone 4/Anime_Proj_base_NoClothes_Face_BaseColor.png`,
+
+          `Skin variations/Original skin/Anime_Proj_base_NoClothes_Face_BaseColor.png`,
+          `Skin variations/Skin tone 1/Anime_Proj_base_NoClothes_Face_BaseColor.png`,
+          `Skin variations/Skin tone 2/Anime_Proj_base_NoClothes_Face_BaseColor.png`,
+          `Skin variations/Skin tone 3/Anime_Proj_base_NoClothes_Face_BaseColor.png`,
+          `Skin variations/Skin tone 4/Anime_Proj_base_NoClothes_Face_BaseColor.png`,
+
+          `Skin variations/Original skin/Anime_Proj_base_NoClothes_Face_BaseColor.png`,
+          `Skin variations/Skin tone 1/Anime_Proj_base_NoClothes_Face_BaseColor.png`,
+          `Skin variations/Skin tone 2/Anime_Proj_base_NoClothes_Face_BaseColor.png`,
+          `Skin variations/Skin tone 3/Anime_Proj_base_NoClothes_Face_BaseColor.png`,
+          `Skin variations/Skin tone 4/Anime_Proj_base_NoClothes_Face_BaseColor.png`,
+
+          `Skin variations/Original skin/Anime_Proj_base_NoClothes_Face_BaseColor.png`,
+          `Skin variations/Skin tone 1/Anime_Proj_base_NoClothes_Face_BaseColor.png`,
+          `Skin variations/Skin tone 2/Anime_Proj_base_NoClothes_Face_BaseColor.png`,
+          `Skin variations/Skin tone 3/Anime_Proj_base_NoClothes_Face_BaseColor.png`,
+          `Skin variations/Skin tone 4/Anime_Proj_base_NoClothes_Face_BaseColor.png`,
+        ].map(n => `/models/Avatar_Bases/Drophunter Class/Variation textures/${n}`),
+      ],
+      [
+        'body',
+        [
+          `Skin variations/Original skin/Anime_Proj_base_NoClothes_skin_BaseColor.png`,
+          `Skin variations/Original skin/Anime_Proj_base_NoClothes_skin_BaseColor_alt.png`,
+          `Skin variations/Skin tone 1/Anime_Proj_base_NoClothes_skin_BaseColor.png`,
+          `Skin variations/Skin tone 2/Anime_Proj_base_NoClothes_skin_BaseColor.png`,
+          `Skin variations/Skin tone 3/Anime_Proj_base_NoClothes_skin_BaseColor.png`,
+          `Skin variations/Skin tone 4/Anime_Proj_base_NoClothes_skin_BaseColor.png`,
+
+          `Skin variations/Arm sleeves/ArmSleeves_Original.png`,
+          `Skin variations/Arm sleeves/ArmSleeves_Tone_1.png`,
+          `Skin variations/Arm sleeves/ArmSleeves_Tone_2.png`,
+          `Skin variations/Arm sleeves/ArmSleeves_Tone_3.png`,
+          `Skin variations/Arm sleeves/ArmSleeves_Tone_4.png`,
+
+          `Skin variations/Knee highs/KneeHighs_Original.png`,
+          `Skin variations/Knee highs/KneeHighs_Tone_1.png`,
+          `Skin variations/Knee highs/KneeHighs_Tone_2.png`,
+          `Skin variations/Knee highs/KneeHighs_Tone_3.png`,
+          `Skin variations/Knee highs/KneeHighs_Tone_4.png`,
+
+          `Skin variations/Thigh highs/ThighHighs_Original.png`,
+          `Skin variations/Thigh highs/ThighHighs_Tone_1.png`,
+          `Skin variations/Thigh highs/ThighHighs_Tone_2.png`,
+          `Skin variations/Thigh highs/ThighHighs_Tone_3.png`,
+          `Skin variations/Thigh highs/ThighHighs_Tone_4.png`,
+        ].map(n => `/models/Avatar_Bases/Drophunter Class/Variation textures/${n}`),
+      ],
+      [
+        'mouth',
+        [],
+      ],
+    ],
+    clothing: {
+      'Anime_Proj_base_Set_1_Pants.001_BaseColor': [
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_6_Textures/Blue/Anime_Proj_base_Set_1_Pants.001_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_6_Textures/Black/Anime_Proj_base_Set_1_Pants.001_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_6_Textures/Pink/Anime_Proj_base_Set_1_Pants.001_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_6_Textures/Green/Anime_Proj_base_Set_1_Pants.001_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_6_Textures/Yellow/Anime_Proj_base_Set_1_Pants.001_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_6_Textures/Original/Anime_Proj_base_Set_1_Pants.001_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_6_Textures/Cyan/Anime_Proj_base_Set_1_Pants.001_BaseColor.png`,
+      ],
+      'Anime_Proj_base_Set_1_Shoes_BaseColor': [
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_6_Textures/Blue/Anime_Proj_base_Set_1_Shoes_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_6_Textures/Black/Anime_Proj_base_Set_1_Shoes_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_6_Textures/Pink/Anime_Proj_base_Set_1_Shoes_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_6_Textures/Green/Anime_Proj_base_Set_1_Shoes_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_6_Textures/Yellow/Anime_Proj_base_Set_1_Shoes_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_6_Textures/Original/Anime_Proj_base_Set_1_Shoes_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_6_Textures/Cyan/Anime_Proj_base_Set_1_Shoes_BaseColor.png`,
+      ],
+      'Anime_Proj_base_Set_1_Top_BaseColor': [
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_6_Textures/Blue/Anime_Proj_base_Set_1_Top_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_6_Textures/Black/Anime_Proj_base_Set_1_Top_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_6_Textures/Pink/Anime_Proj_base_Set_1_Top_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_6_Textures/Green/Anime_Proj_base_Set_1_Top_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_6_Textures/Yellow/Anime_Proj_base_Set_1_Top_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_6_Textures/Original/Anime_Proj_base_Set_1_Top_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_6_Textures/Cyan/Anime_Proj_base_Set_1_Top_BaseColor.png`,
+      ],
+      'Anime_Proj_base_Set_3_Shoes1_BaseColor': [
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_8_Textures/Blue/Anime_Proj_base_Set_3_Shoes1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_8_Textures/Black/Anime_Proj_base_Set_3_Shoes1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_8_Textures/Pink/Anime_Proj_base_Set_3_Shoes1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_8_Textures/Green/Anime_Proj_base_Set_3_Shoes1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_8_Textures/Yellow/Anime_Proj_base_Set_3_Shoes1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_8_Textures/Original/Anime_Proj_base_Set_3_Shoes1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_8_Textures/Cyan/Anime_Proj_base_Set_3_Shoes1_BaseColor.png`,
+      ],
+      'Anime_Proj_base_Set_3_Top1_BaseColor': [
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_8_Textures/Blue/Anime_Proj_base_Set_3_Top1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_8_Textures/Black/Anime_Proj_base_Set_3_Top1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_8_Textures/Pink/Anime_Proj_base_Set_3_Top1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_8_Textures/Green/Anime_Proj_base_Set_3_Top1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_8_Textures/Yellow/Anime_Proj_base_Set_3_Top1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_8_Textures/Original/Anime_Proj_base_Set_3_Top1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_8_Textures/Cyan/Anime_Proj_base_Set_3_Top1_BaseColor.png`,
+      ],
+      'Anime_Proj_base_Set_3_pants1_BaseColor': [
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_8_Textures/Blue/Anime_Proj_base_Set_3_pants1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_8_Textures/Black/Anime_Proj_base_Set_3_pants1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_8_Textures/Pink/Anime_Proj_base_Set_3_pants1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_8_Textures/Green/Anime_Proj_base_Set_3_pants1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_8_Textures/Yellow/Anime_Proj_base_Set_3_pants1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_8_Textures/Original/Anime_Proj_base_Set_3_pants1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_8_Textures/Cyan/Anime_Proj_base_Set_3_pants1_BaseColor.png`,
+      ],
+      'DropHunter_Outfit_1_Highcut socks_BaseColor': [
+        `/Variation textures/Outfit_1_Textures/Blue/DropHunter_Outfit_1_Highcut socks_BaseColor.png`,
+        `/Variation textures/Outfit_1_Textures/Black/DropHunter_Outfit_1_Highcut socks_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_1_Textures/Pink/DropHunter_Outfit_1_Highcut socks_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_1_Textures/Green/DropHunter_Outfit_1_Highcut socks_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_1_Textures/Yellow/DropHunter_Outfit_1_Highcut socks_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_1_Textures/Original/DropHunter_Outfit_1_Highcut socks_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_1_Textures/Cyan/DropHunter_Outfit_1_Highcut socks_BaseColor.png`,
+      ],
+      'DropHunter_Outfit_1_Leg Items_BaseColor': [
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_1_Textures/Blue/DropHunter_Outfit_1_Leg Items_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_1_Textures/Black/DropHunter_Outfit_1_Leg Items_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_1_Textures/Pink/DropHunter_Outfit_1_Leg Items_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_1_Textures/Green/DropHunter_Outfit_1_Leg Items_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_1_Textures/Yellow/DropHunter_Outfit_1_Leg Items_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_1_Textures/Original/DropHunter_Outfit_1_Leg Items_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_1_Textures/Cyan/DropHunter_Outfit_1_Leg Items_BaseColor.png`,
+      ],
+      'DropHunter_Outfit_1_Shirt1_BaseColor': [
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_1_Textures/Blue/DropHunter_Outfit_1_Shirt1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_1_Textures/Black/DropHunter_Outfit_1_Shirt1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_1_Textures/Pink/DropHunter_Outfit_1_Shirt1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_1_Textures/Green/DropHunter_Outfit_1_Shirt1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_1_Textures/Yellow/DropHunter_Outfit_1_Shirt1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_1_Textures/Original/DropHunter_Outfit_1_Shirt1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_1_Textures/Cyan/DropHunter_Outfit_1_Shirt1_BaseColor.png`,
+      ],
+      'DropHunter_Outfit_1_Shoes4_BaseColor': [
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_1_Textures/Blue/DropHunter_Outfit_1_Shoes4_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_1_Textures/Black/DropHunter_Outfit_1_Shoes4_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_1_Textures/Pink/DropHunter_Outfit_1_Shoes4_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_1_Textures/Green/DropHunter_Outfit_1_Shoes4_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_1_Textures/Yellow/DropHunter_Outfit_1_Shoes4_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_1_Textures/Original/DropHunter_Outfit_1_Shoes4_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_1_Textures/Cyan/DropHunter_Outfit_1_Shoes4_BaseColor.png`,
+      ],
+      'DropHunter_Outfit_1_Shorts_BaseColor2': [
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_1_Textures/Blue/legs_WaistShorts_Blue.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_1_Textures/Blue/old/DropHunter_Outfit_1_Shorts_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_1_Textures/Black/legs_WaistShorts_Black.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_1_Textures/Black/old/DropHunter_Outfit_1_Shorts_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_1_Textures/Pink/legs_WaistShorts_Pink.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_1_Textures/Pink/old/DropHunter_Outfit_1_Shorts_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_1_Textures/Green/legs_WaistShorts_Green.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_1_Textures/Green/old/DropHunter_Outfit_1_Shorts_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_1_Textures/Yellow/legs_WaistShorts_Yellow.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_1_Textures/Yellow/old/DropHunter_Outfit_1_Shorts_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_1_Textures/Original/old/DropHunter_Outfit_1_Shorts_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_1_Textures/Original/DropHunter_Outfit_1_Shorts_BaseColor2.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_1_Textures/Cyan/legs_WaistShorts_Cyan.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_1_Textures/Cyan/old/DropHunter_Outfit_1_Shorts_BaseColor.png`,
+      ],
+      'DropHunter_Outfit_2_Boots1_BaseColor': [
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_2_Textures/Blue/DropHunter_Outfit_2_Boots1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_2_Textures/Black/DropHunter_Outfit_2_Boots1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_2_Textures/Pink/DropHunter_Outfit_2_Boots1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_2_Textures/Green/DropHunter_Outfit_2_Boots1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_2_Textures/Yellow/DropHunter_Outfit_2_Boots1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_2_Textures/Original/DropHunter_Outfit_2_Boots1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_2_Textures/Cyan/DropHunter_Outfit_2_Boots1_BaseColor.png`,
+      ],
+      'DropHunter_Outfit_2_Dress1_BaseColor': [
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_2_Textures/Blue/DropHunter_Outfit_2_Dress1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_2_Textures/Black/DropHunter_Outfit_2_Dress1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_2_Textures/Pink/DropHunter_Outfit_2_Dress1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_2_Textures/Green/DropHunter_Outfit_2_Dress1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_2_Textures/Yellow/DropHunter_Outfit_2_Dress1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_2_Textures/Original/DropHunter_Outfit_2_Dress1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_2_Textures/Cyan/DropHunter_Outfit_2_Dress1_BaseColor.png`,
+      ],
+      'DropHunter_Outfit_3_VERTEX_Belt1_BaseColor': [
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_3_Textures/Blue/DropHunter_Outfit_3_VERTEX_Belt1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_3_Textures/Black/DropHunter_Outfit_3_VERTEX_Belt1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_3_Textures/Pink/DropHunter_Outfit_3_VERTEX_Belt1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_3_Textures/Green/DropHunter_Outfit_3_VERTEX_Belt1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_3_Textures/Yellow/DropHunter_Outfit_3_VERTEX_Belt1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_3_Textures/Original/DropHunter_Outfit_3_VERTEX_Belt1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_3_Textures/Cyan/DropHunter_Outfit_3_VERTEX_Belt1_BaseColor.png`,
+      ],
+      'DropHunter_Outfit_3_VERTEX_Jacket2_BaseColor': [
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_3_Textures/Blue/DropHunter_Outfit_3_VERTEX_Jacket2_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_3_Textures/Black/DropHunter_Outfit_3_VERTEX_Jacket2_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_3_Textures/Pink/DropHunter_Outfit_3_VERTEX_Jacket2_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_3_Textures/Green/DropHunter_Outfit_3_VERTEX_Jacket2_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_3_Textures/Yellow/DropHunter_Outfit_3_VERTEX_Jacket2_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_3_Textures/Original/DropHunter_Outfit_3_VERTEX_Jacket2_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_3_Textures/Cyan/DropHunter_Outfit_3_VERTEX_Jacket2_BaseColor.png`,
+      ],
+      'DropHunter_Outfit_3_VERTEX_Shirt2_BaseColor': [
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_3_Textures/Blue/DropHunter_Outfit_3_VERTEX_Shirt2_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_3_Textures/Black/DropHunter_Outfit_3_VERTEX_Shirt2_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_3_Textures/Pink/DropHunter_Outfit_3_VERTEX_Shirt2_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_3_Textures/Green/DropHunter_Outfit_3_VERTEX_Shirt2_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_3_Textures/Yellow/DropHunter_Outfit_3_VERTEX_Shirt2_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_3_Textures/Original/DropHunter_Outfit_3_VERTEX_Shirt2_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_3_Textures/Cyan/DropHunter_Outfit_3_VERTEX_Shirt2_BaseColor.png`,
+      ],
+      'DropHunter_Outfit_3_VERTEX_Shoes6_BaseColor': [
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_3_Textures/Blue/DropHunter_Outfit_3_VERTEX_Shoes6_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_3_Textures/Black/DropHunter_Outfit_3_VERTEX_Shoes6_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_3_Textures/Pink/DropHunter_Outfit_3_VERTEX_Shoes6_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_3_Textures/Green/DropHunter_Outfit_3_VERTEX_Shoes6_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_3_Textures/Yellow/DropHunter_Outfit_3_VERTEX_Shoes6_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_3_Textures/Original/DropHunter_Outfit_3_VERTEX_Shoes6_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_3_Textures/Cyan/DropHunter_Outfit_3_VERTEX_Shoes6_BaseColor.png`,
+      ],
+      'DropHunter_Outfit_3_VERTEX_Skirt1_BaseColor': [
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_3_Textures/Blue/DropHunter_Outfit_3_VERTEX_Skirt1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_3_Textures/Black/DropHunter_Outfit_3_VERTEX_Skirt1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_3_Textures/Pink/DropHunter_Outfit_3_VERTEX_Skirt1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_3_Textures/Green/DropHunter_Outfit_3_VERTEX_Skirt1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_3_Textures/Yellow/DropHunter_Outfit_3_VERTEX_Skirt1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_3_Textures/Original/DropHunter_Outfit_3_VERTEX_Skirt1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_3_Textures/Cyan/DropHunter_Outfit_3_VERTEX_Skirt1_BaseColor.png`,
+      ],
+      'DropHunter_Outfit_3_VERTEX_Socks1_BaseColor': [
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_3_Textures/Blue/DropHunter_Outfit_3_VERTEX_Socks1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_3_Textures/Black/DropHunter_Outfit_3_VERTEX_Socks1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_3_Textures/Pink/DropHunter_Outfit_3_VERTEX_Socks1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_3_Textures/Green/DropHunter_Outfit_3_VERTEX_Socks1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_3_Textures/Yellow/DropHunter_Outfit_3_VERTEX_Socks1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_3_Textures/Original/DropHunter_Outfit_3_VERTEX_Socks1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_3_Textures/Cyan/DropHunter_Outfit_3_VERTEX_Socks1_BaseColor.png`,
+      ],
+      'DropHunter_Outfit_4_Shoe7_BaseColor': [
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_4_Textures/Blue/DropHunter_Outfit_4_Shoe7_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_4_Textures/Black/DropHunter_Outfit_4_Shoe7_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_4_Textures/Pink/DropHunter_Outfit_4_Shoe7_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_4_Textures/Green/DropHunter_Outfit_4_Shoe7_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_4_Textures/Yellow/DropHunter_Outfit_4_Shoe7_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_4_Textures/Original/DropHunter_Outfit_4_Shoe7_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_4_Textures/Cyan/DropHunter_Outfit_4_Shoe7_BaseColor.png`,
+      ],
+      'DropHunter_Outfit_4_Shorts3_BaseColor': [
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_4_Textures/Blue/DropHunter_Outfit_4_Shorts3_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_4_Textures/Black/DropHunter_Outfit_4_Shorts3_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_4_Textures/Pink/DropHunter_Outfit_4_Shorts3_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_4_Textures/Green/DropHunter_Outfit_4_Shorts3_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_4_Textures/Yellow/DropHunter_Outfit_4_Shorts3_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_4_Textures/Original/DropHunter_Outfit_4_Shorts3_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_4_Textures/Cyan/DropHunter_Outfit_4_Shorts3_BaseColor.png`,
+      ],
+      'DropHunter_Outfit_4_Sweater1_BaseColor': [
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_4_Textures/Blue/DropHunter_Outfit_4_Sweater1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_4_Textures/Black/DropHunter_Outfit_4_Sweater1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_4_Textures/Pink/DropHunter_Outfit_4_Sweater1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_4_Textures/Green/DropHunter_Outfit_4_Sweater1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_4_Textures/Yellow/DropHunter_Outfit_4_Sweater1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_4_Textures/Original/DropHunter_Outfit_4_Sweater1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_4_Textures/Cyan/DropHunter_Outfit_4_Sweater1_BaseColor.png`,
+      ],
+      'DropHunter_Outfit_4_Tanktop1_BaseColor': [
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_5_Textures/Blue/DropHunter_Outfit_5_Tanktop1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_5_Textures/Black/DropHunter_Outfit_5_Tanktop1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_5_Textures/Pink/DropHunter_Outfit_5_Tanktop1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_5_Textures/Green/DropHunter_Outfit_5_Tanktop1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_5_Textures/Yellow/DropHunter_Outfit_5_Tanktop1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_5_Textures/Original/DropHunter_Outfit_5_Tanktop1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_5_Textures/Cyan/DropHunter_Outfit_5_Tanktop1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_4_Textures/Blue/DropHunter_Outfit_4_Tanktop1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_4_Textures/Black/DropHunter_Outfit_4_Tanktop1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_4_Textures/Pink/DropHunter_Outfit_4_Tanktop1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_4_Textures/Green/DropHunter_Outfit_4_Tanktop1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_4_Textures/Yellow/DropHunter_Outfit_4_Tanktop1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_4_Textures/Original/DropHunter_Outfit_4_Tanktop1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_4_Textures/Cyan/DropHunter_Outfit_4_Tanktop1_BaseColor.png`,
+      ],
+      'DropHunter_Outfit_5_Jacket1_BaseColor': [
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_5_Textures/Blue/DropHunter_Outfit_5_Jacket1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_5_Textures/Black/DropHunter_Outfit_5_Jacket1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_5_Textures/Pink/DropHunter_Outfit_5_Jacket1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_5_Textures/Green/DropHunter_Outfit_5_Jacket1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_5_Textures/Yellow/DropHunter_Outfit_5_Jacket1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_5_Textures/Original/DropHunter_Outfit_5_Jacket1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_5_Textures/Cyan/DropHunter_Outfit_5_Jacket1_BaseColor.png`,
+      ],
+      'DropHunter_Outfit_5_Shoes5_BaseColor': [
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_5_Textures/Blue/DropHunter_Outfit_5_Shoes5_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_5_Textures/Black/DropHunter_Outfit_5_Shoes5_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_5_Textures/Pink/DropHunter_Outfit_5_Shoes5_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_5_Textures/Green/DropHunter_Outfit_5_Shoes5_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_5_Textures/Yellow/DropHunter_Outfit_5_Shoes5_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_5_Textures/Original/DropHunter_Outfit_5_Shoes5_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_5_Textures/Cyan/DropHunter_Outfit_5_Shoes5_BaseColor.png`,
+      ],
+      'DropHunter_Outfit_5_Shorts2_BaseColor': [
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_5_Textures/Blue/DropHunter_Outfit_5_Shorts2_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_5_Textures/Black/DropHunter_Outfit_5_Shorts2_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_5_Textures/Pink/DropHunter_Outfit_5_Shorts2_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_5_Textures/Green/DropHunter_Outfit_5_Shorts2_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_5_Textures/Yellow/DropHunter_Outfit_5_Shorts2_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_5_Textures/Original/DropHunter_Outfit_5_Shorts2_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_5_Textures/Cyan/DropHunter_Outfit_5_Shorts2_BaseColor.png`,
+      ],
+      'DropHunter_Outfit_7_Jacket_2_BaseColor': [
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_7_Textures/Blue/DropHunter_Outfit_7_Jacket_2_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_7_Textures/Black/DropHunter_Outfit_7_Jacket_2_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_7_Textures/Pink/DropHunter_Outfit_7_Jacket_2_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_7_Textures/Green/DropHunter_Outfit_7_Jacket_2_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_7_Textures/Yellow/DropHunter_Outfit_7_Jacket_2_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_7_Textures/Original/DropHunter_Outfit_7_Jacket_2_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_7_Textures/Cyan/DropHunter_Outfit_7_Jacket_2_BaseColor.png`,
+      ],
+      'DropHunter_Outfit_7_boots_BaseColor': [
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_7_Textures/Blue/DropHunter_Outfit_7_boots_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_7_Textures/Black/DropHunter_Outfit_7_boots_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_7_Textures/Pink/DropHunter_Outfit_7_boots_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_7_Textures/Green/DropHunter_Outfit_7_boots_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_7_Textures/Yellow/DropHunter_Outfit_7_boots_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_7_Textures/Original/DropHunter_Outfit_7_boots_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_7_Textures/Cyan/DropHunter_Outfit_7_boots_BaseColor.png`,
+      ],
+      'DropHunter_Outfit_7_shorts_BaseColor': [
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_7_Textures/Blue/DropHunter_Outfit_7_shorts_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_7_Textures/Black/DropHunter_Outfit_7_shorts_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_7_Textures/Pink/DropHunter_Outfit_7_shorts_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_7_Textures/Green/DropHunter_Outfit_7_shorts_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_7_Textures/Yellow/DropHunter_Outfit_7_shorts_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_7_Textures/Original/DropHunter_Outfit_7_shorts_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_7_Textures/Cyan/DropHunter_Outfit_7_shorts_BaseColor.png`,
+      ],
+      'DropHunter_Outfit_9_Half jacket_BaseColor': [
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_9_Textures/Blue/DropHunter_Outfit_9_Half jacket_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_9_Textures/Black/DropHunter_Outfit_9_Half jacket_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_9_Textures/Pink/DropHunter_Outfit_9_Half jacket_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_9_Textures/Green/DropHunter_Outfit_9_Half jacket_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_9_Textures/Yellow/DropHunter_Outfit_9_Half jacket_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_9_Textures/Original/DropHunter_Outfit_9_Half jacket_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_9_Textures/Cyan/DropHunter_Outfit_9_Half jacket_BaseColor.png`,
+      ],
+      'DropHunter_Outfit_9_Pants_BaseColor': [
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_9_Textures/Blue/DropHunter_Outfit_9_Pants_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_9_Textures/Black/DropHunter_Outfit_9_Pants_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_9_Textures/Pink/DropHunter_Outfit_9_Pants_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_9_Textures/Green/DropHunter_Outfit_9_Pants_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_9_Textures/Yellow/DropHunter_Outfit_9_Pants_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_9_Textures/Original/DropHunter_Outfit_9_Pants_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_9_Textures/Cyan/DropHunter_Outfit_9_Pants_BaseColor.png`,
+      ],
+      'DropHunter_Outfit_9_Shoes2_BaseColor': [
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_9_Textures/Blue/DropHunter_Outfit_9_Shoes2_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_9_Textures/Black/DropHunter_Outfit_9_Shoes2_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_9_Textures/Pink/DropHunter_Outfit_9_Shoes2_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_9_Textures/Green/DropHunter_Outfit_9_Shoes2_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_9_Textures/Yellow/DropHunter_Outfit_9_Shoes2_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_9_Textures/Original/DropHunter_Outfit_9_Shoes2_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_9_Textures/Cyan/DropHunter_Outfit_9_Shoes2_BaseColor.png`,
+      ],
+      'DropHunter_Outfit_9_Topsuit_BaseColor': [
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_9_Textures/Blue/DropHunter_Outfit_9_Topsuit_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_9_Textures/Black/DropHunter_Outfit_9_Topsuit_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_9_Textures/Pink/DropHunter_Outfit_9_Topsuit_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_9_Textures/Green/DropHunter_Outfit_9_Topsuit_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_9_Textures/Yellow/DropHunter_Outfit_9_Topsuit_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_9_Textures/Original/DropHunter_Outfit_9_Topsuit_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_9_Textures/Cyan/DropHunter_Outfit_9_Topsuit_BaseColor.png`,
+      ],
+      'DropHunter_Outfit_10_Updated jacket_Jacket_BaseColor': [
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_10_Textures/Blue/DropHunter_Outfit_10_Updated jacket_Jacket_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_10_Textures/Black/DropHunter_Outfit_10_Updated jacket_Jacket_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_10_Textures/Pink/DropHunter_Outfit_10_Updated jacket_Jacket_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_10_Textures/Green/DropHunter_Outfit_10_Updated jacket_Jacket_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_10_Textures/Yellow/DropHunter_Outfit_10_Updated jacket_Jacket_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_10_Textures/Original/DropHunter_Outfit_10_Updated jacket_Jacket_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_10_Textures/Cyan/DropHunter_Outfit_10_Updated jacket_Jacket_BaseColor.png`,
+      ],
+      'DropHunter_Outfit_10_Updated jacket_Shoes3_BaseColor': [
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_10_Textures/Blue/DropHunter_Outfit_10_Updated jacket_Shoes3_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_10_Textures/Black/DropHunter_Outfit_10_Updated jacket_Shoes3_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_10_Textures/Pink/DropHunter_Outfit_10_Updated jacket_Shoes3_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_10_Textures/Green/DropHunter_Outfit_10_Updated jacket_Shoes3_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_10_Textures/Yellow/DropHunter_Outfit_10_Updated jacket_Shoes3_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_10_Textures/Original/DropHunter_Outfit_10_Updated jacket_Shoes3_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_10_Textures/Cyan/DropHunter_Outfit_10_Updated jacket_Shoes3_BaseColor.png`,
+      ],
+      'DropHunter_Outfit_10_Updated jacket_shorts1_BaseColor': [
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_10_Textures/Blue/DropHunter_Outfit_10_Updated jacket_shorts1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_10_Textures/Black/DropHunter_Outfit_10_Updated jacket_shorts1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_10_Textures/Pink/DropHunter_Outfit_10_Updated jacket_shorts1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_10_Textures/Green/DropHunter_Outfit_10_Updated jacket_shorts1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_10_Textures/Yellow/DropHunter_Outfit_10_Updated jacket_shorts1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_10_Textures/Original/DropHunter_Outfit_10_Updated jacket_shorts1_BaseColor.png`,
+        `/models/Avatar_Bases/Drophunter Class/Variation textures/Outfit_10_Textures/Cyan/DropHunter_Outfit_10_Updated jacket_shorts1_BaseColor.png`,
+      ],
+    },
+  },
 ];
-// const seed = 'lol' + Math.random();
-const seed = 'lol';
-globalThis.seed = seed;
+const seed = 'a';
 const rng = alea(seed);
 const hairShift = rng() * Math.PI * 2;
 const clothingShift = rng() * Math.PI * 2;
 const hairMetadata = [1, hairShift, 0.5, 0.5];
 const chestMetadata = [0, clothingShift, 0, 0.3];
 const clothingMetadata = [1, clothingShift, 0, 0.3];
+const eyeMetadata = [1, 0, 0, 0];
 const headMetadata = [1, 0, 0, 0];
 const bodyMetadata = [1, 0, 0, 0];
 const categorySpecsArray = [
@@ -71,6 +1047,11 @@ const categorySpecsArray = [
       name: 'hair',
       className: 'hair',
       metadata: hairMetadata,
+    },
+    {
+      regex: /^Headbaked\(copy\)_1$/i,
+      name: 'eye',
+      metadata: eyeMetadata,
     },
     {
       regex: /head/i,
@@ -86,37 +1067,37 @@ const categorySpecsArray = [
     },
     {
       regex: /^chest_/,
-      name: 'chest',
+      name: 'clothing',
       className: 'clothing',
       metadata: chestMetadata,
     },
     {
       regex: /^legs_/,
-      name: 'legs',
+      name: 'clothing',
       className: 'clothing',
       metadata: clothingMetadata,
     },
     {
       regex: /^foot_/,
-      name: 'foot',
+      name: 'clothing',
       className: 'clothing',
       metadata: clothingMetadata,
     },
     {
       regex: /^outer_/,
-      name: 'outer',
+      name: 'clothing',
       className: 'clothing',
       metadata: clothingMetadata,
     },
     {
       regex: /^accessories_/,
-      name: 'accessories',
+      name: 'clothing',
       className: 'clothing',
       metadata: clothingMetadata,
     },
     {
       regex: /^solo_/,
-      name: 'solo',
+      name: 'clothing',
       className: 'solo',
       metadata: clothingMetadata,
     },
@@ -130,33 +1111,39 @@ const categorySpecsArray = [
     },
     {
       regex: /^foot_/,
-      name: 'foot',
+      name: 'clothing',
       className: 'clothing',
       metadata: clothingMetadata,
     },
     {
       regex: /^accessories_/,
-      name: 'accessories',
+      name: 'clothing',
       className: 'clothing',
       metadata: clothingMetadata,
     },
     {
       regex: /^outer_/,
-      name: 'outer',
+      name: 'clothing',
       className: 'clothing',
       metadata: clothingMetadata,
     },
     {
       regex: /^chest_/,
-      name: 'chest',
+      name: 'clothing',
       className: 'clothing',
       metadata: chestMetadata,
     },
     {
       regex: /^legs_/,
-      name: 'legs',
+      name: 'clothing',
       className: 'clothing',
       metadata: clothingMetadata,
+    },
+    {
+      regex: /^head_geobaked\(copy\)$/i,
+      name: 'eye',
+      className: 'eye',
+      metadata: eyeMetadata,
     },
     {
       regex: /^head_/,
@@ -172,7 +1159,7 @@ const categorySpecsArray = [
     },
     {
       regex: /^solo_/,
-      name: 'solo',
+      name: 'clothing',
       className: 'solo',
       metadata: clothingMetadata,
     },
@@ -183,7 +1170,6 @@ const size = 1024;
 //
 
 const gltfLoader = makeGltfLoader();
-const gltfExporter = makeGltfExporter();
 const getMeshes = model => {
   const meshes = [];
   model.traverse(o => {
@@ -195,20 +1181,39 @@ const getMeshes = model => {
 };
 const loadGltf = avatarUrl => {
   const p = makePromise();
-  gltfLoader.load(avatarUrl, gltf => {
-    p.resolve(gltf);
-  }, function onProgress(xhr) {
+  gltfLoader.load(avatarUrl, p.resolve, function onProgress(xhr) {
     // console.log('progress', xhr.loaded / xhr.total);
   }, p.reject);
   return p;
 };
-const selectAvatar = async (avatarUrlIndex = Math.floor(rng() * avatarUrls.length)) => {
-  const avatarUrl = avatarUrls[avatarUrlIndex];
-  const categorySpecs = categorySpecsArray[avatarUrlIndex];
+const _hueShiftCtx = (ctx, shift) => {
+  const imageData = ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height);
+  const {data} = imageData;
+  for (let i = 0; i < data.length; i += 4) {
+    localColor.setRGB(
+      data[i + 0] / 255,
+      data[i + 1] / 255 * 0.5,
+      data[i + 2] / 255 * 0.5
+    )
+      .offsetHSL(shift, 0, 0);
+    data[i + 0] = localColor.r * 255;
+    data[i + 1] = localColor.g * 255;
+    data[i + 2] = localColor.b * 255;
+  }
+  ctx.putImageData(imageData, 0, 0);
+};
+const selectAvatar = async (avatarSpecIndex = Math.floor(rng() * avatarSpecs.length)) => {
+  const avatarSpec = avatarSpecs[avatarSpecIndex];
+  const {
+    base,
+  } = avatarSpec;
+  const categorySpecs = categorySpecsArray[avatarSpecIndex];
 
-  const gltf = await loadGltf(avatarUrl);
+  const gltf = await loadGltf(base);
   const oldModel = gltf.scene;
   
+  // globalThis.gltf = gltf;
+
   const model = new THREE.Scene();
   model.position.copy(gltf.scene.position);
   model.quaternion.copy(gltf.scene.quaternion);
@@ -216,16 +1221,299 @@ const selectAvatar = async (avatarUrlIndex = Math.floor(rng() * avatarUrls.lengt
   model.matrix.copy(gltf.scene.matrix);
   model.matrixWorld.copy(gltf.scene.matrixWorld);
   model.visible = gltf.scene.visible;
-  while(oldModel.children.length > 0) {
+  while (oldModel.children.length > 0) {
     model.add(oldModel.children[0]);
   }
   model.updateMatrixWorld();
   gltf.scene = model;
 
-  // recompile the model
-  let meshes = getMeshes(model);
+  // latch
+  // globalThis.model = model;
+  const rng = Math.random;
 
-  // sort meshes
+  // recompile model
+  const meshes = getMeshes(model);
+  // globalThis.meshes = meshes;
+
+  const categories = {};
+  for (const mesh of meshes) {
+    const {name} = mesh;
+    const categoryIndex = categorySpecs.findIndex(categorySpec => {
+      return categorySpec.regex.test(name);
+    });
+    if (categoryIndex !== -1) {
+      const categorySpec = categorySpecs[categoryIndex];
+      let entry = categories[categorySpec.name];
+      if (!entry) {
+        entry = {
+          meshes: [],
+        };
+        categories[categorySpec.name] = entry;
+      }
+      entry.meshes.push(mesh);
+    } else {
+      console.warn('failed to match mesh to category', name);
+      debugger;
+    }
+    mesh.visible = false;
+  }
+
+  // console.log('got categories', {
+  //   meshes,
+  //   categories,
+  // });
+
+  // sort by name
+  for (const categoryName in categories) {
+    categories[categoryName].meshes.sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  // select and show a random mesh from each category
+  const categorySelections = {};
+  const _selectFromCategory = (name) => {
+    const category = categories[name];
+    const mesh = category.meshes[Math.floor(rng() * category.meshes.length)];
+    mesh.visible = true;
+    categorySelections[name] = mesh;
+  };
+  for (const categorySpec of categorySpecs) {
+    const {name, className} = categorySpec;
+    // if (!['solo', 'clothing'].includes(className)) {
+      _selectFromCategory(name);
+    // }
+  }
+  /* let isSolo = (categories['solo'] ?
+    (categories['solo'].meshes.length > 0)
+  :
+    false
+  ) && (rng() < 0.5);
+  if (isSolo) {
+    for (const categorySpec of categorySpecs) {
+      const {name, className} = categorySpec;
+      if (className === 'solo') {
+        _selectFromCategory(name);
+      }
+    }
+  } else {
+    for (const categorySpec of categorySpecs) {
+      const {name, className} = categorySpec;
+      if (className === 'clothing') {
+        _selectFromCategory(name);
+      }
+    }
+  } */
+
+  const textures = [];
+  const materialMeshes = [];
+  const materials = [];
+  const texturePaths = [];
+  const seenTextures = new Set();
+  model.traverse(o => {
+    if (o.isMesh) {
+      const {material} = o;
+      for (const k in material) {
+        const v = material[k];
+        if (v?.isTexture) {
+          textures.push(v);
+          materialMeshes.push(o);
+          materials.push(material);
+          texturePaths.push([
+            o,
+            material,
+            k,
+            v,
+          ]);
+          seenTextures.add(v);
+        }
+      }
+    }
+  });
+  // globalThis.textures = textures;
+  // globalThis.materialMeshes = materialMeshes;
+  // globalThis.materials = materials;
+  // globalThis.texturePaths = texturePaths;
+
+  globalThis.categories = categories;
+
+  // enable base meshes
+  for (const mesh of categories.eye.meshes) {
+    mesh.visible = true;
+  }
+  for (const mesh of categories.head.meshes) {
+    mesh.visible = true;
+  }
+  for (const mesh of categories.body.meshes) {
+    mesh.visible = true;
+  }
+
+  const _updateEye = async () => {
+    for (let i = 0; i < categories.eye.meshes.length; i++) {
+      const mesh = categories.eye.meshes[i];
+      const eyeTexture = mesh.material.map;
+      const {source} = eyeTexture;
+      const imageBitmap = source.data;
+
+      const {
+        eye,
+      } = avatarSpec;
+      const eyeTextureUrl = eye[Math.floor(rng() * eye.length)];
+      const img = await loadImage(eyeTextureUrl);
+
+      const canvas2 = document.createElement('canvas');
+      canvas2.width = imageBitmap.width;
+      canvas2.height = imageBitmap.height;
+      canvas2.classList.add(mesh.name + '-2');
+      const ctx2 = canvas2.getContext('2d');
+      ctx2.drawImage(img, 0, 0);
+      canvas2.style.cssText = `\
+        background: red;
+        width: 512px;
+        height: 512px;
+      `;
+      document.body.appendChild(canvas2);
+
+      eyeTexture.image = canvas2;
+      eyeTexture.needsUpdate = true;
+
+      mesh.material.map = eyeTexture;
+      mesh.material.needsUpdate = true;
+    }
+  };
+  await _updateEye();
+
+  const _updateHair = () => {
+    const hairTextures = new Set();
+    for (const mesh of categories.hair.meshes) {
+      if (mesh.visible) {
+        const {material} = mesh;
+        const {map} = material;
+        hairTextures.add(map);
+      }
+    }
+    for (const hairTexture of hairTextures) {
+      const canvas = document.createElement('canvas');
+      canvas.width = hairTexture.image.width;
+      canvas.height = hairTexture.image.height;
+      canvas.classList.add('hair');
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(hairTexture.image, 0, 0);
+      _hueShiftCtx(ctx, Math.random() * Math.PI * 2);
+      canvas.style.cssText = `\
+        background: red;
+        width: 512px;
+        height: 512px;
+      `;
+      document.body.appendChild(canvas);
+
+      hairTexture.image = canvas;
+      hairTexture.needsUpdate = true;
+    }
+  };
+  _updateHair();
+
+  const _updateSkin = async () => {
+    // load images
+    let faceCanvas;
+    let bodyCanvas;
+    {
+      const {
+        skin,
+      } = avatarSpec;
+      const [faceSpec, bodySpec] = skin;
+      const faceOptions = faceSpec[1];
+      const bodyOptions = bodySpec[1];
+
+      const optionIndex = Math.floor(rng() * faceOptions.length);
+      const faceOption = faceOptions[optionIndex];
+      const bodyOption = bodyOptions[optionIndex];
+
+      const [
+        faceImage,
+        bodyImage,
+      ] = await Promise.all([
+        loadImage(faceOption),
+        loadImage(bodyOption),
+      ]);
+
+      faceCanvas = document.createElement('canvas');
+      faceCanvas.width = faceImage.width;
+      faceCanvas.height = faceImage.height;
+      faceCanvas.classList.add('face');
+      const faceCtx = faceCanvas.getContext('2d');
+      faceCtx.drawImage(faceImage, 0, 0);
+      faceCanvas.style.cssText = `\
+        background: red;
+        width: 512px;
+        height: 512px;
+      `;
+
+      bodyCanvas = document.createElement('canvas');
+      bodyCanvas.width = bodyImage.width;
+      bodyCanvas.height = bodyImage.height;
+      bodyCanvas.classList.add('body');
+      const bodyCtx = bodyCanvas.getContext('2d');
+      bodyCtx.drawImage(bodyImage, 0, 0);
+      bodyCanvas.style.cssText = `\
+        background: red;
+        width: 512px;
+        height: 512px;
+      `;
+    }
+
+    // head
+    const headTextures = new Set();
+    const headMeshes = new Set();
+    for (let i = 0; i < categories.head.meshes.length; i++) {
+      const mesh = categories.head.meshes[i];
+      if (mesh.visible) {
+        const {material} = mesh;
+        const {map} = material;
+        headTextures.add(map);
+        headMeshes.add(mesh);
+
+        material.map.image = faceCanvas;
+        material.map.needsUpdate = true;
+      }
+    }
+
+    // body
+    const bodyTextures = new Set();
+    const bodyMeshes = new Set();
+    for (const mesh of categories.body.meshes) {
+      if (mesh.visible) {
+        const {material} = mesh;
+        const {map} = material;
+        bodyTextures.add(map);
+        bodyMeshes.add(mesh);
+
+        material.map.image = bodyCanvas;
+        material.map.needsUpdate = true;
+      }
+    }
+  };
+  await _updateSkin();
+
+  globalThis.gltf = gltf;
+
+  const _updateClothing = () => {
+    const clothingTextures = new Set();
+    const clothingMeshes = new Set();
+    for (const mesh of categories.clothing.meshes) {
+      if (mesh.visible) {
+        const {material} = mesh;
+        const {map} = material;
+        clothingTextures.add(map);
+        clothingMeshes.add(mesh);
+      }
+    }
+
+    console.log('got clothing meshes', Array.from(clothingMeshes));
+  };
+  _updateClothing();
+
+  return gltf;
+
+  /* // sort meshes
   const categories = {};
   for (const mesh of meshes) {
     const {name} = mesh;
@@ -259,9 +1547,6 @@ const selectAvatar = async (avatarUrlIndex = Math.floor(rng() * avatarUrls.lengt
   const categorySelections = {};
   const _selectFromCategory = (name) => {
     const category = categories[name];
-    // if (!category) {
-    //   debugger;
-    // }
     const mesh = category.meshes[Math.floor(rng() * category.meshes.length)];
     mesh.visible = true;
     categorySelections[name] = mesh;
@@ -309,11 +1594,12 @@ const selectAvatar = async (avatarUrlIndex = Math.floor(rng() * avatarUrls.lengt
   }
 
   // return
-  return gltf;
+  return gltf; */
 };
 
 //
 
+/* const gltfExporter = makeGltfExporter();
 const downloadGlb = async (gltf, name = 'avatar.vrm') => {
   // export glb
   const arrayBuffer = await new Promise((accept, reject) => {
@@ -341,20 +1627,9 @@ const downloadGlb = async (gltf, name = 'avatar.vrm') => {
     type: 'model/gltf-binary',
   });
   const url = URL.createObjectURL(avatarBlob);
-  
-  // XXX debug
-  // {
-  //   const gltf2 = await new Promise((accept, reject) => {
-  //     gltfLoader.load(url, accept, function onProgress(xhr) {}, reject);
-  //   });
-  //   console.log('load back gltf', gltf2);
-  // }
 
   downloadFile(avatarBlob, name);
 };
-
-//
-
 const generateAvatars = async () => {
   const numAvatarsPerIndex = 10;
   for (let i = 0; i < avatarUrls.length; i++) {
@@ -364,11 +1639,11 @@ const generateAvatars = async () => {
     }
   }
 };
-globalThis.generateAvatars = generateAvatars;
+globalThis.generateAvatars = generateAvatars; */
 
 //
 
-const generateAvatar = async (canvas, prompt, negativePrompt) => {
+const generateAvatar = async (canvas) => {
   const renderer = makeRenderer(canvas);
 
   const scene = new THREE.Scene();
@@ -376,7 +1651,6 @@ const generateAvatar = async (canvas, prompt, negativePrompt) => {
 
   const camera = makeDefaultCamera();
   camera.position.set(0, 0.9, -2);
-  // camera.lookAt(new THREE.Vector3(0, camera.position.y, 0));
   camera.quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI);
   camera.updateMatrixWorld();
 
@@ -391,9 +1665,48 @@ const generateAvatar = async (canvas, prompt, negativePrompt) => {
   const controls = new OrbitControls(camera, canvas);
   controls.minDistance = 1;
   controls.maxDistance = 100;
-  const targetDistance = -camera.position.z;
-  controls.target.copy(camera.position)
-    // .addScaledVector(new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion), targetDistance);
+  controls.target.copy(camera.position);
+  controls.target.z = 0;
+  controls.update();
+  
+  const gltf = await selectAvatar();
+  // console.log('got gltf', gltf);
+  scene.add(gltf.scene);
+  gltf.scene.updateMatrixWorld();
+
+  // start render loop
+  const _render = () => {
+    requestAnimationFrame(_render);
+    renderer.render(scene, camera);
+  };
+  _render();
+};
+
+//
+
+const retextureAvatar = async (canvas, prompt, negativePrompt) => {
+  const renderer = makeRenderer(canvas);
+
+  const scene = new THREE.Scene();
+  scene.autoUpdate = false;
+
+  const camera = makeDefaultCamera();
+  camera.position.set(0, 0.9, -2);
+  camera.quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI);
+  camera.updateMatrixWorld();
+
+  const light = new THREE.DirectionalLight(0xffffff, 2);
+  light.position.set(1, 2, 3);
+  light.updateMatrixWorld();
+  scene.add(light);
+
+  const ambientLight = new THREE.AmbientLight(0xffffff, 1);
+  scene.add(ambientLight);
+
+  const controls = new OrbitControls(camera, canvas);
+  controls.minDistance = 1;
+  controls.maxDistance = 100;
+  controls.target.copy(camera.position);
   controls.target.z = 0;
   controls.update();
 
@@ -403,33 +1716,16 @@ const generateAvatar = async (canvas, prompt, negativePrompt) => {
     const gltf = await selectAvatar();
     let model = gltf.scene;
 
-    // return;
-
-    // // XXX: hack because this mesh does not have an identity transform
-    // model.updateMatrixWorld();
-    // const beltMesh = categories.accessories.meshes.find(mesh => mesh.name === 'accessories_HipBelt');
-    // beltMesh.matrix.decompose(beltMesh.position, beltMesh.quaternion, beltMesh.scale);
-    // beltMesh.geometry.applyMatrix4(beltMesh.matrix);
-    // beltMesh.matrix.identity()
-    //   .decompose(beltMesh.position, beltMesh.quaternion, beltMesh.scale);
-    // beltMesh.updateMatrixWorld();
-
     // optimize the resulting model
     model = await optimizeAvatarModel(model);
-    // globalThis.optimizedModel = model;
 
     // // add the model to the scene
     avatars.add(model);
     model.updateMatrixWorld();
 
     const meshes = getMeshes(model);
-    if (meshes.length !== 1) {
-      console.warn('unexpected number of meshes', meshes.length);
-      debugger;
-    }
     {
       const mesh = meshes[0];
-      globalThis.mesh = mesh;
       const {material} = mesh;
 
       const canvas = document.createElement('canvas');
@@ -444,19 +1740,12 @@ const generateAvatar = async (canvas, prompt, negativePrompt) => {
       const renderer2 = makeRenderer(canvas);
       renderer2.autoClear = false;
 
-      const candidateColors = colors.slice();
+      // const candidateColors = colors.slice();
 
       const backgroundColor = 0xFFFFFF;
-      // const backgroundColor = 0x000000;
-      // const backgroundColor = colors[Math.floor(Math.random() * colors.length)];
-      // const backgroundColor = candidateColors.splice(Math.floor(Math.random() * candidateColors.length), 1)[0];
       const bgColor = new THREE.Color(backgroundColor);
 
       const backgroundColor2 = 0xFFFFFF;
-      // const backgroundColor2 = 0x000000;
-      // const backgroundColor2 = colors[Math.floor(Math.random() * colors.length)];
-      // const backgroundColor2 = candidateColors.splice(Math.floor(Math.random() * candidateColors.length), 1)[0];
-      // const backgroundColor2 = backgroundColor;
       const bgColor2 = new THREE.Color(backgroundColor2);
 
       // background scene
@@ -465,7 +1754,7 @@ const generateAvatar = async (canvas, prompt, negativePrompt) => {
 
       // background mesh
       // fullscreen geometry
-      const backgroundGeometry = new THREE.PlaneBufferGeometry(2, 2);
+      const backgroundGeometry = new THREE.PlaneGeometry(2, 2);
       const backgroundMaterial = new THREE.ShaderMaterial({
         uniforms: {
           uAlpha: {
@@ -496,21 +1785,7 @@ const generateAvatar = async (canvas, prompt, negativePrompt) => {
           varying vec2 vUv;
 
           void main() {
-            // gl_FragColor = color;
-            // gl_FragColor.b += 0.1;
-            // gl_FragColor.a = 1.;
-
-            // gl_FragColor = vec4(color.rgb, uAlpha);
-
-            // gl_FragColor = vec4(uColor * (0.5 + vUv.y * 0.5), uAlpha);
             gl_FragColor = vec4(mix(uColor, uColor2, vUv.y), uAlpha);
-            // gl_FragColor = vec4(vUv, 0., uAlpha);
-
-            // if (uAlpha == 1.) {
-            //   gl_FragColor = vec4(color.rgb, uAlpha);
-            // } else {
-            //   // gl_FragColor = vec4(uColor * (0.7 + vUv.y * 0.3), uAlpha);
-            // }
           }
         `,
         depthTest: false,
@@ -537,10 +1812,6 @@ const generateAvatar = async (canvas, prompt, negativePrompt) => {
             value: material.map,
             needsUpdate: true,
           },
-          // uFlipY: {
-          //   value: +flipY,
-          //   needsUpdate: true,
-          // },
         },
         vertexShader: `\
           attribute vec4 metadata;
@@ -604,18 +1875,10 @@ const generateAvatar = async (canvas, prompt, negativePrompt) => {
   
             bool realAlpha = uAlpha < 0.;
             float a = realAlpha ? alpha : uAlpha;
-            // if (vUv2.x < 0.25 || vUv2.x > 0.75) {
-            //   a = 1.;
-            // }
             gl_FragColor = vec4(color.rgb, a);
-            // gl_FragColor = vec4(color.rgb, alpha);
           }
         `,
-        // depthTest: false,
-        // depthWrite: false,
         blending: THREE.NoBlending,
-        // side: THREE.DoubleSide,
-        // transparent: true,
       });
       scene2.overrideMaterial = overrideMaterial;
 
@@ -689,26 +1952,9 @@ const generateAvatar = async (canvas, prompt, negativePrompt) => {
       const maskContext = maskCanvas.getContext('2d');
       maskContext.putImageData(maskImageData, 0, 0);
 
-      // const [
-      //   opaqueImgDataUrl,
-      //   maskImgDataUrl,
-      // ] = await Promise.all([
-      //   image2DataUrl(opaqueCanvas),
-      //   image2DataUrl(maskCanvas),
-      // ]);
-
       const blob = await canvas2blob(opaqueCanvas);
       const maskBlob = await canvas2blob(maskCanvas);
 
-      // const editImg = await img2img({
-      //   prompt,
-      //   negativePrompt,
-      //   width: size,
-      //   height: size,
-      //   imageDataUrl: opaqueImgDataUrl,
-      //   // imageDataUrl: maskImgDataUrl,
-      //   maskImageDataUrl: maskImgDataUrl,
-      // });
       const editImg = await img2img({
         prompt,
         blob,
@@ -717,63 +1963,6 @@ const generateAvatar = async (canvas, prompt, negativePrompt) => {
       console.log('edit image', editImg);
       document.body.appendChild(editImg);
     }
-
-    /* // latch the new mesh specs
-    meshes = getMeshes(model);
-    // if (meshes.length !== 1) {
-    //   console.warn('only one mesh is supported', meshes.length);
-    // }
-    console.log('new meshes', meshes);
-    globalThis.meshes = meshes.slice();
-
-    for (const mesh of meshes) {
-      mesh.visible = false;
-    }
-
-    // XXX
-    let first = true;
-    for (let i = 0; i < meshes.length; i++) {
-      const mesh = meshes[i];
-      mesh.visible = true;
-      const {
-        width,
-        height,
-        maskImgDataUrl,
-        opaqueImgDataUrl,
-      } = await preprocessMeshForTextureEdit(mesh, {
-        textureSize: size,
-        flipY: true,
-      });
-      
-      console.log('ok 1', {
-        width,
-        height,
-        maskImgDataUrl,
-        opaqueImgDataUrl,
-      });
-
-      const mesh2 = await editMeshTextures(mesh, {
-        prompt,
-        width,
-        height,
-        opaqueImgDataUrl,
-        maskImgDataUrl,
-        flipY: false,
-      });
-
-      console.log('ok 2', mesh2);
-
-      if (first) {
-        first = false;
-        const parent = mesh.parent;
-        parent.remove(mesh);
-        parent.add(mesh2);
-      }
-    } */
-
-    // globalThis.model = model;
-    // globalThis.mesh = mesh;
-    // globalThis.mesh2 = mesh2;
   })();
   scene.add(avatars);
 
@@ -786,37 +1975,77 @@ const generateAvatar = async (canvas, prompt, negativePrompt) => {
 };
 
 const defaultPrompt = 'anime style, girl character, 3d model vrchat avatar orthographic front view, dress';
-// const negativePrompt = 'side, back';
 const negativePrompt = '';
 const AvatarGeneratorComponent = () => {
   const [prompt, setPrompt] = useState(defaultPrompt);
+  const [loading, setLoading] = useState(false);
   const [generated, setGenerated] = useState(false);
+  const [retextured, setRetextured] = useState(false);
   const [imageAiModel, setImageAiModel] = useState('sd');
   const canvasRef = useRef();
   
-  const generateClick = async prompt => {
+  const generateClick = async () => {
     const canvas = canvasRef.current;
     if (canvas && !generated) {
-      setGenerated(true);
-      await generateAvatar(canvas, prompt, negativePrompt);
+      try {
+        setLoading(true);
+
+        await generateAvatar(canvas);
+        setGenerated(true);
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+  const retextureClick = async () => {
+    const canvas = canvasRef.current;
+    if (canvas && !retextured) {
+      try {
+        setLoading(true);
+
+        await retextureAvatar(canvas, prompt, negativePrompt);
+        setRetextured(true);
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
   return (
-    <div className={styles.mobGenerator}>
-      <input type="text" className={styles.input} value={prompt} onChange={e => {
-        setPrompt(e.target.value);
-      }} placeholder={prompt} />
-      <select className={styles.select} value={imageAiModel} onChange={e => {
-        setImageAiModel(e.target.value);
-      }}>
-        <option value="sd">SD</option>
-        <option value="openai">OpenAI</option>
-      </select>
-      <div className={styles.button} onClick={async () => {
-        await generateClick(prompt);
-      }}>Generate</div>
-      <canvas className={styles.canvas} width={size} height={size} ref={canvasRef} />
+    <div className={styles.avatarGenerator}>
+      {loading ?
+        <div className={styles.header}>
+          compiling...
+        </div>
+      :
+        <>
+          {!generated ?
+            <div className={styles.button} onClick={async () => {
+              await generateClick();
+            }}>Generate</div>
+          : null}
+          {(generated && !retextured) ?
+            <>
+              <input type="text" className={styles.input} value={prompt} onChange={e => {
+                setPrompt(e.target.value);
+              }} placeholder={prompt} />
+              <select className={styles.select} value={imageAiModel} onChange={e => {
+                setImageAiModel(e.target.value);
+              }}>
+                <option value="sd">SD</option>
+                <option value="openai">OpenAI</option>
+              </select>
+              <div className={styles.button} onClick={async () => {
+                await retextureClick();
+              }}>Retexture</div>
+            </>
+          : null}
+        </>
+      }
+      <canvas className={classnames(
+        styles.canvas,
+        generated ? null : styles.hidden,
+      )} width={size} height={size} ref={canvasRef} />
     </div>
   );
 };

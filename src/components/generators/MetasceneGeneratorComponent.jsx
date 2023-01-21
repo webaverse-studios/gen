@@ -772,13 +772,6 @@ class PanelPicker3D extends THREE.Object3D {
         }
       }
     }
-    
-    // if (this.hoverPanelSpec !== oldHoverPanelSpec) {
-    //   this.dispatchEvent({
-    //     type: 'hoverchange',
-    //     hoverPanelSpec: this.hoverPanelSpec,
-    //   });
-    // }
 
     this.controls.enableRotate = this.hoverPanelSpec === null;
   }
@@ -1616,13 +1609,6 @@ class PanelPickerGraph extends THREE.Object3D {
     };
 
     intersectEntranceExit() || intersectPanel();
-
-    // if (this.hoverPanelSpec !== oldHoverPanelSpec) {
-    //   this.dispatchEvent({
-    //     type: 'hoverchange',
-    //     hoverPanelSpec: this.hoverPanelSpec,
-    //   });
-    // }
   }
 }
 
@@ -2789,12 +2775,18 @@ export class Metazine extends EventTarget {
     this.zs.clear();
   }
 
-  autoConnect() { // automatically connect panel exits to panel entrances
-    this.#autoConnect3D();
+  autoConnect({
+    seed = '',
+  }) { // automatically connect panel exits to panel entrances
+    this.#autoConnect3D({
+      seed,
+    });
     this.#autoConnectGraph();
     this.#emitUpdate();
   }
-  #autoConnect3D() {
+  #autoConnect3D({
+    seed,
+  }) {
     const rng = alea(seed);
     const panelSpecs = this.renderPanelSpecs;
 
@@ -5003,7 +4995,9 @@ const MetasceneGeneratorComponent = () => {
     setLoaded(true);
   };
   const autoConnect = () => {
-    metazine.autoConnect();
+    metazine.autoConnect({
+      seed,
+    });
   };
 
   const setSrc = async src => {
