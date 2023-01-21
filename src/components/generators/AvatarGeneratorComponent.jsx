@@ -1328,12 +1328,8 @@ const selectAvatar = async (avatarSpecIndex = Math.floor(rng() * avatarSpecs.len
       }
     }
   });
-  // globalThis.textures = textures;
-  // globalThis.materialMeshes = materialMeshes;
-  // globalThis.materials = materials;
-  // globalThis.texturePaths = texturePaths;
 
-  globalThis.categories = categories;
+  // globalThis.categories = categories;
 
   // enable base meshes
   for (const mesh of categories.eye.meshes) {
@@ -1493,8 +1489,6 @@ const selectAvatar = async (avatarSpecIndex = Math.floor(rng() * avatarSpecs.len
   };
   await _updateSkin();
 
-  globalThis.gltf = gltf;
-
   const _updateClothing = () => {
     const clothingTextures = new Set();
     const clothingMeshes = new Set();
@@ -1504,10 +1498,23 @@ const selectAvatar = async (avatarSpecIndex = Math.floor(rng() * avatarSpecs.len
         const {map} = material;
         clothingTextures.add(map);
         clothingMeshes.add(mesh);
+
+        // const textureName = textureReverseMap.get(map.source.uuid);
+        const textureSpec = gltf.parser.associations.get(map);
+        const {textures} = textureSpec;
+        const image = gltf.parser.json.images[textures];
+        const {name} = image;
+
+        const {
+          clothing,
+        } = avatarSpec;
+        // XXX this needs to be extended to the full path in the spec
+        // XXX replace the textures with an option from the new spec
+        const clothingSpec = clothing[name];
+        console.log('got texture options', clothingSpec);
       }
     }
-
-    console.log('got clothing meshes', Array.from(clothingMeshes));
+    // console.log('got clothing meshes', Array.from(clothingMeshes));
   };
   _updateClothing();
 
