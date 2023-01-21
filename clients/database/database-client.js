@@ -7,13 +7,10 @@ import {
   getDatasetItemsForDatasetSpec,
 } from '../../lore/dataset-engine/dataset-specs.js';
 // import {DatasetGenerator} from './lore/dataset-engine/dataset-generator.js';
-import {
-  // formatDatasetNamePrompt,
-  // formatDatasetDescriptionPrompt,
-  // formatDatasetAttributePrompts,
-  formatDatasetItems,
-  formatDatasetItemsForPolyfill,
-} from '../../lore/dataset-engine/dataset-parser.js';
+// import {
+//   formatDatasetItems,
+//   formatDatasetItemsForPolyfill,
+// } from '../../lore/dataset-engine/dataset-parser.js';
 import {
   Qdrant,
 } from '../../qdrant/index.js';
