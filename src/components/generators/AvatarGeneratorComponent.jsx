@@ -760,8 +760,8 @@ const avatarSpecs = [
         `Outfit_8_Textures/Cyan/Anime_Proj_base_Set_3_pants1_BaseColor.png`,
       ],
       'DropHunter_Outfit_1_Highcut socks_BaseColor': [
-        `/Variation textures/Outfit_1_Textures/Blue/DropHunter_Outfit_1_Highcut socks_BaseColor.png`,
-        `/Variation textures/Outfit_1_Textures/Black/DropHunter_Outfit_1_Highcut socks_BaseColor.png`,
+        `Outfit_1_Textures/Blue/DropHunter_Outfit_1_Highcut socks_BaseColor.png`,
+        `Outfit_1_Textures/Black/DropHunter_Outfit_1_Highcut socks_BaseColor.png`,
         `Outfit_1_Textures/Pink/DropHunter_Outfit_1_Highcut socks_BaseColor.png`,
         `Outfit_1_Textures/Green/DropHunter_Outfit_1_Highcut socks_BaseColor.png`,
         `Outfit_1_Textures/Yellow/DropHunter_Outfit_1_Highcut socks_BaseColor.png`,
