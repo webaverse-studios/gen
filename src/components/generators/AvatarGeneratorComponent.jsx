@@ -1046,8 +1046,9 @@ const avatarSpecs = [
     }, n => `/models/Avatar_Bases/Drophunter Class/Variation textures/${n}`),
   },
 ];
-const seed = 'a';
-const rng = alea(seed);
+// const seed = 'b';
+// const rng = alea(seed);
+const rng = Math.random;
 const hairShift = rng() * Math.PI * 2;
 const clothingShift = rng() * Math.PI * 2;
 const hairMetadata = [1, hairShift, 0.5, 0.5];
@@ -1245,7 +1246,6 @@ const selectAvatar = async (avatarSpecIndex = Math.floor(rng() * avatarSpecs.len
 
   // latch
   // globalThis.model = model;
-  const rng = Math.random;
 
   // recompile model
   const meshes = getMeshes(model);
