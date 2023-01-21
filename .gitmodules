@@ -13,3 +13,6 @@
 [submodule "src/zine-aux"]
 	path = src/zine-aux
 	url = https://github.com/webaverse/zine-aux.git
+[submodule "packages/three-vrm"]
+	path = packages/three-vrm
+	url = https://github.com/webaverse/three-vrm.git
