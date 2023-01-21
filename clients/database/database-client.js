@@ -19,7 +19,7 @@ import {
 } from '../../qdrant/index.js';
 
 import getUuid from 'uuid-by-string';
-const uuidV3Hash = s => getUuid(s, 3);
+// const uuidV3Hash = s => getUuid(s, 3);
 const uuidV5Hash = s => getUuid(s, 5);
 // import murmurhash from 'murmurhash';
 // const murmurhash3 = murmurhash.v3;
