@@ -2,7 +2,7 @@ import {useState, useEffect, useRef} from 'react';
 import * as THREE from 'three';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 import classnames from 'classnames';
-import alea from '../../utils/alea.js';
+// import alea from '../../utils/alea.js';
 import {
   img2img,
 } from '../../clients/image-client.js';
