@@ -16,3 +16,9 @@
 [submodule "packages/three-vrm"]
 	path = packages/three-vrm
 	url = https://github.com/webaverse/three-vrm.git
+[submodule "src/avatars"]
+	path = src/avatars
+	url = https://github.com/webaverse/avatars
+[submodule "src/avatars-wasm"]
+	path = src/avatars-wasm
+	url = https://github.com/webaverse/avatars-wasm
