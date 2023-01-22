@@ -13,6 +13,7 @@
     "@pixiv/three-vrm-core": "./packages/three-vrm/three-vrm-core",
     "@pixiv/three-vrm-materials-mtoon": "./packages/three-vrm/three-vrm-materials-mtoon",
     "@pixiv/three-vrm-springbone": "./packages/three-vrm/three-vrm-springbone",
+    "@shaderfrog/glsl-parser": "^1.1.0",
     "@vitejs/plugin-react": "^3.0.0",
     "@vitejs/plugin-react-swc": "^3.0.1",
     "alea": "^1.0.1",
