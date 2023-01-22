@@ -10,9 +10,9 @@ import {
 //   txt2img,
 //   img2img,
 // } from '../../clients/sd-image-client.js';
-import {
-  generateTextureMaps,
-} from '../../clients/material-map-client.js';
+// import {
+//   generateTextureMaps,
+// } from '../../clients/material-map-client.js';
 // import {mobUrls} from '../../constants/urls.js';
 import {
   makeRenderer,
@@ -24,6 +24,7 @@ import {
 import {
   makePromise,
   loadImage,
+  fetchArrayBuffer,
 } from '../../../utils.js';
 import {
   createSeedImage,
@@ -45,12 +46,69 @@ import {
 //   editMeshTextures,
 // } from '../../utils/model-utils.js';
 // import {downloadFile} from '../../utils/http-utils.js';
+import Avatar from '../../avatars/avatars.js';
+import {
+  AvatarRenderer,
+} from '../../avatars/avatar-renderer.js';
+import {
+  AvatarIconer,
+} from '../../avatars/avatar-iconer.js';
 
 import styles from '../../../styles/AvatarGenerator.module.css';
 
 //
 
 const localColor = new THREE.Color();
+
+//
+
+// XXX
+const screenshotAvatarUrl = async ({
+  start_url,
+  width = 300,
+  height = 300,
+  canvas,
+  emotion,
+}) => {
+  const arrayBuffer = await fetchArrayBuffer(start_url);
+
+  const avatarRenderer = new AvatarRenderer({
+    arrayBuffer,
+    srcUrl: start_url,
+    quality: maxAvatarQuality,
+  });
+  await avatarRenderer.waitForLoad();
+
+  const avatar = createAvatarForScreenshot(avatarRenderer);
+
+  const result = await screenshotAvatar({
+    avatar,
+    width,
+    height,
+    canvas,
+    emotion,
+  });
+  avatar.destroy();
+  return result;
+};
+const createAvatarForScreenshot = avatarRenderer => {
+  const avatar = new Avatar(avatarRenderer, {
+    fingers: true,
+    hair: true,
+    visemes: true,
+    debug: false,
+  });
+  avatar.setTopEnabled(false);
+  avatar.setHandEnabled(0, false);
+  avatar.setHandEnabled(1, false);
+  avatar.setBottomEnabled(false);
+  avatar.inputs.hmd.position.y = avatar.height;
+  avatar.inputs.hmd.quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI);
+  avatar.inputs.hmd.updateMatrixWorld();
+  return avatar;
+};
+
+//
 
 const _pathize = (n, fn) => {
   if (Array.isArray(n)) {
@@ -1683,43 +1741,61 @@ globalThis.generateAvatars = generateAvatars; */
 
 //
 
-const generateAvatar = async (canvas) => {
-  const renderer = makeRenderer(canvas);
+class AvatarManager {
+  constructor(canvas) {
+    const renderer = makeRenderer(canvas);
 
-  const scene = new THREE.Scene();
-  scene.autoUpdate = false;
+    const scene = new THREE.Scene();
+    scene.autoUpdate = false;
 
-  const camera = makeDefaultCamera();
-  camera.position.set(0, 0.9, -2);
-  camera.quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI);
-  camera.updateMatrixWorld();
+    const camera = makeDefaultCamera();
+    camera.position.set(0, 0.9, -2);
+    camera.quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI);
+    camera.updateMatrixWorld();
 
-  const light = new THREE.DirectionalLight(0xffffff, 2);
-  light.position.set(1, 2, 3);
-  light.updateMatrixWorld();
-  scene.add(light);
+    const light = new THREE.DirectionalLight(0xffffff, 2);
+    light.position.set(1, 2, 3);
+    light.updateMatrixWorld();
+    scene.add(light);
 
-  const ambientLight = new THREE.AmbientLight(0xffffff, 1);
-  scene.add(ambientLight);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 1);
+    scene.add(ambientLight);
 
-  const controls = new OrbitControls(camera, canvas);
-  controls.minDistance = 1;
-  controls.maxDistance = 100;
-  controls.target.copy(camera.position);
-  controls.target.z = 0;
-  controls.update();
-  
-  const gltf = await selectAvatar();
-  // console.log('got gltf', gltf);
-  scene.add(gltf.scene);
-  gltf.scene.updateMatrixWorld();
+    const controls = new OrbitControls(camera, canvas);
+    controls.minDistance = 1;
+    controls.maxDistance = 100;
+    controls.target.copy(camera.position);
+    controls.target.z = 0;
+    controls.update();
 
-  // start render loop
-  const _render = () => {
-    requestAnimationFrame(_render);
-    renderer.render(scene, camera);
-  };
-  _render();
+    this.loadPromise = (async () => {
+      const gltf = await selectAvatar();
+      scene.add(gltf.scene);
+      gltf.scene.updateMatrixWorld();
+    })();
+
+    // start render loop
+    const _render = () => {
+      requestAnimationFrame(_render);
+      renderer.render(scene, camera);
+    };
+    _render();
+  }
+  waitForLoad() {
+    return this.loadPromise;
+  }
+  async createImage() {
+    // XXX
+  }
+  async createIcons() {
+    // XXX
+  }
+  async createVideo() {
+    // XXX
+  }
+  embody() {
+    // const avatar = new Avatar();
+  }
 };
 
 //
@@ -2019,19 +2095,20 @@ const negativePrompt = '';
 const AvatarGeneratorComponent = () => {
   const [prompt, setPrompt] = useState(defaultPrompt);
   const [loading, setLoading] = useState(false);
-  const [generated, setGenerated] = useState(false);
+  const [avatarManager, setAvatarManager] = useState(null);
   const [retextured, setRetextured] = useState(false);
   const [imageAiModel, setImageAiModel] = useState('sd');
   const canvasRef = useRef();
   
   const generateClick = async () => {
     const canvas = canvasRef.current;
-    if (canvas && !generated) {
+    if (canvas && !avatarManager) {
       try {
         setLoading(true);
 
-        await generateAvatar(canvas);
-        setGenerated(true);
+        const avatarManager = new AvatarManager(canvas);
+        await avatarManager.waitForLoad();
+        setAvatarManager(avatarManager);
       } finally {
         setLoading(false);
       }
@@ -2050,6 +2127,18 @@ const AvatarGeneratorComponent = () => {
       }
     }
   };
+  const imageClick = async () => {
+    const image = await avatarManager.createImage();
+  };
+  const iconsClick = async () => {
+    const icons = await avatarManager.createIcons();
+  };
+  const videoClick = async () => {
+    const video = await avatarManager.createVideo();
+  };
+  const embodyClick = () => {
+    avatarManager.embody();
+  };
 
   return (
     <div className={styles.avatarGenerator}>
@@ -2059,32 +2148,48 @@ const AvatarGeneratorComponent = () => {
         </div>
       :
         <>
-          {!generated ?
-            <div className={styles.button} onClick={async () => {
-              await generateClick();
-            }}>Generate</div>
-          : null}
-          {(generated && !retextured) ?
-            <>
-              <input type="text" className={styles.input} value={prompt} onChange={e => {
-                setPrompt(e.target.value);
-              }} placeholder={prompt} />
-              <select className={styles.select} value={imageAiModel} onChange={e => {
-                setImageAiModel(e.target.value);
-              }}>
-                <option value="sd">SD</option>
-                <option value="openai">OpenAI</option>
-              </select>
+          <div className={styles.header}>
+            {!avatarManager ?
               <div className={styles.button} onClick={async () => {
-                await retextureClick();
-              }}>Retexture</div>
-            </>
-          : null}
+                await generateClick();
+              }}>Generate</div>
+            : null}
+            {(avatarManager && !retextured) ?
+              <>
+                <input type="text" className={styles.input} value={prompt} onChange={e => {
+                  setPrompt(e.target.value);
+                }} placeholder={prompt} />
+                <select className={styles.select} value={imageAiModel} onChange={e => {
+                  setImageAiModel(e.target.value);
+                }}>
+                  <option value="sd">SD</option>
+                  <option value="openai">OpenAI</option>
+                </select>
+                <div className={styles.button} onClick={async () => {
+                  await retextureClick();
+                }}>Retexture</div>
+              </>
+            : null}
+          </div>
+          {(avatarManager && !avatarManager.embodied) ? <div className={styles.header}>
+            <div className={styles.button} onClick={async () => {
+              await imageClick();
+            }}>Image</div>
+            <div className={styles.button} onClick={async () => {
+              await iconsClick();
+            }}>Icons</div>
+            <div className={styles.button} onClick={async () => {
+              await videoClick();
+            }}>Video</div>
+            <div className={styles.button} onClick={async () => {
+              embodyClick();
+            }}>Embody</div>
+          </div> : null}
         </>
       }
       <canvas className={classnames(
         styles.canvas,
-        generated ? null : styles.hidden,
+        avatarManager ? null : styles.hidden,
       )} width={size} height={size} ref={canvasRef} />
     </div>
   );
