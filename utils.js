@@ -145,3 +145,13 @@ export const modUv = (uv) => {
     uv.y = mod(uv.y, 1);
     return uv;
 };
+
+export const fetchArrayBuffer = async srcUrl => {
+  const res = await fetch(srcUrl);
+  if (res.ok) {
+    const arrayBuffer = await res.arrayBuffer();
+    return arrayBuffer;
+  } else {
+    throw new Error('failed to load: ' + res.status + ' ' + srcUrl);
+  }
+};
