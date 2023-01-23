@@ -1335,8 +1335,6 @@ const selectAvatar = async (rng = Math.random) => {
   const gltf = await loadGltf(base);
   const oldModel = gltf.scene;
   
-  // globalThis.gltf = gltf;
-
   const model = new THREE.Scene();
   model.position.copy(gltf.scene.position);
   model.quaternion.copy(gltf.scene.quaternion);
@@ -1350,12 +1348,8 @@ const selectAvatar = async (rng = Math.random) => {
   model.updateMatrixWorld();
   gltf.scene = model;
 
-  // latch
-  // globalThis.model = model;
-
   // recompile model
   const meshes = getMeshes(model);
-  // globalThis.meshes = meshes;
 
   const categories = {};
   for (const mesh of meshes) {
@@ -1450,8 +1444,6 @@ const selectAvatar = async (rng = Math.random) => {
       }
     }
   });
-
-  // globalThis.categories = categories;
 
   // enable base meshes
   for (const mesh of categories.eye.meshes) {
@@ -1798,11 +1790,7 @@ const fitCameraToBoundingBox = (() => {
       const size = box.getSize(localVector);
       const center = box.getCenter(localVector2)
         .add(new THREE.Vector3(0, size.y / 16, 0));
-      // center.y = camera.position.y;
 
-      globalThis.size = size.clone();
-      globalThis.center = center.clone();
-  
       const maxSize = Math.max(size.x, size.y) / 2;
       const fitHeightDistance = maxSize / (2 * Math.atan(Math.PI * camera.fov / 360));
       const fitWidthDistance = fitHeightDistance / camera.aspect;
@@ -1813,19 +1801,10 @@ const fitCameraToBoundingBox = (() => {
         .sub(camera.position)
         .normalize();
 
-      globalThis.position = camera.position.clone();
-      globalThis.direction = direction.clone();
-      globalThis.distance = distance;
-  
-      // camera.near = Math.min(0.1, maxSize / 20.0);
-      // camera.updateProjectionMatrix();
-
       const directionScaled = direction.clone()
         .multiplyScalar(distance);
-      globalThis.directionScaled = directionScaled;
       camera.position.sub(directionScaled);
       // camera.position.sub(direction);
-      globalThis.position2 = camera.position.clone();
       camera.quaternion.setFromRotationMatrix(
         localMatrix.lookAt(new THREE.Vector3(), direction, new THREE.Vector3(0, 1, 0))
       );
@@ -1836,12 +1815,7 @@ const _lookAt = (camera, boundingBox) => {
   boundingBox.getCenter(camera.position);
   const size = boundingBox.getSize(localVector);
 
-  globalThis.initialSize = size.clone();
-
-  // camera.position.set(0, size.y * 3 / 4, -1);
   camera.position.set(0, size.y / 2, -1);
-
-  globalThis.initialPosition = camera.position.clone();
 
   fitCameraToBoundingBox(camera, boundingBox, 0.65);
 };
@@ -2037,7 +2011,6 @@ class AvatarManager extends EventTarget {
     avatar.update(0, 0); // compute the bounding box
     gltf.scene.updateMatrixWorld();
     const boundingBox = new THREE.Box3().setFromObject(gltf.scene);
-    globalThis.boundingBox = boundingBox.clone();
 
     const writeCanvas = document.createElement('canvas');
     writeCanvas.width = width;
@@ -2063,7 +2036,6 @@ class AvatarManager extends EventTarget {
       avatar.update(now, timeDiff);
 
       _lookAt(camera, boundingBox);
-      globalThis.camera = camera;
 
       renderer.clear();
       renderer.render(scene, camera);
