@@ -2,6 +2,7 @@ import path from 'path';
 import http from 'http';
 import https from 'https';
 import fs from 'fs';
+import child_process from 'child_process';
 
 import express from 'express';
 import * as vite from 'vite';
@@ -25,6 +26,36 @@ const port = parseInt(process.env.PORT, 10) || 9999;
 //
 
 const imageAiServer = new ImageAiServer();
+
+//
+
+class DatabaseServer {
+  constructor() {
+    const cp = child_process.spawn(path.join(
+      'target',
+      'release',
+      'qdrant',
+    ), [], {
+      cwd: path.join(
+        'bin',
+        'qdrant',
+      ),
+    });
+    cp.stdout.pipe(process.stdout);
+    cp.stderr.pipe(process.stderr);
+    cp.on('error', err => {
+      console.warn(err.stack);
+    });
+    this.cp = cp;
+  }
+  destory() {
+    this.cp.kill();
+  }
+}
+const databaseServer = new DatabaseServer();
+process.on('exit', () => {
+  databaseServer.destory();
+});
 
 //
 
@@ -59,7 +90,7 @@ const _setHeaders = res => {
 //   '/packages/characters/',
 //   // '/packages/wsrtc/',
 // ];
-const _proxyFile = (req, res, u) => {
+/* const _proxyFile = (req, res, u) => {
   u = path.join(dirname, u);
   // console.log('proxy file', u);
   const rs = fs.createReadStream(u);
@@ -69,7 +100,7 @@ const _proxyFile = (req, res, u) => {
     res.end(err.stack);
   });
   rs.pipe(res);
-};
+}; */
 
 // main
 
