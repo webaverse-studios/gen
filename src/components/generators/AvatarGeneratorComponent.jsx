@@ -2,7 +2,8 @@ import {useState, useEffect, useRef} from 'react';
 import * as THREE from 'three';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 import classnames from 'classnames';
-// import alea from '../../utils/alea.js';
+import * as WebMWriter from 'webm-writer';
+import alea from '../../utils/alea.js';
 import {
   img2img,
 } from '../../clients/image-client.js';
@@ -39,6 +40,9 @@ import {
   img2canvas,
 } from '../../utils/convert-utils.js';
 import {
+  screenshotAvatar,
+} from '../../avatars/avatar-screenshotter.js';
+import {
   optimizeAvatarModel,
 } from '../../utils/avatar-optimizer.js';
 // import {
@@ -50,20 +54,30 @@ import Avatar from '../../avatars/avatars.js';
 import {
   AvatarRenderer,
 } from '../../avatars/avatar-renderer.js';
+// import {
+//   AvatarIconer,
+// } from '../../avatars/avatar-iconer.js';
 import {
-  AvatarIconer,
-} from '../../avatars/avatar-iconer.js';
+  maxAvatarQuality,
+} from '../../avatars/constants.js';
+import avatarsWasmManager from '../../avatars/avatars-wasm-manager.js';
 
 import styles from '../../../styles/AvatarGenerator.module.css';
 
 //
 
+const localVector = new THREE.Vector3();
+const localVector2 = new THREE.Vector3();
+const localQuaternion = new THREE.Quaternion();
 const localColor = new THREE.Color();
 
 //
 
-// XXX
-const screenshotAvatarUrl = async ({
+const FPS = 60;
+
+//
+
+/* const screenshotAvatarUrl = async ({
   start_url,
   width = 300,
   height = 300,
@@ -75,6 +89,36 @@ const screenshotAvatarUrl = async ({
   const avatarRenderer = new AvatarRenderer({
     arrayBuffer,
     srcUrl: start_url,
+    quality: maxAvatarQuality,
+  });
+  await avatarRenderer.waitForLoad();
+
+  const avatar = createAvatarForScreenshot(avatarRenderer);
+
+  const result = await screenshotAvatar({
+    avatar,
+    width,
+    height,
+    canvas,
+    emotion,
+  });
+  avatar.destroy();
+  return result;
+}; */
+const screenshotAvatarGltf = async ({
+  gltf = null,
+  width = 300,
+  height = 300,
+  canvas,
+  emotion,
+}) => {
+  await Promise.all([
+    Avatar.waitForLoad(),
+    avatarsWasmManager.waitForLoad(),
+  ]);
+
+  const avatarRenderer = new AvatarRenderer({
+    gltf,
     quality: maxAvatarQuality,
   });
   await avatarRenderer.waitForLoad();
@@ -1106,7 +1150,10 @@ const avatarSpecs = [
 ];
 // const seed = 'b';
 // const rng = alea(seed);
-const rng = Math.random;
+// const rng = Math.random;
+const r = Math.random() + '';
+const makeRng = () => alea(r);
+const rng = makeRng();
 const hairShift = rng() * Math.PI * 2;
 const clothingShift = rng() * Math.PI * 2;
 const hairMetadata = [1, hairShift, 0.5, 0.5];
@@ -1277,7 +1324,8 @@ const _hueShiftCtx = (ctx, shift) => {
   }
   ctx.putImageData(imageData, 0, 0);
 };
-const selectAvatar = async (avatarSpecIndex = Math.floor(rng() * avatarSpecs.length)) => {
+const selectAvatar = async (rng = Math.random) => {
+  const avatarSpecIndex = Math.floor(rng() * avatarSpecs.length);
   const avatarSpec = avatarSpecs[avatarSpecIndex];
   const {
     base,
@@ -1741,8 +1789,97 @@ globalThis.generateAvatars = generateAvatars; */
 
 //
 
-class AvatarManager {
+const fitCameraToBoundingBox = (() => {
+  const localVector = new THREE.Vector3();
+  const localVector2 = new THREE.Vector3();
+  const localMatrix = new THREE.Matrix4();
+
+  return (camera, box, fitOffset = 1) => {
+      const size = box.getSize(localVector);
+      const center = box.getCenter(localVector2)
+        .add(new THREE.Vector3(0, size.y / 16, 0));
+      // center.y = camera.position.y;
+
+      globalThis.size = size.clone();
+      globalThis.center = center.clone();
+  
+      const maxSize = Math.max(size.x, size.y) / 2;
+      const fitHeightDistance = maxSize / (2 * Math.atan(Math.PI * camera.fov / 360));
+      const fitWidthDistance = fitHeightDistance / camera.aspect;
+      const distance = fitOffset * Math.max(fitHeightDistance, fitWidthDistance);
+  
+      const direction = center
+        .clone()
+        .sub(camera.position)
+        .normalize();
+
+      globalThis.position = camera.position.clone();
+      globalThis.direction = direction.clone();
+      globalThis.distance = distance;
+  
+      // camera.near = Math.min(0.1, maxSize / 20.0);
+      // camera.updateProjectionMatrix();
+
+      const directionScaled = direction.clone()
+        .multiplyScalar(distance);
+      globalThis.directionScaled = directionScaled;
+      camera.position.sub(directionScaled);
+      // camera.position.sub(direction);
+      globalThis.position2 = camera.position.clone();
+      camera.quaternion.setFromRotationMatrix(
+        localMatrix.lookAt(new THREE.Vector3(), direction, new THREE.Vector3(0, 1, 0))
+      );
+      camera.updateMatrixWorld();
+  };
+})();
+const _lookAt = (camera, boundingBox) => {
+  boundingBox.getCenter(camera.position);
+  const size = boundingBox.getSize(localVector);
+
+  globalThis.initialSize = size.clone();
+
+  // camera.position.set(0, size.y * 3 / 4, -1);
+  camera.position.set(0, size.y / 2, -1);
+
+  globalThis.initialPosition = camera.position.clone();
+
+  fitCameraToBoundingBox(camera, boundingBox, 0.65);
+};
+
+//
+
+class AvatarManager extends EventTarget {
   constructor(canvas) {
+    super();
+
+    this.renderer = null;
+    this.scene = null;
+    this.camera = null;
+    this.controls = null;
+    this.gltf = null;
+    // this.gltf2 = null;
+
+    this.loadPromise = (async () => {
+      const {
+        renderer,
+        scene,
+        camera,
+        controls,
+        gltf,
+        // gltf2,
+      } = await AvatarManager.makeContext(canvas);
+
+      this.renderer = renderer;
+      this.scene = scene;
+      this.camera = camera;
+      this.controls = controls;
+      this.gltf = gltf;
+      // this.gltf2 = gltf2;
+    })();
+
+    this.lastTimestamp = performance.now();
+  }
+  static async makeContext(canvas) {
     const renderer = makeRenderer(canvas);
 
     const scene = new THREE.Scene();
@@ -1767,34 +1904,219 @@ class AvatarManager {
     controls.target.copy(camera.position);
     controls.target.z = 0;
     controls.update();
+    
+    const gltf = await selectAvatar(makeRng());      
+    scene.add(gltf.scene);
+    gltf.scene.updateMatrixWorld();
 
-    this.loadPromise = (async () => {
-      const gltf = await selectAvatar();
-      scene.add(gltf.scene);
-      gltf.scene.updateMatrixWorld();
-    })();
-
-    // start render loop
-    const _render = () => {
-      requestAnimationFrame(_render);
-      renderer.render(scene, camera);
+    // const gltf2 = await selectAvatar(makeRng());
+    
+    return {
+      renderer,
+      scene,
+      camera,
+      controls,
+      gltf,
+      // gltf2,
     };
-    _render();
+  }
+  static async makeAvatar({
+    gltf,
+    // gltf2,
+  }) {
+    const avatarRenderer = new AvatarRenderer({
+      gltf,
+      // gltf2,
+      quality: maxAvatarQuality,
+    });
+    await avatarRenderer.waitForLoad();
+  
+    const avatar = new Avatar(avatarRenderer, {
+      fingers: true,
+      hair: true,
+      visemes: true,
+      debug: false,
+    });
+    avatar.setTopEnabled(false);
+    avatar.setHandEnabled(0, false);
+    avatar.setHandEnabled(1, false);
+    avatar.setBottomEnabled(false);
+    avatar.inputs.hmd.position.y = avatar.height;
+    // avatar.inputs.hmd.quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI);
+    avatar.inputs.hmd.updateMatrixWorld();
+
+    return avatar;
+  }
+  update() {
+    const {
+      renderer,
+      scene,
+      camera,
+    } = this;
+
+    const timestamp = performance.now();
+    const timeDiff = timestamp - this.lastTimestamp;
+    this.dispatchEvent(new MessageEvent('update', {
+      data: {
+        timestamp,
+        timeDiff,
+      },
+    }));
+    this.lastTimestamp = timestamp;
+    
+    renderer.render(scene, camera);
   }
   waitForLoad() {
     return this.loadPromise;
   }
   async createImage() {
-    // XXX
+    const {
+      gltf,
+    } = this;
+    const width = 300;
+    const height = 300;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    canvas.classList.add('avatarImageCanvas');
+
+    const emotion = '';
+    
+    const img = await screenshotAvatarGltf({
+      gltf,
+      width,
+      height,
+      canvas,
+      emotion,
+    });
+    return img;
   }
   async createIcons() {
     // XXX
   }
   async createVideo() {
-    // XXX
+    await Promise.all([
+      Avatar.waitForLoad(),
+      avatarsWasmManager.waitForLoad(),
+    ]);
+
+    // const animations = metaversefileApi.useAvatarAnimations();
+    const animations = Avatar.getAnimations();
+    // const walkAnimation = animations.find(a => a.name === 'walking.fbx');
+    // const runAnimation = animations.find(a => a.name === 'Fast Run.fbx');
+    // const runAnimationDuration = runAnimation.duration * 1.5;
+    const idleAnimation = animations.find(a => a.name === 'idle.fbx');
+    const idleAnimationDuration = idleAnimation.duration;
+
+    const width = 512;
+    const height = 512;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+
+    const {
+      renderer,
+      scene,
+      camera,
+      controls,
+      gltf,
+      // gltf2,
+    } = await AvatarManager.makeContext(canvas);
+
+    const avatar = await AvatarManager.makeAvatar({
+      gltf,
+      // gltf2,
+    });
+    // avatar.inputs.hmd.position.y = 0;
+    // avatar.inputs.hmd.updateMatrixWorld();
+
+    scene.add(gltf.scene);
+
+    avatar.update(0, 0); // compute the bounding box
+    gltf.scene.updateMatrixWorld();
+    const boundingBox = new THREE.Box3().setFromObject(gltf.scene);
+    globalThis.boundingBox = boundingBox.clone();
+
+    const writeCanvas = document.createElement('canvas');
+    writeCanvas.width = width;
+    writeCanvas.height = height;
+    const writeCtx = writeCanvas.getContext('2d');
+
+    const videoWriter = new WebMWriter({
+      quality: 1,
+      fileWriter: null,
+      fd: null,
+      frameDuration: null,
+      frameRate: FPS,
+    });
+
+    const _pushFrame = () => {
+      writeCtx.drawImage(renderer.domElement, 0, 0);
+      videoWriter.addFrame(writeCanvas);
+    };
+
+    let now = 0;
+    const timeDiff = 1000 / FPS;
+    while (now < idleAnimationDuration * 1000) {
+      avatar.update(now, timeDiff);
+
+      _lookAt(camera, boundingBox);
+      globalThis.camera = camera;
+
+      renderer.clear();
+      renderer.render(scene, camera);
+
+      _pushFrame();
+      
+      now += timeDiff;
+    }
+
+    const blob = await videoWriter.complete();
+
+    const video = document.createElement('video');
+    video.muted = true;
+    video.autoplay = true;
+    await new Promise((accept, reject) => {
+      video.oncanplaythrough = accept;
+      video.onerror = reject;
+      video.src = URL.createObjectURL(blob);
+    });
+    video.style.cssText = `\
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 512px;
+      background: red;
+    `;
+    video.loop = true;
+    document.body.appendChild(video);
   }
-  embody() {
-    // const avatar = new Avatar();
+  async embody() {
+    await Promise.all([
+      Avatar.waitForLoad(),
+      avatarsWasmManager.waitForLoad(),
+    ]);
+
+    const {
+      gltf,
+      // gltf2,
+    } = this;
+    const avatar = await AvatarManager.makeAvatar({
+      gltf,
+      // gltf2,
+    });
+
+    this.scene.add(gltf.scene);
+
+    this.addEventListener('update', e => {
+      const {timestamp, timeDiff} = e.data;
+      avatar.update(timestamp, timeDiff);
+
+      // gltf2.scene.updateMatrixWorld();
+      // gltf.scene.updateMatrixWorld();
+    });
   }
 };
 
@@ -2108,6 +2430,13 @@ const AvatarGeneratorComponent = () => {
 
         const avatarManager = new AvatarManager(canvas);
         await avatarManager.waitForLoad();
+
+        const _render = () => {
+          requestAnimationFrame(_render);
+          avatarManager.update();
+        };
+        requestAnimationFrame(_render);
+
         setAvatarManager(avatarManager);
       } finally {
         setLoading(false);
@@ -2129,6 +2458,15 @@ const AvatarGeneratorComponent = () => {
   };
   const imageClick = async () => {
     const image = await avatarManager.createImage();
+    image.style.cssText = `\
+      position: fixed;
+      top: 0 ;
+      left: 0;
+      width: 128px;
+      height: 128px;
+      background: red;
+    `;
+    document.body.appendChild(image);
   };
   const iconsClick = async () => {
     const icons = await avatarManager.createIcons();
