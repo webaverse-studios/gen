@@ -61,6 +61,9 @@ import {
 //   AvatarIconer,
 // } from '../../avatars/avatar-iconer.js';
 import {
+  ArrowMesh,
+} from '../../generators/arrow-mesh.js';
+import {
   maxAvatarQuality,
 } from '../../avatars/constants.js';
 import avatarsWasmManager from '../../avatars/avatars-wasm-manager.js';
@@ -71,8 +74,14 @@ import styles from '../../../styles/AvatarGenerator.module.css';
 
 const localVector = new THREE.Vector3();
 const localVector2 = new THREE.Vector3();
+const localVector2D = new THREE.Vector2();
 const localQuaternion = new THREE.Quaternion();
+const localPlane = new THREE.Plane();
+const localRaycaster = new THREE.Raycaster();
 const localColor = new THREE.Color();
+
+const zeroVector = new THREE.Vector3(0, 0, 0);
+const upVector = new THREE.Vector3(0, 1, 0);
 
 //
 
@@ -1853,6 +1862,12 @@ class AvatarManager extends EventTarget {
       this.controls = controls;
       this.gltf = gltf;
       // this.gltf2 = gltf2;
+
+      const avatarToolsMesh = new AvatarToolsMesh({
+        avatarManager: this,
+      });
+      scene.add(avatarToolsMesh);
+      this.avatarToolsMesh = avatarToolsMesh;
     })();
 
     this.lastTimestamp = performance.now();
@@ -1941,6 +1956,8 @@ class AvatarManager extends EventTarget {
       },
     }));
     this.lastTimestamp = timestamp;
+
+    this.avatarToolsMesh.update();
     
     renderer.render(scene, camera);
   }
@@ -2384,6 +2401,184 @@ const retextureAvatar = async (canvas, prompt, negativePrompt) => {
   _render();
 };
 
+//
+
+const cancelEvent = e => {
+  e.preventDefault();
+  e.stopPropagation();
+};
+
+//
+
+class FloorMesh extends THREE.Mesh {
+  constructor() {
+    const geometry = new THREE.PlaneBufferGeometry(30, 30)
+      .rotateX(-Math.PI / 2);
+    const material = new THREE.MeshBasicMaterial({
+      // color: 0xEEEEEE,
+      color: 0x000000,
+      // opacity: 0.5,
+      // transparent: true,
+    });
+    super(geometry, material);
+  }
+}
+
+//
+
+class AvatarToolsMesh extends THREE.Object3D {
+  static tools = [
+    'camera',
+    'move',
+  ];
+  
+  constructor({
+    avatarManager,
+  }) {
+    super();
+
+    // args
+    this.avatarManager = avatarManager;
+    
+    const {
+      camera,
+      controls,
+    } = avatarManager;
+    const canvas = avatarManager.renderer.domElement;
+    // if (!camera || !controls || !canvas) {
+    //   console.log('got', {camera, controls});
+    //   debugger;
+    // }
+    this.camera = camera;
+    this.controls = controls;
+    this.canvas = canvas;
+
+    // scene
+    // const scene = new THREE.Scene();
+    // scene.autoUpdate = true;
+    // this.scene = scene;
+
+    // floor mesh
+    const floorMesh = new FloorMesh();
+    floorMesh.frustumCulled = false;
+    this.add(floorMesh);
+    floorMesh.updateMatrixWorld();
+    this.floorMesh = floorMesh;
+    // globalThis.floorMesh = floorMesh;
+
+    // arrow mesh
+    const arrowMesh = new ArrowMesh();
+    arrowMesh.geometry = arrowMesh.geometry.clone()
+      .rotateX(Math.PI)
+      .scale(0.1, 0.1, 0.1)
+      .translate(0, 0.2, 0)
+    arrowMesh.frustumCulled = false;
+    arrowMesh.visible = false;
+    this.add(arrowMesh);
+    arrowMesh.updateMatrixWorld();
+    this.arrowMesh = arrowMesh;
+
+    // state
+    this.toolIndex = 0;
+    this.mouse = new THREE.Vector2();
+    this.cleanup = null;
+    
+    // intitialize
+    this.#listen();
+  }
+  get tool() {
+    return AvatarToolsMesh.tools[this.toolIndex];
+  }
+  set tool(tool) {
+    throw new Error('not implemented');
+    /* const toolIndex = AvatarToolsMesh.tools.indexOf(tool);
+    if (toolIndex !== -1) {
+      this.setToolIndex(toolIndex);
+    } */
+  }
+  setToolIndex(toolIndex) {
+    this.toolIndex = toolIndex;
+    this.dispatchEvent({
+      type: 'toolchange',
+      tool: this.tool,
+    });
+  }
+  update() {
+    this.arrowMesh.visible = false;
+    
+    if (this.tool === 'move') {
+      // console.log('update move');
+  
+      const intersectFloor = (mouse, camera, vectorTarget) => {
+        const floorPlane = localPlane.setFromNormalAndCoplanarPoint(
+          upVector,
+          zeroVector
+        );
+        localRaycaster.setFromCamera(mouse, camera);
+        return localRaycaster.ray.intersectPlane(floorPlane, vectorTarget);
+      };
+      const intersection = intersectFloor(this.mouse, this.camera, localVector);
+
+      // console.log('intersect', this.mouse.toArray(), this.camera.position.toArray(), intersection && intersection.toArray());
+      if (intersection) {
+        this.arrowMesh.position.copy(intersection);
+        this.arrowMesh.updateMatrixWorld();
+        this.arrowMesh.visible = true;
+       }
+    }
+  }
+  #listen() {
+    const keydown = e => {
+      switch (e.key) {
+        case '1':
+        case '2':
+        case '3':
+        case '4':
+        case '5':
+        case '6':
+        case '7':
+        case '8':
+        case '9':
+        {
+          cancelEvent(e);
+
+          const keyIndex = parseInt(e.key, 10) - 1;
+          this.setToolIndex(keyIndex);
+          break;
+        }
+        case 't': {
+          cancelEvent(e);
+          // XXX enable talk
+          break;
+        }
+      }
+    };
+    document.addEventListener('keydown', keydown);
+
+    const mousemove = e => {
+      const rect = this.canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      this.mouse.set(
+        (x / rect.width) * 2 - 1,
+        -(y / rect.height) * 2 + 1
+      );
+    };
+    this.canvas.addEventListener('mousemove', mousemove);
+
+    this.cleanup = () => {
+      document.removeEventListener('keydown', keydown);
+      this.canvas.removeEventListener('mousemove', mousemove);
+    };
+  }
+  destroy() {
+    this.cleanup();
+  }
+}
+
+//
+
 const defaultPrompt = 'anime style, girl character, 3d model vrchat avatar orthographic front view, dress';
 const negativePrompt = '';
 const AvatarGeneratorComponent = () => {
@@ -2419,17 +2614,19 @@ const AvatarGeneratorComponent = () => {
           avatarsWasmManager.waitForLoad(),
         ]);
 
+        // avatar manager
         const avatarManager = new AvatarManager(canvas);
         await avatarManager.waitForLoad();
         setAvatarManager(avatarManager);
 
-        // avatars/emotes
+        // emotions
         const emotions = [
           'none',
         ].concat(avatarEmotions);
         console.log('got emotions', emotions);
         setEmotions(emotions);
 
+        // animations
         const animations = Avatar.getAnimations();
         setAnimations(animations);
         setAnimation(idleAnimationName);
