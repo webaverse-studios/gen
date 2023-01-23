@@ -46,6 +46,15 @@
   background-color: #CCC;
   font-size: 13px;
 }
+
+.avatarGenerator .interrogation .conversation {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+/* */
+
 .avatarGenerator .interrogation .messages {
   display: flex;
   flex-direction: column;

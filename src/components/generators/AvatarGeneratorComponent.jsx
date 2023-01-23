@@ -67,6 +67,9 @@ import {
   maxAvatarQuality,
 } from '../../avatars/constants.js';
 import avatarsWasmManager from '../../avatars/avatars-wasm-manager.js';
+import {
+  makeId,
+} from '../../../utils.js';
 
 import styles from '../../../styles/AvatarGenerator.module.css';
 
@@ -2586,6 +2589,109 @@ class AvatarToolsMesh extends THREE.Object3D {
 
 //
 
+const Conversation = ({
+  conversation,
+}) => {
+  const {
+    characters,
+    setting,
+  } = conversation;
+
+  const [messages, setMessages] = useState(conversation.messages);
+  const [message, setMessage] = useState('');
+
+  return (<div className={styles.conversation}>
+    <div className={styles.characters}>{characters.map(character => {
+      return (
+        <div className={classnames(
+          styles.character,
+          styles.row,
+        )} key={character.name}>
+          <div className='name'>{character.name}</div>
+          <div className='bio'>{character.bio}</div>
+        </div>
+      );
+    })}</div>
+    <div className={classnames(
+      styles.messages,
+      styles.row,
+    )}>{messages.map((m, index) => {
+      return (
+        <div className={styles.message} key={index}>
+          <div className={styles.name}>{m.name}</div>
+          <div className={styles.text}>{m.text}</div>
+        </div>
+      );
+    })}</div>
+    <input type='text' className={styles.input} value={message} onChange={e => {
+      setMessage(e.target.value);
+    }} onKeyDown={e => {
+      if (e.key === 'Enter') {
+        const text = e.target.value;
+        if (text) {
+          const message = {
+            name: 'you',
+            text,
+          };
+          const newMessages = messages.concat([message]);
+          setMessages(newMessages);
+          setMessage('');
+
+          console.log('handle new message', message);
+
+          // XXX handle the message here
+        }
+      }
+    }} placeholder='press enter to chat' />
+  </div>);
+};
+
+//
+
+class NLPConversation {
+  constructor() {
+    const id = makeId(8);
+    this.name = `conversation_${id}`;
+
+    this.characters = [];
+    this.setting = '';
+    this.messages = [];
+  }
+}
+
+//
+
+const ConversationSelect = ({
+  conversations,
+  onSelect,
+}) => {
+  const [conversation, setConversation] = useState('new');
+
+  return (
+    <div className={styles.conversationSelect}>
+      <select value={conversation} onChange={e => {
+        setConversation(e.target.value);
+      }}>
+        {conversations.map((conversation, index) => {
+          return (
+            <option key={index}>{conversation.name}</option>
+          );
+        })}
+        <option value='new'>New conversation</option>
+      </select>
+      <div className={styles.button} onClick={e => {
+        let newConversation;
+        if (conversation === 'new') {
+          newConversation = new NLPConversation();
+        } else {
+          newConversation = conversations.find(c => c.name === conversation);
+        }
+        onSelect(newConversation);
+      }}>Open convo</div>
+    </div>
+  );
+};
+
 const defaultPrompt = 'anime style, girl character, 3d model vrchat avatar orthographic front view, dress';
 const negativePrompt = '';
 const AvatarGeneratorComponent = () => {
@@ -2603,10 +2709,12 @@ const AvatarGeneratorComponent = () => {
   
   const [embodied, setEmbodied] = useState(false);
   
-  const [bio, setBio] = useState('');
-  const [messages, setMessages] = useState([]);
-  const [message, setMessage] = useState('');
+  // const [characters, setCharacters] = useState([]);
+  // const [setting, setSetting] = useState('');
+  // const [messages, setMessages] = useState([]);
   const [interrogating, setInterrogating] = useState(false);
+  const [conversations, setConversations] = useState([]);
+  const [conversation, setConversation] = useState(null);
   
   const canvasRef = useRef();
   
@@ -2763,38 +2871,18 @@ const AvatarGeneratorComponent = () => {
         </>
       }
       {interrogating ? <div className={styles.interrogation}>
-        <div className={styles.row}>{bio}</div>
-        <div className={classnames(
-          styles.messages,
-          styles.row,
-        )}>{messages.map((m, index) => {
-          return (
-            <div className={styles.message} key={index}>
-              <div className={styles.name}>{m.name}</div>
-              <div className={styles.text}>{m.text}</div>
-            </div>
-          );
-        })}</div>
-        {/* <div className={styles.spacer} /> */}
-        <input type='text' className={styles.input} value={message} onChange={e => {
-          setMessage(e.target.value);
-        }} onKeyDown={e => {
-          // if enter
-          if (e.key === 'Enter') {
-            const text = e.target.value;
-            if (text) {
-              const message = {
-                name: 'you',
-                text,
-              };
-              const newMessages = messages.concat([message]);
-              setMessages(newMessages);
-              setMessage('');
-
-              // XXX handle the message here
-            }
-          }
-        }} placeholder='press enter to chat' />
+        {conversation ?
+          <Conversation
+            conversation={conversation}
+          />
+        :
+          <ConversationSelect
+            conversations={conversations}
+            onSelect={conversation => {
+              setConversation(conversation);
+            }}
+          />
+        }
       </div> : null}
       <canvas className={classnames(
         styles.canvas,
