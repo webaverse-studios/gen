@@ -52,6 +52,9 @@ import {
 // import {downloadFile} from '../../utils/http-utils.js';
 import Avatar from '../../avatars/avatars.js';
 import {
+  emotions as avatarEmotions,
+} from '../../avatars/emotes/emotions.js';
+import {
   AvatarRenderer,
 } from '../../avatars/avatar-renderer.js';
 // import {
@@ -1288,6 +1291,7 @@ const categorySpecsArray = [
   ],
 ];
 const size = 1024;
+const idleAnimationName = 'idle.fbx';
 
 //
 
@@ -1975,12 +1979,8 @@ class AvatarManager extends EventTarget {
       avatarsWasmManager.waitForLoad(),
     ]);
 
-    // const animations = metaversefileApi.useAvatarAnimations();
     const animations = Avatar.getAnimations();
-    // const walkAnimation = animations.find(a => a.name === 'walking.fbx');
-    // const runAnimation = animations.find(a => a.name === 'Fast Run.fbx');
-    // const runAnimationDuration = runAnimation.duration * 1.5;
-    const idleAnimation = animations.find(a => a.name === 'idle.fbx');
+    const idleAnimation = animations.find(a => a.name === idleAnimationName);
     const idleAnimationDuration = idleAnimation.duration;
 
     const width = 512;
@@ -2392,6 +2392,10 @@ const AvatarGeneratorComponent = () => {
   const [avatarManager, setAvatarManager] = useState(null);
   const [retextured, setRetextured] = useState(false);
   const [imageAiModel, setImageAiModel] = useState('sd');
+  const [emotion, setEmotion] = useState('none');
+  const [emotions, setEmotions] = useState([]);
+  const [animation, setAnimation] = useState('none');
+  const [animations, setAnimations] = useState([]);
   const canvasRef = useRef();
   
   const generateClick = async () => {
@@ -2400,16 +2404,32 @@ const AvatarGeneratorComponent = () => {
       try {
         setLoading(true);
 
+        await Promise.all([
+          Avatar.waitForLoad(),
+          avatarsWasmManager.waitForLoad(),
+        ]);
+
         const avatarManager = new AvatarManager(canvas);
         await avatarManager.waitForLoad();
+        setAvatarManager(avatarManager);
 
+        // avatars/emotes
+        const emotions = [
+          'none',
+        ].concat(avatarEmotions);
+        console.log('got emotions', emotions);
+        setEmotions(emotions);
+
+        const animations = Avatar.getAnimations();
+        setAnimations(animations);
+        setAnimation(idleAnimationName);
+
+        // animate
         const _render = () => {
           requestAnimationFrame(_render);
           avatarManager.update();
         };
         requestAnimationFrame(_render);
-
-        setAvatarManager(avatarManager);
       } finally {
         setLoading(false);
       }
@@ -2482,6 +2502,30 @@ const AvatarGeneratorComponent = () => {
             : null}
           </div>
           {(avatarManager && !avatarManager.embodied) ? <div className={styles.header}>
+            <label>
+              Emote:
+              <select className={styles.select} value={emotion} onChange={e => {
+                setEmotion(e.target.value);
+              }}>
+                {emotions.map(emotion => {
+                  return (
+                    <option key={emotion} value={emotion}>{emotion}</option>
+                  );
+                })}
+              </select>
+            </label>
+            <label>
+              Anim:
+              <select className={styles.select} value={animation} onChange={e => {
+                setAnimation(e.target.value);
+              }}>
+                {animations.map(animation => {
+                  return (
+                    <option key={animation.name} value={animation.name}>{animation.name}</option>
+                  );
+                })}
+              </select>
+            </label>
             <div className={styles.button} onClick={async () => {
               await imageClick();
             }}>Image</div>
