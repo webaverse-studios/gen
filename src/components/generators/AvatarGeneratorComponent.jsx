@@ -2567,9 +2567,16 @@ class AvatarToolsMesh extends THREE.Object3D {
     };
     this.canvas.addEventListener('mousemove', mousemove);
 
+    const toolchange = e => {
+      console.log('update', e.tool);
+      this.controls.enabled = e.tool === 'camera';
+    };
+    this.addEventListener('toolchange', toolchange);
+
     this.cleanup = () => {
       document.removeEventListener('keydown', keydown);
       this.canvas.removeEventListener('mousemove', mousemove);
+      this.removeEventListener('toolchange', toolchange);
     };
   }
   destroy() {
