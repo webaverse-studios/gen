@@ -34,6 +34,43 @@
 
 /* */
 
+.avatarGenerator .interrogation {
+  display: flex;
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 300px;
+  min-height: 100vh;
+  padding: 5px;
+  flex-direction: column;
+  background-color: #CCC;
+  font-size: 13px;
+}
+.avatarGenerator .interrogation .messages {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+.avatarGenerator .interrogation .messages .message {
+  display: flex;
+}
+.avatarGenerator .interrogation .messages .message .name {
+  font-weight: 600;
+  margin-right: 5px;
+}
+.avatarGenerator .interrogation .messages .message .text {
+  
+}
+/* .avatarGenerator .interrogation .spacer {
+  flex: 1;
+} */
+.avatarGenerator .interrogation .input {
+  min-width: 100%;
+  font-size: inherit;
+}
+
+/* */
+
 .avatarGenerator .hidden {
   display: none;
 }

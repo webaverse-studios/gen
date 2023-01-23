@@ -2390,13 +2390,22 @@ const AvatarGeneratorComponent = () => {
   const [prompt, setPrompt] = useState(defaultPrompt);
   const [loading, setLoading] = useState(false);
   const [avatarManager, setAvatarManager] = useState(null);
+  
   const [retextured, setRetextured] = useState(false);
   const [imageAiModel, setImageAiModel] = useState('sd');
+  
   const [emotion, setEmotion] = useState('none');
   const [emotions, setEmotions] = useState([]);
   const [animation, setAnimation] = useState('none');
   const [animations, setAnimations] = useState([]);
+  
   const [embodied, setEmbodied] = useState(false);
+  
+  const [bio, setBio] = useState('');
+  const [messages, setMessages] = useState([]);
+  const [message, setMessage] = useState('');
+  const [interrogating, setInterrogating] = useState(false);
+  
   const canvasRef = useRef();
   
   const generateClick = async () => {
@@ -2471,6 +2480,9 @@ const AvatarGeneratorComponent = () => {
     await avatarManager.embody();
     setEmbodied(true);
   };
+  const interrogateClick = async () => {
+    setInterrogating(true);
+  };
 
   return (
     <div className={styles.avatarGenerator}>
@@ -2540,9 +2552,46 @@ const AvatarGeneratorComponent = () => {
             {!embodied ? <div className={styles.button} onClick={async () => {
               embodyClick();
             }}>Embody</div> : null}
+            {embodied && !interrogating ? <div className={styles.button} onClick={async () => {
+              interrogateClick();
+            }}>Interrogate</div> : null}
           </div> : null}
         </>
       }
+      {interrogating ? <div className={styles.interrogation}>
+        <div className={styles.row}>{bio}</div>
+        <div className={classnames(
+          styles.messages,
+          styles.row,
+        )}>{messages.map((m, index) => {
+          return (
+            <div className={styles.message} key={index}>
+              <div className={styles.name}>{m.name}</div>
+              <div className={styles.text}>{m.text}</div>
+            </div>
+          );
+        })}</div>
+        {/* <div className={styles.spacer} /> */}
+        <input type='text' className={styles.input} value={message} onChange={e => {
+          setMessage(e.target.value);
+        }} onKeyDown={e => {
+          // if enter
+          if (e.key === 'Enter') {
+            const text = e.target.value;
+            if (text) {
+              const message = {
+                name: 'you',
+                text,
+              };
+              const newMessages = messages.concat([message]);
+              setMessages(newMessages);
+              setMessage('');
+
+              // XXX handle the message here
+            }
+          }
+        }} placeholder='press enter to chat' />
+      </div> : null}
       <canvas className={classnames(
         styles.canvas,
         avatarManager ? null : styles.hidden,
