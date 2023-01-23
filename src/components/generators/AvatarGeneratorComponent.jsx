@@ -2396,6 +2396,7 @@ const AvatarGeneratorComponent = () => {
   const [emotions, setEmotions] = useState([]);
   const [animation, setAnimation] = useState('none');
   const [animations, setAnimations] = useState([]);
+  const [embodied, setEmbodied] = useState(false);
   const canvasRef = useRef();
   
   const generateClick = async () => {
@@ -2466,8 +2467,9 @@ const AvatarGeneratorComponent = () => {
   const videoClick = async () => {
     const video = await avatarManager.createVideo();
   };
-  const embodyClick = () => {
-    avatarManager.embody();
+  const embodyClick = async () => {
+    await avatarManager.embody();
+    setEmbodied(true);
   };
 
   return (
@@ -2501,7 +2503,7 @@ const AvatarGeneratorComponent = () => {
               </>
             : null}
           </div>
-          {(avatarManager && !avatarManager.embodied) ? <div className={styles.header}>
+          {(avatarManager) ? <div className={styles.header}>
             <label>
               Emote:
               <select className={styles.select} value={emotion} onChange={e => {
@@ -2535,9 +2537,9 @@ const AvatarGeneratorComponent = () => {
             <div className={styles.button} onClick={async () => {
               await videoClick();
             }}>Video</div>
-            <div className={styles.button} onClick={async () => {
+            {!embodied ? <div className={styles.button} onClick={async () => {
               embodyClick();
-            }}>Embody</div>
+            }}>Embody</div> : null}
           </div> : null}
         </>
       }
