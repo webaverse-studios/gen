@@ -98,6 +98,10 @@ import {
   voicePacksUrl,
   voiceEndpointsUrl,
 } from '../../voice-engine/voice-constants.js';
+import {
+  StoryManager,
+  // NLPConversation,
+} from '../../story-engine/story-engine.js';
 
 import styles from '../../../styles/AvatarGenerator.module.css';
 
@@ -115,6 +119,18 @@ const localColor = new THREE.Color();
 
 const zeroVector = new THREE.Vector3(0, 0, 0);
 const upVector = new THREE.Vector3(0, 1, 0);
+
+//
+
+const loadDatasetGenerator = async () => {
+  const datasetSpecs = await getDatasetSpecs();
+  const datasetGenerator = new DatasetGenerator({
+    datasetSpecs,
+    aiClient,
+    // fillRatio: 0.5,
+  });
+  return datasetGenerator;
+};
 
 //
 
@@ -2845,22 +2861,6 @@ const Conversation = ({
 
 //
 
-class NLPConversation {
-  constructor({
-    name = `conversation_${makeId(8)}`,
-    characters = [],
-    setting = '',
-    messages = [],
-  }) {
-    this.name = name;
-    this.characters = characters;
-    this.setting = setting;
-    this.messages = messages;
-  }
-}
-
-//
-
 const ConversationSelect = ({
   conversations,
   onSelect,
@@ -2887,54 +2887,14 @@ const ConversationSelect = ({
 
             let newConversation;
             if (conversation === 'new') {
-              const datasetSpecs = await getDatasetSpecs();
-              const datasetGenerator = new DatasetGenerator({
-                datasetSpecs,
-                aiClient,
-                // fillRatio: 0.5,
-              });
-              let [
-                character1,
-                // character2,
-                setting,
-              ] = await Promise.all([
-                datasetGenerator.generateItem('character', {
-                  // Name: 'Death Mountain',
-                  // Description: panelSpec.description,
-                }, {
-                  keys: ['Name', 'Description', 'Image'],
-                }),
-                // datasetGenerator.generateItem('character', {
-                //   // Name: 'Death Mountain',
-                //   // Description: panelSpec.description,
-                // }, {
-                //   // keys: ['Name', 'Description', 'Image'],
-                // }),
-                datasetGenerator.generateItem('setting', {
-                  // Name: 'Death Mountain',
-                  // Description: panelSpec.description,
-                }, {
-                  keys: ['Name', 'Description', 'Image'],
-                }),
-              ]);
-              const formatObject = c => {
-                const result = {};
-                for (const key in c) {
-                  result[key.toLowerCase()] = c[key];
-                }
-                return result;
+              const datasetGenerator = await loadDatasetGenerator();
+              const generators = {
+                dataset: datasetGenerator,
               };
-              const characters = [
-                character1,
-                // character2,
-              ].map(c =>  formatObject(c));
-              setting = formatObject(setting);
-              console.log('got character spec', {characters, setting});
-
-              newConversation = new NLPConversation({
-                characters,
-                setting,
+              const storyManager = new StoryManager({
+                generators,
               });
+              newConversation = await storyManager.createConversationAsync();
             } else {
               newConversation = conversations.find(c => c.name === conversation);
             }
