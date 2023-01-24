@@ -1,5 +1,6 @@
 import {useState, useEffect, useRef} from 'react';
 import * as THREE from 'three';
+import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 import classnames from 'classnames';
 import * as WebMWriter from 'webm-writer';
@@ -2458,6 +2459,67 @@ class FloorMesh extends THREE.Mesh {
 
 //
 
+class DropMesh extends THREE.Mesh {
+  constructor() {
+    const h = 2;
+    const railGeometry = new THREE.BoxGeometry(0.02, h, 0.02)
+      .translate(0, h / 2, 0);
+    const partIds = new Float32Array(railGeometry.attributes.position.count).fill(1);
+    railGeometry.setAttribute('partId', new THREE.BufferAttribute(partIds, 1));
+
+    const h2 = 0.2;
+    const headGeometry = new THREE.CylinderGeometry(0.2, 0.03, h2, 16)
+      .translate(0, h2 / 2, 0);
+    const partIds2 = new Float32Array(railGeometry.attributes.position.count).fill(2);
+    headGeometry.setAttribute('partId', new THREE.BufferAttribute(partIds2, 1));
+    
+    const geometry = BufferGeometryUtils.mergeBufferGeometries([
+      railGeometry,
+      headGeometry,
+    ]);
+    const material = new THREE.ShaderMaterial({
+      // color: 0xff0000,
+      uniforms: {
+        uTime: {
+          value: 0,
+          needsUpdate: true,
+        },
+      },
+      vertexShader: `\
+        attribute float partId;
+
+        varying vec2 vUv;
+        flat varying float vPartId;
+
+        void main() {
+          vUv = uv;
+          vPartId = partId;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `\
+        uniform float uTime;
+        varying vec2 vUv;
+        flat varying float vPartId;
+
+        void main() {
+          float f = mod(uTime / 1000., 1.);
+          gl_FragColor = vec4(f, vPartId, 0., 1.);
+        }
+      `,
+      transparent: true,
+    });
+    super(geometry, material);
+  }
+  update() {
+    const now = performance.now();
+    this.material.uniforms.uTime.value = now;
+    this.material.uniforms.uTime.needsUpdate = true;
+  }
+}
+
+//
+
 class AvatarToolsMesh extends THREE.Object3D {
   static tools = [
     'camera',
@@ -2504,11 +2566,16 @@ class AvatarToolsMesh extends THREE.Object3D {
       .rotateX(Math.PI)
       .scale(0.1, 0.1, 0.1)
       .translate(0, 0.2, 0)
-    arrowMesh.frustumCulled = false;
     arrowMesh.visible = false;
     this.add(arrowMesh);
     arrowMesh.updateMatrixWorld();
     this.arrowMesh = arrowMesh;
+
+    // drop mesh
+    const dropMesh = new DropMesh();
+    arrowMesh.add(dropMesh);
+    dropMesh.updateMatrixWorld();
+    this.dropMesh = dropMesh;
 
     // path mesh
     const pathMesh = new PathMesh();
@@ -2565,6 +2632,8 @@ class AvatarToolsMesh extends THREE.Object3D {
         this.arrowMesh.updateMatrixWorld();
         this.arrowMesh.visible = true;
        }
+
+       this.dropMesh.update();
     }
   }
   #listen() {
