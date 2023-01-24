@@ -353,8 +353,7 @@ export const parseDatasetItems = (md, datasetSpec, {
                 currentAttributeValue,
                 itemString,
                 itemLines,
-              }, null, 2) // +
-              // '\n' +  
+              }, null, 2)
           );
         }
       }
