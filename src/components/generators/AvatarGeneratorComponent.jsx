@@ -86,15 +86,18 @@ import {
   DatasetGenerator,
   // CachedDatasetGenerator,
 } from '../../../lore/dataset-engine/dataset-generator.js';
+import {PathMesh} from '../../zine-aux/meshes/path-mesh.js';
 
 import styles from '../../../styles/AvatarGenerator.module.css';
 
 //
 
 const localVector = new THREE.Vector3();
-// const localVector2 = new THREE.Vector3();
-// const localVector2D = new THREE.Vector2();
-// const localQuaternion = new THREE.Quaternion();
+const localVector2 = new THREE.Vector3();
+const localVector3 = new THREE.Vector3();
+const localVector4 = new THREE.Vector3();
+const localQuaternion = new THREE.Quaternion();
+const localMatrix = new THREE.Matrix4();
 const localPlane = new THREE.Plane();
 const localRaycaster = new THREE.Raycaster();
 const localColor = new THREE.Color();
@@ -1872,6 +1875,8 @@ class AvatarManager extends EventTarget {
     this.gltf = null;
     // this.gltf2 = null;
 
+    this.avatar = null;
+
     this.loadPromise = (async () => {
       const {
         renderer,
@@ -2122,6 +2127,7 @@ class AvatarManager extends EventTarget {
       gltf,
       // gltf2,
     });
+    this.avatar = avatar;
 
     this.scene.add(gltf.scene);
 
@@ -2504,6 +2510,14 @@ class AvatarToolsMesh extends THREE.Object3D {
     arrowMesh.updateMatrixWorld();
     this.arrowMesh = arrowMesh;
 
+    // path mesh
+    const pathMesh = new PathMesh();
+    pathMesh.frustumCulled = false;
+    // this.zineRenderer.transformScene.add(pathMesh);
+    this.add(pathMesh);
+    pathMesh.updateMatrixWorld();
+    this.pathMesh = pathMesh;
+
     // state
     this.toolIndex = 0;
     this.mouse = new THREE.Vector2();
@@ -2593,6 +2607,69 @@ class AvatarToolsMesh extends THREE.Object3D {
     };
     this.canvas.addEventListener('mousemove', mousemove);
 
+    const mousedown = e => {
+      cancelEvent(e);
+
+      if (this.tool === 'move') {
+        if (this.avatarManager.avatar) {
+          const points = (() => {
+            const startPosition = localVector2.copy(this.avatarManager.avatar.inputs.hmd.position)
+              .add(
+                localVector3.set(0, -this.avatarManager.avatar.height, 0)
+              );
+            const endPosition = this.arrowMesh.position;
+
+            const stepSize = 1;
+            const points = [];
+            const direction = endPosition.clone()
+              .sub(startPosition);
+            const distance = direction.length();
+            direction.normalize();
+            for (let d = 0; d < distance; d += stepSize) {
+              const point = startPosition.clone()
+                .add(direction.clone().multiplyScalar(d));
+              points.push(point);
+            }
+            points.push(endPosition.clone());
+
+            // make this a directional walk from the entrance to the exit
+            // const depthFloats = floorHeightfield;
+            // const yOffset = 0.10;
+            const rng = alea('paths');
+            for (let i = 0; i < points.length; i++) {
+              // const labelSpec = portalLabels[i];
+              // const normal = localVector.fromArray(labelSpec.normal);
+              // const center = localVector2.fromArray(labelSpec.center);
+              const center = points[i];
+              
+              // portal center in world space, 1m in front of the center
+              const portalCenter = localVector3.copy(center)
+              if (i !== 0 && i !== points.length - 1) {
+                const prevCenter = points[i - 1];
+                localQuaternion.setFromRotationMatrix(
+                  localMatrix.lookAt(
+                    prevCenter,
+                    endPosition,
+                    upVector
+                  )
+                );
+                portalCenter.add(localVector4.set((rng() - 0.5) * 2 * 0.3, 0, 0).applyQuaternion(localQuaternion));
+              }
+              // portalCenter.add(upVector);
+              portalCenter.y += 0.1;
+              center.copy(portalCenter);
+            }
+
+            return points;
+          })();
+          this.pathMesh.geometry = PathMesh.makeGeometry(points);
+          this.pathMesh.visible = points.length > 0;
+          globalThis.pathMesh = this.pathMesh;
+        }
+      }
+    };
+    this.canvas.addEventListener('mousedown', mousedown);
+
     const toolchange = e => {
       console.log('update', e.tool);
       this.controls.enabled = e.tool === 'camera';
@@ -2602,6 +2679,7 @@ class AvatarToolsMesh extends THREE.Object3D {
     this.cleanup = () => {
       document.removeEventListener('keydown', keydown);
       this.canvas.removeEventListener('mousemove', mousemove);
+      this.canvas.removeEventListener('mousedown', mousedown);
       this.removeEventListener('toolchange', toolchange);
     };
   }
