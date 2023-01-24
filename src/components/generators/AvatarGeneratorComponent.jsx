@@ -2558,7 +2558,6 @@ class AvatarToolsMesh extends THREE.Object3D {
     this.add(floorMesh);
     floorMesh.updateMatrixWorld();
     this.floorMesh = floorMesh;
-    // globalThis.floorMesh = floorMesh;
 
     // arrow mesh
     const arrowMesh = new ArrowMesh();
@@ -2733,7 +2732,6 @@ class AvatarToolsMesh extends THREE.Object3D {
           })();
           this.pathMesh.geometry = PathMesh.makeGeometry(points);
           this.pathMesh.visible = points.length > 0;
-          globalThis.pathMesh = this.pathMesh;
         }
       }
     };
