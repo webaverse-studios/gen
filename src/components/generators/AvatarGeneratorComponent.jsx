@@ -70,15 +70,31 @@ import avatarsWasmManager from '../../avatars/avatars-wasm-manager.js';
 import {
   makeId,
 } from '../../../utils.js';
+import {
+  AiClient,
+} from '../../../clients/ai/ai-client.js';
+import {
+  DatabaseClient,
+} from '../../../clients/database/database-client.js';
+import {
+  getDatasetSpecs,
+  // getDatasetItems,
+  // getTrainingItems,
+  // getDatasetItemsForDatasetSpec,
+} from '../../../lore/dataset-engine/dataset-specs.js';
+import {
+  DatasetGenerator,
+  // CachedDatasetGenerator,
+} from '../../../lore/dataset-engine/dataset-generator.js';
 
 import styles from '../../../styles/AvatarGenerator.module.css';
 
 //
 
 const localVector = new THREE.Vector3();
-const localVector2 = new THREE.Vector3();
-const localVector2D = new THREE.Vector2();
-const localQuaternion = new THREE.Quaternion();
+// const localVector2 = new THREE.Vector3();
+// const localVector2D = new THREE.Vector2();
+// const localQuaternion = new THREE.Quaternion();
 const localPlane = new THREE.Plane();
 const localRaycaster = new THREE.Raycaster();
 const localColor = new THREE.Color();
@@ -89,6 +105,13 @@ const upVector = new THREE.Vector3(0, 1, 0);
 //
 
 const FPS = 60;
+
+//
+
+const aiClient = new AiClient();
+const databaseClient = new DatabaseClient({
+  aiClient,
+});
 
 //
 
@@ -2607,11 +2630,17 @@ const Conversation = ({
           styles.character,
           styles.row,
         )} key={character.name}>
-          <div className='name'>{character.name}</div>
-          <div className='bio'>{character.bio}</div>
+          <div className={styles.name}>{character.name}</div>
+          <div className={styles.description}>{character.description}</div>
+          <div className={styles.image}>{character.image}</div>
         </div>
       );
     })}</div>
+    <div className={styles.setting}>
+      <div className={styles.name}>{setting.name}</div>
+      <div className={styles.description}>{setting.description}</div>
+      <div className={styles.image}>{setting.image}</div>
+    </div>
     <div className={classnames(
       styles.messages,
       styles.row,
@@ -2649,13 +2678,16 @@ const Conversation = ({
 //
 
 class NLPConversation {
-  constructor() {
-    const id = makeId(8);
-    this.name = `conversation_${id}`;
-
-    this.characters = [];
-    this.setting = '';
-    this.messages = [];
+  constructor({
+    name = `conversation_${makeId(8)}`,
+    characters = [],
+    setting = '',
+    messages = [],
+  }) {
+    this.name = name;
+    this.characters = characters;
+    this.setting = setting;
+    this.messages = messages;
   }
 }
 
@@ -2666,28 +2698,88 @@ const ConversationSelect = ({
   onSelect,
 }) => {
   const [conversation, setConversation] = useState('new');
+  const [loading, setLoading] = useState(false);
 
   return (
     <div className={styles.conversationSelect}>
-      <select value={conversation} onChange={e => {
-        setConversation(e.target.value);
-      }}>
-        {conversations.map((conversation, index) => {
-          return (
-            <option key={index}>{conversation.name}</option>
-          );
-        })}
-        <option value='new'>New conversation</option>
-      </select>
-      <div className={styles.button} onClick={e => {
-        let newConversation;
-        if (conversation === 'new') {
-          newConversation = new NLPConversation();
-        } else {
-          newConversation = conversations.find(c => c.name === conversation);
-        }
-        onSelect(newConversation);
-      }}>Open convo</div>
+      {!loading ? <>
+        <select value={conversation} onChange={e => {
+          setConversation(e.target.value);
+        }}>
+          {conversations.map((conversation, index) => {
+            return (
+              <option key={index}>{conversation.name}</option>
+            );
+          })}
+          <option value='new'>New conversation</option>
+        </select>
+        <div className={styles.button} onClick={async e => {
+          try {
+            setLoading(true);
+
+            let newConversation;
+            if (conversation === 'new') {
+              const datasetSpecs = await getDatasetSpecs();
+              const datasetGenerator = new DatasetGenerator({
+                datasetSpecs,
+                aiClient,
+                // fillRatio: 0.5,
+              });
+              let [
+                character1,
+                // character2,
+                setting,
+              ] = await Promise.all([
+                datasetGenerator.generateItem('character', {
+                  // Name: 'Death Mountain',
+                  // Description: panelSpec.description,
+                }, {
+                  keys: ['Name', 'Description', 'Image'],
+                }),
+                // datasetGenerator.generateItem('character', {
+                //   // Name: 'Death Mountain',
+                //   // Description: panelSpec.description,
+                // }, {
+                //   // keys: ['Name', 'Description', 'Image'],
+                // }),
+                datasetGenerator.generateItem('setting', {
+                  // Name: 'Death Mountain',
+                  // Description: panelSpec.description,
+                }, {
+                  keys: ['Name', 'Description', 'Image'],
+                }),
+              ]);
+              const formatObject = c => {
+                const result = {};
+                for (const key in c) {
+                  result[key.toLowerCase()] = c[key];
+                }
+                return result;
+              };
+              const characters = [
+                character1,
+                // character2,
+              ].map(c =>  formatObject(c));
+              setting = formatObject(setting);
+              console.log('got character spec', {characters, setting});
+
+              newConversation = new NLPConversation({
+                characters,
+                setting,
+              });
+            } else {
+              newConversation = conversations.find(c => c.name === conversation);
+            }
+            onSelect(newConversation);
+          } finally {
+            setLoading(false);
+          }
+        }}>Open convo</div>
+      </>
+      :
+      <div className={styles.row}>
+        Loading...
+      </div>}
     </div>
   );
 };

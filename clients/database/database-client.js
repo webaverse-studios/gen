@@ -22,6 +22,7 @@ const uuidV5Hash = s => getUuid(s, 5);
 // const murmurhash3 = murmurhash.v3;
 
 const embeddingDimensions = 1536;
+
 export class DatabaseClient {
   constructor({
     aiClient,

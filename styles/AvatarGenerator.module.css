@@ -47,10 +47,41 @@
   font-size: 13px;
 }
 
+/* */
+
 .avatarGenerator .interrogation .conversation {
   display: flex;
   flex-direction: column;
   flex: 1;
+}
+
+/* */
+
+.avatarGenerator .interrogation .conversation .characters {
+  display: flex;
+  flex-direction: column;
+}
+.avatarGenerator .interrogation .conversation .characters .character,
+.avatarGenerator .interrogation .conversation .setting
+{
+  display: flex;
+  flex-direction: column;
+  background-color: #EEE;
+  margin-bottom: 5px;
+  padding: 5px;
+}
+.avatarGenerator .interrogation .conversation .characters .character .name,
+.avatarGenerator .interrogation .conversation .setting .name
+{
+  font-weight: 600;
+  margin-right: 5px;
+}
+.avatarGenerator .interrogation .conversation .characters .character .description {
+}
+
+/* */
+
+.avatarGenerator .interrogation .conversation .setting {
 }
 
 /* */
