@@ -2,6 +2,16 @@ import {makeId} from './util.js';
 
 //
 
+const formatObject = c => {
+  const result = {};
+  for (const key in c) {
+    result[key.toLowerCase()] = c[key];
+  }
+  return result;
+};
+
+//
+
 export class StoryManager {
   constructor({
     generators,
@@ -36,13 +46,6 @@ export class StoryManager {
         keys: ['Name', 'Description', 'Image'],
       }),
     ]);
-    const formatObject = c => {
-      const result = {};
-      for (const key in c) {
-        result[key.toLowerCase()] = c[key];
-      }
-      return result;
-    };
     const characters = [
       character1,
       // character2,
