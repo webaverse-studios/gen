@@ -88,6 +88,16 @@ import {
   // CachedDatasetGenerator,
 } from '../../../lore/dataset-engine/dataset-generator.js';
 import {PathMesh} from '../../zine-aux/meshes/path-mesh.js';
+import {
+  VoiceEndpoint,
+  PreloadMessage,
+  VoiceEndpointVoicer,
+  getVoiceEndpointUrl,
+} from '../../voice-engine/voice-output/voice-endpoint-voicer.js';
+import {
+  voicePacksUrl,
+  voiceEndpointsUrl,
+} from '../../voice-engine/voice-constants.js';
 
 import styles from '../../../styles/AvatarGenerator.module.css';
 
@@ -116,6 +126,18 @@ const aiClient = new AiClient();
 const databaseClient = new DatabaseClient({
   aiClient,
 });
+
+//
+
+const getAudioContext = (() => {
+  let audioContext = null;
+  return () => {
+    if (!audioContext) {
+      audioContext = new AudioContext();
+    }
+    return audioContext;
+  };
+})();
 
 //
 
@@ -183,6 +205,7 @@ const createAvatarForScreenshot = avatarRenderer => {
     hair: true,
     visemes: true,
     debug: false,
+    audioContext: getAudioContext(),
   });
   avatar.setTopEnabled(false);
   avatar.setHandEnabled(0, false);
@@ -2943,6 +2966,12 @@ const AvatarGeneratorComponent = () => {
   const [emotions, setEmotions] = useState([]);
   const [animation, setAnimation] = useState('none');
   const [animations, setAnimations] = useState([]);
+
+  const [voiceEndpoint, setVoiceEndpoint] = useState('');
+  const [voiceEndpoints, setVoiceEndpoints] = useState([]);
+
+  const [voicePack, setVoicePack] = useState('');
+  const [voicePacks, setVoicePacks] = useState([]);
   
   const [embodied, setEmbodied] = useState(false);
   
@@ -2955,6 +2984,23 @@ const AvatarGeneratorComponent = () => {
   
   const canvasRef = useRef();
   
+  // prevent wheel event
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (canvas) {
+      const wheel = e => {
+        cancelEvent(e);
+      };
+      canvas.addEventListener('wheel', wheel, {
+        passive: false,
+      });
+
+      return () => {
+        canvas.removeEventListener('wheel', wheel);
+      };
+    }
+  }, [canvasRef.current]);
+
   const generateClick = async () => {
     const canvas = canvasRef.current;
     if (canvas && !avatarManager) {
@@ -2975,13 +3021,34 @@ const AvatarGeneratorComponent = () => {
         const emotions = [
           'none',
         ].concat(avatarEmotions);
-        console.log('got emotions', emotions);
+        // console.log('got emotions', emotions);
         setEmotions(emotions);
 
         // animations
         const animations = Avatar.getAnimations();
         setAnimations(animations);
         setAnimation(idleAnimationName);
+
+        // voices
+        const [
+          voicePacks,
+          voiceEndpoints,
+        ] = await Promise.all([
+          (async () => {
+            const res = await fetch(voicePacksUrl);
+            const j = await res.json();
+            // voicePacks.push(...j);
+            return j;
+          })(),
+          (async () => {
+            const res = await fetch(voiceEndpointsUrl);
+            const j = await res.json();
+            // voiceEndpoints.push(...j);
+            return j;
+          })(),
+        ]);
+        setVoicePacks(voicePacks);
+        setVoiceEndpoints(voiceEndpoints);
 
         // animate
         const _render = () => {
@@ -3065,30 +3132,56 @@ const AvatarGeneratorComponent = () => {
             : null}
           </div>
           {(avatarManager) ? <div className={styles.header}>
-            <label>
-              Emote:
-              <select className={styles.select} value={emotion} onChange={e => {
-                setEmotion(e.target.value);
-              }}>
-                {emotions.map(emotion => {
-                  return (
-                    <option key={emotion} value={emotion}>{emotion}</option>
-                  );
-                })}
-              </select>
-            </label>
-            <label>
-              Anim:
-              <select className={styles.select} value={animation} onChange={e => {
-                setAnimation(e.target.value);
-              }}>
-                {animations.map(animation => {
-                  return (
-                    <option key={animation.name} value={animation.name}>{animation.name}</option>
-                  );
-                })}
-              </select>
-            </label>
+            <div className={styles.row}>
+              <label>
+                Emote:
+                <select className={styles.select} value={emotion} onChange={e => {
+                  setEmotion(e.target.value);
+                }}>
+                  {emotions.map(emotion => {
+                    return (
+                      <option key={emotion} value={emotion}>{emotion}</option>
+                    );
+                  })}
+                </select>
+              </label>
+              <label>
+                Anim:
+                <select className={styles.select} value={animation} onChange={e => {
+                  setAnimation(e.target.value);
+                }}>
+                  {animations.map(animation => {
+                    return (
+                      <option key={animation.name} value={animation.name}>{animation.name}</option>
+                    );
+                  })}
+                </select>
+              </label>
+              <label>
+                VP:
+                <select className={styles.select} value={voicePack} onChange={e => {
+                  setVoicePack(e.target.value);
+                }}>
+                  {voicePacks.map(voicePack => {
+                    return (
+                      <option key={voicePack.name} value={voicePack.name}>{voicePack.name}</option>
+                    );
+                  })}
+                </select>
+              </label>
+              <label>
+                VE:
+                <select className={styles.select} value={voiceEndpoint} onChange={e => {
+                  setVoiceEndpoint(e.target.value);
+                }}>
+                  {voiceEndpoints.map(voiceEndpoint => {
+                    return (
+                      <option key={voiceEndpoint.name} value={voiceEndpoint.name}>{voiceEndpoint.name}</option>
+                    );
+                  })}
+                </select>
+              </label>
+            </div>
             <div className={styles.button} onClick={async () => {
               await imageClick();
             }}>Image</div>
