@@ -519,18 +519,6 @@ export const getCompletionParser = (datasetSpec, initialValue, opts) => (complet
         if (readString.length > 0) {
           readString += `\n#${key}:\n`;
         }
-        // const newPrompt = promptString + readString;
-        // console.warn('line ended early', {
-        //   key,
-        //   allKeys,
-        //   neededKeys: allKeys.slice(firstMissingValueKeyIndex),
-        //   initialValue,
-        //   promptString,
-        //   completionString,
-        //   readString,
-        //   completionValue,
-        //   newPrompt,
-        // });
         done = false;
         break;
       }
