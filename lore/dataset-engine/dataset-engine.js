@@ -27,10 +27,6 @@ export class DatasetEngine {
 
     const initialValueString = formatInitialValueText(initialValue, this.datasetSpec, opts);
     const initialValueEncoded = this.aiClient.tokenize(initialValueString);
-    // console.log('got string 1', {
-    //   initialValueString,
-    //   initialValueEncoded,
-    // });
     let tokenLength = initialValueEncoded.length;
     // note: the token length is conservative, since we don't account for token merge across items
 
@@ -77,24 +73,42 @@ export class DatasetEngine {
         '\n\n',
       ];
     }
-    const completion = await this.aiClient.generate(prompt, stops);
-    console.log('got completion', {
-      prompt,
-      stops,
-      completion,
-    });
-    const parseFn = getCompletionParser(this.datasetSpec, initialValue, opts);
-    const parsedCompletion = parseFn(completion);
-    // console.log('parsed completion', {
-    //   prompt,
-    //   completion,
-    //   parsedCompletion,
-    // });
 
-    const completedValue = {
-      ...initialValue,
-      ...parsedCompletion,
-    };
-    return completedValue;
+    const maxRetries = 5;
+    for (let i = 0; i < maxRetries; i++) {
+      const completion = await this.aiClient.generate(prompt, stops);
+      // console.log('got completion', {
+      //   prompt,
+      //   stops,
+      //   completion,
+      // });
+      const parseFn = getCompletionParser(this.datasetSpec, initialValue, opts);
+      const {
+        readString,
+        done,
+        completionValue,
+      } = parseFn(completion);
+
+      initialValue = {
+        ...initialValue,
+        ...completionValue,
+      };
+
+      if (done) {
+        return initialValue;
+      } else {
+        // console.log('read partial completion', {
+        //   prompt,
+        //   stops,
+        //   completion,
+        //   readString,
+        //   initialValue,
+        //   completionValue,
+        // });
+        prompt += readString;
+      }
+    }
+
+    throw new Error(`Failed to generate item after ${maxRetries} retries`);
   }
 }

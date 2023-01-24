@@ -410,7 +410,7 @@ export const parseDatasetSpec = md => {
   }
 };
 
-export const getCompletionParser = (datasetSpec, initialValue, opts) => completionString => {
+export const getCompletionParser = (datasetSpec, initialValue, opts) => (completionString) => {
   const {
     nameKey,
     descriptionKey,
@@ -422,28 +422,46 @@ export const getCompletionParser = (datasetSpec, initialValue, opts) => completi
   } = opts;
 
   const completionValue = {};
+  let done = true;
+  let readString = '';
   if (continueKey) {
     const oldValue = initialValue[continueKey] ?? '';
     completionValue[continueKey] = oldValue + completionString;
+    readString += completionString;
   } else {
     let completionStringRemaining = completionString;
-    // let index = 0;
-    const readLine = () => {
-      const match = completionStringRemaining.match(/^([^\n]+)(?:\n|$)/);
+
+    const readLineIndex = () => {
+      const match = completionStringRemaining.match(/^([^\n]+)(\n|$)/);
       if (match) {
         const line = match[1];
-        const deltaLength = line.length + 1;
-        completionStringRemaining = completionStringRemaining.slice(deltaLength);
-        // index += deltaLength;
-        return line;
+        const sp = match[2];
+        const deltaLength = line.length + sp.length;
+        return deltaLength;
       } else {
-        // console.warn('could not read line:', [completionStringRemaining]);
+        return -1;
+      }
+    };
+    const readLine = () => {
+      const deltaLength = readLineIndex();
+      
+      if (deltaLength !== -1) {
+        const first = completionStringRemaining.slice(0, deltaLength);
+        shiftLine(deltaLength);
+        return first;
+      } else {
         return null;
       }
     };
-    const unshiftLine = line => {
-      completionStringRemaining = line + '\n' + completionStringRemaining;
+    const shiftLine = deltaLength => {
+      const first = completionStringRemaining.slice(0, deltaLength);
+      const rest = completionStringRemaining.slice(deltaLength);
+      completionStringRemaining = rest;
+      readString += first;
     };
+    // const unshiftLine = line => {
+    //   completionStringRemaining = line + '\n' + completionStringRemaining;
+    // };
     const labelLineRegex = /^#([^\n]*):(?:\n|$)/;
     
     const allKeys = collectKeys(datasetSpec, initialValue, opts);
@@ -475,23 +493,46 @@ export const getCompletionParser = (datasetSpec, initialValue, opts) => completi
         let acc = '';
         acc += value;
         for (;;) {
-          const value2 = readLine();
-          if (value2 === null) {
-            break;
-          } else if (labelLineRegex.test(value2)) {
-            unshiftLine(value2);
+          const lineIndex = readLineIndex();
+          if (lineIndex === -1) {
             break;
           } else {
-            acc += '\n';
-            acc += value2;
-            continue;
+            const value2 = completionStringRemaining.slice(0, lineIndex);
+            if (labelLineRegex.test(value2)) {
+              // unshiftLine(value2);
+              break;
+            } else {
+              acc += value2;
+              shiftLine(lineIndex);
+              continue;
+            }
           }
         }
-        completionValue[key] = acc;
+        completionValue[key] = acc.trim();
       } else {
-        completionValue[key] = null;
+        if (readString.length > 0) {
+          readString += `\n#${key}:\n`;
+        }
+        const newPrompt = promptString + readString;
+        // console.warn('line ended early', {
+        //   key,
+        //   allKeys,
+        //   neededKeys: allKeys.slice(firstMissingValueKeyIndex),
+        //   initialValue,
+        //   promptString,
+        //   completionString,
+        //   readString,
+        //   completionValue,
+        //   newPrompt,
+        // });
+        done = false;
+        break;
       }
     }
   }
-  return completionValue;
+  return {
+    done,
+    readString,
+    completionValue,
+  };
 }
