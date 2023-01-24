@@ -489,3 +489,78 @@ RED 0, GREEN 0, BLUE 60, WHITE 30, BLACK 60
 ## Mobs:
 - [Pirate Ghosts](/items/Pirate Ghosts)
 - [Fish](/items/fish)
+
+## Name:
+Pixel Palace 
+## Description:
+A digital frontier made entirely of holographic projection. The city is a fast-paced metropolis filled with bright lights, tall corporate buildings, and hoards of people. A city is a place where the latest and greatest technology is displayed. You can find robots serving fast food through a conveyor belt. Robot horses gallop through the streets in carriages. And self-service touchscreen grocery stores that retrieve your items through a claw machine. Many of the people who live here are scientists, engineers, or anyone interested in the latest and greatest technological advances in the entire region. In the town square is a shopping flea market filled with digital touchscreen hubs where visitors can purchase weapons, potions, and elements. Each flea market is hosted by a character with a sparkling personality!
+Metropolis
+## Image:
+- ![Pixel Palace: The new digital frontier| god view, top down, no characters, digital metropolis, holographic, transparent buildings, city, futuristic, tron]()
+## Image Gallery:
+- ![The city is a place where the latest and greatest technology is displayed.|Technological buildings, smart homes, robotic futuristic creatures directing traffic, space ships flying through the sky, dusk, god view, tron, hd. ]()
+- ![You can find robots serving fast food through a conveyor belt.|fast food dining hall, futuristic, Tron, robot taking orders at the front counter, burgers, and fries are displayed on a conveyor belt, technological, blade runner, hd]()
+- ![ Robot horses galloping through the streets in carriages.|futuristic central park, tron, holographic trees, robot horse gallops through the street, blade runner, hd]()
+- ![And self-service touch screen grocery stores that retrieve your items through a claw machine.|a claw machine with produce instead of stuffed animals, tron, futuristic, hd, beside the machine is a touch screen where you can order produce.]()
+- ![ In the town square is a shopping flea market filled with digital touchscreen hubs where visitors can purchase weapons, potions, and elements.|tron flea market, digital kiosk, touch screens to buy goods, potions, weapons, elements, crowded, nightlife, hub, HD.]()
+## Ores:
+RED 0, GREEN 80, BLUE 80, WHITE 80, BLACK 0
+## Items:
+- [Skyscrapers](/items/Skyscrapers)
+- [Holographic Trees](/items/Holographic Trees)
+- [Pixel Petals](/items/Pixel Petals)
+## Mobs:
+- [Spaceships](/items/Spaceships)
+- [Robots](/items/Robots)
+- [Robot Horses](/items/Robot Horses)
+
+## Name:
+Golden Isles 
+## Description:
+Inspired by New Harmony, Indiana; Golden Isles a luxurious tiny metropolis separated by waters where the richest and elitist citizens are known to live. The town lives up to its name, having streets, street lights, sidewalks, and trash cans paved in pure gold! Antique mansions with gothic trimmings line the streets painted with decadent golden chrome. The town is rumored to be so bright and sparkly, it attracts fellow visitors from hundreds of miles away! The town is applauded for its various statues which can be seen glowing at night and a grass labyrinth filled with mysterious creatures. Every year a tournament is held where the strongest warriors compete to see who will make it through the labyrinth in the quickest time, many do not always make it out alive. 
+## Biome:
+Island City
+## Image:
+- ![Golden Isles: In the land of luxury!|god view, Venetian modern city with streets separated by bodies of water, golden buildings, futuristic, water city]()
+## Image Gallery:
+- ![The town lives up to its name, having streets, street lights, sidewalks, and trash cans paved in pure gold!.|cobblestone streets, Venetian, paved with gold, luxury, god view]()
+- ![Antique mansions with gothic trimmings line the streets painted with a decadent golden chrome.| ]()
+- ![The town is applauded for its various statues which can be seen glowing at night| ]()
+- ![And a grass labyrinth filled with mysterious creatures.|god view, grass labyrinth decorated by hung string lights, inside the maze are shadow figures, mysterious, scary, horror. ]()
+## Ores:
+RED 50, GREEN 50, BLUE 50, WHITE 50, BLACK 50
+## Items:
+- [Golden Mansions](/items/Golden Mansions)
+- [Gold Chrome Streetlights](/items/Gold Chrome Streetlights)
+- [Gold Chrome Disposal Cans](/items/Gold Chrome Disposal Cans)
+- [Gold Chrome Abstract Statues](/items/Gold Chrome Disposal)
+## Mobs:
+- [Golden Parakeets](/items/Golden Parakeets)
+- [Dazzling Moths](/items/Dazzling Moths)
+- [Golden Tortoise Beetles](/items/Robot Horses)
+
+## Name:
+Myoma 
+## Description:
+Myoma is a modest settlement in the middle of the arctic with cold temperatures and snow that fills the walkways year-round. In the center of the city, you can find the Myoman Stadium, an entire gym carved out of ice where battles of the finest warriors are watched. Outside of the city are ice caves where blue and white ore can be mined. The neighborhoods are filled with igloo homes. In the winter, the Iceballl is held in the town square where the strongest fighters are invited to celebrate, feast, and most of all…party! It is rumored that a menacing ice witch roams the caves outside of the city waiting to return and wreak havoc on the townspeople. 
+## Biome: 
+Arctic 
+## Image:
+- ![The City of Myoma: Where winter is year-round!|god view of a winter snow metropolis filled with tiny modern minimalist igloos, icy lights posts, and blue cobblestone streets in the center of the city is a large roman stadium made out of ice, flurry, winter, gaudism, futuristic.]()
+## Image Gallery:
+- ![In the center of the city you can find the Myoman Stadium.|winter colosseum made out of icy blue glass, two ice statues of angels stand at the entrance, and an icy fountain is in the center between the two statues with swans that float on the water, gaudism, ice, winter, futuristic, metropolis.]()
+- ![The neighborhoods are filled with igloo homes |icy blue glass igloos with ice picket fences, people are seen shoveling snow, minimalism, futuristic, moonlight shines on the igloos, community, winter, modern.]()
+- ![Outside of the city are ice caves where blue and white ore can be mined|ice cave with moonlight that shines through the ceiling, chunky blue and white crystals are everywhere, dazzle, winter.]()
+- ![It is rumored that a menacing creature roams the caves outside of the city waiting to return and wreak havoc on the townspeople.|menacing cyborg yetti stands in the middle of an ice cave, it roars with fury, haze, and snow storm.]()
+- ![In the winter, the Iceballl is held in the town square where the strongest fighters are invited to celebrate, feast, and most of all…party!|winter ball feast, outdoors, icy blue tall tables filled with baked ham, champagne, mashed potatoes, sauteed veggies, ice sculpture swan rests in the middle of the table, people surround the table in blue silk formalwear drinking champagne out of glass flutes and laughing, futuristic, festive, fancy, string lights decorate the feast.]()
+## Ores:
+RED 0, GREEN 0, BLUE 50, WHITE 50, BLACK 0
+## Items:
+- [Igloos](/items/Igloos)
+- [Icy Lampposts](/items/Icy Lampposts)
+- [Ice Stadium](/items/Ice Stadium)
+- [Winter Trees](/items/Winter Trees)
+## Mobs:
+- [Minature Peguins](/items/Minature Peguins)
+- [Snowy Owls](/items/Snowy Owls)
+- [Artic Foxes](/items/Artic Foxes)

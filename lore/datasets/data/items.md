@@ -1402,3 +1402,250 @@ ATK 0, DEF 0, VIT 9, SPR 5, DEX 0, LCK 5
 RED 0, GREEN 0, BLUE 100, WHITE 100, BLACK 0
 ## Price:
 1000
+
+## Name:
+Pink Thing
+## Description:
+A mysterious glittery pink sludge that powers up any player on consumption. The taste is said to be somewhere between a strawberry cake and a cheeseburger. 
+## Image:
+![a glittery pink fluffy mound]()
+## Stats:
+ATK 15, DEF 15, VIT 15, SPR 15, DEX 15, LCK 15
+## Decomposition:
+RED 10, GREEN 0, BLUE 0, WHITE 10, BLACK 0
+## Price:
+400
+
+## Name:
+Rose Milk 
+## Description:
+Milk made from the finest of roses squeezed together in a glass bottle with boba. This decadent drink increases defense, dexterity, and luck. 
+## Image:
+![rose milk in a glass baby bottle with rose petals, fantasy, princess, anime]()
+## Stats:
+ATK 0, DEF 30, VIT 0, SPR 0, DEX 50, LCK 30
+## Decomposition:
+RED 10, GREEN 0, BLUE 0, WHITE 0, BLACK 5
+## Price:
+200
+
+## Name:
+Bass Cloud
+## Description:
+An electric bass guitar embellished with cloud designs. Blue smoke fills the screen as soon as it is played and a centrifugal force is sent to rock your enemy's world! 
+## Image:
+![a baby blue electric guitar shaped like a cloud, anime, fantasy, princess, blue smoke surrounds the guitar]()
+## Stats:
+ATK 0, DEF 0, VIT 30, SPR 30, DEX 20, LCK 1
+## Decomposition:
+RED 10, GREEN 0, BLUE 10, WHITE 0, BLACK 5
+## Price:
+1000
+
+## Name:
+Bedazzled Mic
+## Description:
+A disposable sparkly microphone with magical properties. Can maximize attacks by double the HP until the microphone’s battery dies. 
+## Image:
+![a pink gem bedazzled popstar microphone with a pink fluffy handle, preppy, futuristic, pink sparkles surround the microphone, hd]()
+## Stats:
+ATK 0, DEF 0, VIT 0, SPR 50, DEX 0, LCK 10
+## Decomposition:
+RED 0, GREEN 0, BLUE 0, WHITE 10, BLACK 10
+## Price:
+500
+
+## Name:
+Flare Darts
+## Description:
+A bow and arrow set that shoots flaming arrows. Any person struck with these arrows will take some serious damaging including  a residual burn. 
+## Image:
+![red chrome plated bow and arrow set, arrows imbued with a forceful flame]()
+## Stats:
+ATK 40, DEF 5, VIT 0, SPR 0, DEX 50, LCK 3
+## Decomposition:
+RED 10, GREEN 0, BLUE 0, WHITE 10, BLACK 0
+## Price:
+3000
+
+## Name:
+Tick Tick Booms
+## Description:
+Tiny metallic explosives that leave a mysterious purple dust that fills the vicinity upon use, great for quick escapes and obscuring hits from your opponent. Can deal minimal damage if close to the explosion. 
+## Image:
+![silver metallic explosives that cast purple smoke when used, cherry bombs, explosive, purple smoke, futuristic, hd.]()
+## Stats:
+ATK 0, DEF 20, VIT 0, SPR 0, DEX 0, LCK 0
+## Decomposition:
+RED 10, GREEN 0, BLUE 0, WHITE 10, BLACK 5
+## Price:
+350
+
+## Name:
+Cursed Juice 
+## Description:
+A suspicious dark green liquid embedded with dark magic. The juice will only heal those ‘deserving’ of their properties. Those who are not will feel extremely sick upon consumption. 
+## Image:
+![dark green potion in black transparent bottle, gothic trimmings wrap around the bottle, cursed, dark magic, HD.]()
+## Stats:
+ATK 0, DEF 20, VIT 20, SPR 0, DEX 0, LCK 20
+## Decomposition:
+RED 0, GREEN 0, BLUE 0, WHITE 0, BLACK 10
+## Price:
+1,000
+
+## Name:
+Octopus Ink 
+## Description:
+A protein-packed juice pouch filled with octopus ink. Great for those who want to bulk up on their HP while venturing around the region. 
+## Image:
+![octopus tentacle-shaped juice pouch, a transparent hole is in the middle of the pouch displaying octopus ink, fantastical, hd]()
+## Stats:
+ATK 0, DEF 0, VIT 0, SPR 0, DEX 0, LCK 2
+## Decomposition:
+RED 10, GREEN 0, BLUE 10, WHITE 10, BLACK 5
+## Price:
+100
+
+## Name:
+Nacho Dust
+## Description:
+Dissolving snack pods filled to the brim with nacho cheese dust, packing a punch of flavor and spicy delight! 
+## Image:
+![tiny dissolving pods filled with nacho cheese dust, futuristic, snack, hd.]()
+## Stats:
+ATK 0, DEF 5, VIT 0, SPR 0, DEX 10, LCK 1
+## Decomposition:
+RED 10, GREEN 0, BLUE 0, WHITE 0, BLACK 0
+## Price:
+10 
+
+## Name:
+Shark Tooth Saber 
+## Description:
+A looming saber with a blade entirely made of shark teeth. The blade has an embedded power to summon the spirits of the sharks before who may appear to assist with the battle. 
+## Image:
+![shark teeth melded together to make a sharp sword, blue chrome plated handle, HD.]()
+## Stats:
+ATK 0, DEF 0, VIT 10, SPR 5, DEX 5, LCK 2
+## Decomposition:
+RED 0, GREEN 0, BLUE 10, WHITE 0, BLACK 10
+## Price:
+850
+
+## Name:
+Mystery Box
+## Description:
+A mess of multi-colored circuits and wires with a digital box in the middle. Those who can figure out how to repair this mysterious device will discover that it is a machine used to power up any weapon. 
+## Image:
+![a mysterious titanium box buried underneath a variety of colored wires and breakers]()
+## Stats:
+ATK 0, DEF 0, VIT 0, SPR 5, DEX 5, LCK 2
+## Decomposition:
+RED 0, GREEN 0, BLUE 0, WHITE 10, BLACK 10
+## Price:
+0
+
+## Name:
+Mysterious Green Goo
+## Description:
+This bottle of unknown green goo that is found in a hidden compartment in the janitor closet, it is glowy and has an odd smell. There are no directions attached with the bottle so the only way to find out what happens is to drink the goo and hope it doesn't kill you. Word around town is a short acting goo that gives you super strength and height for help in battles.
+## Image:
+![metal bottle of mysterious green goo]()
+## Stats:
+ATK 50, DEF 25, VIT 10, SPR 10, DEX 15, LCK 5
+## Decomposition:
+RED 0, GREEN 7, BLUE 0, WHITE 2, BLACK 0, SILVER 1
+## Price:
+Unknown
+
+## Name:
+Pink Lighting Yo-Yo
+## Description:
+A pink yo-yo made out of lighting, it’s cute yet extremely powerful. It can be used to knock out enemies by hitting them in the back of the head. Or it can be used to wrap around an enemy and shock them with lighting. If spun around fast enough it will cause a short lighting storm that helps you stay hidden in a fight.
+## Image:
+![an anime style pink yo yo made of lighting]()
+## Stats:
+ATK 30, DEF 25, VIT 20, SPR 15, DEX 5, LCK 10
+## Decomposition:
+RED 8, GREEN 0, BLUE 0, WHITE 1, BLACK 1, SILVER 0
+## Price:
+2500
+
+## Name:
+Bubblegum Lockpick
+## Description:
+A small handmade lock pick that is completely made out of bubblegum. It can be used to unlock doors and also treasure chests. If not used properly it will break and you’ll have to chew more gum to fix it. It also is able to make copies of keys if pressed into the bubblegum. It helps players be sneaky and also extra cute.
+## Image:
+![a small lock pick made out of bubblegum]()
+## Stats:
+ATK 0, DEF 5, VIT 0, SPR 0, DEX 50, LCK 15
+## Decomposition:
+RED 3, GREEN 2, BLUE 2, WHITE 3, BLACK 0, SILVER 0
+## Price:
+650
+
+## Name:
+Ice Pods
+## Description:
+A pair of big wireless headphones made completely out of ice, it is soundproof and almost feels like it freezes time. Wait, does this freeze time? If you play the song I Melt with You while wearing the headphones, it will freeze time for the length of the song. This can only be used once a day so choose carefully. Other times it is just a very chilly set of cool headphones.
+## Image:
+![wireless headphones made out of ice]()
+## Stats:
+ATK 0, DEF 10, VIT 0, SPR 0, DEX 20, LCK 10
+## Decomposition:
+RED 0, GREEN 0, BLUE 6, WHITE 4, BLACK 0, SILVER 0
+## Price:
+1000
+
+## Name:
+Strawberry Milk 
+## Description:
+Ever get tired throughout the day and think “Wow! I could really use a big glass of cold milk.” Well here it is, but it isn’t just a delicious strawberry pink milk. It heals players, it adds 30% to a players health. It is a great drink to have during or after a battle. 
+## Image:
+![kawaii bottle of strawberry milk with a straw]()
+## Stats:
+ATK 5, DEF 5, VIT 0, SPR 0, DEX 45, LCK 15
+## Decomposition:
+RED 5, GREEN 0, BLUE 0, WHITE 4, BLACK 0, SILVER 1
+## Price:
+15
+
+## Name:
+Mini Laptop 
+## Description:
+Sometimes in times of need you wish you had a very tiny laptop that you can easily carry with you, well here it is! This is the perfect item if you’re the team that needs to look up the fastest routes, how to make a healing potion or to code a new weapon. It isn’t helpful on the battlefield but it’s perfect to set plans and make the team’s weapons stronger. It’s so small it can fit in your pocket, sock or even a fanny pack. 
+## Image:
+![futuristic mini laptop]()
+## Stats:
+ATK 0, DEF 20, VIT 0, SPR 0, DEX 20, LCK 2
+## Decomposition:
+RED 0, GREEN 0, BLUE 0, WHITE 1, BLACK 0, SILVER 8
+## Price:
+6000
+
+## Name:
+Frost Cinquedea Sword
+## Description:
+This was an ancient sword from the middle ages, it fell into a lake that was frozen over. It was heard to be trapped in a chest completely made of ice. And over time the sword mixed with the ice and became stronger and more powerful. While it still does a deadly attack from combat fighting, it also can shoot ice out of it to freeze enemies or to create walls of ice. Only one person has the power to carry this sword. 
+## Image:
+![cinquedea sword made of ice]()
+## Stats:
+ATK 45, DEF 30, VIT 15, SPR 40, DEX 5, LCK 5
+## Decomposition:
+RED 0, GREEN 0, BLUE 6, WHITE 3, BLACK 0, SILVER 1
+## Price:
+4500
+
+## Name:
+Meatloaf
+## Description:
+The famous meatloaf made by the robot lunch lady, sadly she only knows how to make meatloaf since being left out in the rain. But hey it’s delicious and tastes like the nostalgic nuclear family you learned about on twitter. But this meatloaf is full of nutritious and warm fuzzy feelings. So once you eat any meatloaf recipe you gain back half percent of lost health and it will have you immune to damage for a minute.
+## Image:
+![Futuristic anime style meatloaf]()
+## Stats:
+ATK 0, DEF 5, VIT 0, SPR 5, DEX 25, LCK 30
+## Decomposition:
+RED 6, GREEN 0, BLUE 0, WHITE 0, BLACK 4, SILVER 0
+## Price:
+Lunch Card

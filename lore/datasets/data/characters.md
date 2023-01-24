@@ -613,7 +613,7 @@ Her best friend is an old woman in the Zone 5 Great Filter, who grows magical [a
 - She learned Kung Fu from watching [cyberpunk anime](/lore/Neo Nokyo).
 
 ## Name:
-Rhyden 
+Rhyden
 ## Description:
 Rhyden is a fourteen-year-old army brat who thrives on combat. His father is one of the region’s most highly ranked [mercenaries](/lore/mercenary). Rhyden follows closely in his father’s footsteps, he is an extremely skilled swordsman who has beaten any opponent who dares to contest against him. At first glance, he has a hardened persona but underneath this is a wounded son who struggles with vulnerability. Rhyden wields a large titanium shotgun he refers to as [Nightbringer](/items/Nightbringer) which has been passed down to him through his father and generations before him. He is known in battle for his agility and ability to make swift transitions between moves. During a battle at [Groov’s Arena](/settings/Groov’s Arena), he befriends [Linus](/characters/Linus), and the two make their way down the street in search of recognition from their academy. Rhyden mostly does it because he knows any accolade from his school would make his father more than proud. Throughout the journey down the street, Rhyden slowly but surely opens up to his newfound friends [Linus](/characters/Linus) and [Yona](/characters/Yona).  He secretly dreams about abandoning his father’s legacy and leaving everything behind. 
 ## Class:
@@ -665,11 +665,11 @@ Rhyden sleeps in an old wooden twin bed in [Groov’s Arena](/settings/Groov’s
 - Rhyden has a scar on his lower lip that is from a childhood fall. 
 
 ## Name:
-Yona 
+Yona
 ## Description:
 Yona is a new student at the zone’s academy. However, this isn’t Yona’s first rodeo as the new girl. Her parent’s nomadic lifestyle leaves her in a perpetual state of change. She has little disregard for the rules, the status quo, and her social life. However, this all begins to change when Yona is gifted with powers that require great responsibility. On her first day of school, Yona is greeted by Class President [Ness](/characters/Ness) who is persistent in showing her around. The two find an [Ice Vape](/objects/Ice Vape) in an abandoned locker that activates a force in Yona’s hands. The force allows her to levitate, attack, and heal all through her fingertips. Quickly after Yona discovers the true potential of her powers, she convinces [Ness](/characters/Ness) to sneak past school grounds and venture down the street to find answers. The two cross paths with [Rhyden](/characters/Rhyden) and [Linus](/characters/Linus) and begin to make their way past the never-ending roadway together facing a variety of quests, monsters, and maybe even becoming closer along the way. When Yona ventures down the street she begins to experiment and harness her powers which begin to excel at a rapid pace. In the last battle against [Noir](/characters/Noir), Yona exhausts herself pushing herself and her powers to the brink of exhaustion. After she falls conscious, [Rhyden](/characters/Rhyden) steps in sacrificing himself to save her. 
 ## Class:
-Mage 
+Mage
 ## Stats:
 ATK 0, DEF 0, VIT 6, SPR 6, DEX 2, LCK 3
 ## Alignment:
@@ -714,7 +714,7 @@ Yona and her parents live in a desolate apartment building. Her parents had purc
 - Yona has never taken a picture with her parents
 
 ## Name:
-Linus 		
+Linus
 ## Description:
 Linus is a goofy and loyal friend who surprises those around him with his sudden moments of bravery. Linus is the physical embodiment of good vibes. His personality is upbeat and goofy, and his charisma seems to touch everyone he encounters. Linus also enjoys [foraging](/lore/foraging). He enjoys picking a variety of mushrooms, flowers, and herbs for potion making which he seldom uses recipe books for. His very own potion [Good Juice](/items/Good Juice) is a concoction made from his recipe that allows you to heal with some minor effects. Throughout his journey down the endless road, Linus finds a way to overcome his fear of the unknown and his small instances of bravery change him from a mouse to a lion. He be-friends fierce warrior [Rhyden](/characters/Rhyden). to learn from his bravery and the two form a powerful bond rooted in their loyalty to one another.  His undying loyalty and friendship are what make him the perfect companion whether it is in navigation, battle, and banter. 
 ## Class:
@@ -722,7 +722,7 @@ Scout/Healer
 ## Stats:
 ATK 0, DEF 0, VIT 5, SPR 7, DEX 0, LCK 5
 ## Alignment:
-Lawful Good 
+Lawful Good
 ## Quotes:
 - "List of important quotes the character has said"
 ## Image:
@@ -758,7 +758,7 @@ Linus lives with his parents in a quaint cottage in [Onogan Park](/settings/Onog
 - Linus’ favorite food is bok choy which is a key ingredient in [Good Juice](/items/Good Juice). 
 
 ## Name:
-Jojo 				
+Jojo
 ## Description:
 Jojo is a thirteen-year-old [Hacker](/lore/Hacker) who uses her engineering skill to manipulate her opponents. She is sardonic and sarcastic by nature and seems to only speak in one-syllable phrases. Her weapon of choice is a [Bitsy](/items/Bitsy), a portable computer that generates any object out of thin air with correct data input. In battle, Jojo uses her portable computer,[Bitsy](/items/Bitsy), to conjure holographic creatures that fight her opponents on her behalf, as long as she makes sure to keep her [Bitsy](/items/Bitsy) charged! At first glance, she is incredibly intelligent and reserved in conversations. She struggles sometimes to articulate herself which is the root cause of why she isolates herself from others. Jojo is an only child, her father, [Dr. Sloane](/characters/Dr. Sloane) is regarded as an architectural genius who is responsible for the construction and design of her town at large. Her appearance is noted by her black lipstick, her hair in pigtails, and the bubblegum she chews constantly. 
 ## Class:
@@ -766,7 +766,7 @@ Engineer
 ## Stats:
 ATK 5, DEF 5, VIT 0, SPR 0, DEX 40, LCK 10
 ## Alignment:
-Lawful Evil 
+Lawful Evil
 ## Quotes:
 - “And Icarus flew so high… And Icarus crashed so hard”
 - “I don’t do anything my [Bitsy](/items/Bitsy) can’t, it’s basic protocol”
@@ -810,7 +810,7 @@ Blue Mage/Jack of All Trades
 ## Stats:
 ATK 10, DEF 10, VIT 0, SPR 0, DEX 0, LCK 10
 ## Alignment:
-Lawful Good 
+Lawful Good
 ## Quotes:
 - "Geographically speaking, I guess so. In terms of actuality, it felt pretty easy."
 - "You can’t make things up that are already true”
@@ -847,11 +847,11 @@ Lorne’s best friend is [Lilith](/characters/Lilith) who also shares Lorne’s 
 - All of his family members who are maskers have names that begin with an L. 
 
 ## Name:
-Axel 				
+Axel
 ## Description:
 Axel is a complete wild card. He is known in battle for devastating blows toward his opponents. He fights with a steel fist latched on his right hand referred to as the [Barbarian](/items/Barbarian). He is known for his sarcastic quips, his fearless demeanor, and his smile that never seems to fade. While he is generally friendly to most people he encounters, he has an inner rage toward those who betray him. His twin brother, [Kaine](/characters/Kaine) is his closest friend and the two seem to have a loving but contentious relationship. Axel is a fierce opponent, known for his damaging attacks and moderate speed. 
 ## Class:
-Berserker 
+Berserker
 ## Stats:
 ATK 9, DEF 2, VIT 0, SPR 0, DEX 4, LCK 0
 ## Alignment:
@@ -897,7 +897,7 @@ Axel and his brother [Kaine](/characters/Kaine) live in an ornately decorated ch
 - Axel and his brother both wear fire-imbued pendants from the volcanic region of [Volero](/settings/Volero) , an ancient city buried by magma.
 
 ## Name:
-Kaine 
+Kaine
 ## Description:
 Kaine (14/M) is a skilled archer and inquisitive explorer. His weapon of choice is his bow and arrow set known as [Disc&Fly](/items/Disc&Fly). His go-getter persona and profound optimism make him a great leader. Kaine enlists his brother [Axel](/characters/Axel) on a journey down the longest boulevard in the region after finding a trail of unexplained digital material. Kaine is a skilled technician, if he is not outdoors exploring he can be found in his chateau basement tweaking his gadgets. He is a versatile fighter known for his impeccable aim, dexterity, and speed. He is a versatile fighter known for his impeccable aim, dexterity, and speed.
 ## Class:
@@ -905,7 +905,7 @@ Ninja/Heroe
 ## Stats:
 ATK 7, DEF 5, VIT 0, SPR 0, DEX 8, LCK 6
 ## Alignment:
-Lawful Good 
+Lawful Good
 ## Quotes:
 - "I don’t think I care if my cup is half full or half empty, as long as it’s metaphorically a nice cup"
 - “Alone we can do so little, but together we can do so much”
@@ -987,15 +987,15 @@ Ryu lives in a one-story trailer on the border of the [Veilside Crypts](/setting
 - Ryu was born on September 26th. His zodiac sign is Libra.
 
 ## Name:
-Raelle 				
+Raelle
 ## Description:
 Raelle or ‘Rae’ (14/W) is a budding [botanist](/lore/botany) who uses her knowledge in potion making to her disposal. She keeps a leather-bound journal to document the different species of flowers, greenery, and herbs she encounters and the recipes of potions she concocts. Her personality is marked by her infinite curiosity to gather knowledge and her immediate warmth toward others. However, while Raelle is naturally kind, it is not in anyone’s best interest to upset her. Raelle has a supernatural ability to conjure the natural elements to do her bidding (/lore/hedge witch). Her best friend is [Ryu](/characters/Ryu) whom she has helped nurture his shapeshifting powers. Her other close friend is [Kyle](/characters/Kyle) whom she has a slight crush. In her free time, she can be seen in the academy’s garden journaling and watering plants. She is known in battle for her poisonous attacks and ability to heal others in battle. 
 ## Class:
-Healer/Necromancer  
+Healer/Necromancer
 ## Stats:
 ATK 0, DEF 0, VIT 8, SPR 8, DEX 0, LCK 10
 ## Alignment:
-Lawful Neutral 
+Lawful Neutral
 ## Quotes:
 - "I wouldn’t say I have just a green thumb, more like a green hand… or two"
 - “A water a day keeps the dead plant away”
@@ -1007,13 +1007,13 @@ Lawful Neutral
 - ![She keeps a leather-bound journal to document the different species of flowers, greenery, and herbs she encounters and recipes of potions she concocts.|Short stubby teen girl alchemist in a lab with mortar and pestle. Behind her are bright-colored potions. In front of her is a brown leather-bound notebook with scribbled recipes, HD.]()
 ## Has:
 - [Sakura Petals](/items/Sakura Petals)
-- [Shroom Mush](/items/Shroom Mush) 
-- [Chlorolixer](/items/Chlorolixer) 
+- [Shroom Mush](/items/Shroom Mush)
+- [Chlorolixer](/items/Chlorolixer)
 ## Abilities:
-- [Poison Ivy](/abilities/Poison Ivy) 
-- [Nisotomic](/abilities/Nisotomic) 
-- [Idioblast](/abilities/Idioblast) 
-- [Hydro-grow](/abilities/Hyro-grow) 
+- [Poison Ivy](/abilities/Poison Ivy)
+- [Nisotomic](/abilities/Nisotomic)
+- [Idioblast](/abilities/Idioblast)
+- [Hydro-grow](/abilities/Hyro-grow)
 ## Limit Break:
 ***Poison Ivy*** - ability to fully restore hp to every player in her party.  
 ## Biography:
@@ -1088,11 +1088,11 @@ Zeke
 ## Description:
 Zeke is a budding sorcerer who has an infinite love for gathering knowledge. He has a strong ancestral background dating back to the very first model of AIs in the region (lore/the land before). He is known in battle for his magical abilities specifically channeling electricity into his attacks. He spends his free time in the library researching the history of the town as well as new spells he might be able to try. He is a lone wolf by choice and every so often spends his time with the academy’s librarian [Mr. Owl](/characters/Mr. Owl). Zeke begins to be plagued with vivid dreams of a world before this one. While on the journey for answers, Zeke discovers a book called a [Didact](/items/Didact) which has the entire inscribed history of his region. Zeke must find a key (/items/skeleton key) that is buried somewhere in the city to unlock the [Didact](/items/Didact) and receive answers. 
 ## Class:
-Mage 
+Mage
 ## Stats:
 ATK 0, DEF 0, VIT 8, SPR 7, DEX 0, LCK 0
 ## Alignment:
-Chaotic Good 
+Chaotic Good
 ## Quotes:
 - "Mr. Owl. I'm having dreams. Weird dreams, dreams of maybe my great-grandfather. I think he's trying to tell me something." (/lore/the land before)
 - “I want to know more about my family. The people before me who built this city.” 
@@ -1102,15 +1102,15 @@ Chaotic Good
 - ![He spends his free time in the library researching the history of the town|scrawny boy with black long hair reading in the library, near him are piles of books, sharp lighting, --niji]()
 - ![Zeke begins to be plagued with dreams of a world before this one|scrawny boy, anime, cold sweat, the nightmare in bed, dusk, high definition, midnight, low light]()
 ## Has:
-- [Opal Compass](/items/Opal Compass) 
-- [Aura Glass](/items/Aura Glass) 
+- [Opal Compass](/items/Opal Compass)
+- [Aura Glass](/items/Aura Glass)
 - [Good Juice](/items/Good Juice)
-- [Chloro-lixer](/items/Chloro-lixer) 
+- [Chloro-lixer](/items/Chloro-lixer)
 ## Abilities:
 - [Breaker of Chains](/abilities/Breaker of Chains)
-- [Thunder-dome](/abilities/Thunder-dome) 
-- [Super shock](/abilities/Super shock) 
-- [FrightLight](/abilities/FrightLight) 
+- [Thunder-dome](/abilities/Thunder-dome)
+- [Super shock](/abilities/Super shock)
+- [FrightLight](/abilities/FrightLight)
 ## Limit Break:
 ***Breaker of Chains*** - Attacks double in damage and defense for twenty hits or twenty seconds. 
 ## Biography:
@@ -1127,7 +1127,7 @@ Zeke lives in a [Secret Corridor](/settings/Secret Corridor) within the library 
 - Zeke was born on November 8th. His zodiac sign is Scorpio.
 
 ## Name:
-Wyatt 
+Wyatt
 ## Description:
 Wyatt is a fourteen-year-old teen fighter known for his heavy attacks in hand-to-hand combat and hot-head tendencies. He holds a reputation at the academy as one of the strongest competitors which proceed him in every classroom. He holds the title of team captain of the [MatchStix](/lore/MatchStix] a student-based collective of some of the strongest fighters. He fights with him [Uppercuts](/items/Uppercuts], a pair of holographic gloves generate a lethal force with each attack. He has a rivalry with co-captain and friend [Lance](/characters/Lance) and a budding friendship with [Lilian](/characters/Lilian) whom he gets assigned to journey down the [Street](/lore/Street) with. He is known in battle for his hard-hitting attacks and accuracy.  
 ## Class:
@@ -1135,7 +1135,7 @@ Barbarian
 ## Stats:
 ATK 7, DEF 3, VIT 0, SPR 0, DEX 0, LCK 7
 ## Alignment:
-Chaotic Good 
+Chaotic Good
 ## Quotes:
 - “Funny thing is… I don’t need powers to defeat you, I just need my bare hands”
 - “Can I bribe you with an arm wrestle?”
@@ -1179,7 +1179,7 @@ Lancer
 ## Stats:
 ATK 7, DEF 3, VIT 0, SPR 0, DEX 8, LCK 0
 ## Alignment:
-Chaotic Good 
+Chaotic Good
 ## Quotes:
 - “Happy that you two kissed and made up, now could you tell us how to get to the end of the street?” (/lore/street)
 - “I don’t aspire to be liked, I aspire to be feared”
@@ -1189,9 +1189,9 @@ Chaotic Good
 - ![The top fencer at the academy|short teen girl with black hair loosely framing face, black fencing suit, front view, purple sword in mid-air]()
 - ![Her weapon of choice is Soothsaber|short teen girl with black face framing bob, holding purple samurai sword glowing, lavender falls in the background, front view, sharp HD ]()
 ## Has:
-- [Soothsaber](items/Soothsaber) 
-- [Microchips](/items/Microchips)  
-- [Hydrapack](/items/Hydrapack) 
+- [Soothsaber](items/Soothsaber)
+- [Microchips](/items/Microchips)
+- [Hydrapack](/items/Hydrapack)
 ## Abilities:
 - [Swift Swing](/abilities/Swift Swing)
 - [Slash](/abilities/Slash)
@@ -1213,7 +1213,7 @@ Lilith lives in a heaping mansion in [Misfortuno](/settings/Misfortuno). The loo
 - Lilith was born on October 3rd. Her zodiac sign is Libra.
 
 ## Name:
-Malice	
+Malice
 ## Description:
 Malice is a fifteen-year-old fighter who is known for her untamed furry and strong will toward justice. She wields a dual dagger set [Yin&Yang]. She is considered to be a vigilante, willing to fight on anyone’s behalf if it means that fairness is restored. She is skilled in pickpocketing which allows her to collect money, potions, and orbs. She is accompanied by her black pet rabbit, [Wednesday](/characters/Wednesday) who gives Malice extra luck in her attacks. She has a strong friendship with [Lily](/characters/Lily) and a contentious relationship with her brother [Will](/characters/Will). She is known in battle for her speed, agility, and flexibility. 
 ## Class:
@@ -1221,7 +1221,7 @@ Hero/Thief
 ## Stats:
 ATK 6, DEF 5, VIT 3, SPR 3, DEX 8, LCK 7
 ## Alignment:
-Chaotic Good 
+Chaotic Good
 ## Quotes:
 - “If you win, I’ll come to the cave with you. If I win, you never speak to me again.”
 - “You’re being weird, weirdo”
@@ -1232,7 +1232,7 @@ Chaotic Good
 - ![She enjoys traveling with her pet rabbit Wednesday|A teen girl, anime, pink pigtails, smokey eyes, she holds a black rabbit.]()
 - ![She wields a dual dagger set, Ying&Yang.|Teen girl, anime, pink pigtails, pink playsuit, front view, battle, two pink chrome daggers.]()
 ## Has:
-- [Yin&Yang](items/Yin&Yang) 
+- [Yin&Yang](items/Yin&Yang)
 - [Pink Puff](/items/Pink Puff)
 - [Lyra Bunnies](/items/Lyra Bunnies)
 ## Abilities:
@@ -1258,15 +1258,15 @@ Malice lives on campus in a single dorm room. The dorm room is decorated with pi
 - Her birthday is June 1st. Her zodiac sign is Gemini.
 
 ## Name:
-Lily 
+Lily
 ## Description:
 Lily is a fourteen-year-old sorceress known for her water-binding and healing powers. She has a welcoming persona and a strange way of seeing the good in everyone. She wields a blue titanium mage (/items/Wand of Triton) that allows her to swarm her opponents with waterfalls, blizzards, and tsunamis. Her parents are [Nymph Healers](/lore/Nymph Healers) who specialize in protecting and nourishing the nature of the AI region. She assists her best friend Malice in her journey down the [Street](/lore/Street]. 
 ## Class:
-Sorceress 
+Sorceress
 ## Stats:
 ATK 0, DEF 0, VIT 7, SPR 5, DEX 8, LCK 9
 ## Alignment:
-Lawful Good 
+Lawful Good
 ## Quotes:
 - “The ocean always seems to put my mind at peace. It reminds me of how small I am in the grand scheme of things.”
 - “What’s the motion, Ocean? What’s the tide, my guy?”
@@ -1277,7 +1277,7 @@ Lawful Good
 - ![She is a sorceress, known for her water binding and healing powers.|A wide-eyed girl with long icy hair, wearing a blue frosted two-piece, a wave of water shoots from her hands, anime, full body view, waves crash in the background]()
 - ![She wields a blue titanium mage.|A long blue chrome wand, aqua, futuristic, shiny embossed, shell handle.]()
 ## Has:
-- [Wand of Triton](items/Wand of Triton) 
+- [Wand of Triton](items/Wand of Triton)
 - [Freeze Puff](/items/Freeze Puff)
 - [Lyra Bunnies](/items/Lyra Bunnies)
 ## Abilities:
@@ -1308,7 +1308,7 @@ Assassin
 ## Stats:
 ATK 50, DEF 40, VIT 13, SPR 10, DEX 60, LCK 20
 ## Alignment:
-Chaotic Neutral 
+Chaotic Neutral
 ## Quotes:
 - "Aw, you think I’m cute? Gross."
 - "Being a pickpocketer is easy, being a teenage girl is hard."
@@ -1356,7 +1356,7 @@ Opal still lives in the [Cherry Blossom Forest](/settings/Cherry Blossom Forest)
 - Since Opal doesn't know her parents, her day of birth and where she is from is unknown. 
 
 ## Name:
-Berry 
+Berry
 ## Description:
 Berry Marionberry is a 15/F. She is the youngest in a set of twins with [Mary](/characters/Mary), she has taken on the role of the shy and almost invisible as a twin. She spends most days doodling and reading books about electronics and building machines. She is builder of ideas and [Mary](/characters/Mary) is the thinker. Or that’s what she’s been told. Since she is so knowledgeable about being an engineer she can make new weapons or objects out of anything. She’s a fast learner and is always listening so she’s aware at all times. Instead of a wallflower think more cyberflower. 
 ## Class:
@@ -1412,7 +1412,7 @@ Berry and her twin share a room, it’s split right down the middle. Berry’s s
 - Berry was born on May 25, making her and her sister a Gemini.
 
 ## Name:
-Mary 
+Mary
 ## Description:
 Mary Marionberry is a 15/F. She is the oldest in a set of twins. As the oldest she felt it was her role to take control and be the voice of the two. She is very driven and creative, her favorite thing to do is read philosophy books and be an innovator. She knows her worth and won’t back down from a fight for what she wants. Sometimes she works so hard so she doesn’t have to stop and think so much about life. It’s just easier for her to stay in control when she doesn’t stop moving. Her IQ is the highest in the whole school and she knows it. Her passion makes her want to invent new technology to improve the world, and allow for a safer and healthier environment. Mary is the brain of the twins, she has a never ending creation of ideas.
 ## Class:
@@ -1466,3 +1466,270 @@ Mary shares a room with her twin [Berry](/characters/Berry), her side of the roo
 - Mary’s favorite movie genre is rom coms, but she’ll never tell anybody.
 - Mary finds herself obsessing over things that she can not control, if she starts to panic she uses breathing techniques.
 - Mary was born on May 25, making her and her sister a Gemini.
+
+## Name:
+MarcieX3
+## Description:
+MarcieX3 is a budding pop star who uses her skills in song and dance to her disposal in battle. She uses her melodic voice and [BassCloud](/objects/BassCloud) to strike her enemies down. In her, free time MarcieX3 runs the local dance squad on campus and likes to mine for sparkly jewels and minerals to decorate her costumes with. She has a bubbly personality and doesn’t seem to take life too seriously. However, you mustn't take her kindness for weakness as once you undermine her, you become her enemy. She dreams of moving away from the region to pursue her dreams of stardom. She has a best friend and sister [Mayona](/characters/Mayona) who always seems to set MarcieX3 on track. 
+## Class:
+Bard
+## Stats:
+ATK 0, DEF 0, VIT 50, SPR 15, DEX 50, LCK 7
+## Alignment:
+Chaotic Good
+## Quotes:
+- "Are you wearing…that?"
+- “I love looking at a challenge in the eye.. And giving it a wink”
+- “There is a force no power than a girl with impeccable style”
+- “....Slacks?....”
+- “Life is tough... But so are you!”
+## Image:
+- ![Portrait of MarcieX3|front view girl with brown skin, baby doll brown eyes, pink pigtail braids, pink leather fashion nova two-piece, hd, sharp lighting, pink backdrop]()
+## Image Gallery:
+- ![She likes to mine for sparkly jewels and minerals to decorate her costumes with.| bird's eye view, brown girl with baby doll eyes and pink pigtails mines for sparkly jewels, behind her is a quarry with tons of minerals, hd, sharp lighting.]()
+- ![She uses her melodic voice and Bass Cloud to strike her enemies down.|full body view, brown girl with baby doll eyes and pigtails, preppy, singing, playing holographic guitar, behind her are illuminated notes, futuristic, girly, hd]()
+- ![MarcieX3 runs the local dance squad on campus.|full body view, brown girl with baby doll eyes and pink pigtails in a preppy futuristic cheer uniform, she is at the very top of a cheer pyramid, she is peppy, behind her is a gym.]()
+## Has:
+- [BassCloud](/items/BassCloud)
+- [RoseMilk](/items/Venturine Potion)
+- [PinkThing](/items/Booster)
+- [GoodJuice](/items/Ramen)
+- [BedazzledMic](/items/Grappling Hook)
+## Abilities:
+- [Vibrato](/abilities/Vibrato)
+- [Do-Re-Mi](/abilities/Do-Re-Mi)
+- [1-2-3](/abilities/1-2-3)
+- [Starpower](/abilities/Starpower)
+## Limit Break:
+**Starpower** - Stats are doubled for the next twenty attacks. 
+## Biography:
+MarcieX3 is the oldest of three siblings. She is the closest to her sister [Mayona](/characters/Mayona) and seems to butt heads with her baby brother [Riku](/characters/Riku). Her parents [Lena](/characters/Lena) and [Dr. Maori](/characters/Dr. Maori) is a successful scientific duo that lives apart from the three as their scientific findings demand them to travel constantly. MarcieX3 is the only musically inclined member in her family causing her to continually feel as though she is the black sheep. 
+## Appearance:
+MarcieX3 has brown skin, baby doll eyes, and pastel pink pigtails. She is always seen wearing nothing but pink, pink, and pink! She has a Y2K kind of style with futuristic embellishments. She takes pride in her appearance, and wouldn’t ever be caught dead looking ‘normal’. 
+## Personality:
+MarcieX3 has an innocent and bubbly personality. She tends to be adventurous and doesn’t seem to take life too seriously. Although she has a strong work ethic and is determined upon graduation to venture out past her region to pursue a career in music. While she is extremely friendly this can switch quickly if her kindness is taken as a weakness. 
+## Homespace:
+MarcieX3 lives in a smart house in [Pixel Palace](/settings/Pixel Palace). She has a personalized room with digital pink sparkly projections, a fluffy Fuschia cyber bed, and a surround sound system to practice her songs with. 
+## Relationships:
+- MarcieX3 is the closest with her younger sister [Mayona](/characters/Mayona). [Mayona](/characters/Mayona) is a budding witch who keeps MarcieX3’s head out of the clouds. The two can sometimes butt heads as [Mayona’s](/characters/Mayona) realism seems to burst MarcieX3’s bubble. 
+- MarcieX3 strives to impress her parents in any way possible. She doesn’t tend to see them often and only receives written postcards from where they have traveled. MarcieX3 dreams of making her career a reality to make them proud. 
+- MarcieX3 is the older sister to her brother [Riku](/characters/Riku) and tries her best to take care of him while his parents are away. [Riku](/characters/Riku] accuses MarcieX3 of being too controlling and too strict on him but MarcieX3 will never stop being [Riku’s](/characters/Riku’s) and that is never going to change! 
+## Trivia:
+- MarcieX3 is inspired by Brady Bunch fan favorite, Marcia Brady, and the show’s famous catchphrase: Marcia Marcia Marcia. 
+- MarcieX3 can play the guitar, the keyboard, and the harp. 
+- MarcieX3 was born on November 8th, her zodiac sign is in Scorpio.
+
+## Name:
+Glacier Girl
+## Description:
+Also known as Carly, a 14 year old girl, who happened to stumble upon the [Frost Cinquedea Sword](/items/Frost Cinquedea Sword) on a quest. Which gave her the power of being able to control and make ice. She’s extremely intelligent and is always one step ahead of everyone else. She came up with her new persona Glacier Girl with her best friend and battle partner [Blades](/characters/Blades). Once she picked up the sword she felt ice in her veins and realized her life was going to change overnight. Now with her new found power she’s going to have to juggle being a teenage girl and helping the city. But this doesn’t scare Carly, it only drives her to become better. With her best friend by her side, no fight seems unbeatable.
+## Class:
+Battle Witch
+## Stats:
+ATK 45, DEF 25, VIT 70, SPR 40, DEX 35, LCK 5
+## Alignment:
+Neutral Good
+## Quotes:
+- “Have you heard the forecast? Looks like a blizzard is coming!”
+- "Blades, will you please focus!”
+- "Hold on, ice got this.”
+- "Want some frostbite."
+- "I’m never leaving your side, okay?"
+## Image:
+- ![Glacier Girl concept art | front view, a anime girl with silver long hair, parts of her made of ice, wearing blue futuristic clothing, holding an ice sword]()
+## Image Gallery:
+- ![Glacier Girl in battle | front view, a anime girl with silver long hair, parts of her made of ice, wearing blue futuristic clothing,on a battlefield, shooting ice out of a sword]()
+- ![Glacier Girl jugging school with fighting|side view, a anime girl with silver long hair, parts of her made of ice, wearing blue futuristic clothing, sitting on a bed, in a teenage girl room, reading a book]()
+- ![Glacier Girl creates a storm |back view, a anime girl with silver long hair, parts of her made of ice, wearing blue futuristic clothing,on a battlefield, floating in mid air, high off the ground, as she makes it blizzard around her]()
+- ![Glacier Girl flying | side view, a anime girl with silver long hair, parts of her made of ice, wearing blue futuristic clothing, flying in the air, on a beam of ice, coming from her hands]()
+- ![Glacier Girl bored in class| front view, a anime girl with silver long hair, parts of her made of ice, wearing blue futuristic clothing, doodling hearts in her diary, desk,at a futuristic school]()
+## Has:
+- [Frost Cinquedea Sword](/items/Frost Cinquedea Sword)
+- [Snow Goggles](/items/Snow Goggles)
+- [Bag of Crystals](/items/Bag of Crystals)
+- [Health Potion](/items/Health Potion)
+- [Cherry Capstick](/items/Cherry Capstick)
+## Abilities:
+- [Blizzard](/abilities/Blizzard)
+- [Area Damage](/abilities/Area Damage)
+- [Slash Damage](/abilities/Slash Damage)
+- [Beam of Ice](/abilities/Beam of Ice)
+- [Ice Shield](/abilities/Ice Shield)
+## Limit Break:
+**Winter Storm** Glacier Girl gains the ability to summon a winter storm so thick no one can see through it, it also makes enemies slower. Her sword attack is x10 more deadly, this only lasts for a short period of time and needs some time to recharge.
+## Biography:
+Before she found the [Frost Cinquedea Sword](/items/Frost Cinquedea Sword) in the [Cherry Blossom Forest](/settings/Cherry Blossom Forest), she was a normal 14 year old girl named Carly. Carly grew up in a middle class family and always tried her hardest to fit in. She wanted to be liked by everyone so she developed an almost chameleon personality. The only person who really knows her is her best friend [Blades](/characters/Blades), they met in middle school and have been a duo ever since. Sadly her parents got divorced when she was younger so she struggles trying to be a teenager, a good daughter and now a battle witch. Don’t be fooled by her aloof cold persona, it's her way she protects herself from getting hurt. Now since she picked up the [Frost Cinquedea Sword](/items/Frost Cinquedea Sword) and ice flowed through her veins she’s found a bigger purpose, fighting for the people she loves and protecting the place she grew up in.
+## Appearance:
+Glacier Girl is a 14 year old girl, who is short and lean. She has long silver hair and parts of her skin are made of ice. She wears mostly silver and blue cyberpunk armor to protect herself but still be stylish.
+Glacier Girl has always struggled with liking what she sees in the mirror, but everyone else she’s an angel when she walks in the room. Love is currently not on her mind because she is so busy and overwhelmed. Plus the first person she needs to love is herself.
+## Personality:
+Glacier Girl is mysterious from the outside looking in, at first glance you see a beautiful and effortlessly cool girl. But underneath that she is battling her own demons. Yet with all of her inner struggle, the ones close to her know she is genuine, passionate and a goofball. She’s full of knowledge of lore, old books and crystals. She’s kinda a self proclaimed witch, her having powers has helped out. When she’s not fighting crime, doing homework or hanging with  [Blades](/characters/Blades); she’s at home mediating surrounded by crystals. 
+## Homespace:
+Glacier Girl’s home is in two separate locations, ever since her parents were divorced she had to move around from each spot. Making her feel as if she doesn’t really have a constant home. Her house with her moms is a beautiful almost staged blue and silver bedroom, filled with crystals, spell books and posters of cute boys. Her room at her dad’s is almost empty, it looks like it could belong to any person in the world. Both places make her feel phony. 
+## Relationships:
+Glacier Girls' only true friend is [Blades](/characters/Blades), they met in middle school and have been stuck at the hip ever since. They bring a perfect balance to each other. One being kinda a wild child and the other a driven person. Glacier Girl has only ever truly opened up fully to [Blades](/characters/Blades), this is the only person who truly knows her.
+Glacier Girl is close to her mom, they struggle a lot between being mother/daughter and being friends. But at the end of the day they love each other.
+Like most teenage girls, Glacier Girl struggles to have a very close relationship with her father, he spends a lot of time in his head. So they usually sit in silence and watch tv. 
+## Trivia:
+- Her favorite crystal is a Rhodonite, it helps her sooth her anxious thoughts.
+- She owns more spell books than school books.
+- Her [Frost Cinquedea Sword](/items/Frost Cinquedea Sword) is so heavy she has started weight training to carry it faster. 
+- Her favorite season is actually summer.
+- She has [spells](/lore/spells)for any situation. 
+- She was born May 26 making her a Gemini.
+
+## Name:
+Blades
+## Description:
+Also known as Olivia is a 14 year old girl, who lives her life with all gas and no brakes. She is full of life and is fearless, she’s never afraid to take up space and be herself fully. That's how her and [Glacier Girl](/characters/Glacier Girl) became best friends. They both saw something they needed for themselves in each other. Blades never cared much about school or grades, she usually skipped class to go skate in the park. She was always drawn to skating; it felt so free and unstoppable. She could go as fast as she wanted and no one could stop her. And when she got the opportunity to give a little blood to [Colbe Cheese Troll](/characters/Colbe Cheese Troll) in exchange for [Choppy Skate Blades 9000](/items/Choppy Skate Blades 9000), she didn’t even hesitate. She wasn’t afraid to make a deal with a little [troll](/lore/troll), she’s always been like that, impulsive. Now with her new set of blades, she has the power to fight side by side with her best friend.
+## Class:
+Sonic Speed
+## Stats:
+ATK 40, DEF 35, VIT 20, SPR 35, DEX 80, LCK 10
+## Alignment:
+Chaotic Neutral
+## Quotes:
+- “Can you keep up?”
+- "Watch out for the blades!”
+- "Glacier Girl, hold on!.”
+- "Ugh! This is boring."
+- "Tag you’re it!"
+## Image:
+- ![Blades concept art | front view, a anime girl with dark black spikey hair, wearing green futuristic clothing, in a pair of battle skates ]()
+## Image Gallery:
+- ![Blades in battle | front view, a anime girl with dark black spiky hair, wearing green futuristic clothing, in a pair of battle skates, on a battlefield, skating at the speed of light ]()
+- ![Blades resting after battle|side view, a anime girl with dark black spiky hair, wearing green futuristic clothing, in a pair of battle skates, sitting on a rock, resting, drinking soda]()
+- ![Blade skates a tornado | back view , a anime girl with dark black spiky hair, wearing green futuristic clothing, in a pair of battle skates, skating so fast, makes a tornado]()
+- ![Blade breaking the rules | back view , a anime girl with dark black spiky hair, wearing green futuristic clothing, in a pair of skates, smoking cigarettes , behind a school ]()
+- ![Blades flying | front view, a anime girl with dark black spiky hair, wearing green futuristic clothing, in a pair of skates, flying in air, a green beam of light ]()
+## Has:
+- [Choppy Skate Blades 9000](/items/Choppy Skate Blades 9000)
+- [Ice Vape](/items/Ice Vape)
+- [C-witch Gadget](/items/C-witch Gadget])
+- [Sour Gumballs](/items/Sour Gumballs)
+- [Green Face Shield](/items/Green Face Shield)
+## Abilities:
+- [Slashing Skates](/abilities/Slashing Skates)
+- [Green Beam](/abilities/Green Beam)
+- [Skate Smash](/abilities/Skate Smash)
+- [LightingSpeed](/abilities/Lighting Speed)
+- [Free Spirit](/abilities/Free Spirit)
+## Limit Break:
+**Tornado Warning** Blade is able to skate so fast around in a circle it creates a tornado around her enemies to distract them, when this is happening her strength is up by x15.
+## Biography:
+Before she was known as Blade, she was a young 14 year old girl named Olivia. Olivia lived in the smaller part of town. She was raised by her mom and also has a younger brother. Growing up she felt very alone, she had a hard time making friends because she was so outgoing and unafraid of judgment. It wasn’t until she met [Glacier Girl](/characters/Glacier Girl), that she finally felt like she had a true friend. [Glacier Girl](/characters/Glacier Girl) never made her feel ashamed or weird for who she was, they were always there for each other. Blades also had a bad habit of sneaking out of her house at the age of 11, she always felt trapped in her home and even in her town. The only time she felt free was skating around in the moonlight, it was like flying to her. And that’s how she always wanted to feel free. So with the help of her best friend, they spend their days and nights running around their city making it a safe place.
+## Appearance:
+Blades is a 14 year old girl with spiky dark black hair, she’s usually in black leather and the color green. She doesn’t try to be cool but people are usually intimated by her appearance. And she’s always rocking her bright green [Choppy Skate Blades 9000](/items/Choppy Skate Blades 9000). Blades also loves to wear chain necklaces and any big funky rings she can find. She doesn’t mind standing out, especially with her fashion. Blade enjoys expressing herself through her style.
+## Personality:
+Blade is a carefree, loud and deeply loving person. She’s not afraid to be the center of attention as long as she is being herself fully. She’ll crack jokes at inappropriate times and might even giggle a little bit if she sees someone fall, but not in a mean way. She’s just always living in the moment, never wanting to stay in the present too long. Maybe she's running? Running away from her own loneliness or fear but she doesn’t stop to think about it. She just wants to be happy and not take anything too seriously. The only thing she takes seriously is skating and brawling. She never wants to lose a fight but she may make some jokes between punches.
+## Homespace:
+Blade lives at home with her mom and brother, they have a small house which sometimes makes Blade feel like she is suffocating. Her room is dark and messy, the floor is mostly piles of clothes. Her walls are covered in rock posters, skating posters and cute girls. She never stays long to clean it up, since usually sneaks out to stay over at Glacier Girl](/characters/Glacier Girl) mom’s house or if that’s not possible she'll skate and listen to music all night. She doesn’t really feel like she needs a home, she can make one wherever she goes.
+## Relationships:
+Blade’s best friend is [Glacier Girl](/characters/Glacier Girl), she is always there when Blade needs her. The most consistent thing in her life has been [Glacier Girl](/characters/Glacier Girl). She would do anything for her and really looks up to how driven she is. Plus she loves making her laugh.
+Blade has an eight year old brother, Blades would never tell him but she loves him to death. He may annoy her most of the time but he’s her brother. She can’t wait to teach him how to skate.
+Blade loves her mom, she does. And she knows her mom works so hard for her and her brother. But her mom reminds her sometimes of the past. And she doesn’t want to think of that, so as she gets older their relationship is strained.
+## Trivia:
+- She put on her first set of skates when she was only three.
+- Sometimes she skips class to practice her fighting skills.
+- She's only met her dad once.
+- She gets blisters from skating too much.
+- It takes her an hour to do her hair.
+- She was born July 2, making her a Cancer.
+
+## Name:
+Mayona
+## Description:
+Mayona (15/F) is a clairvoyant enchantress who uses her sixth sense and psychic abilities to trick her enemies into submission. She has an incredible charisma about her that allows her to make friends easily and trick others into doing her bidding. She is incredibly opportunistic and will not let anyone get in the way of what she wants to accomplish. While she may seem secretly manipulative, she becomes an entirely different person towards her older sister on paper but a younger sister at heart, [MarcieX3](/characters/MarcieX3). Her clairvoyant abilities allow her to navigate paths to checkpoints, understand what people are thinking, and drain her enemies' energies to recharge her own. However, her clairvoyant abilities do come at a cost, if Mayona does not give herself enough time to recharge she could risk depleting her energy and risk fainting. In her free time, Mayona is known to meditate, collect different gems and ores, and study astrology. 
+## Class:
+Enchantress
+## Stats:
+ATK 0, DEF 0, VIT 50, SPR 40, DEX 20, LCK 0
+## Alignment:
+Chaotic Good
+## Quotes:
+- “You’re an Aries?....Bummer.”
+- “I won’t let you drain my energy….instead I’d like to drain yours.”
+- “You know what they say about karma? I’m not sure, it’s never really applied to me”
+- “I’m sensing a bad vibe.”
+## Image:
+- ![Portrait of Mayona|portrait view, brown girl, purple bob, purple baby doll eyes, sparkly black lipstick, purple and black playsuit, sparkly black corset, anime, spooky, tim burton, hd]()
+## Image Gallery:
+- ![She has an incredible charisma about her that allows her to make friends easily and trick others into doing her bidding.|full body view brown girl with purple bob, purple baby doll eyes, sparkly black lipstick, purple and black playsuit stands, a purple laser shoots out of her eyes as she hypnotizes a boy,tim burton, hd, anime, sharp lighting.]()
+- ![In her free time studying astrology.|slumber party, brown girl with purple bob and purple baby doll eyes sits with an astrology book in front of her, frilly pillows and blankets fill the room, HD, anime]()
+- ![Her psychic abilities allow her to drain her opponents' energy while re-filling her own.|full body shot, brown girl with purple bob and purple baby doll eyes, purple and black playsuit, sparkly black corset, raises her hand, purple lasers shoot out of her eyes as she drains the energy of her enemy amid battle, anime, hd, sharp lighting.]()
+## Has:
+- [CrystalMound](/items/CrystalMound)
+- [Darkwater](/items/Darkwater)
+- [OctopusInk](/items/)
+- [CursedJuice](/items/CursedJuice)
+## Abilities:
+- [Extra-sensory](/abilities/Extra-sensory)
+- [Mesmerize](/abilities/Mesmerize)
+- [Doll Eyes](/abilities/Doll Eyes)
+- [High Priestess](/abilities/High Priestess)
+## Limit Break:
+***Extra-Sensory*** Attacks double in draining their opponent's XP for three consecutive hits. 
+## Biography:
+Mayona is not sure where her psychic abilities came from. She wonders if it may be generational but is too nervous to ask her parents. Mayona’s parents are a scientific duo who tend to travel a lot leaving her and her other siblings mostly alone. What Mayona does not know is that it is Mayona’s parents, [Lena](/characters/Lena) and [Dr. Mayori](/characters/Dr. Mayori) coded, created, and engineered all three children, programming Mayona specifically to have psychic abilities. 
+## Appearance:
+Mayona has a dark purple blunted bob, purple eyes, brown-toned skin, and dazzling sparkly black lipstick. She wears a purple and black playsuit with a sparkly black corset wrapped around it. 
+## Personality:
+Mayona is known to be incredibly charismatic having the intense ability to tell people what they want to hear and mirror their energies and interests. Because Mayona is telepathically able to read people’s minds, she can see what they are thinking and speak accordingly. However, other characters with psychic abilities can see right through Mayona and find her to be incredibly manipulative.
+## Homespace:
+Mayona lives in a smart house in [Pixel Palace](/settings/Pixel Palace). Her bedroom is cluttered with astrology books, crystals, a crystal ball, and a four-foot purple bed with silk purple sheets. Light projects stars and planets illuminate her bedroom ceiling. 
+## Relationships:
+- Mayona is incredibly close with her older sister [MarcieX3](/characters/MarcieX3). The two have an unconventional sisterhood. While [MarcieX3] is the older sister, Mayona is the one who tends to look out for [MarcieX3](/characters/MarcieX3), especially against other people. Mayona often accuses [MarcieX3](/characters/MarcieX3) of being too trusting and [MarcieX3](/characters/MarcieX3) accuses Mayona of being too cold. However, the two have an undying love for each other and will protect each other at all costs. 
+- Mayona is also fairly close to her brother [Riku](/characters/Riku) who finds Mayona chiller and much more laidback than their older sister [MarcieX3](/characters/MarcieX3]. Mayona and [Riku](/characters/Riku) both share a dream of exploring the entire region. Mayona promises [Riku](/characters/Riku) that when he gets a little older the two can venture off together with their other sister [MarcieX3](/characters) of course! 
+## Trivia:
+- Mayona was born on October 31st. Her zodiac sign is Scorpio. 
+- Mayona loves scary movies and her favorite holiday is Halloween. 
+- Mayona’s favorite food is [squid ink pasta](/items/squid ink pasta).
+
+## Name:
+Riku
+## Description:
+Riku (13/M) is a [fire archer](/characters/fire archer) and the younger brother of [MarcieX3](/characters/MarcieX3) and [Mayona](/characters/Mayona). He has a slight napoleon complex when it comes to his sisters and always tries to prove to them that he can battle and explore alone. He is known to wield a bow and arrow set [Flare Darts](/items/Flare Darts) that shoots flaming arrows toward his opponents. He enjoys watching things burn and will do anything to see his opponents decimated. He has an impulsive nature about him that sometimes puts him in the trickiest of situations. He has a close friendship with his sister [Mayona](/characters/Mayona) and a somewhat rocky sibling rivalry with his oldest sister [MarcieX3](/characters/MarcieX3). In his free time, he enjoys going solo to abandoned mining caves and blowing up explosives. He is known for his dexterity, attack, and speed. 
+## Class:
+Fire Archer
+## Stats:
+ATK 0, DEF 0, VIT 0, SPR 0, DEX 20, LCK 0
+## Alignment:
+Chaotic Evil
+## Quotes:
+- “I like watching things go tick… but I love watching things go BOOM!”
+- “Just because mom isn’t here doesn’t mean you have to become her [Marcie](/characters/MarcieX3).” 
+- “Do you think I could get that thingy thing on that tree right there?”
+- “You got my back and I got yours, bottle rocket.”
+## Image:
+- ![Portrait of Riku|brown lanky teen boy with red spikey hair and purple eyes, wearing a red jumpsuit with burn marks and holes and green cyber goggles, pyromaniac, smile, HD, anime.]()
+## Image Gallery:
+- ![He is known to wield a bow and arrow set that shoots flaming arrows towards his opponents.|brown lanky teen boy with red spikey hair and red jumpsuit with burn marks, full body shot, he wields a flaming bow and arrow shooting it towards the sky, pyromaniac, night, HD, anime .]()
+- ![He is a pyromaniac who loves to watch things burn.|brown lanky boy with red spikey hair and big purple eyes, full body shot, in front of him is an entire building on fire, flames burst, anime, HD.]()
+- ![In his free time, he enjoys going solo to abandoned mining caves and blowing up explosives.|an abandoned mine shaft filled with flames, a teen boy with brown skin, red spikey hair, and purple eyes stands over the cave throwing cherry bombs, HD, sharp lighting, pyromaniac.]()
+## Has:
+- [Flare Darts](/items/Flare Darts)
+- [TickTickBooms](/items/TickTickBooms)
+- [Nacho Dust](/items/Nacho Dust)
+- [Good Juice](/items/Good Juice)
+## Abilities:
+- [Pyromanic](/abilities/Pyromaniac)
+-[Cherrybomb](/abilities/Cherrybomb)
+- [Quick Char](/abilities/Quick Char)
+- [Sea of Flame](/abilities/Sea of Flame)
+## Limit Break:
+***Sea of Flame*** Riku’s arrows deal up to double in damage for as long as the effect is up. A ring of fire encompasses him making it hard for his opponents to hit him with accuracy. 
+## Biography:
+Riku wonders why he is the only child without mystical powers. His sisters [Mayona](/characters/Mayona) and [MarcieX3](/characters/MarcieX3) both have psychic powers that Riku does not. What Riku does not know is that his parents, [Lena](/characters/Lena) and [Dr. Mayori](/characters/Dr. Mayori) coded, created, and engineered all three children in hopes of creating the perfect nuclear family. His parents had attempted to give Riku as a child the gift of telekinesis, but an experiment gone array left him with nothing. While Riku does not remember much, he gets visions of this experiment from time to time. He wonders if these visions are real or just a dream.
+## Appearance:
+Riku is a younger lanky brown boy with spikey red hair, purple eyes, and a red jumpsuit with a few holes and burn marks. He wears a pair of green goggles and orange leather gloves. 
+## Personality:
+Riku is known for his adventurous and impulsive whims. He has a spontaneous nature that sometimes puts him in the trickiest of situations. He is a rebel at heart who dislikes authority, especially when it comes from his controlling and overbearing sister [MarcieX3](/MarcieX3).
+## Homespace:
+Riku has his bedroom in his family’s smart house in [Pixel Palace](/characters/Pixel Palace). His room is made to emulate the inside of a volcano with magma-flowing wallpaper, orange led lamps, and red leather furniture and bedding. 
+## Relationships:
+- Riku is the closest with his sister [Mayona](/characters/Mayona). The two are the most adventurous out of the three and secretly dream of exploring the region together. Unlike the relationship he has with his oldest sister [MarcieX3](/characters/MariceX3), Riku feels like [Mayona](/characters/Mayona) see’s him as more than just a pesky younger brother. 
+- Riku has a rocky relationship with his oldest sister [MarcieX3](/characters/MarcieX3). Riku finds his older sister overbearing and controlling. Riku secretly hopes that he can prove to his sister that he can fend for himself. 
+## Trivia:
+- Riku’s favorite holiday is the Fourth of July. He loves watching everyone blow up fireworks. 
+- Riku was born on March 30th. His zodiac sign is Aries. 
+- Riku’s favorite food is nachos. He loves the zesty cheese!
