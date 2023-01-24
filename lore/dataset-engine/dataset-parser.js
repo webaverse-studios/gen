@@ -300,7 +300,7 @@ export const parseDatasetItems = (md, datasetSpec, {
     const itemAttributes = {};
     let currentAttributeName = '';
     let currentAttributeValue = '';
-    let currentAttributeAsterisk = false;
+    // let currentAttributeAsterisk = false;
     const _flushAttribute = () => {
       itemAttributes[currentAttributeName] = currentAttributeValue;
       // if (currentAttributeAsterisk) {
@@ -309,7 +309,7 @@ export const parseDatasetItems = (md, datasetSpec, {
 
       currentAttributeName = '';
       currentAttributeValue = '';
-      currentAttributeAsterisk = false;
+      // currentAttributeAsterisk = false;
     };
 
     const itemLines = itemString.split('\n');
@@ -319,7 +319,7 @@ export const parseDatasetItems = (md, datasetSpec, {
       const match3 = itemLine.match(/^([@#]+ ?[\s\S]+?)(\*?):(?: )?(.*)(?:\n|$)/);
       if (match3) {
         const name = match3[1];
-        const asterisk = match3[2];
+        // const asterisk = match3[2];
         const value = match3[3];
 
         if (currentAttributeName) {
@@ -328,7 +328,7 @@ export const parseDatasetItems = (md, datasetSpec, {
 
         currentAttributeName = name.replace(/^[@#]+ ?/, '');
         currentAttributeValue = value;
-        currentAttributeAsterisk = !!asterisk;
+        // currentAttributeAsterisk = !!asterisk;
       } else {
         if (currentAttributeName) {
           if (currentAttributeName === groupKey) {
