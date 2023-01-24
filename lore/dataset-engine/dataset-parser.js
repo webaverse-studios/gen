@@ -476,14 +476,21 @@ export const getCompletionParser = (datasetSpec, initialValue, opts) => (complet
             throw new Error('invalid label line: ' + JSON.stringify(line));
           }
           if (match[1].trim().toLowerCase() !== key.toLowerCase()) {
-            throw new Error('key mismatch: ' + JSON.stringify({
+            console.warn('key mismatch', {
               key,
               line,
               match: [
                 match[1].toLowerCase(),
                 key.toLowerCase(),
               ],
-            }));
+            });
+
+            if (readString.length > 0) {
+              readString += `\n#${key}:\n`;
+            }
+            done = false;
+            
+            break;
           }
         }
       }
