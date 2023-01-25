@@ -247,7 +247,7 @@ export class NLPConversation {
     this.setting = setting;
     this.messages = messages;
 
-    this.mainImagePrompts = [];
+    this.mainImagePrompts = {};
     this.imageCache = new Map(); // prompt -> image
     this.text = '';
     this.vector = null;
@@ -261,6 +261,7 @@ export class NLPConversation {
     const object = {
       character: this.characters,
       setting: [this.setting],
+      message: [],
     };
     // const text = md.toMarkdownString(object);
     const mainImagePromptAlts = await getMainImagePromptsAltsAsync(object);

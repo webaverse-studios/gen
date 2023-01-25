@@ -2955,9 +2955,16 @@ const Conversation = ({
   const {
     setting,
     characters,
+    mainImagePrompts,
+    imageCache,
   } = conversation;
 
-  console.log('got conversatiom', conversation, conversation.imageCache);
+  console.log('got conversation', {
+    setting,
+    characters,
+    mainImagePrompts,
+    messages: conversation.messages,
+  });
 
   const [messages, setMessages] = useState(conversation.messages);
   const [message, setMessage] = useState('');
@@ -2973,6 +2980,7 @@ const Conversation = ({
       const newMessages = messages.concat([m]);
       setMessages(newMessages);
       setMessage('');
+      setAttachments([]);
 
       // XXX handle the message here
       console.log('handle new message', m);
@@ -3017,12 +3025,16 @@ const Conversation = ({
     <Message
       className={styles.setting}
       message={setting}
+      imageCache={imageCache}
+      mainImagePrompt={mainImagePrompts.setting[0]}
     />
-    <div className={styles.characters}>{characters.map(character => {
+    <div className={styles.characters}>{characters.map((character, index) => {
       return (
         <Message
           className={styles.character}
           message={character}
+          imageCache={imageCache}
+          mainImagePrompt={mainImagePrompts.character[index]}
           key={character.name}
         />
       );
@@ -3033,8 +3045,9 @@ const Conversation = ({
     )}>{messages.map((m, index) => {
       return (
         <Message
-          // className={styles.character}
           message={m}
+          imageCache={imageCache}
+          mainImagePrompt={mainImagePrompts.message[index]}
           key={index}
         />
       );
