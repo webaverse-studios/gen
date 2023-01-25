@@ -2847,6 +2847,7 @@ const Message = ({
 
   const urls = message.getImageSources();
   console.log('render message', message, urls);
+  const imgSrc = urls[0];
 
   const item = message.object;
 
@@ -2855,7 +2856,10 @@ const Message = ({
       styles.message,
       className,
     )}>
-      <div className={styles.image}>{item.image}</div>
+      {/* <div className={styles.image}>{item.image}</div> */}
+      {imgSrc ? <div className={styles.image}>
+        <img src={imgSrc} className={styles.img} />
+      </div> : null}
       <div className={styles.wrap}>
         {item.name ? <div className={styles.name}>{item.name}</div> : null}
         {item.description ? <div className={styles.description}>{item.description}</div> : null}
@@ -3039,6 +3043,7 @@ const Conversation = ({
         <Message
           className={classnames(
             message.object.type !== 'text' ? styles.hero : null,
+            styles[message.object.type],
           )}
           message={message}
           key={index}
