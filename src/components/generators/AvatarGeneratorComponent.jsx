@@ -144,6 +144,8 @@ const loadDatasetGenerator = async () => {
 //
 
 const FPS = 60;
+const abortError = new Error('abort');
+abortError.isAbortError = true;
 
 //
 
@@ -2824,69 +2826,89 @@ const RenderWrap = ({
 
 //
 
+const compileImages = async (text, {
+  abortController = null,
+} = {}) => {
+  const rootEl = document.createElement('div');
+  const root = ReactDOMClient.createRoot(rootEl);
+  const p = makePromise();
+  root.render(
+    <RenderWrap
+      promise={p}
+    >
+      {text}
+    </RenderWrap>
+  );
+  await p;
+  if (abortController && abortController.signal.aborted) {
+    throw abortError;
+  }
+
+  const imgPlaceholders = Array.from(rootEl.querySelectorAll('img'));
+  const imgPromptsAlts = imgPlaceholders.map(img => {
+    const alt = img.getAttribute('alt');
+    const match = alt.match(/^([^\|]*?)\|([\s\S]*)$/);
+    if (match) {
+      const altText = match[1].trim();
+      const promptText = match[2].trim();
+      return [
+        promptText,
+        altText,
+      ];
+    } else {
+      throw new Error('invalid alt text: ' + alt);
+    }
+  });
+  const imgs = await Promise.all(imgPromptsAlts.map(async ([promptText, altText]) => {
+    const img = await imageAiClient.createImage(promptText);
+    img.setAttribute('alt', altText);
+    return img;
+  }));
+  if (abortController && abortController.signal.aborted) {
+    throw abortError;
+  }
+
+  root.unmount();
+
+  return imgs;
+};
+
+//
+
 const Message = ({
   message,
   className = null,
   mega = false,
 }) => {
   useEffect(() => {
-    let live = true;
-
+    const abortController = new AbortController();
     (async () => {
-      const rootEl = document.createElement('div');
-      const root = ReactDOMClient.createRoot(rootEl);
-      const p = makePromise();
-      root.render(
-        <RenderWrap
-          promise={p}
-        >
-          {message.image}
-        </RenderWrap>
-      );
-      await p;
-      if (!live) {
-        // console.log('early 1');
-        return;
-      }
-
-      const imgPlaceholders = Array.from(rootEl.querySelectorAll('img'));
-      const imgPrompts = imgPlaceholders.map(img => {
-        const alt = img.getAttribute('alt');
-        const match = alt.match(/^([^\|]*?)\|([\s\S]*)$/);
-        if (match) {
-          const altText = match[1].trim();
-          const prompt = match[2].trim();
-          return prompt;
-        } else {
-          throw new Error('invalid alt text: ' + alt);
+      try {
+        const imgs = await compileImages(message.image, {
+          abortController,
+        });
+        
+        // XXX pre-compute this during conversation generation
+        console.log('return imgs', imgs);
+        
+        for (let i = 0; i < imgs.length; i++) {
+          const img = imgs[i];2
+          img.style.cssText = `\
+            width: 512px;
+            height: 512px;
+            background: red;
+          `;
+          document.body.appendChild(img);
         }
-      });
-      const imgs = await Promise.all(imgPrompts.map(prompt => {
-        return imageAiClient.createImage(prompt);
-      }));
-      if (!live) {
-        // console.log('early 2');
-        return;
+      } catch(err) {
+        if (!err?.isAbortError) {
+          throw err;
+        }
       }
-
-      // XXX pre-compute this during conversation generation
-      console.log('got images', {message, image: message.image, rootEl, rootElClone: rootEl.cloneNode(true), imgs, imgPrompts});
-
-      for (let i = 0; i < imgs.length; i++) {
-        const img = imgs[i];
-        img.style.cssText = `\
-          width: 512px;
-          height: 512px;
-          background: red;
-        `;
-        document.body.appendChild(img);
-      }
-
-      root.unmount();
     })();
 
     return () => {
-      live = false;
+      abortController.abort();
     };
   }, []);
 
