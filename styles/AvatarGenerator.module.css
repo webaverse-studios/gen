@@ -114,8 +114,9 @@
 }
 .avatarGenerator .interrogation .messages .message {
   display: flex;
+  flex-direction: column;
 }
-.avatarGenerator .interrogation .messages .message .wrap {
+.avatarGenerator .interrogation .messages .message:not(.hero) .wrap {
   display: flex;
 }
 .avatarGenerator .interrogation .messages .message .name {

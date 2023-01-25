@@ -2819,7 +2819,6 @@ class AvatarToolsMesh extends THREE.Object3D {
 const Message = ({
   message,
   className = null,
-  mega = false,
 }) => {
   /* useEffect(() => {
     const abortController = new AbortController();
@@ -2846,17 +2845,18 @@ const Message = ({
     };
   }, []); */
 
+  const item = message.object;
+
   return (
     <div className={classnames(
       styles.message,
       className,
-      mega ? styles.mega : null,
     )}>
-      <div className={styles.image}>{message.image}</div>
+      <div className={styles.image}>{item.image}</div>
       <div className={styles.wrap}>
-        {message.name ? <div className={styles.name}>{message.name}</div> : null}
-        {message.description ? <div className={styles.description}>{message.description}</div> : null}
-        {message.text ? <div className={styles.text}>{message.text}</div> : null}
+        {item.name ? <div className={styles.name}>{item.name}</div> : null}
+        {item.description ? <div className={styles.description}>{item.description}</div> : null}
+        {item.text ? <div className={styles.text}>{item.text}</div> : null}
       </div>
     </div>
   );
@@ -2949,38 +2949,44 @@ class Attachment extends EventTarget {
 //
 
 const Conversation = ({
-  conversation,
+  conversation: _conversation,
   onClose,
 }) => {
-  const {
-    setting,
-    characters,
-    mainImagePrompts,
-    imageCache,
-  } = conversation;
+  const [conversation, setConversation] = useState(_conversation);
+  const [message, setMessage] = useState('');
+  const [attachments, setAttachments] = useState([]);
+  const [epoch, setEpoch] = useState(0);
 
+  // XXX latch the conversation singularly, and amange messages as NLPMessage instances
   console.log('got conversation', {
-    setting,
-    characters,
-    mainImagePrompts,
+    // setting,
+    // characters,
+    // mainImagePrompts,
     messages: conversation.messages,
   });
 
-  const [messages, setMessages] = useState(conversation.messages);
-  const [message, setMessage] = useState('');
-  const [attachments, setAttachments] = useState([]);
-  const [attachmentEpoch, setAttachmentEpoch] = useState(0);
-
-  const send = () => {
+  const send = async () => {
     if (message || attachments.length > 0) {
-      const m = {
+      let text = message;
+      if (attachments.length > 0) {
+        text = attachments.map(attachment => {
+          return `![attached file|${attachment.name}]()`;
+        }).join(' ') + ' ' + text;
+      }
+      // inject images
+      await Promise.all(attachments.map(async attachment => {
+        await conversation.injectImageToCache(attachment.name, attachment.url);
+      }))
+      // create new message
+      const m = conversation.createTextMessage({
         name: 'you',
-        text: message,
-      };
-      const newMessages = messages.concat([m]);
-      setMessages(newMessages);
+        text,
+      });
+      // const newMessages = messages.concat([m]);
+      // setMessages(newMessages);
       setMessage('');
       setAttachments([]);
+      setEpoch(epoch + 1);
 
       // XXX handle the message here
       console.log('handle new message', m);
@@ -2998,7 +3004,7 @@ const Conversation = ({
       
       await attachment.ensure();
       
-      setAttachmentEpoch(attachmentEpoch + 1);
+      setEpoch(epoch + 1);
     }
   };
   const addFiles = files => {
@@ -3022,32 +3028,16 @@ const Conversation = ({
   };
 
   return (<div className={styles.conversation}>
-    <Message
-      className={styles.setting}
-      message={setting}
-      imageCache={imageCache}
-      mainImagePrompt={mainImagePrompts.setting[0]}
-    />
-    <div className={styles.characters}>{characters.map((character, index) => {
-      return (
-        <Message
-          className={styles.character}
-          message={character}
-          imageCache={imageCache}
-          mainImagePrompt={mainImagePrompts.character[index]}
-          key={character.name}
-        />
-      );
-    })}</div>
     <div className={classnames(
       styles.messages,
-      styles.row,
-    )}>{messages.map((m, index) => {
+      // styles.row,
+    )}>{conversation.messages.map((message, index) => {
       return (
         <Message
-          message={m}
-          imageCache={imageCache}
-          mainImagePrompt={mainImagePrompts.message[index]}
+          className={classnames(
+            message.object.type !== 'text' ? styles.hero : null,
+          )}
+          message={message}
           key={index}
         />
       );

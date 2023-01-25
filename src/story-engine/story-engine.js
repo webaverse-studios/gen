@@ -137,47 +137,33 @@ const blob2dataUrlAsync = blob => {
   }
   return imgUrls;
 }; */
-const getMainImagePromptsAltsAsync = async (object, {
+const getMainImagePromptsAltsAsync = async (messages, {
   abortController = null,
 } = {}) => {
-  const results = {};
-  for (const type in object) {
-    const items = object[type];
+  return await Promise.all(messages.map(async message => {
+    const item = message.object;
 
-    results[type] = await Promise.all(items.map(async item => {
-      let result = null;
-      // console.log('check item image 1', item);
-      if (item.image) {
-        const imgPromptsAlts = await getMarkdownImagesAsync(item.image, {
-          abortController,
-        });
-        if (imgPromptsAlts.length > 0) {
-          result = imgPromptsAlts[0];
-        }
+    let result = null;
+    if (item.image) {
+      const imgPromptsAlts = await getMarkdownImagesAsync(item.image, {
+        abortController,
+      });
+      if (imgPromptsAlts.length > 0) {
+        result = imgPromptsAlts[0];
       }
-      return result;
-    }));
-  }
-  return results;
+    }
+    return result;
+  }));
 };
-const getObjectImagePrompts = mainImagePromptAlts => {
-  const results = {};
-  for (const type in mainImagePromptAlts) {
-    results[type] = [];
-
-    const items = mainImagePromptAlts[type];
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i];
-      
-      let result = null;
-      if (item) {
-        const [promptText, altText] = item;
-        result = promptText;
-      }
-      results[type].push(result);
+const getObjectImagePrompts = (mainImagePromptAlts, mainImagePrompts) => {
+  for (let i = 0; i < mainImagePromptAlts.length; i++) {
+    const item = mainImagePromptAlts[i];
+    
+    if (item !== null) {
+      const [promptText, altText] = item;
+      mainImagePrompts.set(item, promptText);
     }
   }
-  return results;
 };
 const compileObjectText = async (object, {
   abortController = null,
@@ -219,17 +205,45 @@ export class StoryManager {
         keys: ['Name', 'Description', 'Image'],
       }),
     ]);
-    let characters = [
-      character1,
-    ].map(c =>  formatObject(c));
+    character1 = formatObject(character1);
     setting = formatObject(setting);
 
-    const conversation = new NLPConversation({
-      characters,
-      setting,
+    const conversation = new NLPConversation();
+
+    // XXX initialize with messages only
+    conversation.createHeroMessage('setting', {
+      name: setting.name,
+      description: setting.description,
+      image: setting.image,
     });
+
+    conversation.createHeroMessage('character', {
+      name: character1.name,
+      description: character1.description,
+      image: character1.image,
+    });
+
     await conversation.updateImagesAsync();
     return conversation;
+  }
+}
+
+//
+
+export class NLPMessage {
+  #parent;
+  constructor(object, parent) {
+    this.object = object;
+    this.#parent = parent;
+  }
+  getName() {
+    return this.object.name ?? '';
+  }
+  getText() {
+    return this.object.description ?? this.object.text ?? '';
+  }
+  getImageSources() {
+    return this.#parent.getImageSources(this); 
   }
 }
 
@@ -238,101 +252,109 @@ export class StoryManager {
 export class NLPConversation {
   constructor({
     name = `conversation_${makeId()}`,
-    characters = [],
-    setting = '',
-    messages = [],
   } = {}) {
     this.name = name;
-    this.characters = characters;
-    this.setting = setting;
-    this.messages = messages;
 
-    this.mainImagePrompts = {};
+    this.messages = [];
+
+    this.mainImagePrompts = new WeakMap(); // message -> prompt
     this.imageCache = new Map(); // prompt -> image
     this.text = '';
     this.vector = null;
   }
   async updateImagesAsync() {
-    // const {
-    //   mainImagePrompts,
-    //   images,
-    // } = await compileObjectImages();
+    // const object = {
+    //   character: this.characters,
+    //   setting: [this.setting],
+    //   message: [],
+    // };
+    const mainImagePromptAlts = await getMainImagePromptsAltsAsync(this.messages);
+    getObjectImagePrompts(mainImagePromptAlts, this.mainImagePrompts);
 
-    const object = {
-      character: this.characters,
-      setting: [this.setting],
-      message: [],
-    };
-    // const text = md.toMarkdownString(object);
-    const mainImagePromptAlts = await getMainImagePromptsAltsAsync(object);
-    const mainImagePrompts = getObjectImagePrompts(mainImagePromptAlts);
-    
-    this.mainImagePrompts = mainImagePrompts;
+    if (mainImagePromptAlts.length !== this.messages.length) {
+      throw new Error('invalid main image prompts alts: ' + mainImagePromptAlts.length + ' !== ' + this.messages.length);
+    }
 
-    const promises = [];
-    this.mainImagePrompts = {};
-    for (const type in mainImagePromptAlts) {
-      const items = mainImagePromptAlts[type];
+    // cache images
+    await Promise.all(this.messages.map(async (message, index) => {
+      // console.log('got item', {
+      //   item,
+      //   mainImagePromptAlts,
+      //   mainImagePrompts: this.mainImagePrompts,
+      // });
 
-      const p = (async () => {
-        console.log('got items', {
-          items,
-          mainImagePromptAlts,
-        });
-        this.mainImagePrompts[type] = await Promise.all(items.map(async item => {
-          console.log('got item', {
-            item,
-            mainImagePromptAlts,
-            mainImagePrompts,
+      const [
+        prompt,
+        alt,
+      ] = mainImagePromptAlts[index];
+
+      if (!this.imageCache.has(prompt)) {
+        const imageBlob = await imageAiClient.createImageBlob(prompt);
+        const url = URL.createObjectURL(imageBlob);
+
+        this.imageCache.set(prompt, url);
+
+        // XXX debug
+        (async () => {
+          const img = document.createElement('img');
+          img.src = url;
+          img.setAttribute('prompt', prompt);
+          img.setAttribute('alt', alt);
+          img.style.cssText = `\
+            width: 512px;
+            height: 512px;
+            background: red;
+          `;
+
+          await new Promise((accept, reject) => {
+            img.onload = accept;
+            img.onerror = reject;
           });
 
-          if (item) {
-            const [
-              prompt,
-              alt,
-            ] = item;
-
-            if (!this.imageCache.has(prompt)) {
-              const imageBlob = await imageAiClient.createImageBlob(prompt);
-              // const url = await blob2dataUrl(imageBlob);
-              const url = URL.createObjectURL(imageBlob);
-
-              // XXX debug
-              (async () => {
-                const img = document.createElement('img');
-                img.src = url;
-                img.setAttribute('prompt', prompt);
-                img.setAttribute('alt', alt);
-                img.style.cssText = `\
-                  width: 512px;
-                  height: 512px;
-                  background: red;
-                `;
-
-                await new Promise((accept, reject) => {
-                  img.onload = accept;
-                  img.onerror = reject;
-                });
-
-                document.body.appendChild(img);
-              })();
-
-              this.imageCache.set(prompt, url);
-            }
-            return prompt;
-          } else {
-            return null;
-          }
-        }));
-      })();
-      promises.push(p);
-    }
-    await Promise.all(promises);
+          document.body.appendChild(img);
+        })();
+      }
+    }));
 
     console.log('udpate images async', {
       mainImagePrompts: this.mainImagePrompts,
       imageCache: this.imageCache,
     });
+  }
+  getImagePrompts(message) {
+    return this.mainImagePrompts.get(message);
+  }
+  getImageSources(message) {
+    const prompts = this.getImagePrompts(message);
+    const urls = prompts.map(p => this.imageCache.get(p));
+    return urls;
+  }
+  createHeroMessage(type, {
+    name,
+    description,
+    image,
+  }) {
+    const m = new NLPMessage({
+      type,
+      name,
+      description,
+      image,
+    }, this);
+    this.messages.push(m);
+    return m;
+  }
+  createTextMessage({
+    name,
+    text,
+  }) {
+    const type = 'text';
+    const m = new NLPMessage({
+      type,
+      name,
+      text,
+    }, this);
+    this.messages.push(m);
+    return m;
   }
   async updateTextAsync() {
     const {
