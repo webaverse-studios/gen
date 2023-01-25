@@ -2845,6 +2845,9 @@ const Message = ({
     };
   }, []); */
 
+  const urls = message.getImageSources();
+  console.log('render message', message, urls);
+
   const item = message.object;
 
   return (

@@ -141,29 +141,17 @@ const getMainImagePromptsAltsAsync = async (messages, {
   abortController = null,
 } = {}) => {
   return await Promise.all(messages.map(async message => {
-    const item = message.object;
-
-    let result = null;
-    if (item.image) {
-      const imgPromptsAlts = await getMarkdownImagesAsync(item.image, {
-        abortController,
-      });
-      if (imgPromptsAlts.length > 0) {
-        result = imgPromptsAlts[0];
-      }
-    }
-    return result;
+    const text = md.toMarkdownString([message]);
+    const imgPromptsAlts = await getMarkdownImagesAsync(text, {
+      abortController,
+    });
+    console.log('check images text', {
+      object: message.object,
+      text,
+      imgPromptsAlts,
+    })
+    return imgPromptsAlts;
   }));
-};
-const getObjectImagePrompts = (mainImagePromptAlts, mainImagePrompts) => {
-  for (let i = 0; i < mainImagePromptAlts.length; i++) {
-    const item = mainImagePromptAlts[i];
-    
-    if (item !== null) {
-      const [promptText, altText] = item;
-      mainImagePrompts.set(item, promptText);
-    }
-  }
 };
 const compileObjectText = async (object, {
   abortController = null,
@@ -263,17 +251,22 @@ export class NLPConversation {
     this.vector = null;
   }
   async updateImagesAsync() {
-    // const object = {
-    //   character: this.characters,
-    //   setting: [this.setting],
-    //   message: [],
-    // };
     const mainImagePromptAlts = await getMainImagePromptsAltsAsync(this.messages);
-    getObjectImagePrompts(mainImagePromptAlts, this.mainImagePrompts);
-
-    if (mainImagePromptAlts.length !== this.messages.length) {
-      throw new Error('invalid main image prompts alts: ' + mainImagePromptAlts.length + ' !== ' + this.messages.length);
+    for (let i = 0; i < this.messages.length; i++) {
+      const message = this.messages[i];
+      const specs = mainImagePromptAlts[i];
+      
+      const prompts = specs.map(spec => spec[0]);
+      this.mainImagePrompts.set(message, prompts);
     }
+
+    // console.log('main image prompts', mainImagePromptAlts);
+
+    /* if (mainImagePromptAlts.length !== this.messages.length) {
+      throw new Error('invalid main image prompts alts: ' + mainImagePromptAlts.length + ' !== ' + this.messages.length);
+    } */
+
+    // console.log('got prompt alts', mainImagePromptAlts, this.messages);
 
     // cache images
     await Promise.all(this.messages.map(async (message, index) => {
@@ -283,51 +276,57 @@ export class NLPConversation {
       //   mainImagePrompts: this.mainImagePrompts,
       // });
 
-      const [
-        prompt,
-        alt,
-      ] = mainImagePromptAlts[index];
+      const specs = mainImagePromptAlts[index];
 
-      if (!this.imageCache.has(prompt)) {
-        const imageBlob = await imageAiClient.createImageBlob(prompt);
-        const url = URL.createObjectURL(imageBlob);
+      // console.log('got specs', specs);
+      for (const [prompt, alt] of specs) {
+        if (!this.imageCache.has(prompt)) {
+          const imageBlob = await imageAiClient.createImageBlob(prompt);
+          const url = URL.createObjectURL(imageBlob);
 
-        this.imageCache.set(prompt, url);
+          // console.log('set cache', prompt, url);
+          this.imageCache.set(prompt, url);
 
-        // XXX debug
-        (async () => {
-          const img = document.createElement('img');
-          img.src = url;
-          img.setAttribute('prompt', prompt);
-          img.setAttribute('alt', alt);
-          img.style.cssText = `\
-            width: 512px;
-            height: 512px;
-            background: red;
-          `;
+          // XXX debug
+          (async () => {
+            const img = document.createElement('img');
+            img.src = url;
+            img.setAttribute('prompt', prompt);
+            img.setAttribute('alt', alt);
+            img.style.cssText = `\
+              width: 512px;
+              height: 512px;
+              background: red;
+            `;
 
-          await new Promise((accept, reject) => {
-            img.onload = accept;
-            img.onerror = reject;
-          });
+            await new Promise((accept, reject) => {
+              img.onload = accept;
+              img.onerror = reject;
+            });
 
-          document.body.appendChild(img);
-        })();
+            document.body.appendChild(img);
+          })();
+        }
       }
     }));
 
-    console.log('udpate images async', {
-      mainImagePrompts: this.mainImagePrompts,
-      imageCache: this.imageCache,
-    });
+    // console.log('udpate images async', {
+    //   mainImagePrompts: this.mainImagePrompts,
+    //   imageCache: this.imageCache,
+    // });
   }
   getImagePrompts(message) {
-    return this.mainImagePrompts.get(message);
+    return this.mainImagePrompts.get(message) ?? [];
   }
   getImageSources(message) {
     const prompts = this.getImagePrompts(message);
+    // console.log('got prompts', prompts);
     const urls = prompts.map(p => this.imageCache.get(p));
+    // console.log('get image prompts', {message, prompts, urls, imageCache: this.imageCache});
     return urls;
+  }
+  injectImageToCache(prompt, url) {
+    this.imageCache.set(prompt, url);
   }
   createHeroMessage(type, {
     name,

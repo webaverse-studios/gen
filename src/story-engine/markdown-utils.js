@@ -1,32 +1,34 @@
 const md = {
-  toMarkdownString(o) {
+  toMarkdownString(messages) {
     let s = '';
-    for (const type in o) {
-      const items = o[type];
-      for (let i = 0; i < items.length; i++) {
-        const item = items[i];
+    for (let i = 0; i < messages.length; i++) {
+      const message = messages[i];
+      const item = message.object;
 
+      if (s) {
+        s += '\n\n';
+      }
+
+      for (const key in item) {
+        const value = item[key];
         if (s) {
-          s += '\n\n';
+          s += '\n';
         }
-
-        s += `#Type:\n${type}`;
-        for (const key in item) {
-          const value = item[key];
-          s += `\n##${key}:\n${value}`;
-        }
+        s += `#${key}:\n${value}`;
       }
     }
     return s;
   },
   fromMarkdownString(s) {
-    const categoryStrings = s.split('\n\n');
+    const itemStrings = s.split('\n\n');
     
-    const result = {};
-    for (let i = 0; i < categoryStrings.length; i++) {
-      let categoryString = categoryStrings[i];
+    const results = [];
+    for (let i = 0; i < itemStrings.length; i++) {
+      const itemString = itemStrings[i];
 
-      let completionStringRemaining = categoryString;
+      // console.log('item string', itemStrings);
+
+      let completionStringRemaining = itemString;
       const readLineIndex = () => {
         const match = completionStringRemaining.match(/^([^\n]+)(\n|$)/);
         if (match) {
@@ -58,48 +60,8 @@ const md = {
       for (;;) {
         const lineIndex = readLineIndex();
         if (lineIndex !== -1) {
-          const lineString = completionStringRemaining.slice(0, lineIndex);
-          completionStringRemaining = completionStringRemaining.slice(lineIndex);
-
-          const _consumeTypeLabel = () => {
-            const labelMatch = lineString.match(labelLineRegex);
-            if (labelMatch) {
-              const label = labelMatch[1].trim();
-              if (label === 'Type') {
-                const value2 = labelMatch[2].trim();
-
-                let acc = '';
-                acc += value2;
-                for (;;) {
-                  const lineIndex = readLineIndex();
-                  if (lineIndex === -1) {
-                    break;
-                  } else {
-                    const value3 = completionStringRemaining.slice(0, lineIndex);
-                    if (labelLineRegex.test(value3)) {
-                      break;
-                    } else {
-                      acc += value3;
-                      shiftLine(lineIndex);
-                      continue;
-                    }
-                  }
-                }
-                return acc.trim();
-              } else {
-                throw new Error(`expected type: ${lineString}`);
-              }
-            } else {
-              throw new Error(`expected label: ${lineString}`);
-            }
-          };
-          const type = _consumeTypeLabel();
-          if (!result[type]) {
-            result[type] = [];
-          }
-
           const completionValue = {};
-          result[type].push(completionValue);
+          results.push(completionValue);
           const _consumeAttributes = () => {
             for (;;) {
               const value = readLine();
@@ -141,7 +103,7 @@ const md = {
         }
       }
     }
-    return result;
+    return results;
   },
 };
 export default md;
