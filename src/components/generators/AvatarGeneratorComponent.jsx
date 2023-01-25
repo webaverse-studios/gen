@@ -2898,8 +2898,8 @@ const Conversation = ({
       <div className={styles.button} onClick={async e => {
         console.log('save 1');
         const exportObject = await conversation.exportAsync();
-        console.log('save 2');
-        globalThis.exportObject = exportObject;
+        console.log('save 2', exportObject);
+        // XXX finish this
       }}>Save</div>
       <div className={styles.button} onClick={e => {
         onClose();
