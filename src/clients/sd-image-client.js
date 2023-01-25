@@ -434,7 +434,7 @@ export const img_inpainting = async ({
                 noiseImgDataUrl, // image for img2img
                 noiseImgDataUrl, // mask
                 "Upload mask", // mask mode
-                50, // sampling steps
+                20, // sampling steps
                 "Euler a", // sampling method
                 0, // mask blur
                 1, // mask transparency
@@ -538,8 +538,12 @@ export const new_img_inpainting = async ({
                                          seed = -1,
                                      } = {}) => {
 
-    // console.log("ImgDataUrl", ImgDataUrl);
-    // console.log("maskDataUrl", maskDataUrl);
+    console.log("ImgDataUrl", ImgDataUrl);
+    const init_img = await loadImage(ImgDataUrl);
+    // document.body.appendChild(init_img);
+    console.log("maskDataUrl", maskDataUrl);
+    const mask_img = await loadImage(maskDataUrl);
+    // document.body.appendChild(mask_img);
 
     const res = await fetch(`${baseUrl}sdapi/v1/img2img`, {
         method: "POST",
@@ -590,11 +594,6 @@ export const new_img_inpainting = async ({
     const base64img= images[0];
     const img = new Image();
     img.src = "data:image/png;base64,"+base64img;
-    // img.style.cssText = `\
-    //   position: absolute;
-    //   top: 0;
-    //   left: 0;
-    // `;\
-    // return j;
+    // document.body.appendChild(img);
     return img;
 };

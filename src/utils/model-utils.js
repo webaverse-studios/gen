@@ -21,9 +21,6 @@ import {
 import {
   colors,
 } from '../constants/detectron-colors.js';
-import {loadImage} from "../../utils.js";
-import {combineMasked} from "../components/generators/AvatarRendererComponent.jsx";
-
 //
 
 const defaultTextureSize = 1024;
