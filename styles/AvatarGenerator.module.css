@@ -22,6 +22,8 @@
 .avatarGenerator {
   width: inherit;
   height: inherit;
+
+  --image-size: 100px;
 }
 
 /* */
@@ -87,16 +89,6 @@
   margin-bottom: 5px;
   padding: 5px;
 }
-.avatarGenerator .interrogation .conversation .setting .name
-{
-  font-weight: 600;
-  margin-right: 5px;
-}
-
-/* */
-
-.avatarGenerator .interrogation .conversation .setting {
-}
 
 /* */
 
@@ -116,14 +108,25 @@
   font-weight: 600;
   margin-right: 5px;
 }
-.avatarGenerator .interrogation .messages .message .text {
+
+/* */
+
+.avatarGenerator .interrogation .messages .message.text img {
+  display: inline-flex;
+  width: var(--image-size);
+  height: var(--image-size);
+}
+
+/* */
+
+.avatarGenerator .interrogation .messages .message.text .img {
   
 }
 
 /* */
 
 .avatarGenerator .interrogation .messages .message.setting .img {
-  height: 100px;
+  height: var(--image-size);
   width: 100%;
   object-fit: cover;
 }
@@ -131,8 +134,8 @@
 /* */
 
 .avatarGenerator .interrogation .messages .message.character .img {
-  height: 100px;
-  width: 100px;
+  height: var(--image-size);
+  width: var(--image-size);
   margin: auto;
   object-fit: cover;
   border-radius: 1000px;

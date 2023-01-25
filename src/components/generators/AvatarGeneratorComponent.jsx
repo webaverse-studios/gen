@@ -90,6 +90,9 @@ import {
   // CachedDatasetGenerator,
 } from '../../../lore/dataset-engine/dataset-generator.js';
 import {PathMesh} from '../../zine-aux/meshes/path-mesh.js';
+
+import Markdown from 'marked-react';
+
 import {
   VoiceEndpoint,
   PreloadMessage,
@@ -100,6 +103,7 @@ import {
   voicePacksUrl,
   voiceEndpointsUrl,
 } from '../../voice-engine/voice-constants.js';
+
 import {
   StoryManager,
   // NLPConversation,
@@ -2816,40 +2820,59 @@ class AvatarToolsMesh extends THREE.Object3D {
 
 //
 
+// const transparentPng1Px = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+const MessageText = ({
+  className,
+  conversation,
+  children,
+}) => {
+  const mdRef = useRef();
+  useEffect(() => {
+    const mdDiv = mdRef.current;
+    // console.log('got md div1', mdDiv);
+    if (mdDiv) {
+      const imgs = Array.from(mdDiv.querySelectorAll('img'));
+      // console.log('got md div 2', mdDiv, imgs);
+      for (let i = 0; i < imgs.length; i++) {
+        const img = imgs[i];
+        const imgAlt = img.getAttribute('alt');
+        const match = imgAlt.match(/^(?:([^\|]*?)\|)?([\s\S]+)$/);
+        if (match) {
+          const altText = match[1] ?? '';
+          const prompt = match[2] ?? '';
+          const url = conversation.getImageSourceFromPrompt(prompt);
+          if (url) {
+            // console.log('got url', url);
+            img.setAttribute('src', url);
+          } else {
+            console.warn('no url', conversation, prompt);
+          }
+        } else {
+          console.warn('no alt match', imgAlt);
+        }
+      }
+    }
+  }, [mdRef.current]);
+
+  return (
+    <div className={className} ref={mdRef}>
+      <Markdown gfm openLinksInNewTab={false}>
+        {children}
+      </Markdown>
+    </div>
+  );
+};
 const Message = ({
   message,
   className = null,
 }) => {
-  /* useEffect(() => {
-    const abortController = new AbortController();
-    (async () => {
-      try {
-        const object = {
-          message,
-        };
-        const object2 = await StoryManager.compileObject(object, {
-          abortController,
-        });
-        
-        // XXX pre-compute this during conversation generation
-        console.log('compiled object', [object, object2]);
-      } catch(err) {
-        if (!err?.isAbortError) {
-          throw err;
-        }
-      }
-    })();
-
-    return () => {
-      abortController.abort();
-    };
-  }, []); */
-
   const urls = message.getImageSources();
-  console.log('render message', message, urls);
+  // console.log('render message', message, urls);
   const imgSrc = urls[0];
 
   const item = message.object;
+
+  const conversation = message.getConversation();
 
   return (
     <div className={classnames(
@@ -2861,9 +2884,9 @@ const Message = ({
         <img src={imgSrc} className={styles.img} />
       </div> : null}
       <div className={styles.wrap}>
-        {item.name ? <div className={styles.name}>{item.name}</div> : null}
-        {item.description ? <div className={styles.description}>{item.description}</div> : null}
-        {item.text ? <div className={styles.text}>{item.text}</div> : null}
+        {item.name ? <MessageText className={styles.name} conversation={conversation}>{item.name}</MessageText> : null}
+        {item.description ? <MessageText className={styles.description} conversation={conversation}>{item.description}</MessageText> : null}
+        {item.text ? <MessageText className={styles.text} conversation={conversation}>{item.text}</MessageText> : null}
       </div>
     </div>
   );

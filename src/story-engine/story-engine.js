@@ -224,6 +224,9 @@ export class NLPMessage {
     this.object = object;
     this.#parent = parent;
   }
+  getConversation() {
+    return this.#parent;
+  }
   getName() {
     return this.object.name ?? '';
   }
@@ -324,6 +327,9 @@ export class NLPConversation {
     const urls = prompts.map(p => this.imageCache.get(p));
     // console.log('get image prompts', {message, prompts, urls, imageCache: this.imageCache});
     return urls;
+  }
+  getImageSourceFromPrompt(prompt) {
+    return this.imageCache.get(prompt);
   }
   injectImageToCache(prompt, url) {
     this.imageCache.set(prompt, url);
