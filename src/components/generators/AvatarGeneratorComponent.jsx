@@ -2898,8 +2898,9 @@ const Message = ({
     )}>
       <div className={styles.image}>{message.image}</div>
       <div className={styles.wrap}>
-        <div className={styles.name}>{message.name}</div>
-        <div className={styles.description}>{message.description}</div>
+        {message.name ? <div className={styles.name}>{message.name}</div> : null}
+        {message.description ? <div className={styles.description}>{message.description}</div> : null}
+        {message.text ? <div className={styles.text}>{message.text}</div> : null}
       </div>
     </div>
   );
