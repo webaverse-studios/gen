@@ -2858,6 +2858,7 @@ const Message = ({
 
 const Conversation = ({
   conversation,
+  onClose,
 }) => {
   const {
     setting,
@@ -2893,6 +2894,17 @@ const Conversation = ({
         />
       );
     })}</div>
+    <div className={styles.row}>
+      <div className={styles.button} onClick={async e => {
+        console.log('save 1');
+        const exportObject = await conversation.exportAsync();
+        console.log('save 2');
+        globalThis.exportObject = exportObject;
+      }}>Save</div>
+      <div className={styles.button} onClick={e => {
+        onClose();
+      }}>Close</div>
+    </div>
     <input type='text' className={styles.input} value={message} onChange={e => {
       setMessage(e.target.value);
     }} onKeyDown={e => {
@@ -3218,6 +3230,9 @@ const AvatarGeneratorComponent = () => {
         {conversation ?
           <Conversation
             conversation={conversation}
+            onClose={() => {
+              setConversation(null);
+            }}
           />
         :
           <ConversationSelect

@@ -91,7 +91,7 @@ const getMarkdownImagesAsync = async (text, {
   
   const imgPromptsAlts = imgPlaceholders.map(img => {
     const alt = img.getAttribute('alt');
-    const match = alt.match(/^([^\|]*?)\|([\s\S]*)$/);
+    const match = alt.match(/^(?:([^\|]*)\|)?([\s\S]*)$/);
     if (match) {
       const altText = match[1].trim();
       const promptText = match[2].trim();
@@ -105,21 +105,27 @@ const getMarkdownImagesAsync = async (text, {
   });
   return imgPromptsAlts;
 }
-const compileImages = async (text, {
+const blob2dataUrlAsync = blob => {
+  const fr = new FileReader();
+  const p = makePromise();
+  fr.onload = () => {
+    p.resolve(fr.result);
+  };
+  fr.onerror = err => {
+    p.reject(err);
+  };
+  fr.readAsDataURL(blob);
+  return p;
+};
+/* const compileImages = async (text, {
   abortController = null,
 } = {}) => {
   const imgPromptsAlts = await getMarkdownImagesAsync(text, {
     abortController,
   });
   const imgUrls = await Promise.all(imgPromptsAlts.map(async ([promptText, altText]) => {
-    const imgBlob = await imageAiClient.createImageBlob(promptText);
-    // img.setAttribute('prompt', promptText);
-    // img.setAttribute('alt', altText);
-    // return img;
-    // return {
-    //   imgBlob,
-    // };
-    const url = URL.createObjectURL(imgBlob);
+    const imageBlob = await imageAiClient.createImageBlob(promptText);
+    const url = await blob2dataUrl(imageBlob);
     return {
       url,
       prompt: promptText,
@@ -130,8 +136,8 @@ const compileImages = async (text, {
     throw abortError;
   }
   return imgUrls;
-};
-const getMainImagePromptsAsync = async (object, {
+}; */
+const getMainImagePromptsAltsAsync = async (object, {
   abortController = null,
 } = {}) => {
   const results = {};
@@ -140,18 +146,13 @@ const getMainImagePromptsAsync = async (object, {
 
     results[type] = await Promise.all(items.map(async item => {
       let result = null;
-      console.log('check item image 1', item);
+      // console.log('check item image 1', item);
       if (item.image) {
         const imgPromptsAlts = await getMarkdownImagesAsync(item.image, {
           abortController,
         });
-        console.log('check item image 2', imgPromptsAlts);
         if (imgPromptsAlts.length > 0) {
-          const [
-            promptText,
-            altText,
-          ] = imgPromptsAlts[0];
-          result = promptText;
+          result = imgPromptsAlts[0];
         }
       }
       return result;
@@ -159,48 +160,35 @@ const getMainImagePromptsAsync = async (object, {
   }
   return results;
 };
-const compileObject = async (object, {
+const getObjectImagePrompts = mainImagePromptAlts => {
+  const results = {};
+  for (const type in mainImagePromptAlts) {
+    results[type] = [];
+
+    const items = mainImagePromptAlts[type];
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      
+      let result = null;
+      if (item) {
+        const [promptText, altText] = item;
+        result = promptText;
+      }
+      results[type].push(result);
+    }
+  }
+  return results;
+};
+const compileObjectText = async (object, {
   abortController = null,
 } = {}) => {
   const text = md.toMarkdownString(object);
-  const mainImagePromptAlts = await getMainImagePromptsAsync(object);
-  console.log('main image prompt alts', object, mainImagePromptAlts);
-  const mainImagePrompts = (() => {
-    const results = {};
-    for (const type in mainImagePromptAlts) {
-      results[type] = [];
-
-      const items = mainImagePromptAlts[type];
-      for (let i = 0; i < items.length; i++) {
-        const item = items[i];
-        
-        let result = null;
-        if (item) {
-          const [promptText, altText] = item;
-          result = promptText;
-        }
-        results[type].push(result);
-      }
-    }
-    return results;
-  })();
-  console.log('main image prompts', mainImagePrompts);
-  const [
-    images,
-    vector,
-  ] = await Promise.all([
-    compileImages(text, {
-      abortController,
-    }),
-    aiClient.embed(text, {
-      abortController,
-    }),
-  ]);
+  const vector = await aiClient.embed(text, {
+    abortController,
+  });
 
   return {
-    mainImagePrompts,
     text,
-    images,
     vector,
   };
 };
@@ -240,11 +228,8 @@ export class StoryManager {
       characters,
       setting,
     });
-    await conversation.waitForLoad();
+    await conversation.updateImagesAsync();
     return conversation;
-  }
-  static compileObject(...args) {
-    return compileObject(...args);
   }
 }
 
@@ -262,50 +247,144 @@ export class NLPConversation {
     this.setting = setting;
     this.messages = messages;
 
+    this.mainImagePrompts = [];
     this.imageCache = new Map(); // prompt -> image
+    this.text = '';
     this.vector = null;
+  }
+  async updateImagesAsync() {
+    // const {
+    //   mainImagePrompts,
+    //   images,
+    // } = await compileObjectImages();
 
-    this.loadPromise = this.updateAsync();
+    const object = {
+      character: this.characters,
+      setting: [this.setting],
+    };
+    // const text = md.toMarkdownString(object);
+    const mainImagePromptAlts = await getMainImagePromptsAltsAsync(object);
+    const mainImagePrompts = getObjectImagePrompts(mainImagePromptAlts);
+    
+    this.mainImagePrompts = mainImagePrompts;
+
+    const promises = [];
+    this.mainImagePrompts = {};
+    for (const type in mainImagePromptAlts) {
+      const items = mainImagePromptAlts[type];
+
+      const p = (async () => {
+        console.log('got items', {
+          items,
+          mainImagePromptAlts,
+        });
+        this.mainImagePrompts[type] = await Promise.all(items.map(async item => {
+          console.log('got item', {
+            item,
+            mainImagePromptAlts,
+            mainImagePrompts,
+          });
+
+          if (item) {
+            const [
+              prompt,
+              alt,
+            ] = item;
+
+            if (!this.imageCache.has(prompt)) {
+              const imageBlob = await imageAiClient.createImageBlob(prompt);
+              // const url = await blob2dataUrl(imageBlob);
+              const url = URL.createObjectURL(imageBlob);
+
+              // XXX debug
+              (async () => {
+                const img = document.createElement('img');
+                img.src = url;
+                img.setAttribute('prompt', prompt);
+                img.setAttribute('alt', alt);
+                img.style.cssText = `\
+                  width: 512px;
+                  height: 512px;
+                  background: red;
+                `;
+
+                await new Promise((accept, reject) => {
+                  img.onload = accept;
+                  img.onerror = reject;
+                });
+
+                document.body.appendChild(img);
+              })();
+
+              this.imageCache.set(prompt, url);
+            }
+            return prompt;
+          } else {
+            return null;
+          }
+        }));
+      })();
+      promises.push(p);
+    }
+    await Promise.all(promises);
+
+    console.log('udpate images async', {
+      mainImagePrompts: this.mainImagePrompts,
+      imageCache: this.imageCache,
+    });
   }
-  waitForLoad() {
-    return this.loadPromise;
-  }
-  async updateAsync() {
+  async updateTextAsync() {
     const {
-      images,
       text,
       vector,
-    } = await compileObject({
+    } = await compileObjectText({
       character: this.characters,
       setting: [this.setting],
     });
 
-    for (let i = 0; i < images.length; i++) {
-      const {
-        url,
-        prompt,
-        alt,
-      } = images[i];
-
-      const img = document.createElement('img');
-      img.src = url;
-      img.setAttribute('prompt', prompt);
-      img.setAttribute('alt', alt);
-      img.style.cssText = `\
-        width: 512px;
-        height: 512px;
-        background: red;
-      `;
-      document.body.appendChild(img);
-      await new Promise((accept, reject) => {
-        img.onload = accept;
-        img.onerror = reject;
-      });
-      this.imageCache.set(prompt, img);
-    }
+    this.text = text;
     this.vector = vector;
 
-    // XXX debug display
-    console.log('got image cache', {images, text, vector}, this.imageCache, this.vector);
+    console.log('udpate image vectors', {
+      text: this.text,
+      vector: this.vector,
+    });
+  }
+  async updateAsync() {
+    await Promise.all([
+      this.updateImagesAsync(),
+      this.updateTextAsync(),
+    ]);
+  }
+  async exportAsync() {
+    await this.updateAsync();
+    
+    let {
+      mainImagePrompts,
+      imageCache,
+      setting,
+      characters,
+      text,
+      vector,
+    } = this;
+
+    const imageCache2 = {};
+    await Promise.all(Array.from(imageCache.keys()).map(async prompt => {
+      const url = imageCache.get(prompt);
+
+      const res = await fetch(url);
+      const blob = await res.blob();
+      const dataUrl = await blob2dataUrlAsync(blob);
+      imageCache2[prompt] = dataUrl;
+    }));
+    
+    return {
+      mainImagePrompts,
+      imageCache: imageCache2,
+      setting,
+      characters,
+      text,
+      vector,
+    };
   }
 }
