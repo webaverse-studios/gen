@@ -8,3 +8,14 @@ export function makeid(length) {
   return result;
 }
 export const makeId = () => makeid(8);
+
+export const makePromise = () => {
+  let resolve, reject;
+  const promise = new Promise((a, b) => {
+    resolve = a;
+    reject = b;
+  });
+  promise.resolve = resolve;
+  promise.reject = reject;
+  return promise;
+};

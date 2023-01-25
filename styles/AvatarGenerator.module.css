@@ -94,6 +94,9 @@
 .avatarGenerator .interrogation .messages .message {
   display: flex;
 }
+.avatarGenerator .interrogation .messages .message .wrap {
+  display: flex;
+}
 .avatarGenerator .interrogation .messages .message .name {
   font-weight: 600;
   margin-right: 5px;

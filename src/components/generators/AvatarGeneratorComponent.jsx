@@ -105,9 +105,6 @@ import {
   // NLPConversation,
 } from '../../story-engine/story-engine.js';
 
-import md from '../../story-engine/markdown-utils.js';
-import Markdown from 'marked-react';
-
 import {
   ImageAiClient,
 } from '../../clients/image-client.js';
@@ -144,8 +141,6 @@ const loadDatasetGenerator = async () => {
 //
 
 const FPS = 60;
-const abortError = new Error('abort');
-abortError.isAbortError = true;
 
 //
 
@@ -2706,8 +2701,13 @@ class AvatarToolsMesh extends THREE.Object3D {
           break;
         }
         case 't': {
-          cancelEvent(e);
-          // XXX enable talk
+          if (document.activeElement) {
+            // nothing
+          } else {
+            cancelEvent(e);
+            // XXX enable talk
+            console.log('enable talk');
+          }
           break;
         }
       }
@@ -2808,98 +2808,24 @@ class AvatarToolsMesh extends THREE.Object3D {
 
 //
 
-const RenderWrap = ({
-  promise,
-  children,
-}) => {
-  useEffect(() => {
-    // console.log('rendered', promise);
-    promise.resolve();
-  });
-
-  return (
-    <Markdown gfm openLinksInNewTab={false}>
-      {children}
-    </Markdown>
-  );
-};
-
-//
-
-const compileImages = async (text, {
-  abortController = null,
-} = {}) => {
-  const rootEl = document.createElement('div');
-  const root = ReactDOMClient.createRoot(rootEl);
-  const p = makePromise();
-  root.render(
-    <RenderWrap
-      promise={p}
-    >
-      {text}
-    </RenderWrap>
-  );
-  await p;
-  if (abortController && abortController.signal.aborted) {
-    throw abortError;
-  }
-
-  const imgPlaceholders = Array.from(rootEl.querySelectorAll('img'));
-  const imgPromptsAlts = imgPlaceholders.map(img => {
-    const alt = img.getAttribute('alt');
-    const match = alt.match(/^([^\|]*?)\|([\s\S]*)$/);
-    if (match) {
-      const altText = match[1].trim();
-      const promptText = match[2].trim();
-      return [
-        promptText,
-        altText,
-      ];
-    } else {
-      throw new Error('invalid alt text: ' + alt);
-    }
-  });
-  const imgs = await Promise.all(imgPromptsAlts.map(async ([promptText, altText]) => {
-    const img = await imageAiClient.createImage(promptText);
-    img.setAttribute('alt', altText);
-    return img;
-  }));
-  if (abortController && abortController.signal.aborted) {
-    throw abortError;
-  }
-
-  root.unmount();
-
-  return imgs;
-};
-
-//
-
 const Message = ({
   message,
   className = null,
   mega = false,
 }) => {
-  useEffect(() => {
+  /* useEffect(() => {
     const abortController = new AbortController();
     (async () => {
       try {
-        const imgs = await compileImages(message.image, {
+        const object = {
+          message,
+        };
+        const object2 = await StoryManager.compileObject(object, {
           abortController,
         });
         
         // XXX pre-compute this during conversation generation
-        console.log('return imgs', imgs);
-        
-        for (let i = 0; i < imgs.length; i++) {
-          const img = imgs[i];2
-          img.style.cssText = `\
-            width: 512px;
-            height: 512px;
-            background: red;
-          `;
-          document.body.appendChild(img);
-        }
+        console.log('compiled object', [object, object2]);
       } catch(err) {
         if (!err?.isAbortError) {
           throw err;
@@ -2910,7 +2836,7 @@ const Message = ({
     return () => {
       abortController.abort();
     };
-  }, []);
+  }, []); */
 
   return (
     <div className={classnames(
