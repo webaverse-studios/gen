@@ -1,4 +1,6 @@
 import {useState, useEffect, useRef} from 'react';
+import ReactDOM from 'react-dom';
+import ReactDOMClient from 'react-dom/client';
 import * as THREE from 'three';
 import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
@@ -103,6 +105,13 @@ import {
   // NLPConversation,
 } from '../../story-engine/story-engine.js';
 
+import md from '../../story-engine/markdown-utils.js';
+import Markdown from 'marked-react';
+
+import {
+  ImageAiClient,
+} from '../../clients/image-client.js';
+
 import styles from '../../../styles/AvatarGenerator.module.css';
 
 //
@@ -142,6 +151,7 @@ const aiClient = new AiClient();
 const databaseClient = new DatabaseClient({
   aiClient,
 });
+const imageAiClient = new ImageAiClient();
 
 //
 
@@ -2796,44 +2806,142 @@ class AvatarToolsMesh extends THREE.Object3D {
 
 //
 
+const RenderWrap = ({
+  promise,
+  children,
+}) => {
+  useEffect(() => {
+    // console.log('rendered', promise);
+    promise.resolve();
+  });
+
+  return (
+    <Markdown gfm openLinksInNewTab={false}>
+      {children}
+    </Markdown>
+  );
+};
+
+//
+
+const Message = ({
+  message,
+  className = null,
+  mega = false,
+}) => {
+  useEffect(() => {
+    let live = true;
+
+    (async () => {
+      const rootEl = document.createElement('div');
+      const root = ReactDOMClient.createRoot(rootEl);
+      const p = makePromise();
+      root.render(
+        <RenderWrap
+          promise={p}
+        >
+          {message.image}
+        </RenderWrap>
+      );
+      await p;
+      if (!live) {
+        // console.log('early 1');
+        return;
+      }
+
+      const imgPlaceholders = Array.from(rootEl.querySelectorAll('img'));
+      const imgPrompts = imgPlaceholders.map(img => {
+        const alt = img.getAttribute('alt');
+        const match = alt.match(/^([^\|]*?)\|([\s\S]*)$/);
+        if (match) {
+          const altText = match[1].trim();
+          const prompt = match[2].trim();
+          return prompt;
+        } else {
+          throw new Error('invalid alt text: ' + alt);
+        }
+      });
+      const imgs = await Promise.all(imgPrompts.map(prompt => {
+        return imageAiClient.createImage(prompt);
+      }));
+      if (!live) {
+        // console.log('early 2');
+        return;
+      }
+
+      // XXX pre-compute this during conversation generation
+      console.log('got images', {message, image: message.image, rootEl, rootElClone: rootEl.cloneNode(true), imgs, imgPrompts});
+
+      for (let i = 0; i < imgs.length; i++) {
+        const img = imgs[i];
+        img.style.cssText = `\
+          width: 512px;
+          height: 512px;
+          background: red;
+        `;
+        document.body.appendChild(img);
+      }
+
+      root.unmount();
+    })();
+
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  return (
+    <div className={classnames(
+      styles.message,
+      className,
+      mega ? styles.mega : null,
+    )}>
+      <div className={styles.image}>{message.image}</div>
+      <div className={styles.wrap}>
+        <div className={styles.name}>{message.name}</div>
+        <div className={styles.description}>{message.description}</div>
+      </div>
+    </div>
+  );
+};
+
+//
+
 const Conversation = ({
   conversation,
 }) => {
   const {
-    characters,
     setting,
+    characters,
   } = conversation;
 
   const [messages, setMessages] = useState(conversation.messages);
   const [message, setMessage] = useState('');
 
   return (<div className={styles.conversation}>
+    <Message
+      className={styles.setting}
+      message={setting}
+    />
     <div className={styles.characters}>{characters.map(character => {
       return (
-        <div className={classnames(
-          styles.character,
-          styles.row,
-        )} key={character.name}>
-          <div className={styles.name}>{character.name}</div>
-          <div className={styles.description}>{character.description}</div>
-          <div className={styles.image}>{character.image}</div>
-        </div>
+        <Message
+          className={styles.character}
+          message={character}
+          key={character.name}
+        />
       );
     })}</div>
-    <div className={styles.setting}>
-      <div className={styles.name}>{setting.name}</div>
-      <div className={styles.description}>{setting.description}</div>
-      <div className={styles.image}>{setting.image}</div>
-    </div>
     <div className={classnames(
       styles.messages,
       styles.row,
     )}>{messages.map((m, index) => {
       return (
-        <div className={styles.message} key={index}>
-          <div className={styles.name}>{m.name}</div>
-          <div className={styles.text}>{m.text}</div>
-        </div>
+        <Message
+          // className={styles.character}
+          message={m}
+          key={index}
+        />
       );
     })}</div>
     <input type='text' className={styles.input} value={message} onChange={e => {
@@ -2935,9 +3043,6 @@ const AvatarGeneratorComponent = () => {
   
   const [embodied, setEmbodied] = useState(false);
   
-  // const [characters, setCharacters] = useState([]);
-  // const [setting, setSetting] = useState('');
-  // const [messages, setMessages] = useState([]);
   const [interrogating, setInterrogating] = useState(false);
   const [conversations, setConversations] = useState([]);
   const [conversation, setConversation] = useState(null);
