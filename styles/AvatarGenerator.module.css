@@ -1,3 +1,24 @@
+@keyframes rotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(180deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.rotate {
+  animation-name: rotate;
+  animation-duration: 1s;
+  animation-iteration-count: infinite;
+  animation-timing-function: linear;
+}
+
+/* */
+
 .avatarGenerator {
   width: inherit;
   height: inherit;
@@ -108,8 +129,99 @@
   flex: 1;
 } */
 .avatarGenerator .interrogation .input {
-  min-width: 100%;
+  /* min-width: 100%; */
+  min-width: 0;
+  margin-right: 5px;
+  flex: 1;
   font-size: inherit;
+}
+
+/* */
+
+.avatarGenerator .interrogation .messageInput {
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+  background-color: #111;
+  border-radius: 5px;
+  user-select: none;
+}
+
+.avatarGenerator .interrogation .messageInput .row {
+  display: flex;
+  flex: 1;
+}
+
+.avatarGenerator .interrogation .messageInput .attachments {
+  display: inline-flex;
+}
+
+.avatarGenerator .interrogation .messageInput .attachments .attachment {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  padding: 5px;
+  margin-right: 5px;
+  margin-bottom: 5px;
+  background: #222;
+  border-radius: 5px;
+}
+
+.avatarGenerator .interrogation .messageInput .attachments .attachment .img {
+  width: 100px;
+  height: 100px;
+}
+
+.avatarGenerator .interrogation .messageInput .attachments .attachment .name {
+  color: #FFF;
+}
+
+.avatarGenerator .interrogation .messageInput .attachments .attachment .remove {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background-color: #222;
+  cursor: pointer;
+}
+.avatarGenerator .interrogation .messageInput .attachments .attachment .remove:hover {
+  background-color: #e53935;
+}
+.avatarGenerator .interrogation .messageInput .attachments .attachment .remove:active {
+  background-color: #c62828;
+}
+
+.avatarGenerator .interrogation .messageInput .attachments .attachment .remove .img {
+  width: 20px;
+  height: 20px;
+  padding: 2px;
+  filter: invert(1);
+}
+
+.avatarGenerator .interrogation .messageInput .smallButton {
+  display: flex;
+  flex-direction: column;
+  background-color: #000;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.avatarGenerator .interrogation .messageInput .smallButton:not(:last-child) {
+  margin-right: 5px;
+}
+.avatarGenerator .interrogation .messageInput .smallButton:hover {
+  background-color: #1e88e5;
+}
+.avatarGenerator .interrogation .messageInput .smallButton:active {
+  background-color: #1565c0;
+}
+
+.avatarGenerator .interrogation .messageInput .smallButton .img {
+  width: 50px;
+  height: 30px;
+  padding: 5px;
+  filter: invert(1);
 }
 
 /* */

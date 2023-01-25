@@ -106,8 +106,15 @@ import {
 } from '../../story-engine/story-engine.js';
 
 import {
+  DropTarget,
+} from '../drop-target/DropTarget.jsx';
+
+import {
   ImageAiClient,
 } from '../../clients/image-client.js';
+import {
+  VQAClient,
+} from '../../clients/vqa-client.js'
 
 import styles from '../../../styles/AvatarGenerator.module.css';
 
@@ -149,6 +156,7 @@ const databaseClient = new DatabaseClient({
   aiClient,
 });
 const imageAiClient = new ImageAiClient();
+const vqaClient = new VQAClient();
 
 //
 
@@ -2856,6 +2864,90 @@ const Message = ({
 
 //
 
+const Attachments = ({
+  attachments,
+  onRemove,
+}) => {
+  return (
+    <div className={styles.atachments}>
+      {attachments.map((attachment, index) => {
+        const {
+          url,
+          name,
+        } = attachment;
+
+        return (
+          <div className={styles.attachments} key={index}>
+            <div className={styles.attachment}>
+              {url ?
+                <img src={url} className={styles.img} />
+              :
+                <img src='/images/arc-white.png' className={classnames(
+                  styles.img,
+                  styles.placeholder,
+                  styles.rotate,
+                )} />
+              }
+              <div className={styles.remove} onClick={e => {
+                onRemove(attachment);
+              }}>
+                <img src='/images/close.svg' className={styles.img} />
+              </div>
+              {name ?
+                <div className={styles.name}>{name}</div>
+              :
+                <img src='/images/arc-white.png' className={classnames(
+                  styles.img,
+                  styles.placeholder,
+                  styles.rotate,
+                )} />
+              }
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+//
+
+class Attachment extends EventTarget {
+  constructor({
+    name,
+    url,
+  }) {
+    super();
+
+    this.name = name;
+    this.url = url;
+
+    this.editing = false;
+  }
+  edit() {
+    this.editing = true;
+  }
+  blur() {
+    this.editing = false;
+  }
+  async ensure() {
+    if (this.name && !this.url) {
+      // generate
+      const imageBlob = await imageAiClient.createImageBlob(this.name);
+      this.url = URL.createObjectURL(imageBlob);
+    }
+    if (!this.name && this.url) {
+      // analyze
+      const res = await fetch(this.url);
+      const file = await res.blob();
+      const caption = await vqaClient.getImageCaption(file);
+      this.name = `${caption}.png`;
+    }
+  }
+}
+
+//
+
 const Conversation = ({
   conversation,
   onClose,
@@ -2865,8 +2957,61 @@ const Conversation = ({
     characters,
   } = conversation;
 
+  console.log('got conversatiom', conversation, conversation.imageCache);
+
   const [messages, setMessages] = useState(conversation.messages);
   const [message, setMessage] = useState('');
+  const [attachments, setAttachments] = useState([]);
+  const [attachmentEpoch, setAttachmentEpoch] = useState(0);
+
+  const send = () => {
+    if (message || attachments.length > 0) {
+      const m = {
+        name: 'you',
+        text: message,
+      };
+      const newMessages = messages.concat([m]);
+      setMessages(newMessages);
+      setMessage('');
+
+      // XXX handle the message here
+      console.log('handle new message', m);
+    }
+  };
+  const generateImage = async () => {
+    if (message) {
+      const attachment = new Attachment({
+        name: message,
+        url: null,
+      });
+      const newAttachments = [...attachments, attachment];
+      setAttachments(newAttachments);
+      setMessage('');
+      
+      await attachment.ensure();
+      
+      setAttachmentEpoch(attachmentEpoch + 1);
+    }
+  };
+  const addFiles = files => {
+    // console.log('add files', files);
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const {
+        name,
+        type,
+      } = file;
+      if (/^image\//.test(type)) {
+        const url = URL.createObjectURL(file);
+        const attachment = new Attachment({
+          name,
+          url,
+        });
+        const newAttachments = [...attachments, attachment];
+        setAttachments(newAttachments);
+      }
+    }
+  };
 
   return (<div className={styles.conversation}>
     <Message
@@ -2894,7 +3039,10 @@ const Conversation = ({
         />
       );
     })}</div>
-    <div className={styles.row}>
+    <div className={classnames(
+      // styles.row,
+      styles.inputBar,
+    )}>
       <div className={styles.button} onClick={async e => {
         console.log('save 1');
         const exportObject = await conversation.exportAsync();
@@ -2905,26 +3053,49 @@ const Conversation = ({
         onClose();
       }}>Close</div>
     </div>
-    <input type='text' className={styles.input} value={message} onChange={e => {
-      setMessage(e.target.value);
-    }} onKeyDown={e => {
-      if (e.key === 'Enter') {
-        const text = e.target.value;
-        if (text) {
-          const message = {
-            name: 'you',
-            text,
-          };
-          const newMessages = messages.concat([message]);
-          setMessages(newMessages);
-          setMessage('');
-
-          console.log('handle new message', message);
-
-          // XXX handle the message here
-        }
-      }
-    }} placeholder='press enter to chat' />
+    <div className={styles.messageInput}>
+      <Attachments
+        attachments={attachments}
+        onRemove={attachment => {
+          const index = attachments.indexOf(attachment);
+          if (index !== -1) {
+            const newAttachments = attachments.slice();
+            newAttachments.splice(index, 1);
+            setAttachments(newAttachments);
+          } else {
+            console.warn('attachment not found', attachment);
+          }
+        }}
+      />
+      <div className={styles.row}>
+        <input type='text' className={styles.input} value={message} onChange={e => {
+          setMessage(e.target.value);
+        }} onKeyDown={e => {
+          if (e.key === 'Enter') {
+            send();
+          }
+        }} placeholder='press enter to chat' />
+        <div className={styles.smallButton} alt='Generate image' onClick={e => {
+          generateImage();
+        }}>
+          <img src='/images/paint-box.svg' className={styles.img} />
+        </div>
+        <div className={styles.smallButton} alt='Send' onClick={e => {
+          send();
+        }}>
+          <img src='/images/send.svg' className={styles.img} />
+        </div>
+      </div>
+    </div>
+    <DropTarget
+      className={classnames(
+        styles.panelPlaceholder,
+        styles.hidden,
+        // (loaded || loading) ? styles.hidden : null,
+      )}
+      onFilesAdd={addFiles}
+      multiple
+    />
   </div>);
 };
 
