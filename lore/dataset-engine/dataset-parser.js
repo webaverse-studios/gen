@@ -174,7 +174,7 @@ export const formatDatasetItemsForPolyfill = (dataset, datasetSpec, initialValue
     const item = dataset[i];
     const s = formatItemText(item, datasetSpec, initialValue, opts);
     if (result.length > 0) {
-      result += '\n\n';
+      result += '\n';
     }
     result += s;
   }
@@ -421,6 +421,7 @@ export const getCompletionParser = (datasetSpec, initialValue, opts) => (complet
   const {
     keys,
     continueKey,
+    continueLabel,
   } = opts;
 
   const completionValue = {};
@@ -428,7 +429,7 @@ export const getCompletionParser = (datasetSpec, initialValue, opts) => (complet
   let readString = '';
   if (continueKey) {
     const oldValue = initialValue[continueKey] ?? '';
-    completionValue[continueKey] = oldValue + completionString;
+    completionValue[continueKey] = oldValue + '\n' + continueLabel + completionString;
     readString += completionString;
   } else {
     let completionStringRemaining = completionString;
