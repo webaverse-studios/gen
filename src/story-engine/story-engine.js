@@ -18,6 +18,13 @@ import {
   ImageAiClient,
 } from '../clients/image-client.js';
 
+import {
+  getDatasetSpecs,
+} from '../../lore/dataset-engine/dataset-specs.js';
+import {
+  DatasetGenerator,
+} from '../../lore/dataset-engine/dataset-generator.js';
+
 //
 
 const aiClient = new AiClient();
@@ -25,6 +32,17 @@ const databaseClient = new DatabaseClient({
   aiClient,
 });
 const imageAiClient = new ImageAiClient();
+
+//
+
+const loadDatasetGenerator = async () => {
+  const datasetSpecs = await getDatasetSpecs();
+  const datasetGenerator = new DatasetGenerator({
+    datasetSpecs,
+    aiClient,
+  });
+  return datasetGenerator;
+};
 
 //
 
@@ -38,7 +56,6 @@ const RenderWrap = ({
   children,
 }) => {
   useEffect(() => {
-    // console.log('rendered', promise);
     promise.resolve();
   });
 
@@ -117,26 +134,6 @@ const blob2dataUrlAsync = blob => {
   fr.readAsDataURL(blob);
   return p;
 };
-/* const compileImages = async (text, {
-  abortController = null,
-} = {}) => {
-  const imgPromptsAlts = await getMarkdownImagesAsync(text, {
-    abortController,
-  });
-  const imgUrls = await Promise.all(imgPromptsAlts.map(async ([promptText, altText]) => {
-    const imageBlob = await imageAiClient.createImageBlob(promptText);
-    const url = await blob2dataUrl(imageBlob);
-    return {
-      url,
-      prompt: promptText,
-      alt: altText,
-    };
-  }));
-  if (abortController && abortController.signal.aborted) {
-    throw abortError;
-  }
-  return imgUrls;
-}; */
 const getMainImagePromptsAltsAsync = async (messages, {
   abortController = null,
 } = {}) => {
@@ -196,9 +193,8 @@ export class StoryManager {
     character1 = formatObject(character1);
     setting = formatObject(setting);
 
-    const conversation = new NLPConversation();
+    const conversation = new NLPConversation(undefined, this);
 
-    // XXX initialize with messages only
     conversation.createHeroMessage('setting', {
       name: setting.name,
       description: setting.description,
@@ -213,6 +209,45 @@ export class StoryManager {
 
     await conversation.updateImagesAsync();
     return conversation;
+  }
+  async nextAsync(conversation, {
+    continueN = 1,
+    continueLabel = '',
+  } = {}) {
+    const datasetGenerator = await loadDatasetGenerator();
+    
+    // create the initial out of messages
+    const initialValue = {
+      Name: 'Game chat',
+      Description: 'Players are in a conversation.',
+      Chat: '',
+    };
+    const {
+      messages,
+    } = conversation;
+    for (let i = 0; i < messages.length; i++) {
+      const message = messages[i];
+      const {
+        object,
+      } = message;
+      const {
+        type,
+        name,
+        text,
+      } = object;
+      if (type === 'text') {
+        initialValue.Chat += `${name}: ${text}\n`;
+      }
+    }
+    console.log('completion initial value', initialValue);
+
+    const completionSpec = await datasetGenerator.generateItem('chat', initialValue, {
+      keys: ['Description', 'Chat'],
+      continueKey: 'Chat',
+      continueLabel,
+      continueN,
+    });
+    return completionSpec;
   }
 }
 
@@ -241,10 +276,12 @@ export class NLPMessage {
 //
 
 export class NLPConversation {
+  #parent;
   constructor({
     name = `conversation_${makeId()}`,
-  } = {}) {
+  } = {}, parent) {
     this.name = name;
+    this.#parent = parent;
 
     this.messages = [];
 
@@ -263,31 +300,15 @@ export class NLPConversation {
       this.mainImagePrompts.set(message, prompts);
     }
 
-    // console.log('main image prompts', mainImagePromptAlts);
-
-    /* if (mainImagePromptAlts.length !== this.messages.length) {
-      throw new Error('invalid main image prompts alts: ' + mainImagePromptAlts.length + ' !== ' + this.messages.length);
-    } */
-
-    // console.log('got prompt alts', mainImagePromptAlts, this.messages);
-
     // cache images
     await Promise.all(this.messages.map(async (message, index) => {
-      // console.log('got item', {
-      //   item,
-      //   mainImagePromptAlts,
-      //   mainImagePrompts: this.mainImagePrompts,
-      // });
-
       const specs = mainImagePromptAlts[index];
 
-      // console.log('got specs', specs);
       for (const [prompt, alt] of specs) {
         if (!this.imageCache.has(prompt)) {
           const imageBlob = await imageAiClient.createImageBlob(prompt);
           const url = URL.createObjectURL(imageBlob);
 
-          // console.log('set cache', prompt, url);
           this.imageCache.set(prompt, url);
 
           // XXX debug
@@ -312,20 +333,13 @@ export class NLPConversation {
         }
       }
     }));
-
-    // console.log('udpate images async', {
-    //   mainImagePrompts: this.mainImagePrompts,
-    //   imageCache: this.imageCache,
-    // });
   }
   getImagePrompts(message) {
     return this.mainImagePrompts.get(message) ?? [];
   }
   getImageSources(message) {
     const prompts = this.getImagePrompts(message);
-    // console.log('got prompts', prompts);
     const urls = prompts.map(p => this.imageCache.get(p));
-    // console.log('get image prompts', {message, prompts, urls, imageCache: this.imageCache});
     return urls;
   }
   getImageSourceFromPrompt(prompt) {
@@ -333,6 +347,9 @@ export class NLPConversation {
   }
   injectImageToCache(prompt, url) {
     this.imageCache.set(prompt, url);
+  }
+  nextAsync(opts) {
+    return this.#parent.nextAsync(this, opts);
   }
   createHeroMessage(type, {
     name,
@@ -372,11 +389,6 @@ export class NLPConversation {
 
     this.text = text;
     this.vector = vector;
-
-    console.log('udpate image vectors', {
-      text: this.text,
-      vector: this.vector,
-    });
   }
   async updateAsync() {
     await Promise.all([
