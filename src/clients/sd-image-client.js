@@ -303,7 +303,6 @@ export const img2img = async ({
   })})
   const r = await res.json();
   const data = r.data;
-  console.log('got data', data);
   const j = data[0][0];
   const {name} = j;
   const img = await loadImage(`${baseUrl}file=${name}`);
@@ -326,10 +325,6 @@ export const new_img_inpainting = async ({
                                              maskDataUrl = "",
                                              seed = -1,
                                          } = {}) => {
-
-    console.log("ImgDataUrl", ImgDataUrl);
-    console.log("maskDataUrl", maskDataUrl);
-
     const res = await fetch(`${baseUrl}sdapi/v1/img2img`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -379,6 +374,6 @@ export const new_img_inpainting = async ({
     const base64img= images[0];
     const img = new Image();
     img.src = "data:image/png;base64,"+base64img;
-    document.body.appendChild(img);
+    // document.body.appendChild(img);
     return img;
 };

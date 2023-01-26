@@ -167,9 +167,6 @@ const loadGltf = avatarUrl => {
 const selectAvatar = async (avatarUrlIndex = Math.floor(rng() * avatarUrls.length)) => {
   const avatarUrl = avatarUrls[avatarUrlIndex];
   const categorySpecs = categorySpecsArray[avatarUrlIndex];
-  console.log("categorySpecs", categorySpecs);
-
-  console.log('loading avatar', avatarUrl);
   const gltf = await loadGltf(avatarUrl);
 
   // deep copy the gltf
@@ -215,7 +212,6 @@ const selectAvatar = async (avatarUrlIndex = Math.floor(rng() * avatarUrls.lengt
     }
     mesh.visible = false;
   }
-  console.log('categories', categories);
   // sort by name
   for (const categoryName in categories) {
     categories[categoryName].meshes.sort((a, b) => a.name.localeCompare(b.name));
@@ -232,7 +228,6 @@ const selectAvatar = async (avatarUrlIndex = Math.floor(rng() * avatarUrls.lengt
 
   for (const categorySpec of categorySpecs) {
     const {name, className} = categorySpec;
-    console.log('selecting from category', name, className);
     if (!['solo', 'clothing'].includes(className)) {
       _selectFromCategory(name);
     }
@@ -297,7 +292,6 @@ const AvatarGeneratorComponent = () => {
     generateModel().then((mod) => {
       setModel(mod);
       setGenerated(true);
-      console.log("model", model);
     });
   };
 

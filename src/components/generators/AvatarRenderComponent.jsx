@@ -12,7 +12,6 @@ const size = 512;
 function SkinnedMesh3DRenderer(props) {
     // display the selected mesh by making every other part invisible
     const { mesh } = props;
-    console.log("SKINNED", mesh);
     const containerRef = useRef(null);
     const textureCanvasRef = useRef(null);
     const [scene, setScene] = useState(null);
@@ -186,8 +185,6 @@ export class AvatarRenderer extends EventTarget {
     }
 
     destroy() {
-        console.log('destroy PanelRenderer', this);
-
         this.dispatchEvent(new MessageEvent('destroy'));
     }
 };
@@ -196,7 +193,6 @@ export class AvatarRenderer extends EventTarget {
 export const AvatarRendererComponent = ({
                                             model,
                                         }) => {
-    console.log('AvatarRendererComponent model', model);
     const renderer_3D= new THREE.WebGLRenderer({
         alpha: true,
         antialias: true,
