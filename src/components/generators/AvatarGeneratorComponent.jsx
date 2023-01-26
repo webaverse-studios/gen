@@ -2988,18 +2988,14 @@ const Conversation = ({
   const [epoch, setEpoch] = useState(0);
   const conversationRef = useRef();
 
-  console.log('got conversation', {
-    // setting,
-    // characters,
-    // mainImagePrompts,
-    messages: conversation.messages,
-  });
+  // console.log('got conversation', {
+  //   messages: conversation.messages,
+  // });
 
   useEffect(() => {
     const conversationEl = conversationRef.current;
     if (conversationEl) {
       conversationEl.scrollTop = conversationEl.scrollHeight;
-      console.log('epoch', epoch);
     }
   }, [epoch, conversationRef.current]);
 
