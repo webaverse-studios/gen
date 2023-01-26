@@ -31,6 +31,7 @@
 .avatarGenerator .row {
   display: flex;
   flex: 1;
+  align-items: flex-start;
 }
 .avatarGenerator .row.fill {
   justify-content: space-between;
@@ -106,6 +107,10 @@
 
 .avatarGenerator .interrogation .conversation .inputBar,
 .avatarGenerator .interrogation .conversation .inputBarPlaceholder {
+  height: 100px;
+}
+.avatarGenerator .interrogation .conversation .inputBar.hasFiles,
+.avatarGenerator .interrogation .conversation .inputBarPlaceholder.hasFiles {
   height: 200px;
 }
 
@@ -201,7 +206,7 @@
 }
 
 .avatarGenerator .interrogation .messageInput .input {
-  margin-bottom: 5px;
+  margin-bottom: 10px;
 }
 
 .avatarGenerator .interrogation .messageInput .attachments {

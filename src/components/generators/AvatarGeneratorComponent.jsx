@@ -3078,9 +3078,15 @@ const Conversation = ({
           />
         );
       })}
-      <div className={styles.inputBarPlaceholder} />
+      <div className={classnames(
+        styles.inputBarPlaceholder,
+        attachments.length > 0 ? styles.hasFiles : null,
+      )} />
     </div>
-    <div className={styles.inputBar}>
+    <div className={classnames(
+      styles.inputBar,
+      attachments.length > 0 ? styles.hasFiles : null,
+    )}>
       <div className={styles.messageInput}>
         <Attachments
           attachments={attachments}
