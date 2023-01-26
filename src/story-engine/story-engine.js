@@ -1,6 +1,6 @@
 import React from 'react';
 import {useEffect} from 'react';
-import ReactDOM from 'react-dom';
+// import ReactDOM from 'react-dom';
 import ReactDOMClient from 'react-dom/client';
 
 import Markdown from 'marked-react';
