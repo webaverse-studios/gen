@@ -6,8 +6,7 @@
   "scripts": {
     "dev": "node dev-server.mjs",
     "build": "vite build",
-    "start": "vite start",
-    "vercel-build": "next build"
+    "start": "vite start"
   },
   "dependencies": {
     "@pixiv/three-vrm-core": "./packages/three-vrm/three-vrm-core",
@@ -41,7 +40,6 @@
     "zjs": "./packages/zjs"
   },
   "devDependencies": {
-    "eslint": "8.24.0",
-    "eslint-config-next": "12.3.1"
+    "eslint": "8.24.0"
   }
 }
