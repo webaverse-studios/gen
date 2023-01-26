@@ -14,7 +14,7 @@ import {
 import {
   useRouter,
 } from '../../generators/router.js';
-import physx from '../../../physx.js';
+// import physx from '../../../physx.js';
 
 import styles from '../../../styles/SceneGenerator.module.css';
 
@@ -30,11 +30,11 @@ const SceneGeneratorComponent = () => {
   const [panels, setPanels] = useState([]);
 
   // load physx
-  useEffect(() => {
-    (async () => {
-      await physx.waitForLoad();
-    })();
-  }, []);
+  // useEffect(() => {
+  //   (async () => {
+  //     await physx.waitForLoad();
+  //   })();
+  // }, []);
 
   useEffect(() => {
     const paneladd = e => {
