@@ -316,3 +316,69 @@ export const img2img = async ({
   // return j;
   return img;
 };
+
+export const new_img_inpainting = async ({
+                                             prompt = 'test',
+                                             negativePrompt = '',
+                                             width = 512,
+                                             height = 512,
+                                             ImgDataUrl = "",
+                                             maskDataUrl = "",
+                                             seed = -1,
+                                         } = {}) => {
+
+    console.log("ImgDataUrl", ImgDataUrl);
+    console.log("maskDataUrl", maskDataUrl);
+
+    const res = await fetch(`${baseUrl}sdapi/v1/img2img`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+                "init_images": [
+                    ImgDataUrl
+                ],
+                "resize_mode": 0,
+                "denoising_strength": 0.75,
+                "mask": maskDataUrl,
+                "mask_blur": 4,
+                "inpainting_fill": 2,
+                "inpaint_full_res": true,
+                "inpaint_full_res_padding": 32,
+                "inpainting_mask_invert": 0,
+                "prompt": prompt,
+                "styles": [
+                    ""
+                ],
+                "seed": seed,
+                "subseed": -1,
+                "subseed_strength": 0,
+                "seed_resize_from_h": -1,
+                "seed_resize_from_w": -1,
+                "sampler_name": "Euler a",
+                "batch_size": 1,
+                "n_iter": 1,
+                "steps": 20,
+                "cfg_scale": 7.5,
+                "width": 512,
+                "height": 512,
+                "restore_faces": false,
+                "tiling": false,
+                "negative_prompt": negativePrompt,
+                "eta": 0,
+                "s_churn": 0,
+                "s_tmax": 0,
+                "s_tmin": 0,
+                "s_noise": 1,
+                "override_settings": {},
+                "include_init_images": true,
+            }
+        )}
+    )
+    const r = await res.json();
+    const images = r.images;
+    const base64img= images[0];
+    const img = new Image();
+    img.src = "data:image/png;base64,"+base64img;
+    document.body.appendChild(img);
+    return img;
+};
