@@ -154,16 +154,16 @@ export const formatDatasetItems = (dataset, datasetSpec) => {
   return result;
 };
 export const formatDatasetItemsForPolyfill = (dataset, datasetSpec, initialValue = {}, opts = {}) => {
-  const {
-    type,
-    nameKey,
-    descriptionKey,
-    attributeKeys,
-  } = datasetSpec;
-  const {
-    keys,
-    continueKey,
-  } = opts;
+  // const {
+  //   type,
+  //   nameKey,
+  //   descriptionKey,
+  //   attributeKeys,
+  // } = datasetSpec;
+  // const {
+  //   keys,
+  //   continueKey,
+  // } = opts;
 
   // if ([nameKey, descriptionKey].includes(keys)) {
   //   throw new Error(`keys cannot include ${nameKey} or ${descriptionKey}`);
