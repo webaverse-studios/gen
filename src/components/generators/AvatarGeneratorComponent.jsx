@@ -2986,14 +2986,22 @@ const Conversation = ({
   const [message, setMessage] = useState('');
   const [attachments, setAttachments] = useState([]);
   const [epoch, setEpoch] = useState(0);
+  const conversationRef = useRef();
 
-  // XXX latch the conversation singularly, and amange messages as NLPMessage instances
   console.log('got conversation', {
     // setting,
     // characters,
     // mainImagePrompts,
     messages: conversation.messages,
   });
+
+  useEffect(() => {
+    const conversationEl = conversationRef.current;
+    if (conversationEl) {
+      conversationEl.scrollTop = conversationEl.scrollHeight;
+      console.log('epoch', epoch);
+    }
+  }, [epoch, conversationRef.current]);
 
   const send = async () => {
     if (message || attachments.length > 0) {
@@ -3057,7 +3065,7 @@ const Conversation = ({
     }
   };
 
-  return (<div className={styles.conversation}>
+  return (<div className={styles.conversation} ref={conversationRef}>
     <div className={classnames(
       styles.messages,
       // styles.row,
