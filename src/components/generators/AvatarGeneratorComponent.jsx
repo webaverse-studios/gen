@@ -3081,17 +3081,6 @@ const Conversation = ({
       <div className={styles.inputBarPlaceholder} />
     </div>
     <div className={styles.inputBar}>
-      <div className={styles.row}>
-        <div className={styles.button} onClick={async e => {
-          console.log('save 1');
-          const exportObject = await conversation.exportAsync();
-          console.log('save 2', exportObject);
-          // XXX finish this
-        }}>Save</div>
-        <div className={styles.button} onClick={e => {
-          onClose();
-        }}>Close</div>
-      </div>
       <div className={styles.messageInput}>
         <Attachments
           attachments={attachments}
@@ -3123,6 +3112,36 @@ const Conversation = ({
             send();
           }}>
             <img src='/images/send.svg' className={styles.img} />
+          </div>
+        </div>
+        <div className={classnames(
+          styles.row,
+          styles.fill,
+        )}>
+          <div className={styles.smallButton} onClick={async e => {
+            console.log('save 21');
+            const exportObject = await conversation.exportAsync();
+            console.log('save 2', exportObject);
+            // XXX finish this
+          }}>
+            <img src='/images/save.svg' className={styles.img} />
+          </div>
+          <div className={styles.smallButton} onClick={e => {
+            console.log('remove 1', conversation);
+            // XXX finish this
+          }}>
+            <img src='/images/trash.svg' className={styles.img} />
+          </div>
+          <div className={styles.smallButton} onClick={e => {
+            console.log('brain 1', conversation);
+            // XXX finish this
+          }}>
+            <img src='/images/brain.svg' className={styles.img} />
+          </div>
+          <div className={styles.smallButton} onClick={e => {
+            onClose();
+          }}>
+            <img src='/images/close.svg' className={styles.img} />
           </div>
         </div>
       </div>

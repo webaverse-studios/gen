@@ -28,6 +28,16 @@
 
 /* */
 
+.avatarGenerator .row {
+  display: flex;
+  flex: 1;
+}
+.avatarGenerator .row.fill {
+  justify-content: space-between;
+}
+
+/* */
+
 .avatarGenerator .input {
   min-width: 600px;
   margin-right: 15px;
@@ -190,9 +200,8 @@
   user-select: none;
 }
 
-.avatarGenerator .interrogation .messageInput .row {
-  display: flex;
-  flex: 1;
+.avatarGenerator .interrogation .messageInput .input {
+  margin-bottom: 5px;
 }
 
 .avatarGenerator .interrogation .messageInput .attachments {
