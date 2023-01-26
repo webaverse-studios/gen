@@ -3138,9 +3138,13 @@ const Conversation = ({
           }}>
             <img src='/images/trash.svg' className={styles.img} />
           </div>
-          <div className={styles.smallButton} onClick={e => {
-            console.log('brain 1', conversation);
+          <div className={styles.smallButton} onClick={async e => {
+            console.log('brain 1', conversation, conversation.messages.slice());
             // XXX finish this
+            const messages = await conversation.nextAsync({
+              continueLabel: 'you:',
+            });
+            console.log('brain 2', messages);
           }}>
             <img src='/images/brain.svg' className={styles.img} />
           </div>
