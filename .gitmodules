@@ -25,3 +25,6 @@
 [submodule "src/voice-engine"]
 	path = src/voice-engine
 	url = https://github.com/webaverse/voice-engine.git
+[submodule "src/zine-runtime"]
+	path = src/zine-runtime
+	url = https://github.com/webaverse/zine-runtime
