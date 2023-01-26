@@ -2838,8 +2838,8 @@ const MessageText = ({
         const imgAlt = img.getAttribute('alt');
         const match = imgAlt.match(/^(?:([^\|]*?)\|)?([\s\S]+)$/);
         if (match) {
-          const altText = match[1] ?? '';
-          const prompt = match[2] ?? '';
+          const altText = (match[1] ?? '').trim();
+          const prompt = (match[2] ?? '').trim();
           const url = conversation.getImageSourceFromPrompt(prompt);
           if (url) {
             // console.log('got url', url);
