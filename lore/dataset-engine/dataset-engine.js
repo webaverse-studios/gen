@@ -23,6 +23,7 @@ export class DatasetEngine {
   async generateItem(initialValue, opts) {
     const {
       continueKey,
+      continueLabel,
     } = opts;
 
     const initialValueString = formatInitialValueText(initialValue, this.datasetSpec, opts);
@@ -59,14 +60,19 @@ export class DatasetEngine {
     }
 
     const itemsString = formatDatasetItemsForPolyfill(items, this.datasetSpec, initialValue, opts);
-    let prompt = itemsString + '\n\n' + initialValueString;
+    let prompt = itemsString + '\n' + initialValueString;
+    // console.log('initial prompt', {
+    //   itemsString,
+    //   initialValueString,
+    //   prompt,
+    // });
     let stops;
-    const lineKey = '\n-';
     if (continueKey) {
-      prompt += lineKey;
+      if (continueLabel) {
+        prompt += continueLabel;
+      }
       stops = [
-        lineKey,
-        '\n\n',
+        '\n',
       ];
     } else {
       stops = [
@@ -77,7 +83,7 @@ export class DatasetEngine {
     const maxRetries = 5;
     for (let i = 0; i < maxRetries; i++) {
       const completion = await this.aiClient.generate(prompt, stops);
-      // console.log('got completion', {
+      // console.log('try completion', {
       //   prompt,
       //   stops,
       //   completion,
@@ -97,14 +103,6 @@ export class DatasetEngine {
       if (done) {
         return initialValue;
       } else {
-        // console.log('read partial completion', {
-        //   prompt,
-        //   stops,
-        //   completion,
-        //   readString,
-        //   initialValue,
-        //   completionValue,
-        // });
         prompt += readString;
       }
     }
