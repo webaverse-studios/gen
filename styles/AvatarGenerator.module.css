@@ -161,13 +161,7 @@
 
 /* */
 
-.avatarGenerator .interrogation .messages .message.text .img {
-  
-}
-
-/* */
-
-.avatarGenerator .interrogation .messages .message.setting .img {
+.avatarGenerator .interrogation .messages .message.setting img {
   height: var(--image-size);
   width: 100%;
   object-fit: cover;
@@ -175,7 +169,7 @@
 
 /* */
 
-.avatarGenerator .interrogation .messages .message.character .img {
+.avatarGenerator .interrogation .messages .message.character img {
   height: var(--image-size);
   width: var(--image-size);
   margin: auto;
