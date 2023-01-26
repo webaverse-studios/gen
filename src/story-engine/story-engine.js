@@ -236,7 +236,7 @@ export class StoryManager {
         text,
       } = object;
       if (type === 'text') {
-        initialValue.Chat += `${name}: ${text}\n`;
+        initialValue.Chat += `${name}: ${text}`;
       }
     }
     console.log('completion initial value', initialValue);

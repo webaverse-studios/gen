@@ -125,7 +125,10 @@ export const formatInitialValueText = (initialValue, datasetSpec, opts = {}) => 
     const v = initialValue[k];
     s += `#${k}:\n`;
     if (v) {
-      s += `${v}\n`;
+      s += v;
+      // if (!v.endsWith('\n')) {
+        s += '\n';
+      // }
     }
   }
   if (firstMissingValueKeyIndex < allKeys.length) {
