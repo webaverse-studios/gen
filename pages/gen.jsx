@@ -9,6 +9,8 @@ import CharacterGeneratorComponent from '../src/components/generators/CharacterG
 import Item2DGeneratorComponent from '../src/components/generators/Item2DGeneratorComponent.jsx';
 import Item3DGeneratorComponent from '../src/components/generators/Item3DGeneratorComponent.jsx';
 
+import TitleScreenComponent from '../src/components/title-screen/TitleScreen.jsx';
+
 import {useRouter} from '../src/generators/router.js';
 
 import styles from '../styles/Gen.module.css';
@@ -23,6 +25,10 @@ const tabs = [
   {
     tab: 'metasceneGenerator',
     label: 'Metascene',
+  },
+  {
+    tab: 'titleScreen',
+    label: 'Title',
   },
   {
     tab: 'avatarGenerator',
@@ -101,6 +107,9 @@ export const Gen = () => {
             }
             case 'metasceneGenerator': {
               return <MetasceneGeneratorComponent />
+            }
+            case 'titleScreen': {
+              return <TitleScreenComponent />
             }
             case 'avatarGenerator': {
               return <AvatarGeneratorComponent />
