@@ -2845,10 +2845,10 @@ const MessageText = ({
             // console.log('got url', url);
             img.setAttribute('src', url);
           } else {
-            console.warn('no url', conversation, prompt);
+            console.warn('no url', {conversation, prompt});
           }
         } else {
-          console.warn('no alt match', imgAlt);
+          console.warn('no alt match', {imgAlt});
         }
       }
     }
