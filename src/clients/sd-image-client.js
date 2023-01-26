@@ -539,11 +539,7 @@ export const new_img_inpainting = async ({
                                      } = {}) => {
 
     console.log("ImgDataUrl", ImgDataUrl);
-    const init_img = await loadImage(ImgDataUrl);
-    // document.body.appendChild(init_img);
     console.log("maskDataUrl", maskDataUrl);
-    const mask_img = await loadImage(maskDataUrl);
-    // document.body.appendChild(mask_img);
 
     const res = await fetch(`${baseUrl}sdapi/v1/img2img`, {
         method: "POST",
@@ -594,6 +590,6 @@ export const new_img_inpainting = async ({
     const base64img= images[0];
     const img = new Image();
     img.src = "data:image/png;base64,"+base64img;
-    // document.body.appendChild(img);
+    document.body.appendChild(img);
     return img;
 };

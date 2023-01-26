@@ -198,23 +198,23 @@ export const AvatarRendererComponent = ({
                                                   model,
                                               }) => {
     console.log('AvatarRendererComponent model', model);
-    const renderer= new THREE.WebGLRenderer({
+    const renderer_3D= new THREE.WebGLRenderer({
         alpha: true,
         antialias: true,
         preserveDrawingBuffer: true,
     });
-    renderer.setSize(512, 512);
-    renderer.sortObjects = false;
-    renderer.physicallyCorrectLights = true;
-    renderer.outputEncoding = THREE.sRGBEncoding;
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    renderer.setClearColor(0x000000, 0);
+    renderer_3D.setSize(512, 512);
+    renderer_3D.sortObjects = false;
+    renderer_3D.physicallyCorrectLights = true;
+    renderer_3D.outputEncoding = THREE.sRGBEncoding;
+    renderer_3D.shadowMap.enabled = true;
+    renderer_3D.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer_3D.setClearColor(0x000000, 0);
     const projection_renderer = new THREE.WebGLRenderer()
     const mask_renderer = new THREE.WebGLRenderer()
 
     useEffect(() => {
-        renderer.dispose();
+        renderer_3D.dispose();
         projection_renderer.dispose();
         mask_renderer.dispose();
     });
@@ -224,7 +224,7 @@ export const AvatarRendererComponent = ({
         <div className={styles.AvatarGenerator}>
 
             <Avatar3DCanvas model={model}/>
-            <MeshSelector model={model} renderer={renderer} projection_renderer={projection_renderer} mask_renderer={mask_renderer}/>
+            <MeshSelector model={model} renderer={renderer_3D} projection_renderer={projection_renderer} mask_renderer={mask_renderer}/>
         </div>
 
     );

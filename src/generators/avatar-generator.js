@@ -17,46 +17,31 @@ data[2] = 0; // Blue
 data[3] = 255; // Alpha
 
 
+
 // create 4 cameras for front, left, right and back views
 const views = [
-    {prompt: "front view of ", view: 'front'},
+    {prompt: "front view of ", view: 'front', mask_range: 0.1, texture_range: -.1},
     // {prompt: "front right view of ", view: "front-right"},
-    {prompt: "side view of ", view: "right"},
+    {prompt: "side view of ", view: "right", mask_range: 0.6, texture_range: 0.4},
     // {prompt: "back right view of ", view: "back-right"},
-    {prompt: "back view of ", view: 'back'},
-    {prompt: "side view of ", view: 'left'},
+    {prompt: "back view of ", view: 'back', mask_range: 0.1, texture_range: -0.1},
+    {prompt: "side view of ", view: 'left', mask_range: 0.6, texture_range: 0.4},
     // {prompt: "back left view of ", view: 'back-left'},
     // {prompt: "front left view of ", view: "front-left"},
 
-    {prompt: "bottom up view of ", view: 'bottom'},
-    {prompt: "top down view of ", view: "top"},
+    {prompt: "bottom up view of ", view: 'bottom', mask_range: 0, texture_range: 0},
+    {prompt: "top down view of ", view: "top", mask_range: 0, texture_range: 0},
 ];
 
 const symmetrical_views = [
-    {prompt: "front view of ", view: 'front'},
-    {prompt: "side view of ", view: "right"},
-    {prompt: "back view of ", view: 'back'},
-    {prompt: "bottom up view of ", view: 'bottom'},
-    {prompt: "top down view of ", view: "top"},
+    {prompt: "front view of ", view: 'front', mask_range: 0.2, texture_range: -.1},
+    {prompt: "side view of ", view: "right", mask_range: 0.6, texture_range: 0.4},
+    {prompt: "back view of ", view: 'back', mask_range: 0.2, texture_range: -.1},
+    {prompt: "bottom up view of ", view: 'bottom', mask_range: 0, texture_range: 0},
+    {prompt: "top down view of ", view: "top", mask_range: 0, texture_range: 0},
 
 ]
 
-// function converting img to srgb
-function srgb(img) {
-    const canvas = document.createElement('canvas');
-    canvas.width = img.width;
-    canvas.height = img.height;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(img, 0, 0);
-    const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    for (let i = 0; i < data.data.length; i += 4) {
-        data.data[i] = Math.pow(data.data[i] / 255, 2.2) * 255;
-        data.data[i + 1] = Math.pow(data.data[i + 1] / 255, 2.2) * 255;
-        data.data[i + 2] = Math.pow(data.data[i + 2] / 255, 2.2) * 255;
-    }
-    ctx.putImageData(data, 0, 0);
-    return canvas;
-}
 
 // extract uvmap from a 3D mesh
 function extractUVMap({mesh, mask_mesh, renderer}) {
@@ -201,7 +186,7 @@ const Avatar3DCanvas = ({
     return renderer.domElement.toDataURL();
 }
 
-function projectTextureMasked({mesh, masked_mesh, texture, proj_point, renderer, projection_range = 0.3}) {
+function projectTextureMasked({mesh, masked_mesh, texture, proj_point, renderer, projection_range = 0.3, srgb = true}) {
     // projection mapping of texture onto mesh and extracting the uv map
     const {material} = mesh;
     // get the matrices from the proj_point so they're fixed in proj_point's original position
@@ -282,6 +267,7 @@ function projectTextureMasked({mesh, masked_mesh, texture, proj_point, renderer,
             savedModelMatrix: {type: 'mat4', value: new THREE.Matrix4()},
             projPosition: {type: 'v3', value: projPosition},
             dot_min: {value: projection_range},
+            srgb: {value: srgb},
         },
         vertexShader: `
           uniform mat4 savedModelMatrix;
@@ -313,6 +299,7 @@ function projectTextureMasked({mesh, masked_mesh, texture, proj_point, renderer,
         uniform sampler2D uMaskMap;
         uniform vec3 projPosition;
         uniform float dot_min;
+        uniform bool srgb;
         
 
         varying vec3 vNormal;
@@ -324,6 +311,11 @@ function projectTextureMasked({mesh, masked_mesh, texture, proj_point, renderer,
           vec2 uv = (vTexCoords.xy / vTexCoords.w) * 0.5 + 0.5;
 
           vec4 outColor = texture2D(uMap, uv);
+          if (srgb) {
+            outColor.r = pow(outColor.r, 2.2);
+            outColor.g = pow(outColor.g, 2.2);
+            outColor.b = pow(outColor.b, 2.2);   
+          }
 
           // this makes sure we don't render also the back of the object
           vec3 projectorDirection = normalize(projPosition - vWorldPosition.xyz);
@@ -347,23 +339,6 @@ function projectTextureMasked({mesh, masked_mesh, texture, proj_point, renderer,
         depthWrite: false,
         side: THREE.DoubleSide,
     });
-// vec2 uv = (vTexCoords.xy / vTexCoords.w) * 0.5 + 0.5;
-    //
-    // vec4 outColor = texture2D(uMap, uv);
-    //
-    // // this makes sure we don't render also the back of the object
-    // vec3 projectorDirection = normalize(projPosition - vWorldPosition.xyz);
-    // float dotProduct = dot(vNormal, projectorDirection);
-    // if (dotProduct < 0.0) {
-    //   outColor = texture2D(uBGMap, vUv);
-    // }
-
-    // vec4 mask = texture2D(uMaskMap, vUv);
-    // float mag = (mask.r + mask.g + mask.b) / 3.;
-    // if (dotProduct < 0. || mag == 0.) {
-    //   outColor = texture2D(uBGMap, vUv);
-    // }
-    // gl_FragColor = outColor;
     foregroundScene.overrideMaterial = overrideMaterial;
 
     // push mesh to foreground scene
@@ -501,7 +476,7 @@ function projectTexture({mesh, texture, proj_point, renderer, projection_range =
         void main() {
           vec2 uv = (vTexCoords.xy / vTexCoords.w) * 0.5 + 0.5;
 
-          vec4 outColor = texture2D(uMap, uv);
+          vec4 outColor = texture2D(uMap, uv);           
 
           // this makes sure we don't render also the back of the object
           vec3 projectorDirection = normalize(projPosition - vWorldPosition.xyz);
@@ -566,7 +541,7 @@ function getLongestSide({min, max, center, view}) {
         const p3 = new THREE.Vector3(min.x, max.y, max.z);
         const d1 = p1.distanceTo(p2);
         const d2 = p1.distanceTo(p3);
-        return {x: center.x, y: -Math.max(d1, d2) * 2, z: center.z};
+        return {x: center.x, y: center.y - Math.max(d1, d2) * 2, z: center.z};
     }
     if (view === 'right') {
         const p1 = new THREE.Vector3(min.x, min.y, min.z);
@@ -620,9 +595,21 @@ function getLongestSide({min, max, center, view}) {
 
 }
 
-export async function editTexture(mesh, prompt, renderer, projection_renderer, mask_renderer, symmetrical) {
-
-
+export async function editTexture(mesh, prompt, symmetrical) {
+    const renderer= new THREE.WebGLRenderer({
+        alpha: true,
+        antialias: true,
+        preserveDrawingBuffer: true,
+    });
+    renderer.setSize(512, 512);
+    renderer.sortObjects = false;
+    renderer.physicallyCorrectLights = true;
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.setClearColor(0x000000, 0);
+    const projection_renderer = new THREE.WebGLRenderer()
+    const mask_renderer = new THREE.WebGLRenderer()
     // copy mesh and set texture to noise
     const min = mesh.geometry.boundingBox.min;
     const max = mesh.geometry.boundingBox.max;
@@ -641,7 +628,7 @@ export async function editTexture(mesh, prompt, renderer, projection_renderer, m
     const mask_mesh = new THREE.Mesh(mask_geo, mask_material.clone());
     mask_mesh.frustumCulled = false;
 
-    const seed = 0; //Math.floor(Math.random() * 1000000);
+    const seed = Math.floor(Math.random() * 1000000);
 
     if (symmetrical) {
         for (const view of symmetrical_views) {
@@ -657,36 +644,30 @@ export async function editTexture(mesh, prompt, renderer, projection_renderer, m
                 bg_color: 0x000000
             });
 
-            // const gen_img = await new_img_inpainting({
-            //         prompt: view.prompt + prompt,
-            //         width: 512,
-            //         height: 512,
-            //         ImgDataUrl: imgData,
-            //         maskDataUrl: maskData,
-            //         seed: seed,
-            //     });
-
-
-
-            mesh.material.map.encoding = 3000;
+            const gen_img = await new_img_inpainting({
+                    prompt: view.prompt + prompt,
+                    width: 512,
+                    height: 512,
+                    ImgDataUrl: imgData,
+                    maskDataUrl: maskData,
+                    seed: seed,
+                });
+            document.body.appendChild(gen_img)
             const texture = new THREE.CanvasTexture(projectTextureMasked({
                 mesh: mesh,
                 masked_mesh: adaptive_mask_mesh,
                 texture: gen_img,
                 proj_point: base_camera,
                 renderer: projection_renderer,
-                projection_range: 0.2
-            })); //projectTexture({mesh: mesh, texture: gen_img, proj_point: base_camera}));
-            console.log("texture encoding", texture.encoding)
-            // texture.encoding = THREE.sRGBEncoding;
-            console.log("texture encoding", texture.encoding)
+                projection_range: view.texture_range
+            }));
             mesh.material.map = texture;
             adaptive_mask_mesh.material.map = new THREE.CanvasTexture(projectTexture({
                 mesh: adaptive_mask_mesh,
                 texture: black_image,
                 proj_point: base_camera,
                 renderer: mask_renderer,
-                projection_range: 0.4
+                projection_range: view.mask_range
             }));
 
             if (view.view === 'right'){
@@ -700,26 +681,21 @@ export async function editTexture(mesh, prompt, renderer, projection_renderer, m
                 const ctx = canvas.getContext("2d");
                 ctx.scale(-1, 1);
                 ctx.drawImage(gen_img, -gen_img.width, 0, gen_img.width, gen_img.height);
-                document.body.appendChild(canvas);
-                mesh.material.map.encoding = 3000;
                 const texture = new THREE.CanvasTexture(projectTextureMasked({
                     mesh: mesh,
                     masked_mesh: adaptive_mask_mesh,
                     texture: canvas,
                     proj_point: base_camera,
                     renderer: projection_renderer,
-                    projection_range: 0.2
-                })); //projectTexture({mesh: mesh, texture: gen_img, proj_point: base_camera}));
-                console.log("texture encoding", texture.encoding)
-                // texture.encoding = THREE.sRGBEncoding;
-                console.log("texture encoding", texture.encoding)
+                    projection_range: view.texture_range
+                }));
                 mesh.material.map = texture;
                 adaptive_mask_mesh.material.map = new THREE.CanvasTexture(projectTexture({
                     mesh: adaptive_mask_mesh,
                     texture: black_image,
                     proj_point: base_camera,
                     renderer: mask_renderer,
-                    projection_range: 0.4
+                    projection_range: view.mask_range
                 }));
 
             }
@@ -749,8 +725,6 @@ export async function editTexture(mesh, prompt, renderer, projection_renderer, m
                 maskDataUrl: maskData,
                 seed: seed,
             });
-
-            mesh.material.map.encoding = 3000;
             // document.body.appendChild(gen_img);
             const texture = new THREE.CanvasTexture(projectTextureMasked({
                 mesh: mesh,
@@ -758,24 +732,17 @@ export async function editTexture(mesh, prompt, renderer, projection_renderer, m
                 texture: gen_img,
                 proj_point: base_camera,
                 renderer: projection_renderer,
-                projection_range: 0.2
-            })); //projectTexture({mesh: mesh, texture: gen_img, proj_point: base_camera}));
-            console.log("texture encoding", texture.encoding)
-            texture.encoding = THREE.sRGBEncoding;
-            console.log("texture encoding", texture.encoding)
-            mesh.material.map = texture;
+                projection_range: view.texture_range
+            }));
+            mesh.material.map = texture.clone();
             adaptive_mask_mesh.material.map = new THREE.CanvasTexture(projectTexture({
                 mesh: adaptive_mask_mesh,
                 texture: black_image,
                 proj_point: base_camera,
                 renderer: mask_renderer,
-                projection_range: 0.4
+                projection_range: view.mask_range
             }));
 
         }
     }
-    const srgb_img = extractUVMap({mesh: mesh, mask_mesh:mask_mesh, renderer: projection_renderer});
-    document.body.appendChild(srgb_img);
-    console.log(mesh);
-    mesh.material.map.encoding = 3000;
 }
