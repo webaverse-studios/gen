@@ -3,7 +3,7 @@ import GPT3Tokenizer from 'gpt3-tokenizer';
 import {OPENAI_API_KEY} from '../../src/constants/auth.js';
 
 export function makeGenerateFn() {
-  async function query(params = {}) {
+  async function generate(params = {}) {
     const requestOptions = {
       method: "POST",
       headers: {
@@ -25,8 +25,18 @@ export function makeGenerateFn() {
       }
 
       const data = await response.json();
-      // console.log("choices:", data.choices);
-      return data?.choices?.[0]?.text;
+      // console.log("choices:", data);
+      const {choices} = data;
+      if (choices.length !== params.n) {
+        throw new Error('ai api error: ' + choices.length + ' choices returned, expected ' + params.n);
+      }
+      if (choices.length === 0) {
+        throw new Error('ai api error: no choices returned');
+      } else if (choices.length === 1) {
+        return choices[0].text;
+      } else {
+        return choices.map(c => c.text);
+      }
     } catch (e) {
       console.warn('OpenAI API Error', e);
       // return "returning from error";
@@ -36,8 +46,9 @@ export function makeGenerateFn() {
   async function openaiRequest(prompt, stop, opts) {
     const {
       max_tokens = 256,
+      n = 1,
     } = opts ?? {};
-    return await query({
+    return await generate({
       model,
       prompt,
       stop,
@@ -46,13 +57,11 @@ export function makeGenerateFn() {
       // presence_penalty: needsRepetition ? 0.1 : 0.4,
       // temperature: 0.85,
       max_tokens,
-      best_of: 1,
+      n,
+      // best_of: 1,
     });
   }
-  
-  return async (prompt, stop, opts) => {
-    return await openaiRequest(prompt, stop, opts);
-  };
+  return openaiRequest;
 }
 export function makeEmbedFn() {
   async function embed(input) {
