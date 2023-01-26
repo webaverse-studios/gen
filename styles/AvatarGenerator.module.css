@@ -223,7 +223,10 @@
   width: var(--image-size);
   height: var(--image-size);
 }
-.avatarGenerator .interrogation .messageInput .attachments .attachment .img.small {
+.avatarGenerator .interrogation .messageInput .attachments .attachment .img.placeholder:not(.small) {
+  padding: 15px;
+}
+.avatarGenerator .interrogation .messageInput .attachments .attachment .img.placeholder.small {
   width: 15px;
   height: 15px;
 }
