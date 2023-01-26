@@ -123,7 +123,10 @@ export const formatInitialValueText = (initialValue, datasetSpec, opts = {}) => 
   for (let i = 0; i < firstMissingValueKeyIndex; i++) {
     const k = allKeys[i];
     const v = initialValue[k];
-    s += `#${k}:\n${v}\n`;
+    s += `#${k}:\n`;
+    if (v) {
+      s += `${v}\n`;
+    }
   }
   if (firstMissingValueKeyIndex < allKeys.length) {
     const k = allKeys[firstMissingValueKeyIndex];
