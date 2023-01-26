@@ -269,7 +269,7 @@ const Gallery = ({
 
             const urls = text.split('\n')
               .map(name => `${imagesUrl}${name}`);
-            console.log('load new urls', urls);
+            // console.log('load new urls', urls);
             setImgUrls(urls);
         })();
 
