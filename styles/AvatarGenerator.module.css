@@ -75,7 +75,9 @@
 .avatarGenerator .interrogation .conversation {
   display: flex;
   flex-direction: column;
-  flex: 1;
+  /* flex: 1; */
+  height: 100vh;
+  overflow-y: scroll;
 }
 
 /* */
@@ -92,10 +94,35 @@
 
 /* */
 
+.avatarGenerator .interrogation .conversation .inputBar,
+.avatarGenerator .interrogation .conversation .inputBarPlaceholder {
+  height: 200px;
+}
+
+.avatarGenerator .interrogation .conversation .inputBar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: #000;
+}
+
+.avatarGenerator .interrogation .conversation .inputBar .button {
+  color: #FFF;
+}
+.avatarGenerator .interrogation .conversation .inputBar .button:hover {
+  color: #000;
+  border-color: #FFF;
+  background-color: #FFF;
+}
+
+
+/* */
+
 .avatarGenerator .interrogation .messages {
   display: flex;
   flex-direction: column;
-  flex: 1;
+  /* flex: 1; */
 }
 .avatarGenerator .interrogation .messages .message {
   display: flex;

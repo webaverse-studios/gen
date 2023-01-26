@@ -3061,75 +3061,77 @@ const Conversation = ({
     <div className={classnames(
       styles.messages,
       // styles.row,
-    )}>{conversation.messages.map((message, index) => {
-      return (
-        <Message
-          className={classnames(
-            message.object.type !== 'text' ? styles.hero : null,
-            styles[message.object.type],
-          )}
-          message={message}
-          key={index}
-        />
-      );
-    })}</div>
-    <div className={classnames(
-      // styles.row,
-      styles.inputBar,
     )}>
-      <div className={styles.button} onClick={async e => {
-        console.log('save 1');
-        const exportObject = await conversation.exportAsync();
-        console.log('save 2', exportObject);
-        // XXX finish this
-      }}>Save</div>
-      <div className={styles.button} onClick={e => {
-        onClose();
-      }}>Close</div>
+      {conversation.messages.map((message, index) => {
+        return (
+          <Message
+            className={classnames(
+              message.object.type !== 'text' ? styles.hero : null,
+              styles[message.object.type],
+            )}
+            message={message}
+            key={index}
+          />
+        );
+      })}
+      <div className={styles.inputBarPlaceholder} />
     </div>
-    <div className={styles.messageInput}>
-      <Attachments
-        attachments={attachments}
-        onRemove={attachment => {
-          const index = attachments.indexOf(attachment);
-          if (index !== -1) {
-            const newAttachments = attachments.slice();
-            newAttachments.splice(index, 1);
-            setAttachments(newAttachments);
-          } else {
-            console.warn('attachment not found', attachment);
-          }
-        }}
-      />
+    <div className={styles.inputBar}>
       <div className={styles.row}>
-        <input type='text' className={styles.input} value={message} onChange={e => {
-          setMessage(e.target.value);
-        }} onKeyDown={e => {
-          if (e.key === 'Enter') {
+        <div className={styles.button} onClick={async e => {
+          console.log('save 1');
+          const exportObject = await conversation.exportAsync();
+          console.log('save 2', exportObject);
+          // XXX finish this
+        }}>Save</div>
+        <div className={styles.button} onClick={e => {
+          onClose();
+        }}>Close</div>
+      </div>
+      <div className={styles.messageInput}>
+        <Attachments
+          attachments={attachments}
+          onRemove={attachment => {
+            const index = attachments.indexOf(attachment);
+            if (index !== -1) {
+              const newAttachments = attachments.slice();
+              newAttachments.splice(index, 1);
+              setAttachments(newAttachments);
+            } else {
+              console.warn('attachment not found', attachment);
+            }
+          }}
+        />
+        <div className={styles.row}>
+          <input type='text' className={styles.input} value={message} onChange={e => {
+            setMessage(e.target.value);
+          }} onKeyDown={e => {
+            if (e.key === 'Enter') {
+              send();
+            }
+          }} placeholder='press enter to chat' />
+          <div className={styles.smallButton} alt='Generate image' onClick={e => {
+            generateImage();
+          }}>
+            <img src='/images/paint-box.svg' className={styles.img} />
+          </div>
+          <div className={styles.smallButton} alt='Send' onClick={e => {
             send();
-          }
-        }} placeholder='press enter to chat' />
-        <div className={styles.smallButton} alt='Generate image' onClick={e => {
-          generateImage();
-        }}>
-          <img src='/images/paint-box.svg' className={styles.img} />
-        </div>
-        <div className={styles.smallButton} alt='Send' onClick={e => {
-          send();
-        }}>
-          <img src='/images/send.svg' className={styles.img} />
+          }}>
+            <img src='/images/send.svg' className={styles.img} />
+          </div>
         </div>
       </div>
+      <DropTarget
+        className={classnames(
+          styles.panelPlaceholder,
+          styles.hidden,
+          // (loaded || loading) ? styles.hidden : null,
+        )}
+        onFilesAdd={addFiles}
+        multiple
+      />
     </div>
-    <DropTarget
-      className={classnames(
-        styles.panelPlaceholder,
-        styles.hidden,
-        // (loaded || loading) ? styles.hidden : null,
-      )}
-      onFilesAdd={addFiles}
-      multiple
-    />
   </div>);
 };
 
