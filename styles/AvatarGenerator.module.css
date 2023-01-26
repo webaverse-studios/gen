@@ -37,6 +37,7 @@
   justify-content: space-between;
 }
 
+
 /* */
 
 .avatarGenerator .input {
@@ -111,7 +112,7 @@
 }
 .avatarGenerator .interrogation .conversation .inputBar.hasFiles,
 .avatarGenerator .interrogation .conversation .inputBarPlaceholder.hasFiles {
-  height: 200px;
+  height: 230px;
 }
 
 .avatarGenerator .interrogation .conversation .inputBar {
@@ -219,11 +220,22 @@
 }
 
 .avatarGenerator .interrogation .messageInput .attachments .attachment .img {
-  width: 100px;
-  height: 100px;
+  width: var(--image-size);
+  height: var(--image-size);
+}
+.avatarGenerator .interrogation .messageInput .attachments .attachment .img.small {
+  width: 15px;
+  height: 15px;
 }
 
 .avatarGenerator .interrogation .messageInput .attachments .attachment .name {
+  /* display: inline-flex;
+  align-items: center; */
+  max-width: var(--image-size);
+  height: 15px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: #FFF;
 }
 

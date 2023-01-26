@@ -2929,6 +2929,7 @@ const Attachments = ({
                 <img src='/images/arc-white.png' className={classnames(
                   styles.img,
                   styles.placeholder,
+                  styles.small,
                   styles.rotate,
                 )} />
               }
@@ -2971,7 +2972,7 @@ class Attachment extends EventTarget {
       const res = await fetch(this.url);
       const file = await res.blob();
       const caption = await vqaClient.getImageCaption(file);
-      this.name = `${caption}.png`;
+      this.name = caption;
     }
   }
 }
@@ -3029,7 +3030,7 @@ const Conversation = ({
   const generateImage = async () => {
     if (message) {
       const attachment = new Attachment({
-        name: message,
+        name: `attached file.png | ${message}`,
         url: null,
       });
       const newAttachments = [...attachments, attachment];
@@ -3041,7 +3042,7 @@ const Conversation = ({
       setEpoch(epoch + 1);
     }
   };
-  const addFiles = files => {
+  const addFiles = async files => {
     // console.log('add files', files);
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
@@ -3052,9 +3053,14 @@ const Conversation = ({
       if (/^image\//.test(type)) {
         const url = URL.createObjectURL(file);
         const attachment = new Attachment({
-          name,
+          // name,
           url,
         });
+
+        await attachment.ensure();
+        console.log('new attachment name', [attachment.name]);
+        attachment.name = `${name} | ${attachment.name}`;
+
         const newAttachments = [...attachments, attachment];
         setAttachments(newAttachments);
       }
