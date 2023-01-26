@@ -145,7 +145,7 @@ import {
   renderMeshesDepth,
 } from '../clients/reconstruction-client.js';
 import {PathMesh} from '../zine-aux/meshes/path-mesh.js';
-import '../../lore-test.js';
+// import '../../lore-test.js';
 
 //
 
