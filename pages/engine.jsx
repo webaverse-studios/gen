@@ -12,12 +12,12 @@ import {
   layer0Specs,
   layer1Specs,
 } from '../src/zine/zine-data-specs.js';
-import physx from '../physx.js';
+// import physx from '../physx.js';
 import {VQAClient} from '../src/clients/vqa-client.js';
 
 offscreenEngineApi(async (funcName, args, opts) => {
   if (funcName === 'compileScene') {
-    await physx.waitForLoad();
+    // await physx.waitForLoad();
 
     const {
       imageArrayBuffer,
@@ -63,6 +63,6 @@ offscreenEngineApi(async (funcName, args, opts) => {
 
 export const Engine = () => {
   return (
-    <div className='engine-fake-node' />
+    <div className='engine-fake-node'>engine.html</div>
   );
 };
