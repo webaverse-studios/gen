@@ -280,19 +280,13 @@ const _pathize = (n, fn) => {
 
 //
 
-/* const colors = [
-  `Black`,
-  `Blue`,
-  `Cyan`,
-  `Green`,
-  `Original`,
-  `Pink`,
-  `Yellow`,
-]; */
+const contentRootUrl = `https://raw.githack.com/webaverse/content/main/`;
 const avatarSpecs = [
   {
     name: 'hacker',
-    base: `/models/Avatar_Bases/Hacker Class/HackerClassMaster_v2.1_Guilty.vrm`,
+    base: `${contentRootUrl}avatars/Hacker Class/HackerClassMaster_v2.1_Guilty.vrm`,
+    // base: `https://cdn.jsdelivr.net/gh/webaverse/content@main/avatars/Hacker Class/HackerClassMaster_v2.1_Guilty.vrm`,
+    // base: `/models/Avatar_Bases/Hacker Class/HackerClassMaster_v2.1_Guilty.vrm`,
     eye: [
       `IMG_2857.png`,
       `IMG_2858.png`,
@@ -326,7 +320,7 @@ const avatarSpecs = [
       `IMG_2887.png`,
       `IMG_2888.png`,
       `IMG_2889.png`,
-    ].map(name => `/models/Avatar_Bases/Hacker Class/Hacker variant textures/Eye_Color/${name}`),
+    ].map(name => `${contentRootUrl}avatars/Hacker Class/Hacker variant textures/Eye_Color/${name}`),
     skin: [
       // ./Arm sleeves
       // ./Arm sleeves/ArmSleeves_Original.png
@@ -401,7 +395,7 @@ const avatarSpecs = [
           `Skin tone 2/Hacker.png_BASE_Head_BaseColor.png`,
           `Skin tone 3/Hacker.png_BASE_Head_BaseColor.png`,
           `Skin tone 4/Hacker.png_BASE_Head_BaseColor.png`,
-        ].map(n => `/models/Avatar_Bases/Hacker Class/Hacker variant textures/Skin variations/${n}`),
+        ].map(n => `${contentRootUrl}avatars/Hacker Class/Hacker variant textures/Skin variations/${n}`),
       ],
       [
         'body',
@@ -433,7 +427,7 @@ const avatarSpecs = [
           `Thigh highs/ThighHighs_Tone_2.png`,
           `Thigh highs/ThighHighs_Tone_3.png`,
           `Thigh highs/ThighHighs_Tone_4.png`,
-        ].map(n => `/models/Avatar_Bases/Hacker Class/Hacker variant textures/Skin variations/${n}`),
+        ].map(n => `${contentRootUrl}avatars/Hacker Class/Hacker variant textures/Skin variations/${n}`),
       ],
       [
         'mouth',
@@ -465,7 +459,7 @@ const avatarSpecs = [
           `Skin tone 2/Hacker.png_BASE_Mouth_BaseColor.png`,
           `Skin tone 3/Hacker.png_BASE_Mouth_BaseColor.png`,
           `Skin tone 4/Hacker.png_BASE_Mouth_BaseColor.png`,
-        ].map(n => `/models/Avatar_Bases/Hacker Class/Hacker variant textures/Skin variations/${n}`),
+        ].map(n => `${contentRootUrl}avatars/Hacker Class/Hacker variant textures/Skin variations/${n}`),
       ],
     ],
     clothing: _pathize({
@@ -807,12 +801,11 @@ const avatarSpecs = [
         // `Hacker_Dress_10_11_BaseColor.jpg`,
         `Hacker_Dress_10_11_Normal.jpg`,
       ],
-    }, n => `/models/Avatar_Bases/Hacker Class/Hacker variant textures/texture/${n}`),
+    }, n => `${contentRootUrl}avatars/Hacker Class/Hacker variant textures/texture/${n}`),
   },
   {
     name: 'dropHunter',
-    base: `/models/Avatar_Bases/Drophunter Class/DropHunter_Master_v3_Guilty.vrm`,
-    // base: `/models/Avatar_Bases/Drophunter Class/DropHunter_Master_v3.1_Guilty.glb`,
+    base: `${contentRootUrl}avatars/Drophunter Class/DropHunter_Master_v3_Guilty.vrm`,
     eye: [
       `IMG_2817.png`,
       `IMG_2818.png`,
@@ -849,7 +842,7 @@ const avatarSpecs = [
       `IMG_2853.png`,
       `IMG_2854.png`,
       `IMG_2855.png`,
-    ].map(name => `/models/Avatar_Bases/Drophunter Class/Variation textures/Eye_Colors/${name}`),
+    ].map(name => `${contentRootUrl}avatars/Drophunter Class/Variation textures/Eye_Colors/${name}`),
     skin: [
       [
         'face',
@@ -878,7 +871,7 @@ const avatarSpecs = [
           `Skin variations/Skin tone 2/Anime_Proj_base_NoClothes_Face_BaseColor.png`,
           `Skin variations/Skin tone 3/Anime_Proj_base_NoClothes_Face_BaseColor.png`,
           `Skin variations/Skin tone 4/Anime_Proj_base_NoClothes_Face_BaseColor.png`,
-        ].map(n => `/models/Avatar_Bases/Drophunter Class/Variation textures/${n}`),
+        ].map(n => `${contentRootUrl}avatars/Drophunter Class/Variation textures/${n}`),
       ],
       [
         'body',
@@ -907,7 +900,7 @@ const avatarSpecs = [
           `Skin variations/Thigh highs/ThighHighs_Tone_2.png`,
           `Skin variations/Thigh highs/ThighHighs_Tone_3.png`,
           `Skin variations/Thigh highs/ThighHighs_Tone_4.png`,
-        ].map(n => `/models/Avatar_Bases/Drophunter Class/Variation textures/${n}`),
+        ].map(n => `${contentRootUrl}avatars/Drophunter Class/Variation textures/${n}`),
       ],
       [
         'mouth',
@@ -1253,7 +1246,7 @@ const avatarSpecs = [
         `Outfit_10_Textures/Original/DropHunter_Outfit_10_Updated jacket_shorts1_BaseColor.png`,
         `Outfit_10_Textures/Cyan/DropHunter_Outfit_10_Updated jacket_shorts1_BaseColor.png`,
       ],
-    }, n => `/models/Avatar_Bases/Drophunter Class/Variation textures/${n}`),
+    }, n => `${contentRootUrl}avatars/Drophunter Class/Variation textures/${n}`),
   },
 ];
 // const seed = 'b';
