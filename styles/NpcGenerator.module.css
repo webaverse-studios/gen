@@ -1,0 +1,297 @@
+@keyframes rotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(180deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.rotate {
+  animation-name: rotate;
+  animation-duration: 1s;
+  animation-iteration-count: infinite;
+  animation-timing-function: linear;
+}
+
+/* */
+
+.npcGenerator {
+  width: inherit;
+  height: inherit;
+
+  --image-size: 100px;
+}
+
+/* */
+
+.npcGenerator .row {
+  display: flex;
+  flex: 1;
+  align-items: flex-start;
+}
+.npcGenerator .row.fill {
+  justify-content: space-between;
+}
+
+
+/* */
+
+.npcGenerator .input {
+  min-width: 600px;
+  margin-right: 15px;
+  padding: 5px;
+  font-size: 24px;
+}
+.npcGenerator .button {
+  display: inline-block;
+  font-size: 30px;
+  padding: 5px;
+  margin-right: 5px;
+  border: 3px solid currentColor;
+  cursor: pointer;
+}
+.npcGenerator .button:hover {
+  color: #FFF;
+  background-color: #000;
+  border-color: #000;
+}
+.npcGenerator .select {
+  width: 150px;
+  margin-right: 15px;
+  padding: 5px;
+  border: 3px solid currentColor;
+  font: inherit;
+}
+
+/* */
+
+.npcGenerator .interrogation {
+  display: flex;
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 300px;
+  min-height: 100vh;
+  padding: 5px;
+  flex-direction: column;
+  background-color: #CCC;
+  font-size: 13px;
+}
+
+/* */
+
+.npcGenerator .interrogation .conversation {
+  display: flex;
+  flex-direction: column;
+  /* flex: 1; */
+  height: 100vh;
+  overflow-y: scroll;
+}
+
+/* */
+
+.npcGenerator .interrogation .conversation .character,
+.npcGenerator .interrogation .conversation .setting
+{
+  display: flex;
+  flex-direction: column;
+  background-color: #EEE;
+  margin-bottom: 5px;
+  padding: 5px;
+}
+
+/* */
+
+.npcGenerator .interrogation .conversation .inputBar,
+.npcGenerator .interrogation .conversation .inputBarPlaceholder {
+  height: 100px;
+}
+.npcGenerator .interrogation .conversation .inputBar.hasFiles,
+.npcGenerator .interrogation .conversation .inputBarPlaceholder.hasFiles {
+  height: 230px;
+}
+
+.npcGenerator .interrogation .conversation .inputBar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: #000;
+}
+
+.npcGenerator .interrogation .conversation .inputBar .button {
+  color: #FFF;
+}
+.npcGenerator .interrogation .conversation .inputBar .button:hover {
+  color: #000;
+  border-color: #FFF;
+  background-color: #FFF;
+}
+
+
+/* */
+
+.npcGenerator .interrogation .messages {
+  display: flex;
+  flex-direction: column;
+  /* flex: 1; */
+}
+.npcGenerator .interrogation .messages .message {
+  display: flex;
+  flex-direction: column;
+}
+.npcGenerator .interrogation .messages .message:not(.hero) .wrap {
+  display: flex;
+}
+.npcGenerator .interrogation .messages .message .name {
+  font-weight: 600;
+  margin-right: 5px;
+}
+
+/* */
+
+.npcGenerator .interrogation .messages .message.text img {
+  display: inline-flex;
+  width: var(--image-size);
+  height: var(--image-size);
+}
+
+/* */
+
+.npcGenerator .interrogation .messages .message.setting img {
+  height: var(--image-size);
+  width: 100%;
+  object-fit: cover;
+}
+
+/* */
+
+.npcGenerator .interrogation .messages .message.character img {
+  height: var(--image-size);
+  width: var(--image-size);
+  margin: auto;
+  object-fit: cover;
+  border-radius: 1000px;
+}
+
+/* .npcGenerator .interrogation .spacer {
+  flex: 1;
+} */
+.npcGenerator .interrogation .input {
+  /* min-width: 100%; */
+  min-width: 0;
+  margin-right: 5px;
+  flex: 1;
+  font-size: inherit;
+}
+
+/* */
+
+.npcGenerator .interrogation .messageInput {
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+  background-color: #111;
+  border-radius: 5px;
+  user-select: none;
+}
+
+.npcGenerator .interrogation .messageInput .input {
+  margin-bottom: 10px;
+}
+
+.npcGenerator .interrogation .messageInput .attachments {
+  display: inline-flex;
+}
+
+.npcGenerator .interrogation .messageInput .attachments .attachment {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  padding: 5px;
+  margin-right: 5px;
+  margin-bottom: 5px;
+  background: #222;
+  border-radius: 5px;
+}
+
+.npcGenerator .interrogation .messageInput .attachments .attachment .img {
+  width: var(--image-size);
+  height: var(--image-size);
+}
+.npcGenerator .interrogation .messageInput .attachments .attachment .img.placeholder:not(.small) {
+  padding: 15px;
+}
+.npcGenerator .interrogation .messageInput .attachments .attachment .img.placeholder.small {
+  width: 15px;
+  height: 15px;
+}
+
+.npcGenerator .interrogation .messageInput .attachments .attachment .name {
+  /* display: inline-flex;
+  align-items: center; */
+  max-width: var(--image-size);
+  height: 15px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #FFF;
+}
+
+.npcGenerator .interrogation .messageInput .attachments .attachment .remove {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background-color: #222;
+  cursor: pointer;
+}
+.npcGenerator .interrogation .messageInput .attachments .attachment .remove:hover {
+  background-color: #e53935;
+}
+.npcGenerator .interrogation .messageInput .attachments .attachment .remove:active {
+  background-color: #c62828;
+}
+
+.npcGenerator .interrogation .messageInput .attachments .attachment .remove .img {
+  width: 20px;
+  height: 20px;
+  padding: 2px;
+  filter: invert(1);
+}
+
+.npcGenerator .interrogation .messageInput .smallButton {
+  display: flex;
+  flex-direction: column;
+  background-color: #000;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.npcGenerator .interrogation .messageInput .smallButton:not(:last-child) {
+  margin-right: 5px;
+}
+.npcGenerator .interrogation .messageInput .smallButton:hover {
+  background-color: #1e88e5;
+}
+.npcGenerator .interrogation .messageInput .smallButton:active {
+  background-color: #1565c0;
+}
+
+.npcGenerator .interrogation .messageInput .smallButton .img {
+  width: 50px;
+  height: 30px;
+  padding: 5px;
+  filter: invert(1);
+}
+
+/* */
+
+.npcGenerator .hidden {
+  display: none;
+}
