@@ -4,7 +4,7 @@ import {AiServer} from '../../src/servers/ai-server.js';
 const aiServer = new AiServer();
 
 export default function handler(request, response) {
-  handleRequest.handleRequest(request, response);  
+  aiServer.handleRequest(request, response);
   
   // response.status(200).json({
   //   body: 'Hello content: ' + request.url,

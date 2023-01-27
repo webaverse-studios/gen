@@ -82,7 +82,7 @@ export class AiServer {
   }
   async handleRequest(req, res) {
     try {
-      console.log('ai server handle', req.url);
+      console.log('ai server handle request', req.url);
 
       let match;
       if (match = req.url.match(/^\/api\/ai\/(completions|embeddings)/)) {
