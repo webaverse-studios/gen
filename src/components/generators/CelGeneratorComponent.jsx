@@ -4,6 +4,9 @@ import {
   img2img,
 } from '../../clients/sd-image-client.js';
 import {
+  VQAClient,
+} from '../../clients/vqa-client.js'
+import {
   SceneGallery,
 } from '../image-gallery/SceneGallery.jsx';
 import {
@@ -26,23 +29,24 @@ const smallHeight = height / blockSize;
 
 //
 
-// export const img2img = async ({
-//   prompt = 'test',
-//   negativePrompt = '',
-//   width = 512,
-//   height = 512,
-//   imageDataUrl = '',
-//   maskImageDataUrl = '',
-//   maskBlur = 4, // default 4
-//   maskTransparency = 0,
-//   falloffExponent = 1, // default 1
-//   randomness = 0, // default 0
-// } = {}) => {
-// }
+const vqaClient = new VQAClient();
+
+//
 
 const cancelEvent = e => {
   e.preventDefault();
   e.stopPropagation();
+};
+const blob2dataUrl = async blob => {
+  const fileReader = new FileReader();
+  const promise = new Promise((accept, reject) => {
+    fileReader.onload = e => {
+      accept(e.target.result);
+    };
+    fileReader.onerror = reject;
+  });
+  fileReader.readAsDataURL(blob);
+  return promise;
 };
 
 //
@@ -328,18 +332,52 @@ const CelRenderer = ({
           `;
           document.body.appendChild(skyImageMaskCanvas3);
           
-          const skyImageMaskCanvas4 = maskCanvasToAlphaCanvas(imageBitmap, skyImageMaskCanvas3);
+          const alphaCanvas = maskCanvasToAlphaCanvas(imageBitmap, skyImageMaskCanvas3);
 
           // XXX debug
-          skyImageMaskCanvas4.style.cssText = `\
+          alphaCanvas.style.cssText = `\
             background: red;
           `;
-          skyImageMaskCanvas4.classList.add('alphaCanvas');
-          document.body.appendChild(skyImageMaskCanvas4);
+          alphaCanvas.classList.add('alphaCanvas');
+          document.body.appendChild(alphaCanvas);
 
-          /*
-            img2img
-          */
+          {
+            const caption = await vqaClient.getImageCaption(file);
+
+            const imageDataUrl = await blob2dataUrl(file);
+
+            const alphaCanvasBlob = await new Promise((accept, reject) => {
+              alphaCanvas.toBlob(blob => {
+                accept(blob);
+              }, 'image/png');
+            });
+            const alphaCanvasDataUrl = await blob2dataUrl(alphaCanvasBlob);
+
+            // export const img2img = async ({
+            //   prompt = 'test',
+            //   negativePrompt = '',
+            //   width = 512,
+            //   height = 512,
+            //   imageDataUrl = '',
+            //   maskImageDataUrl = '',
+            //   maskBlur = 4, // default 4
+            //   maskTransparency = 0,
+            //   falloffExponent = 1, // default 1
+            //   randomness = 0, // default 0
+            // } = {}) => {
+            // }
+            console.log('run args', {
+              prompt: caption,
+              imageDataUrl,
+              maskImageDataUrl: alphaCanvasDataUrl,
+            })
+            const img = await img2img({
+              prompt: caption,
+              imageDataUrl,
+              maskImageDataUrl: alphaCanvasDataUrl,
+            });
+            console.log('got result', img);
+          }
 
           celMesh.material.uniforms.maskTex.value = skyImageMaskCanvas3;
           celMesh.material.uniforms.maskTex.needsUpdate = true;
