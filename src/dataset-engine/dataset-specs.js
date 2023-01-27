@@ -27,8 +27,10 @@ const fetchText = async u => {
 
 //
 
-const datasetSpecsBasePath = `/lore/datasets/specs/`;
-const datasetDataBasePath = `/lore/datasets/data/`;
+// const datasetsBasePath = `https://raw.githack.com/webaverse/content/main/lore/`;
+const datasetsBasePath = `https://cdn.jsdelivr.net/gh/webaverse/content@main/lore/`;
+const datasetSpecsBasePath = `${datasetsBasePath}specs/`;
+const datasetDataBasePath = `${datasetsBasePath}data/`;
 const mdSpecs = [
   {
     url: 'characters.md',
