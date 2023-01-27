@@ -1,7 +1,10 @@
 import {useEffect, useState, useRef} from 'react';
 import * as THREE from 'three';
+// import {
+//   img2img,
+// } from '../../clients/sd-image-client.js';
 import {
-  img2img,
+  new_img_inpainting,
 } from '../../clients/sd-image-client.js';
 import {
   VQAClient,
@@ -115,13 +118,13 @@ const getImageMasks = async (blob, prompts = ['sky'], {
 //
 
 const maskCanvasToAlphaCanvas = (canvas, maskCanvas) => {
-  if (canvas.width !== maskCanvas.width || canvas.height !== maskCanvas.height) {
-    console.warn('canvas size mismatch',
-      [canvas.width, canvas.height],
-      [maskCanvas.width, maskCanvas.height],
-    );
-    throw new Error('canvas size mismatch');
-  }
+  // if (canvas.width !== maskCanvas.width || canvas.height !== maskCanvas.height) {
+  //   console.warn('canvas size mismatch',
+  //     [canvas.width, canvas.height],
+  //     [maskCanvas.width, maskCanvas.height],
+  //   );
+  //   throw new Error('canvas size mismatch');
+  // }
   const alphaCanvas = document.createElement('canvas');
   alphaCanvas.width = canvas.width;
   alphaCanvas.height = canvas.height;
@@ -148,16 +151,16 @@ const maskCanvasToAlphaCanvas = (canvas, maskCanvas) => {
     // const a2 = 255 - v;
     const a2 = 255 - maskR;
 
-    canvasImageData.data[i + 0] = r;
-    canvasImageData.data[i + 1] = g;
-    canvasImageData.data[i + 2] = b;
-    canvasImageData.data[i + 3] = a2;
+    canvasImageData.data[i + 0] = maskR;
+    canvasImageData.data[i + 1] = maskR;
+    canvasImageData.data[i + 2] = maskR;
+    canvasImageData.data[i + 3] = 255;
   }
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.putImageData(canvasImageData, 0, 0);
 
-  globalThis.maskImageData = maskImageData;
-  globalThis.canvasImageData = canvasImageData;
+  // globalThis.maskImageData = maskImageData;
+  // globalThis.canvasImageData = canvasImageData;
 
   return alphaCanvas;
 }
@@ -353,30 +356,15 @@ const CelRenderer = ({
             });
             const alphaCanvasDataUrl = await blob2dataUrl(alphaCanvasBlob);
 
-            // export const img2img = async ({
-            //   prompt = 'test',
-            //   negativePrompt = '',
-            //   width = 512,
-            //   height = 512,
-            //   imageDataUrl = '',
-            //   maskImageDataUrl = '',
-            //   maskBlur = 4, // default 4
-            //   maskTransparency = 0,
-            //   falloffExponent = 1, // default 1
-            //   randomness = 0, // default 0
-            // } = {}) => {
-            // }
-            console.log('run args', {
-              prompt: caption,
-              imageDataUrl,
-              maskImageDataUrl: alphaCanvasDataUrl,
-            })
-            const img = await img2img({
-              prompt: caption,
-              imageDataUrl,
-              maskImageDataUrl: alphaCanvasDataUrl,
+            const img = await new_img_inpainting({
+              prompt: 'multicolor storm ' + caption,
+              ImgDataUrl: imageDataUrl,
+              maskDataUrl: alphaCanvasDataUrl,
             });
-            console.log('got result', img);
+            img.style.cssText = `\
+              background: red;
+            `;
+            document.body.appendChild(img);
           }
 
           celMesh.material.uniforms.maskTex.value = skyImageMaskCanvas3;
