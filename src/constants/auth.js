@@ -1,1 +1,0 @@
-export const OPENAI_API_KEY = globalThis?.process?.env?.['OPENAI_KEY'] ?? '';
