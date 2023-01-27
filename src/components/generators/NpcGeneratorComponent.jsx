@@ -285,8 +285,6 @@ const avatarSpecs = [
   {
     name: 'hacker',
     base: `${contentRootUrl}avatars/Hacker Class/HackerClassMaster_v2.1_Guilty.vrm`,
-    // base: `https://cdn.jsdelivr.net/gh/webaverse/content@main/avatars/Hacker Class/HackerClassMaster_v2.1_Guilty.vrm`,
-    // base: `/models/Avatar_Bases/Hacker Class/HackerClassMaster_v2.1_Guilty.vrm`,
     eye: [
       `IMG_2857.png`,
       `IMG_2858.png`,
