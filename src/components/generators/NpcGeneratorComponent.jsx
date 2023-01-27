@@ -1,6 +1,6 @@
 import {useState, useEffect, useRef} from 'react';
-import ReactDOM from 'react-dom';
-import ReactDOMClient from 'react-dom/client';
+// import ReactDOM from 'react-dom';
+// import ReactDOMClient from 'react-dom/client';
 import * as THREE from 'three';
 import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
@@ -30,12 +30,12 @@ import {
   loadImage,
   fetchArrayBuffer,
 } from '../../../utils.js';
-import {
-  createSeedImage,
-} from '../../../canvas/seed-image.js';
-import {
-  colors,
-} from '../../constants/detectron-colors.js';
+// import {
+//   createSeedImage,
+// } from '../../../canvas/seed-image.js';
+// import {
+//   colors,
+// } from '../../constants/detectron-colors.js';
 import {
   blob2img,
   canvas2blob,
@@ -70,9 +70,9 @@ import {
   maxAvatarQuality,
 } from '../../avatars/constants.js';
 import avatarsWasmManager from '../../avatars/avatars-wasm-manager.js';
-import {
-  makeId,
-} from '../../../utils.js';
+// import {
+//   makeId,
+// } from '../../../utils.js';
 import {
   AiClient,
 } from '../../../clients/ai/ai-client.js';
