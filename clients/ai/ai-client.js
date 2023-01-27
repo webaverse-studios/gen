@@ -1,20 +1,21 @@
 import {model} from '../../constants/model-constants.js';
 import GPT3Tokenizer from 'gpt3-tokenizer';
-import {OPENAI_API_KEY} from '../../src/constants/auth.js';
+// import {OPENAI_API_KEY} from '../../src/constants/auth.js';
 
 export function makeGenerateFn() {
   async function generate(params = {}) {
     const requestOptions = {
-      method: "POST",
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
-        Authorization: "Bearer " + String(OPENAI_API_KEY),
+        'Content-Type': 'application/json',
+        // Authorization: 'Bearer ' + String(OPENAI_API_KEY),
       },
       body: JSON.stringify(params),
     };
     try {
       const response = await fetch(
-        "https://api.openai.com/v1/completions",
+        // 'https://api.openai.com/v1/completions',
+        '/api/ai/completions',
         requestOptions
       );
       if (response.status !== 200) {
@@ -67,10 +68,10 @@ export function makeEmbedFn() {
   async function embed(input) {
     const embeddingModel = `text-embedding-ada-002`;
     const requestOptions = {
-      method: "POST",
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
-        Authorization: "Bearer " + String(OPENAI_API_KEY),
+        'Content-Type': 'application/json',
+        // Authorization: "Bearer " + String(OPENAI_API_KEY),
       },
       body: JSON.stringify({
         input,
@@ -79,7 +80,8 @@ export function makeEmbedFn() {
     };
     try {
       const response = await fetch(
-        "https://api.openai.com/v1/embeddings ",
+        // 'https://api.openai.com/v1/embeddings',
+        '/api/ai/embeddings',
         requestOptions
       );
       if (response.status !== 200) {
