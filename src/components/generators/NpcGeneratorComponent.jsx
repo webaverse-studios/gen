@@ -139,6 +139,14 @@ const upVector = new THREE.Vector3(0, 1, 0);
 
 //
 
+const makeRendererWithBackground = (canvas) => {
+  const renderer = makeRenderer(canvas);
+  renderer.setClearColor(0xFFFFFF, 1);
+  return renderer;
+};
+
+//
+
 const loadDatasetGenerator = async () => {
   const datasetSpecs = await getDatasetSpecs();
   const datasetGenerator = new DatasetGenerator({
@@ -1963,7 +1971,7 @@ class AvatarManager extends EventTarget {
     this.lastTimestamp = performance.now();
   }
   static async makeContext(canvas) {
-    const renderer = makeRenderer(canvas);
+    const renderer = makeRendererWithBackground(canvas);
 
     const scene = new THREE.Scene();
     scene.autoUpdate = false;
@@ -2203,7 +2211,7 @@ class AvatarManager extends EventTarget {
 //
 
 const retextureAvatar = async (canvas, prompt, negativePrompt) => {
-  const renderer = makeRenderer(canvas);
+  const renderer = makeRendererWithBackground(canvas);
 
   const scene = new THREE.Scene();
   scene.autoUpdate = false;
