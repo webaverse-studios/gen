@@ -9,6 +9,7 @@ import CharacterGeneratorComponent from '../src/components/generators/CharacterG
 import Item2DGeneratorComponent from '../src/components/generators/Item2DGeneratorComponent.jsx';
 import Item3DGeneratorComponent from '../src/components/generators/Item3DGeneratorComponent.jsx';
 
+import CelGeneratorComponent from '../src/components/generators/CelGeneratorComponent.jsx';
 import NpcGeneratorComponent from '../src/components/generators/NpcGeneratorComponent.jsx';
 
 import TitleScreenComponent from '../src/components/title-screen/TitleScreen.jsx';
@@ -35,6 +36,10 @@ const tabs = [
   {
     tab: 'avatarGenerator',
     label: 'Avatar',
+  },
+  {
+    tab: 'celGenerator',
+    label: 'Cel',
   },
   {
     tab: 'npcGenerator',
@@ -119,6 +124,9 @@ export const Gen = () => {
             }
             case 'avatarGenerator': {
               return <AvatarGeneratorComponent />
+            }
+            case 'celGenerator': {
+              return <CelGeneratorComponent />
             }
             case 'npcGenerator': {
               return <NpcGeneratorComponent />
