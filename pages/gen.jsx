@@ -9,6 +9,8 @@ import CharacterGeneratorComponent from '../src/components/generators/CharacterG
 import Item2DGeneratorComponent from '../src/components/generators/Item2DGeneratorComponent.jsx';
 import Item3DGeneratorComponent from '../src/components/generators/Item3DGeneratorComponent.jsx';
 
+import NpcGeneratorComponent from '../src/components/generators/NpcGeneratorComponent.jsx';
+
 import TitleScreenComponent from '../src/components/title-screen/TitleScreen.jsx';
 
 import {useRouter} from '../src/generators/router.js';
@@ -33,6 +35,10 @@ const tabs = [
   {
     tab: 'avatarGenerator',
     label: 'Avatar',
+  },
+  {
+    tab: 'npcGenerator',
+    label: 'Npc',
   },
   {
     tab: 'mobGenerator',
@@ -113,6 +119,9 @@ export const Gen = () => {
             }
             case 'avatarGenerator': {
               return <AvatarGeneratorComponent />
+            }
+            case 'npcGenerator': {
+              return <NpcGeneratorComponent />
             }
             case 'mobGenerator': {
               return <MobGeneratorComponent />
