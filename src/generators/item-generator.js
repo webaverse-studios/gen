@@ -4,10 +4,10 @@ import {ImageAiClient} from '../clients/image-client.js';
 import materialColors from '../constants/material-colors.js';
 import {prompts} from '../constants/prompts.js';
 import {ColorScheme} from '../utils/color-scheme.js';
-import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
-import {
-  img2imgBlob,
-} from '../clients/image-client.js';
+// import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
+// import {
+//   img2imgBlob,
+// } from '../clients/image-client.js';
 import {img2canvas} from '../utils/convert-utils.js';
 
 //
@@ -129,11 +129,11 @@ export class ItemGenerator {
       maskBlob,
     });
 
-    const imgBlob = await img2imgBlob({
-      prompt,
+    const imgBlob = await imageAiClient.editImg(
       blob,
       maskBlob,
-    });
+      prompt,
+    );
     return imgBlob;
   }
   async compileMesh(img) {

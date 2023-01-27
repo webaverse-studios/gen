@@ -62,7 +62,7 @@ export class ImageAiClient {
   }
 }
 
-export const img2imgBlob = async ({
+/* export const img2imgBlob = async ({
   prompt = 'test',
   // negativePrompt = '',
   // width = 512,
@@ -108,4 +108,4 @@ export const img2img = async ({
   });
   const img = await blob2img(resultBlob);
   return img;
-};
+}; */

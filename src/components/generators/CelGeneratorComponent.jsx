@@ -1,6 +1,9 @@
 import {useEffect, useState, useRef} from 'react';
 import * as THREE from 'three';
 import {
+  img2img,
+} from '../../clients/sd-image-client.js';
+import {
   SceneGallery,
 } from '../image-gallery/SceneGallery.jsx';
 import {
@@ -22,6 +25,20 @@ const smallWidth = width / blockSize;
 const smallHeight = height / blockSize;
 
 //
+
+// export const img2img = async ({
+//   prompt = 'test',
+//   negativePrompt = '',
+//   width = 512,
+//   height = 512,
+//   imageDataUrl = '',
+//   maskImageDataUrl = '',
+//   maskBlur = 4, // default 4
+//   maskTransparency = 0,
+//   falloffExponent = 1, // default 1
+//   randomness = 0, // default 0
+// } = {}) => {
+// }
 
 const cancelEvent = e => {
   e.preventDefault();
@@ -93,12 +110,67 @@ const getImageMasks = async (blob, prompts = ['sky'], {
 
 //
 
+const maskCanvasToAlphaCanvas = (canvas, maskCanvas) => {
+  if (canvas.width !== maskCanvas.width || canvas.height !== maskCanvas.height) {
+    console.warn('canvas size mismatch',
+      [canvas.width, canvas.height],
+      [maskCanvas.width, maskCanvas.height],
+    );
+    throw new Error('canvas size mismatch');
+  }
+  const alphaCanvas = document.createElement('canvas');
+  alphaCanvas.width = canvas.width;
+  alphaCanvas.height = canvas.height;
+  const ctx = alphaCanvas.getContext('2d');
+  
+  ctx.drawImage(canvas, 0, 0);
+  const canvasImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  
+  ctx.drawImage(maskCanvas, 0, 0);
+  const maskImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+  for (let i = 0; i < canvasImageData.data.length; i += 4) {
+    const r = canvasImageData.data[i + 0];
+    const g = canvasImageData.data[i + 1];
+    const b = canvasImageData.data[i + 2];
+    const a = canvasImageData.data[i + 3];
+
+    const maskR = maskImageData.data[i + 0];
+    const maskG = maskImageData.data[i + 1];
+    const maskB = maskImageData.data[i + 2];
+    const maskA = maskImageData.data[i + 3];
+
+    // const v = (maskR + maskG + maskB) / 3;
+    // const a2 = 255 - v;
+    const a2 = 255 - maskR;
+
+    canvasImageData.data[i + 0] = r;
+    canvasImageData.data[i + 1] = g;
+    canvasImageData.data[i + 2] = b;
+    canvasImageData.data[i + 3] = a2;
+  }
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.putImageData(canvasImageData, 0, 0);
+
+  globalThis.maskImageData = maskImageData;
+  globalThis.canvasImageData = canvasImageData;
+
+  return alphaCanvas;
+}
+
+//
+
 class CelMesh extends THREE.Mesh {
   constructor({
     images = [],
   }) {
     // full screen quad
     const geometry = new THREE.PlaneGeometry(2, 2);
+    // flip uv y
+    const uvs = geometry.attributes.uv.array;
+    for (let i = 0; i < uvs.length; i += 2) {
+      uvs[i + 1] = 1 - uvs[i + 1];
+    }
     
     // only one image is supported for now
     const image = images[0];
@@ -175,7 +247,7 @@ const CelRenderer = ({
 
       (async () => {
         const imageBitmap = await createImageBitmap(file, {
-          imageOrientation: 'flipY',
+          // imageOrientation: 'flipY',
         });
         if (!live) return;
 
@@ -202,9 +274,9 @@ const CelRenderer = ({
           images: [imageBitmap],
         });
         celMesh.frustumCulled = false;
-        celMesh.onBeforeRender = () => {
-          console.log('render');
-        };
+        // celMesh.onBeforeRender = () => {
+        //   console.log('render');
+        // };
         scene.add(celMesh);
 
         (async () => {
@@ -236,12 +308,40 @@ const CelRenderer = ({
           // XXX debug
           skyImageMaskCanvas2.style.cssText = `\
             background: red;
-            width: ${width}px;
-            height: ${height}px;
           `;
           document.body.appendChild(skyImageMaskCanvas2);
 
-          celMesh.material.uniforms.maskTex.value = skyImageMaskCanvas2;
+          // XXX debug
+          const skyImageMaskCanvas3 = document.createElement('canvas');
+          skyImageMaskCanvas3.width = imageBitmap.width;
+          skyImageMaskCanvas3.height = imageBitmap.height;
+          const ctx3 = skyImageMaskCanvas3.getContext('2d');
+          ctx3.drawImage(
+            skyImageMaskCanvas2,
+            0, 0, skyImageMaskCanvas2.width, skyImageMaskCanvas2.height,
+            0, 0, skyImageMaskCanvas3.width, skyImageMaskCanvas3.height,
+          );
+
+          // XXX debug
+          skyImageMaskCanvas3.style.cssText = `\
+            background: red;
+          `;
+          document.body.appendChild(skyImageMaskCanvas3);
+          
+          const skyImageMaskCanvas4 = maskCanvasToAlphaCanvas(imageBitmap, skyImageMaskCanvas3);
+
+          // XXX debug
+          skyImageMaskCanvas4.style.cssText = `\
+            background: red;
+          `;
+          skyImageMaskCanvas4.classList.add('alphaCanvas');
+          document.body.appendChild(skyImageMaskCanvas4);
+
+          /*
+            img2img
+          */
+
+          celMesh.material.uniforms.maskTex.value = skyImageMaskCanvas3;
           celMesh.material.uniforms.maskTex.needsUpdate = true;
         })();
 
