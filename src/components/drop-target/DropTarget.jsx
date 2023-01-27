@@ -20,11 +20,10 @@ const nop = () => {};
 export const DropTarget = ({
   className = null,
   newLabel = '',
-  // files = [],
-  onFilesAdd = nop,
   onNew = null,
-  // onDrop = nop,
-  // onSubmit = nop,
+  selectLabel = '',
+  onSelect = null,
+  onFilesAdd = nop,
   multiple = false,
 }) => {
   useEffect(() => {
@@ -62,6 +61,9 @@ export const DropTarget = ({
     >
       {onNew ?
         <div><a onClick={onNew}><b>{newLabel}</b></a></div>
+      : null}
+      {onSelect ?
+        <div><a onClick={onSelect}><b>{selectLabel}</b></a></div>
       : null}
       <div>
         {onNew ? 'or, ' : null}
