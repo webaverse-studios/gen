@@ -5,7 +5,7 @@ import {
   getDatasetItems,
   getTrainingItems,
   getDatasetItemsForDatasetSpec,
-} from '../../lore/dataset-engine/dataset-specs.js';
+} from '../../src/dataset-engine/dataset-specs.js';
 // import {DatasetGenerator} from './lore/dataset-engine/dataset-generator.js';
 // import {
 //   formatDatasetItems,

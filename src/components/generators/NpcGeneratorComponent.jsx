@@ -84,11 +84,11 @@ import {
   // getDatasetItems,
   // getTrainingItems,
   // getDatasetItemsForDatasetSpec,
-} from '../../../lore/dataset-engine/dataset-specs.js';
+} from '../../dataset-engine/dataset-specs.js';
 import {
   DatasetGenerator,
   // CachedDatasetGenerator,
-} from '../../../lore/dataset-engine/dataset-generator.js';
+} from '../../dataset-engine/dataset-generator.js';
 import {PathMesh} from '../../zine-aux/meshes/path-mesh.js';
 
 import Markdown from 'marked-react';

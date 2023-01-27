@@ -20,10 +20,10 @@ import {
 
 import {
   getDatasetSpecs,
-} from '../../lore/dataset-engine/dataset-specs.js';
+} from '../dataset-engine/dataset-specs.js';
 import {
   DatasetGenerator,
-} from '../../lore/dataset-engine/dataset-generator.js';
+} from '../dataset-engine/dataset-generator.js';
 
 //
 

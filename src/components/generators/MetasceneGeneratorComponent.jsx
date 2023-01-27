@@ -138,12 +138,12 @@ import {
   getDatasetItems,
   getTrainingItems,
   getDatasetItemsForDatasetSpec,
-} from '../../../lore/dataset-engine/dataset-specs.js';
+} from '../../dataset-engine/dataset-specs.js';
 
 import {
   DatasetGenerator,
   // CachedDatasetGenerator,
-} from '../../../lore/dataset-engine/dataset-generator.js';
+} from '../../dataset-engine/dataset-generator.js';
 import {
   useRouter,
 } from '../../generators/router.js';
