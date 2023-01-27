@@ -2,11 +2,17 @@
   width: inherit;
   height: inherit;
 }
-.AvatarGenerator .input {
+.AvatarGenerator .input[type="text"] {
   min-width: 800px;
   margin-right: 15px;
   padding: 10px;
   font-size: 24px;
+}
+
+.AvatarGenerator .input[type="checkbox"] {
+  height: 49px;
+  width: 49px;
+  transform: translateY(25%);
 }
 .AvatarGenerator .button {
   display: inline-block;
@@ -27,5 +33,5 @@
   font: inherit;
 }
 .AvatarGenerator .select .option {
-
 }
+

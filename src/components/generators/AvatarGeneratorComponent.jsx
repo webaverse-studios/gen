@@ -302,12 +302,12 @@ const AvatarGeneratorComponent = () => {
           if (!generated) {
             return (<div className={styles.button} onClick={async () => {
               await generateClick();
-            }}>Generate</div>)
+            }}>Randomize Avatar</div>)
           } else {
             return (
                 <div>
                   <div className={styles.button} onClick={async () => {
-                    await generateClick();}}>Generate</div>
+                    await generateClick();}}>Randomize Avatar</div>
                   <AvatarRendererComponent model={model}/>
                 </div>
             )
