@@ -61,7 +61,7 @@ function MeshSelector(props){
 
     return (
         <div>
-            <select onChange={handleChange}>
+            <select className={styles.select} onChange={handleChange}>
                 {options.map((option) => (
                     <option key={option} value={option}>
                         {option}
@@ -77,8 +77,8 @@ function MeshSelector(props){
                 <option value="sd">SD</option>
                 <option value="openai">OpenAI</option>
             </select>
-            <button onClick={() => {editTexture(selectedOption.clone(), prompt, renderer, projection_renderer, mask_renderer, symmetrical)}}>Edit</button>
-            <input  type="checkbox" checked={symmetrical} onChange={e => {setSymmetrical(!symmetrical)}}/>
+            <div className={styles.button} onClick={() => {editTexture(selectedOption.clone(), prompt, renderer, projection_renderer, mask_renderer, symmetrical)}}>Generate Texture</div>
+            <input type={"checkbox"} className={styles.input} checked={symmetrical} onChange={e => {setSymmetrical(!symmetrical)}} title={"Mirror left view texture for right view"}/>
             <div>
                 {selectedOption && <SkinnedMesh3DRenderer mesh={selectedOption.clone()} />}
             </div>
