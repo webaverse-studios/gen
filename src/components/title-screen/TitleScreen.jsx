@@ -252,9 +252,50 @@ const _startApp = (canvas, u) => {
 
 //
 
-const Gallery = ({
-    onLoadImage,
+const GalleryImagePlaceholder = ({
+    imgPlaceholder,
+    onIntersect,
 }) => {
+    const ref = useRef();
+
+    useEffect(() => {
+        const el = ref.current;
+        if (el) {
+            const options = {
+                root: null,
+                rootMargin: '1000px',
+                threshold: 0,
+            };
+            const callback = (entries, observer) => {
+                let isIntersecting = false;
+                for (const entry of entries) {
+                    if (entry.isIntersecting) {
+                        isIntersecting = true;
+                        break;
+                    }
+                }
+                isIntersecting && onIntersect();
+            };
+            let observer = new IntersectionObserver(callback, options);
+            observer.observe(el);
+
+            return () => {
+                observer.disconnect();
+            };
+        }
+    }, [imgPlaceholder, ref.current]);
+
+    return (
+        <div className={styles.imageWrap} ref={ref} />
+    );
+};
+
+//
+
+const Gallery = ({
+    onImageClick,
+}) => {
+    const [imgPlaceholders, setImgPlaceholders] = useState(0);
     const [imgUrls, setImgUrls] = useState([]);
     
     useEffect(() => {
@@ -278,19 +319,32 @@ const Gallery = ({
         };
     }, []);
 
+    const numImgPlaceholdersPerChunk = 16;
+
     return (
         <div className={styles.gallery}>
-            {imgUrls.map((u, i) => {
-               return (
-                   <GalleryImage
-                       src={u}
-                       onClick={e => {
-                            onLoadImage(u);
-                       }}
-                       key={i}
-                   />
-               );
-            })}
+            {(() => {
+                const results = Array(imgPlaceholders);
+                for (let i = 0; i < imgPlaceholders; i++) {
+                    const u = imgUrls[i];
+                    results[i] = u ? (
+                        <GalleryImage
+                            src={u}
+                            onClick={e => {
+                                    onImageClick(u);
+                            }}
+                            key={i}
+                        />
+                    ) : null;
+                }
+                return results;
+            })()}
+            <GalleryImagePlaceholder
+                imgPlaceholder={imgPlaceholders}
+                onIntersect={e => {
+                    setImgPlaceholders(imgPlaceholders + numImgPlaceholdersPerChunk);
+                }}
+            />
         </div>
     );
 };
@@ -429,7 +483,7 @@ const TitleScreen = () => {
                 canvasRef={canvasRef}
             />
             {appStarted ? null : <Gallery
-                onLoadImage={u => {
+                onImageClick={u => {
                     if (canvasRef.current && !appStarted) {
                         setAppStarted(true);
                         _startApp(canvasRef.current, u);
