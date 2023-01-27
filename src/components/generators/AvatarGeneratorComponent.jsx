@@ -1,6 +1,6 @@
 import {useState, useEffect, useRef} from 'react';
 import * as THREE from 'three';
-import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
+// import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 import alea from '../../utils/alea.js';
 import {makeDefaultCamera, makeGltfExporter, makeGltfLoader, makeRenderer} from "../../zine/zine-utils.js";
 import {makePromise} from "../../../utils.js";
@@ -179,7 +179,7 @@ const selectAvatar = async (avatarUrlIndex = Math.floor(rng() * avatarUrls.lengt
   model.matrix.copy(gltf.scene.matrix);
   model.matrixWorld.copy(gltf.scene.matrixWorld);
   model.visible = gltf.scene.visible;
-  while(oldModel.children.length > 0) {
+  while (oldModel.children.length > 0) {
     model.add(oldModel.children[0]);
   }
   model.updateMatrixWorld();
@@ -318,4 +318,3 @@ const AvatarGeneratorComponent = () => {
   );
 };
 export default AvatarGeneratorComponent;
-
