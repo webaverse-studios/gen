@@ -13,6 +13,7 @@ import {
 } from '../../zine/zine-data-specs.js';
 
 import styles from '../../../styles/StoryboardRenderer.module.css';
+import {SceneGallery} from '../image-gallery/SceneGallery.jsx';
 
 //
 
@@ -53,13 +54,18 @@ const StoryboardPlaceholderComponent = ({
   storyboard,
   onPanelSelect,
 }) => {
-  // const [files, setFiles] = useState([]);
+  const [selecting, setSelecting] = useState(false);
 
   const onNew = e => {
     cancelEvent(e);
 
     const panel = storyboard.addPanel();
     onPanelSelect(panel);
+  };
+  const onSelect = e => {
+    cancelEvent(e);
+
+    setSelecting(true);
   };
   const addFiles = newFiles => {
     // const allFiles = files.concat(newFiles);
@@ -80,14 +86,23 @@ const StoryboardPlaceholderComponent = ({
   //   }
   // };
 
-  return (
+  return selecting ? (
+    <SceneGallery onImageClick={async u => {
+      const res = await fetch(u);
+      const file = await res.blob();
+      console.log('load file', file);
+      const panel = storyboard.addPanelFromFile(file);
+      onPanelSelect(panel);
+    }}>
+    </SceneGallery>
+  ) : (
     <DropTarget
       className={styles.panelPlaceholder}
       newLabel='Create New Panel'
-      // files={files}
+      selectLabel='Select Scene'
       onFilesAdd={addFiles}
       onNew={onNew}
-      // onDrop={drop}
+      onSelect={onSelect}
     />
   );
 }
