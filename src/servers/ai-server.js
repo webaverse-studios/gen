@@ -2,9 +2,16 @@ import dotenv from 'dotenv';
 // import {Configuration, OpenAIApi} from 'openai';
 // import {getFormData} from '../utils/http-utils.js';
 // import {blob2img} from '../utils/convert-utils.js';
+import {
+  Readable,
+} from 'stream';
 
 dotenv.config();
 const OPENAI_API_KEY = process.env['OPENAI_KEY'];
+
+if (!OPENAI_API_KEY) {
+  throw new Error('missing OPENAI_KEY');
+}
 
 // const configuration = new Configuration({
 //   apiKey: OPENAI_API_KEY,
@@ -24,6 +31,7 @@ const createImageBlob = async (prompt) => {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${OPENAI_API_KEY}`,
+      'Content-Type': 'application/json',
     },
     body: JSON.stringify({
       prompt,
@@ -31,8 +39,9 @@ const createImageBlob = async (prompt) => {
       size: '1024x1024',
     }),
   });
-  const response = await res.json();
-  const image_url = response.data.data[0].url;
+  const responseData = await res.json();
+  // console.log('got response', res.ok, res.status, responseData);
+  const image_url = responseData.data[0].url;
 
   const res2 = await fetch(image_url);
   const blob = await res2.blob();
@@ -73,23 +82,38 @@ export class AiServer {
   }
   async handleRequest(req, res) {
     try {
+      console.log('ai server handle', req.url);
+
       let match;
       if (match = req.url.match(/^\/api\/ai\/(completions|embeddings)/)) {
         const sub = match[1];
+
+        // console.log('match 1', match);
 
         const proxyRes = await fetch(`https://api.openai.com/v1/${sub}`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${OPENAI_API_KEY}`,
+            'Content-Type': 'application/json',
           },
           // pipe the node request to the fetch body
           body: req,
+          duplex: 'half',
         });
 
-        // pipe the proxy response web stream to the nodejs response stream
-        proxyRes.body.pipe(res);
+        if (proxyRes.ok) {
+          // pipe the proxy response web stream to the nodejs response stream
+          Readable.fromWeb(proxyRes.body).pipe(res);
+        } else {
+          const text = await proxyRes.text();
+          console.warn('got error response', text);
+          res.status(500).send(text);
+        }
       } else if (match = req.url.match(/^\/api\/image-ai\/([^\/\?]+)/)) {
         const method = match[1];
+
+        // console.log('match 2', match);
+
         switch (method) {
           case 'createImageBlob': {
             // read query string
