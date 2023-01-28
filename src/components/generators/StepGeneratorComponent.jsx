@@ -1,20 +1,9 @@
 import {useEffect, useState, useRef} from 'react';
 import * as THREE from 'three';
-// import {
-//   new_img_inpainting,
-// } from '../../clients/sd-image-client.js';
-// import {
-//   VQAClient,
-// } from '../../clients/vqa-client.js'
-// import {
-//   SceneGallery,
-// } from '../image-gallery/SceneGallery.jsx';
 import {
   DropTarget,
 } from '../drop-target/DropTarget.jsx';
-// import {
-//   makeRenderer,
-// } from '../../zine/zine-utils.js';
+import SMParse from '../../clients/sm-parse.js';
 
 import styles from '../../../styles/StepGenerator.module.css';
 
