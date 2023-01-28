@@ -10,6 +10,9 @@ import * as vite from 'vite';
 import {
   AiServer,
 } from './src/servers/ai-server.js';
+import {
+  YoutubeServer,
+} from './src/servers/youtube-server.js';
 
 //
 
@@ -23,6 +26,7 @@ const port = parseInt(process.env.PORT, 10) || 9999;
 //
 
 const aiServer = new AiServer();
+const youtubeServer = new YoutubeServer();
 
 //
 
@@ -111,6 +115,10 @@ const _setHeaders = res => {
       '/api/image-ai/',
     ].some(prefix => req.url.startsWith(prefix))) {
       await aiServer.handleRequest(req, res);
+    } else if ([
+      '/api/youtube/',
+    ].some(prefix => req.url.startsWith(prefix))) {
+      await youtubeServer.handleRequest(req, res);
     } else {
       next();
     }
