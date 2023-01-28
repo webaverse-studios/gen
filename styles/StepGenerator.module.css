@@ -67,227 +67,9 @@
   font: inherit;
 }
 
-/* */
-
-.stepGenerator .interrogation {
-  display: flex;
-  position: fixed;
-  top: 0;
-  right: 0;
-  width: 300px;
-  min-height: 100vh;
-  padding: 5px;
-  flex-direction: column;
-  background-color: #CCC;
-  font-size: 13px;
-}
-
-/* */
-
-.stepGenerator .interrogation .conversation {
+.stepGenerator .stepRenderer {
   display: flex;
   flex-direction: column;
-  /* flex: 1; */
-  height: 100vh;
-  overflow-y: scroll;
-}
-
-/* */
-
-.stepGenerator .interrogation .conversation .character,
-.stepGenerator .interrogation .conversation .setting
-{
-  display: flex;
-  flex-direction: column;
-  background-color: #EEE;
-  margin-bottom: 5px;
-  padding: 5px;
-}
-
-/* */
-
-.stepGenerator .interrogation .conversation .inputBar,
-.stepGenerator .interrogation .conversation .inputBarPlaceholder {
-  height: 100px;
-}
-.stepGenerator .interrogation .conversation .inputBar.hasFiles,
-.stepGenerator .interrogation .conversation .inputBarPlaceholder.hasFiles {
-  height: 230px;
-}
-
-.stepGenerator .interrogation .conversation .inputBar {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background-color: #000;
-}
-
-.stepGenerator .interrogation .conversation .inputBar .button {
-  color: #FFF;
-}
-.stepGenerator .interrogation .conversation .inputBar .button:hover {
-  color: #000;
-  border-color: #FFF;
-  background-color: #FFF;
-}
-
-
-/* */
-
-.stepGenerator .interrogation .messages {
-  display: flex;
-  flex-direction: column;
-  /* flex: 1; */
-}
-.stepGenerator .interrogation .messages .message {
-  display: flex;
-  flex-direction: column;
-}
-.stepGenerator .interrogation .messages .message:not(.hero) .wrap {
-  display: flex;
-}
-.stepGenerator .interrogation .messages .message .name {
-  font-weight: 600;
-  margin-right: 5px;
-}
-
-/* */
-
-.stepGenerator .interrogation .messages .message.text img {
-  display: inline-flex;
-  width: var(--image-size);
-  height: var(--image-size);
-}
-
-/* */
-
-.stepGenerator .interrogation .messages .message.setting img {
-  height: var(--image-size);
-  width: 100%;
-  object-fit: cover;
-}
-
-/* */
-
-.stepGenerator .interrogation .messages .message.character img {
-  height: var(--image-size);
-  width: var(--image-size);
-  margin: auto;
-  object-fit: cover;
-  border-radius: 1000px;
-}
-
-/* .stepGenerator .interrogation .spacer {
-  flex: 1;
-} */
-.stepGenerator .interrogation .input {
-  /* min-width: 100%; */
-  min-width: 0;
-  margin-right: 5px;
-  flex: 1;
-  font-size: inherit;
-}
-
-/* */
-
-.stepGenerator .interrogation .messageInput {
-  display: flex;
-  flex-direction: column;
-  padding: 10px;
-  background-color: #111;
-  border-radius: 5px;
-  user-select: none;
-}
-
-.stepGenerator .interrogation .messageInput .input {
-  margin-bottom: 10px;
-}
-
-.stepGenerator .interrogation .messageInput .attachments {
-  display: inline-flex;
-}
-
-.stepGenerator .interrogation .messageInput .attachments .attachment {
-  display: flex;
-  flex-direction: column;
-  position: relative;
-  padding: 5px;
-  margin-right: 5px;
-  margin-bottom: 5px;
-  background: #222;
-  border-radius: 5px;
-}
-
-.stepGenerator .interrogation .messageInput .attachments .attachment .img {
-  width: var(--image-size);
-  height: var(--image-size);
-}
-.stepGenerator .interrogation .messageInput .attachments .attachment .img.placeholder:not(.small) {
-  padding: 15px;
-}
-.stepGenerator .interrogation .messageInput .attachments .attachment .img.placeholder.small {
-  width: 15px;
-  height: 15px;
-}
-
-.stepGenerator .interrogation .messageInput .attachments .attachment .name {
-  /* display: inline-flex;
-  align-items: center; */
-  max-width: var(--image-size);
-  height: 15px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: #FFF;
-}
-
-.stepGenerator .interrogation .messageInput .attachments .attachment .remove {
-  position: absolute;
-  top: -5px;
-  right: -5px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  background-color: #222;
-  cursor: pointer;
-}
-.stepGenerator .interrogation .messageInput .attachments .attachment .remove:hover {
-  background-color: #e53935;
-}
-.stepGenerator .interrogation .messageInput .attachments .attachment .remove:active {
-  background-color: #c62828;
-}
-
-.stepGenerator .interrogation .messageInput .attachments .attachment .remove .img {
-  width: 20px;
-  height: 20px;
-  padding: 2px;
-  filter: invert(1);
-}
-
-.stepGenerator .interrogation .messageInput .smallButton {
-  display: flex;
-  flex-direction: column;
-  background-color: #000;
-  border-radius: 5px;
-  cursor: pointer;
-}
-.stepGenerator .interrogation .messageInput .smallButton:not(:last-child) {
-  margin-right: 5px;
-}
-.stepGenerator .interrogation .messageInput .smallButton:hover {
-  background-color: #1e88e5;
-}
-.stepGenerator .interrogation .messageInput .smallButton:active {
-  background-color: #1565c0;
-}
-
-.stepGenerator .interrogation .messageInput .smallButton .img {
-  width: 50px;
-  height: 30px;
-  padding: 5px;
-  filter: invert(1);
 }
 
 /* */
@@ -295,6 +77,21 @@
 .stepGenerator .canvas {
   width: 768px;
   height: 768px;
+  background-color: red;
+}
+
+/* */
+
+.stepGenerator .audioFeatures {
+  display: flex;
+  flex-direction: column;
+  background-color: #EEE;
+}
+
+.stepGenerator .audioFeatures .data {
+  white-space: pre;
+  font-family: monospace;
+  font-size: 12px;
 }
 
 /* */
