@@ -292,6 +292,13 @@
 
 /* */
 
+.celGenerator .canvas {
+  width: 768px;
+  height: 768px;
+}
+
+/* */
+
 .celGenerator .hidden {
   display: none;
 }
