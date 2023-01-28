@@ -1,9 +1,13 @@
 import {useEffect, useState, useRef} from 'react';
 import * as THREE from 'three';
+import classnames from 'classnames';
 import {
   DropTarget,
 } from '../drop-target/DropTarget.jsx';
 import SMParse from '../../clients/sm-parse.js';
+import {
+  downloadFile,
+} from '../../utils/http-utils.js'
 
 import styles from '../../../styles/StepGenerator.module.css';
 
@@ -48,16 +52,21 @@ const StepRenderer = ({
   file,
 }) => {
   const [srcUrl, setSrcUrl] = useState('');
+
+  const [sm, setSm] = useState('');
   const [audioFeatures, setAudioFeatures] = useState(null);
+
   const [audioContext, setAudioContext] = useState(() => {
     const audioContext = new AudioContext();
     // audioContext.resume();
     return audioContext;
   });
   const [tickAudioBuffer, setTickAudioBuffer] = useState(null);
+
   const audioRef = useRef();
   const canvasRef = useRef();
 
+  // url
   useEffect(() => {
     if (file) {
       const newSrcUrl = URL.createObjectURL(file);
@@ -69,6 +78,58 @@ const StepRenderer = ({
     }
   }, [file]);
 
+  // loading
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (audio && ! audio.smLoaded) {
+      audio.smLoaded = true;
+
+      (async () => {
+        console.log('loading step chart...');
+        
+        const fd = new FormData();
+        fd.append('audio_file', file);
+        const difficulties = [
+          'Beginner',
+          'Easy',
+          'Medium',
+          'Hard',
+          'Challenge',
+        ];
+        const difficulty = difficulties[2];
+        fd.append('diff_coarse', difficulty);
+
+        const res = await fetch(`${audioAiHost}ddc`, {
+          method: 'POST',
+          body: fd,
+        });
+        const text = await res.text();
+        const sm = new SMParse(text);
+        setSm(sm);
+
+        console.log('got step chart', sm);
+      })();
+    }
+  }, [audioRef]);
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (audio && ! audio.audioFeaturesLoaded) {
+      audio.audioFeaturesLoaded = true;
+
+      (async () => {
+        console.log('loading audio features...')
+        const res = await fetch(`${audioAiHost}audioFeatures`, {
+          method: 'POST',
+          body: file,
+        });
+        const audioFeatures = await res.json();
+        console.log('got audio features', audioFeatures);
+        setAudioFeatures(audioFeatures);
+      })();
+    }
+  }, [audioRef]);
+
+  // audio context
   useEffect(() => {
     const audio = audioRef.current;
     if (audio && !audio.tickAudioBufferLoaded) {
@@ -82,49 +143,21 @@ const StepRenderer = ({
       })();
     }
   }, [audioContext, audioRef.current]);
-  
-  // prevent wheel event
+
+  // render
   useEffect(() => {
     const audio = audioRef.current;
     const canvas = canvasRef.current;
-    if (file && srcUrl && tickAudioBuffer && audio && canvas && !audio.loaded) {
+    if (file && srcUrl && tickAudioBuffer && sm && audio && canvas && !audio.loaded) {
       audio.loaded = true;
 
       (async () => {
         // create audio node and connect it
-        audio.src = srcUrl;
         const audioNode = audioContext.createMediaElementSource(audio);
         const gainNode = audioContext.createGain();
         gainNode.gain.value = 0.3;
         audioNode.connect(gainNode)
           .connect(audioContext.destination);
-
-        const _loadSmStepChart = async () => {
-          // load sm
-          console.log('loading step chart...');
-          
-          const fd = new FormData();
-          fd.append('audio_file', file);
-          const difficulties = [
-            'Beginner',
-            'Easy',
-            'Medium',
-            'Hard',
-            'Challenge',
-          ];
-          const difficulty = difficulties[2];
-          fd.append('diff_coarse', difficulty);
-
-          const res = await fetch(`${audioAiHost}ddc`, {
-            method: 'POST',
-            body: fd,
-          });
-          const text = await res.text();
-          const sm = new SMParse(text);
-          console.log('got step chart', sm);
-          return sm;
-        };
-        const sm = await _loadSmStepChart();
 
         // render chart
         const [chart] = sm.charts;
@@ -136,11 +169,6 @@ const StepRenderer = ({
 
         const width = size;
         const height = size;
-        // const canvas = document.createElement('canvas');
-        // const width = 1024;
-        // const height = 1024;
-        // canvas.width = width;
-        // canvas.height = height;
         
         const ctx = canvas.getContext('2d');
         ctx.fillStyle = 'blue';
@@ -207,39 +235,31 @@ const StepRenderer = ({
         };
       })();
     }
-  }, [file, srcUrl, tickAudioBuffer, audioRef.current, canvasRef.current]);
-
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (audio && ! audio.audioFeaturesLoaded) {
-      audio.audioFeaturesLoaded = true;
-
-      (async () => {
-        console.log('loading audio features...')
-        const res = await fetch(`${audioAiHost}audioFeatures`, {
-          method: 'POST',
-          body: file,
-        });
-        const audioFeatures = await res.json();
-        console.log('got audio features', audioFeatures);
-        setAudioFeatures(audioFeatures);
-      })();
-    }
-  }, [audioRef]);
+  }, [file, srcUrl, tickAudioBuffer, sm, audioRef.current, canvasRef.current]);
 
   return (
     <div className={styles.stepRenderer}>
-      <audio
-        className={styles.audio}
-        controls
-        ref={audioRef}
-      />
+      <div className={styles.row}>
+        <audio
+          className={styles.audio}
+          src={srcUrl}
+          controls
+          ref={audioRef}
+        />
+        <div className={styles.button} onClick={e =>{
+          downloadFile(file, 'audio.mp3');
+        }}>Download MP3</div>
+      </div>
       <canvas
         width={size}
         height={size}
-        className={styles.canvas}
+        className={classnames(
+          styles.canvas,
+          sm ? null : styles.hidden,
+        )}
         ref={canvasRef}
       />
+      {sm ? null : <div>loading step chart...</div>}
       {audioFeatures ? (
         <div className={styles.audioFeatures}>
           <div>Audio features</div>
@@ -247,7 +267,7 @@ const StepRenderer = ({
             {JSON.stringify(audioFeatures, null, 2)}
           </div>
         </div>
-      ) : null}
+      ) : <div>loading audio features...</div>}
     </div>
   );
 };
