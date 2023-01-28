@@ -1,8 +1,5 @@
 import {useEffect, useState, useRef} from 'react';
 import * as THREE from 'three';
-// import {
-//   img2img,
-// } from '../../clients/sd-image-client.js';
 import {
   new_img_inpainting,
 } from '../../clients/sd-image-client.js';
@@ -406,34 +403,10 @@ const CelRenderer = ({
 
 const defaultPrompt = 'anime style, girl character, 3d model vrchat avatar orthographic front view, dress';
 const CelGeneratorComponent = () => {
-  // const [prompt, setPrompt] = useState(defaultPrompt);
-  
   const [loading, setLoading] = useState(false);
 
   const [selecting, setSelecting] = useState(false);
   
-  // const [avatarManager, setAvatarManager] = useState(null);
-  
-  // const [retextured, setRetextured] = useState(false);
-  // const [imageAiModel, setImageAiModel] = useState('sd');
-  
-  // const [emotion, setEmotion] = useState('none');
-  // const [emotions, setEmotions] = useState([]);
-  // const [animation, setAnimation] = useState('none');
-  // const [animations, setAnimations] = useState([]);
-
-  // const [voiceEndpoint, setVoiceEndpoint] = useState('');
-  // const [voiceEndpoints, setVoiceEndpoints] = useState([]);
-
-  // const [voicePack, setVoicePack] = useState('');
-  // const [voicePacks, setVoicePacks] = useState([]);
-  
-  // const [embodied, setEmbodied] = useState(false);
-  
-  // const [interrogating, setInterrogating] = useState(false);
-  // const [conversations, setConversations] = useState([]);
-  // const [conversation, setConversation] = useState(null);
-
   const [files, setFiles] = useState([]);
   
   const addFiles = fs => {
