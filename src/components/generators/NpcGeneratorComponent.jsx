@@ -88,6 +88,8 @@ import {
 } from '../../dataset-engine/dataset-generator.js';
 import {PathMesh} from '../../zine-aux/meshes/path-mesh.js';
 
+//
+
 import Markdown from 'marked-react';
 
 import {
@@ -2233,7 +2235,7 @@ const retextureAvatar = async (canvas, prompt, negativePrompt) => {
     // optimize the resulting model
     model = await optimizeAvatarModel(model);
 
-    // // add the model to the scene
+    // add the model to the scene
     avatars.add(model);
     model.updateMatrixWorld();
 
@@ -3380,7 +3382,7 @@ const NpcGeneratorComponent = () => {
             {!avatarManager ?
               <div className={styles.button} onClick={async () => {
                 await generateClick();
-              }}>Generate</div>
+              }}>Random NPC</div>
             : null}
             {(avatarManager && !retextured) ?
               <>
