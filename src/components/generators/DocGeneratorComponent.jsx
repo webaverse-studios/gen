@@ -20,9 +20,39 @@ const size = 1024;
 const DocRenderer = ({
   file,
 }) => {
+  const [image, setImage] = useState(null);
   const [ocrJson, setOcrJson] = useState(null);
   const canvasRef = useRef();
   const overlayRef = useRef();
+
+  // image
+  useEffect(() => {
+    if (file && !image && !file.imageLoaded) {
+      file.image = true;
+
+      (async () => {
+        const image = new Image();
+        await new Promise((accept, reject) => {
+          image.onload = () => {
+            accept();
+            cleanup();
+          };
+          image.onerror = err => {
+            reject(err);
+            cleanup();
+          };
+
+          const u = URL.createObjectURL(file);
+          image.src = u;
+          
+          const cleanup = () => {
+            URL.revokeObjectURL(u);
+          };
+        });
+        setImage(image);
+      })();
+    }
+  }, [file, image]);
 
   // ocr json
   useEffect(() => {
@@ -35,7 +65,7 @@ const DocRenderer = ({
           body: file,
         });
         const ocrJson = await res.json();
-        console.log('got ocr json', ocrJson);
+        // console.log('got ocr json', ocrJson);
         setOcrJson(ocrJson);
       })();
     }
@@ -45,93 +75,74 @@ const DocRenderer = ({
   useEffect(() => {
     const canvas = canvasRef.current;
     const overlayEl = overlayRef.current;
-    if (file && canvas && overlayEl && ocrJson && !canvas.loaded) {
+    if (file && canvas && overlayEl && image && ocrJson && !canvas.loaded) {
       canvas.loaded = true;
 
-      (async () => {
+      // draw image
+      const ctx = canvas.getContext('2d');
+      canvas.width = image.width;
+      canvas.height = image.height;
+      ctx.drawImage(image, 0, 0);
 
-        // load image
-        const image = new Image();
-        await new Promise((accept, reject) => {
-          image.onload = () => {
-            accept();
-            cleanup();
-          };
-          image.onerror = err => {
-            reject(err);
-            cleanup();
-          };
-  
-          const u = URL.createObjectURL(file);
-          image.src = u;
-          
-          const cleanup = () => {
-            URL.revokeObjectURL(u);
-          };
-        });
+      // draw ocr
+      const canvasRect = canvas.getBoundingClientRect();
+      const canvasRectWidth = canvasRect.width;
+      const screenRectHeight = canvasRect.height;
 
-        // draw image
-        const ctx = canvas.getContext('2d');
-        canvas.width = image.width;
-        canvas.height = image.height;
-        ctx.drawImage(image, 0, 0);
+      const overlayRect = overlayEl.getBoundingClientRect();
 
-        // draw ocr
-        const canvasRect = canvas.getBoundingClientRect();
-        const canvasRectWidth = canvasRect.width;
-        const screenRectHeight = canvasRect.height;
+      for (const entry of ocrJson) {
+        const [bbox, label, score] = entry;
+        const [
+          [x0, y0],
+          [x1, y1],
+          [x2, y2],
+          [x3, y3],
+        ] = bbox;
 
-        const overlayRect = overlayEl.getBoundingClientRect();
+        const w = x2 - x0;
+        const h = y2 - y0;
 
-        for (const entry of ocrJson) {
-          const [bbox, label, score] = entry;
-          const [
-            [x0, y0],
-            [x1, y1],
-            [x2, y2],
-            [x3, y3],
-          ] = bbox;
+        const ax = x0 / image.width * canvasRectWidth;
+        const ay = y0 / image.height * screenRectHeight;
+        const ah = h / image.height * screenRectHeight;
 
-          const w = x2 - x0;
-          const h = y2 - y0;
-
-          const ax = x0 / image.width * canvasRectWidth;
-          const ay = y0 / image.height * screenRectHeight;
-          const ah = h / image.height * screenRectHeight;
-
-          console.log('set class', styles.ocrText);
-
-          const div = document.createElement('div');
-          div.className = styles.ocrText;
-          div.innerText = label;
-          div.style.left = `${ax}px`;
-          div.style.top = `${ay}px`;
-          div.style.height = `${ah}px`;
-          div.style.fontSize = `${ah * 0.8}px`;
-          overlayEl.appendChild(div);
-
-          globalThis.overlayEl = overlayEl;
-        }
-      })();
+        const div = document.createElement('div');
+        div.className = styles.ocrText;
+        div.innerText = label;
+        div.style.left = `${ax}px`;
+        div.style.top = `${ay}px`;
+        div.style.height = `${ah}px`;
+        div.style.fontSize = `${ah * 0.8}px`;
+        overlayEl.appendChild(div);
+      }
     }
-  }, [file, ocrJson, canvasRef.current]);
+  }, [file, image, ocrJson, canvasRef.current]);
 
   return (
     <div className={styles.docRenderer}>
-      <div className={styles.row}>
-        <div className={styles.button} onClick={e =>{
-          downloadFile(file, 'image.png');
-        }}>Download Image</div>
-      </div>
-      <div className={styles.overlayWrap}>
-        <div className={styles.overlayInner} ref={overlayRef} />
-        <canvas
-          className={classnames(
-            styles.canvas,
-          )}
-          ref={canvasRef}
-        />
-      </div>
+      {!ocrJson ? (
+        <div className={styles.header}>
+          loading...
+        </div>
+      ) : (
+        <>
+          <div className={styles.row}>
+            <div className={styles.button} onClick={e =>{
+              downloadFile(file, 'image.png');
+            }}>Download Image</div>
+          </div>
+          <div className={styles.overlayWrap}>
+            <div className={styles.overlayInner} ref={overlayRef} />
+            <canvas
+              className={classnames(
+                styles.canvas,
+              )}
+              ref={canvasRef}
+            />
+          </div>
+        </>
+      )}
     </div>
   );
 };
