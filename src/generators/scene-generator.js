@@ -69,9 +69,12 @@ import {
   getDoubleSidedGeometry,
   getGeometryHeights,
 } from '../zine/zine-geometry-utils.js';
+// import {
+//   getFloorNetPhysicsMesh,
+// } from '../zine/zine-mesh-utils.js';
 import {
-  getFloorNetPhysicsMesh,
-} from '../zine/zine-mesh-utils.js';
+  ZineStoryboard,
+} from '../zine/zine-format.js';
 import {
   blob2img,
   img2ImageData,
@@ -5396,4 +5399,29 @@ export async function compileVirtualScene(imageArrayBuffer) {
     wallPlanes,
     paths,
   };
+}
+
+export async function compileVirtualSceneExport(imageArrayBuffer) {
+  const storyboard = new ZineStoryboard();
+  const panel0 = storyboard.addPanel();
+
+  const layer0 = panel0.addLayer();
+  layer0.setData(mainImageKey, imageArrayBuffer);
+
+  // use vqa to set the prompt
+  const blob = new Blob([imageArrayBuffer]);
+  const prompt = await vqaClient.getImageCaption(blob);
+  console.log('computed prompt: ' + JSON.stringify(prompt));
+  layer0.setData(promptKey, prompt);
+
+  const compileResult = await compileVirtualScene(imageArrayBuffer);
+
+  const layer1 = panel0.addLayer();
+  for (const name of layer1Specs) {
+    const v = compileResult[name];
+    layer1.setData(name, v);
+  }
+
+  const uint8Array = await storyboard.exportAsync();
+  return uint8Array;
 }
