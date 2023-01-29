@@ -92,8 +92,9 @@ import {
   VQAClient,
 } from '../clients/vqa-client.js';
 import {
-  // mainImageKey,
+  mainImageKey,
   promptKey,
+  layer1Specs,
   layer2Specs,
 } from '../zine/zine-data-specs.js';
 import {

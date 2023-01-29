@@ -2,18 +2,21 @@ import * as THREE from 'three';
 import {useState, useEffect, useRef, useContext, createContext, Fragment} from 'react';
 import classnames from 'classnames';
 
-// import {
-//     ZineRenderer,
-// } from 'zine/zine-renderer.js';
-import {
-    ZineCameraManager,
-} from '../../zine-runtime/zine-camera.js';
 import {
     ZineStoryboard,
 } from '../../zine/zine-format.js';
+import {
+    ZineRenderer,
+} from '../../zine/zine-renderer.js';
+import {
+    ZineCameraManager,
+} from '../../zine-runtime/zine-camera.js';
 // import {
-//     compileScene, // XXX for remote compilation
+//   compileScene, // XXX for remote compilation
 // } from '../../../zine-runtime/zine-remote-compiler.js';
+import {
+    compileVirtualSceneExport,
+} from '../../generators/scene-generator.js';
 import {
     PathMesh,
 } from '../../zine-aux/meshes/path-mesh.js';
@@ -68,10 +71,11 @@ const _startApp = (canvas, u) => {
     (async () => {
         const imageArrayBuffer = await _loadImageArrayBuffer(u);
 
-        const uint8Array = await compileScene(imageArrayBuffer);
+        // const uint8Array = await compileScene(imageArrayBuffer);
+        const uint8Array = await compileVirtualSceneExport(imageArrayBuffer);
 
         const zineStoryboard = new ZineStoryboard();
-        zineStoryboard.load(uint8Array);
+        await zineStoryboard.loadAsync(uint8Array);
 
         const panel0 = zineStoryboard.getPanel(0);
         const zineRenderer = new ZineRenderer({
@@ -103,7 +107,7 @@ const _startApp = (canvas, u) => {
     let videoMesh = null;
     (async () => {
         const videoUrl = `${assetsBaseUrl}/videos/upstreet2.mp4`;
-        console.log('got video url', videoUrl);
+        // console.log('got video url', videoUrl);
         video = await _loadVideo(videoUrl);
         video.muted = true;
         video.play();
