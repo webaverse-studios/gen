@@ -2,12 +2,6 @@ import * as THREE from 'three';
 import {useState, useEffect, useRef, useContext, createContext, Fragment} from 'react';
 import classnames from 'classnames';
 
-//
-
-import styles from '../../../styles/TitleScreen.module.css';
-
-//
-
 // import {
 //     ZineRenderer,
 // } from 'zine/zine-renderer.js';
@@ -26,6 +20,12 @@ import {
 import{
     SceneGallery,
 } from '../image-gallery/SceneGallery.jsx';
+
+import styles from '../../../styles/TitleScreen.module.css';
+
+//
+
+const assetsBaseUrl = `https://cdn.jsdelivr.net/gh/webaverse/content@main/`
 
 //
 
@@ -102,7 +102,9 @@ const _startApp = (canvas, u) => {
     let videoTexture = null;
     let videoMesh = null;
     (async () => {
-        video = await _loadVideo(`${assetsBaseUrl}/videos/upstreet2.mp4`);;
+        const videoUrl = `${assetsBaseUrl}/videos/upstreet2.mp4`;
+        console.log('got video url', videoUrl);
+        video = await _loadVideo(videoUrl);
         video.muted = true;
         video.play();
         video.loop = true;
