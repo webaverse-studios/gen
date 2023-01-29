@@ -40,9 +40,20 @@ export const DropTarget = ({
     };
     document.addEventListener('drop', drop);
 
+    const paste = e => {
+      console.log('clipboard data', e.clipboardData);
+
+      // access clipboard files
+      const newFiles = Array.from(e.clipboardData.files);
+      // console.log('new files', newFiles);
+      onFilesAdd(newFiles);
+    };
+    document.addEventListener('paste', paste);
+
     return () => {
       document.removeEventListener('dragover', dragover);
       document.removeEventListener('drop', drop);
+      document.removeEventListener('paste', paste);
     };
   }, [onFilesAdd]);
 
