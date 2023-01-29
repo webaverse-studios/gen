@@ -59,10 +59,10 @@ const tabs = [
     tab: 'mobGenerator',
     label: 'Mob',
   },
-  {
+  /* {
     tab: 'characterGenerator',
     label: 'Character',
-  },
+  }, */
   {
     tab: 'item3DGenerator',
     label: 'Item3D',
@@ -150,9 +150,9 @@ export const Gen = () => {
             case 'mobGenerator': {
               return <MobGeneratorComponent />
             }
-            case 'characterGenerator': {
+            /* case 'characterGenerator': {
               return <CharacterGeneratorComponent />
-            }
+            } */
             case 'item2DGenerator': {
               return <Item2DGeneratorComponent />
             }
