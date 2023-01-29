@@ -63,7 +63,13 @@ const _startApp = (canvas, u) => {
     scene.autoUpdate = false;
 
     // camera manager
-    const zineCameraManager = new ZineCameraManager(camera, {
+    const localPlayer = new THREE.Object3D();
+    localPlayer.position.z = -1;
+    localPlayer.updateMatrixWorld();
+    const zineCameraManager = new ZineCameraManager({
+        camera,
+        localPlayer,
+    }, {
         normalizeView: false,
         followView: false,
     });
