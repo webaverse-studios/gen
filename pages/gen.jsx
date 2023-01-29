@@ -5,7 +5,7 @@ import SceneGeneratorComponent from '../src/components/generators/SceneGenerator
 import MetasceneGeneratorComponent from '../src/components/generators/MetasceneGeneratorComponent.jsx';
 import AvatarGeneratorComponent from '../src/components/generators/AvatarGeneratorComponent.jsx';
 import MobGeneratorComponent from '../src/components/generators/MobGeneratorComponent.jsx';
-import CharacterGeneratorComponent from '../src/components/generators/CharacterGeneratorComponent.jsx';
+// import CharacterGeneratorComponent from '../src/components/generators/CharacterGeneratorComponent.jsx';
 import Item2DGeneratorComponent from '../src/components/generators/Item2DGeneratorComponent.jsx';
 import Item3DGeneratorComponent from '../src/components/generators/Item3DGeneratorComponent.jsx';
 
