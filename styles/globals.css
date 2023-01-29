@@ -6,14 +6,14 @@
   font-family: 'WinchesterCaps';
   src:  url('/fonts/WinchesterCaps.ttf');
 } */
-/* @font-face {
+@font-face {
   font-family: 'TTSC-Regular';
   src:  url('/fonts/TT Squares Condensed Regular.otf');
 }
 @font-face {
   font-family: 'TTSC-Bold';
   src:  url('/fonts/TT Squares Condensed Bold.otf');
-} */
+}
 
 html,
 body {
@@ -21,7 +21,8 @@ body {
   margin: 0;
   font-family:
     /* "WinchesterCaps", */
-    "Plaza Regular",
+    /* "Plaza Regular", */
+    "TTSC-Regular",
     -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen,
     Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif;
 }
