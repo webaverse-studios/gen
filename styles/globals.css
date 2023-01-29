@@ -1,12 +1,4 @@
 @font-face {
-  font-family: 'Plaza Regular';
-  src:  url('/fonts/Plaza Regular.ttf');
-}
-/* @font-face {
-  font-family: 'WinchesterCaps';
-  src:  url('/fonts/WinchesterCaps.ttf');
-} */
-@font-face {
   font-family: 'TTSC-Regular';
   src:  url('/fonts/TT Squares Condensed Regular.otf');
 }
@@ -15,11 +7,33 @@
   src:  url('/fonts/TT Squares Condensed Bold.otf');
 }
 
+@font-face {
+  font-family: 'SF Movie Poster';
+  src:  url('/fonts/SF Movie Poster.woff');
+  font-weight: 400;
+}
+@font-face {
+  font-family: 'SF Movie Poster';
+  src:  url('/fonts/SF Movie Poster Bold.woff');
+  font-weight: 600;
+}
+
+/* @font-face {
+  font-family: 'Plaza Regular';
+  src:  url('/fonts/Plaza Regular.ttf');
+} */
+
+/* @font-face {
+  font-family: 'WinchesterCaps';
+  src:  url('/fonts/WinchesterCaps.ttf');
+} */
+
 html,
 body {
   padding: 0;
   margin: 0;
   font-family:
+    /* "SF Movie Poster", */
     /* "WinchesterCaps", */
     /* "Plaza Regular", */
     "TTSC-Regular",
