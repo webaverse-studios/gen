@@ -11,6 +11,7 @@ import Item3DGeneratorComponent from '../src/components/generators/Item3DGenerat
 
 import CelGeneratorComponent from '../src/components/generators/CelGeneratorComponent.jsx';
 import StepGeneratorComponent from '../src/components/generators/StepGeneratorComponent.jsx';
+import DocGeneratorComponent from '../src/components/generators/DocGeneratorComponent.jsx';
 import NpcGeneratorComponent from '../src/components/generators/NpcGeneratorComponent.jsx';
 
 import TitleScreenComponent from '../src/components/title-screen/TitleScreen.jsx';
@@ -45,6 +46,10 @@ const tabs = [
   {
     tab: 'stepGenerator',
     label: 'Step',
+  },
+  {
+    tab: 'docGenerator',
+    label: 'Doc',
   },
   {
     tab: 'npcGenerator',
@@ -135,6 +140,9 @@ export const Gen = () => {
             }
             case 'stepGenerator': {
               return <StepGeneratorComponent />
+            }
+            case 'docGenerator': {
+              return <DocGeneratorComponent />
             }
             case 'npcGenerator': {
               return <NpcGeneratorComponent />

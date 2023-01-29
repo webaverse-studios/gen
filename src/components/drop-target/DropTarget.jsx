@@ -31,6 +31,7 @@ export const DropTarget = ({
       cancelEvent(e);
     };
     document.addEventListener('dragover', dragover);
+
     const drop = e => {
       cancelEvent(e);
 
