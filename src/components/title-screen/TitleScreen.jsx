@@ -11,6 +11,7 @@ import {
 import {
     ZineCameraManager,
 } from '../../zine-runtime/zine-camera.js';
+import bezier from '../../zine-runtime/easing.js';
 // import {
 //   compileScene, // XXX for remote compilation
 // } from '../../../zine-runtime/zine-remote-compiler.js';
@@ -30,6 +31,11 @@ import styles from '../../../styles/TitleScreen.module.css';
 
 const assetsBaseUrl = `https://cdn.jsdelivr.net/gh/webaverse/content@main/`
 const titleScreenZineFileName = 'title-screen.zine';
+const cubicBezier = bezier(0, 1, 0, 1);
+
+//
+
+const localMatrix = new THREE.Matrix4();
 
 //
 
@@ -63,7 +69,7 @@ const _saveFile = async (fileName, uint8Array) => {
     await w.close();
     // console.log('done saving');
 };
-globalThis.saveFile = _saveFile;
+// globalThis.saveFile = _saveFile;
 const _loadFile = async (fileName) => {
     const d = await navigator.storage.getDirectory();
     // console.log('open from d', d);
@@ -78,7 +84,84 @@ const _loadFile = async (fileName) => {
     // console.log('load result', uint8Array);
     return uint8Array;
 };
-globalThis.loadFile = _loadFile;
+// globalThis.loadFile = _loadFile;
+
+//
+
+class SparkleMesh extends THREE.InstancedMesh {
+    constructor() {
+        const planeGeometry = new THREE.PlaneGeometry(1, 1);
+        
+        const numSparkles = 32;
+        const instancedGeometry = new THREE.InstancedBufferGeometry();
+        instancedGeometry.copy(planeGeometry);
+
+        // sparkle index instance attribute
+        const sparkleIndices = new Float32Array(numSparkles);
+        for (let i = 0; i < numSparkles; i++) {
+            sparkleIndices[i] = i;
+        }
+        instancedGeometry.setAttribute('sparkleIndex', new THREE.InstancedBufferAttribute(sparkleIndices, 1));
+
+        const material = new THREE.ShaderMaterial({
+            uniforms: {
+                uTime: {
+                    value: 0,
+                    needsUpdate: true,
+                },
+                cameraQuaternion: {
+                    value: new THREE.Vector4(),
+                    needsUpdate: true,
+                },
+            },
+            vertexShader: `\
+                uniform vec4 cameraQuaternion;
+
+                varying vec2 vUv;
+
+                vec3 rotate_vertex_position(vec3 position, vec4 q) {
+                return position + 2.0 * cross(q.xyz, cross(q.xyz, position) + q.w * position);
+                }
+
+                void main() {
+                    vUv = uv;
+
+                    vec3 p = position;
+                    p = rotate_vertex_position(p, cameraQuaternion);
+                    gl_Position = projectionMatrix * viewMatrix * modelMatrix * instanceMatrix * vec4(p, 1.0);
+                }
+            `,
+            fragmentShader: `\
+                uniform float uTime;
+                
+                varying vec2 vUv;
+
+                void main() {
+                    gl_FragColor = vec4(uTime, vUv, 1.);
+                }
+            `,
+        });
+
+        super(instancedGeometry, material, numSparkles);
+        
+        this.count = 0;
+        const instanceMatrix = localMatrix.identity();
+        for (let i = 0; i < numSparkles; i++) {
+            this.setMatrixAt(i, instanceMatrix);
+        }
+        this.instanceMatrix.needsUpdate = true;
+    }
+    update({
+        timestamp,
+        camera,
+    }) {
+        this.material.uniforms.uTime.value = timestamp;
+        this.material.uniforms.uTime.needsUpdate = true;
+
+        camera.quaternion.toArray(this.material.uniforms.cameraQuaternion.value);
+        this.material.uniforms.cameraQuaternion.needsUpdate = true;
+    }
+}
 
 //
 
@@ -201,13 +284,21 @@ class TitleScreenRenderer {
                         value: new THREE.Vector2(0, -0.3),
                         needsUpdate: true,
                     },
+                    uOpacity: {
+                        value: 1,
+                        needsUpdate: true,
+                    },
                 },
                 vertexShader: `\
+                    uniform float uOpacity;
                     varying vec2 vUv;
     
                     void main() {
                         vUv = uv;
-                        gl_Position = vec4(position, 1.0);
+
+                        vec3 p = position;
+                        p *= (1. + (1. - uOpacity) * 0.2);
+                        gl_Position = vec4(p, 1.0);
                     }
                 `,
                 fragmentShader: `\
@@ -215,6 +306,7 @@ class TitleScreenRenderer {
                     uniform vec2 screenResolution;
                     uniform vec2 videoResolution;
                     uniform vec2 offset;
+                    uniform float uOpacity;
                     varying vec2 vUv;
     
                     const vec3 baseColor = vec3(${
@@ -249,6 +341,8 @@ class TitleScreenRenderer {
                         } else {
                             gl_FragColor.a = min(max(colorDistance * 4., 0.0), 1.0);
                         }
+
+                        gl_FragColor.a *= uOpacity;
                     }
                 `,
                 side: THREE.DoubleSide,
@@ -258,10 +352,22 @@ class TitleScreenRenderer {
             });
     
             videoMesh = new THREE.Mesh(geometry, videoMaterial);
+            videoMesh.update = ({
+                opacity,
+            }) => {
+                videoMesh.material.uniforms.uOpacity.value = opacity;
+                videoMesh.material.uniforms.uOpacity.needsUpdate = true;
+            };
             videoMesh.frustumCulled = false;
             scene.add(videoMesh);
         })();
-    
+
+        const sparkleMesh = new SparkleMesh();
+        sparkleMesh.position.z = -1;
+        sparkleMesh.updateMatrixWorld();
+        scene.add(sparkleMesh);
+        sparkleMesh.updateMatrixWorld();
+
         // resize handler
         const _setSize = () => {
             renderer.setSize(globalThis.innerWidth, globalThis.innerHeight);
@@ -285,19 +391,30 @@ class TitleScreenRenderer {
             globalThis.removeEventListener('resize', resize);
         });
         
-        /* // key handlers
-        globalThis.addEventListener('keydown', e => {
-            switch (e.key) {
-                case 'n': {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    
-                    console.log('trigger animation');
-                    
-                    break;
-                }
-            }
-        }); */
+        // key handlers
+        let lastPointerLockChangeTime = -Infinity;
+        let startOpacity = 0;
+        let endOpacity = 1;
+        const opacityRate = 1;
+        const getCurrentOpacity = now => {
+            const timeDiff = now - lastPointerLockChangeTime;
+            const timeDiffS = timeDiff / 1000;
+
+            let f = timeDiffS / opacityRate;
+            f = Math.min(Math.max(f, 0), 1);
+            
+            const opacity = startOpacity + (endOpacity - startOpacity) * cubicBezier(f);
+            return opacity;
+        };
+        const pointerlockchange = e => {
+            const now = performance.now();
+
+            startOpacity = getCurrentOpacity(now);
+            endOpacity = document.pointerLockElement ? 0 : 1;
+
+            lastPointerLockChangeTime = now;
+        };
+        document.addEventListener('pointerlockchange', pointerlockchange);
     
         // frame loop
         let lastTimestamp = performance.now();
@@ -307,9 +424,34 @@ class TitleScreenRenderer {
           if (!document.hidden) {
             const timestamp = performance.now();
             const timeDiff = timestamp - lastTimestamp;
+
+            /* // update variables
+            {
+                const timeDiffS = timeDiff / 1000;
+                const isFocused = !!document.pointerLockElement;
+                const animationRate = 0.3;
+                opacity += (isFocused ? -1 : 1) * timeDiffS / animationRate;
+                opacity = Math.min(Math.max(opacity, 0), 1);
+            } */
+
+            // update meshes
+            sparkleMesh.update({
+                timestamp,
+                camera,
+            });
+            if (videoMesh) {
+                videoMesh.update({
+                    opacity: getCurrentOpacity(timestamp),
+                });
+            }
+            // update camera
             zineCameraManager.updatePost(timestamp, timeDiff);
-    
+            
+            // render
             renderer.render(scene, camera);
+
+            // post update
+            lastTimestamp = timestamp;
           }
         };
         let frame = requestAnimationFrame(_recurse);
@@ -329,18 +471,63 @@ class TitleScreenRenderer {
 
 const MainScreen = ({
     titleScreenRenderer,
+    focused,
+    onFocus,
     canvasRef,
 }) => {
+    useEffect(() => {
+        const pointerlockchange = e => {
+            onFocus(document.pointerLockElement === canvasRef.current);
+        };
+        document.addEventListener('pointerlockchange', pointerlockchange);
+
+        const wheel = e => {
+            e.preventDefault();
+            e.stopPropagation();
+        };
+        document.addEventListener('wheel', wheel, {
+            passive: false,
+        });
+
+        return () => {
+            document.removeEventListener('pointerlockchange', pointerlockchange);
+            document.removeEventListener('wheel', wheel);
+        };
+    }, [canvasRef.current, onFocus]);
+
     return (
         <div className={classnames(
             styles.mainScreen,
             titleScreenRenderer ? styles.enabled : null,
+            focused ? styles.focused : null,
         )}>
             <canvas className={classnames(
                 styles.canvas,
-            )} ref={canvasRef} />
+            )} onDoubleClick={async e => {
+                const canvas = canvasRef.current;
+                if (canvas) {
+                    await canvas.requestPointerLock();
+                }
+            }} ref={canvasRef} />
             <footer className={styles.footer}>
-                <span className={styles.bold}>SEVERE WARNING:</span> This product is not intended for children under age sixty. <span className={styles.bold}>This is an AI generated product.</span> The ideas expressed are not proven to be safe. This product contains course language and due to its nature it should be viewed twice. Made by the Lisk.
+                <div className={styles.warningLabel}>
+                    <span className={styles.bold}>SEVERE WARNING:</span> This product is not intended for children under age sixty. <span className={styles.bold}>This is an AI generated product.</span> The ideas expressed are not proven to be safe. This product contains course language and due to its nature it should be viewed twice. Made by the Lisk.
+                </div>
+                <div className={styles.slider}>
+                    <div className={styles.notches}>
+                        <div className={classnames(
+                            styles.notch,
+                        )} />
+                        <div className={classnames(
+                            styles.notch,
+                            styles.selected,
+                        )} />
+                        <div className={classnames(
+                            styles.notch,
+                            styles.loading,
+                        )} />
+                    </div>
+                </div>
             </footer>
         </div>
     );
@@ -351,22 +538,24 @@ const MainScreen = ({
 const TitleScreen = () => {
     const [loading, setLoading] = useState(false);
     const [loaded, setLoaded] = useState(false);
+    const [focused, setFocused] = useState(false);
     const [titleScreenRenderer, setTitleScreenRenderer] = useState(null);
 
-    // forward the canvas ref to the main screen
-    const canvasRef = useRef(null);
+    const canvasRef = useRef();
 
     useEffect(() => {
         const keydown = async e => {
             switch (e.key) {
                 case 's': {
-                    e.preventDefault();
-                    e.stopPropagation();
+                    if (e.ctrlKey) {
+                        e.preventDefault();
+                        e.stopPropagation();
 
-                    console.log('save', titleScreenRenderer);
+                        console.log('save', titleScreenRenderer);
 
-                    if (titleScreenRenderer) {
-                        await _saveFile(titleScreenZineFileName, titleScreenRenderer.uint8Array);
+                        if (titleScreenRenderer) {
+                            await _saveFile(titleScreenZineFileName, titleScreenRenderer.uint8Array);
+                        }
                     }
                     break;
                 }
@@ -389,6 +578,7 @@ const TitleScreen = () => {
                                 uint8Array,
                             });
                             setTitleScreenRenderer(newTitleScreenRenderer);
+                            setLoaded(true);
 
                             console.log('done loading', newTitleScreenRenderer);
                         } else {
@@ -412,6 +602,10 @@ const TitleScreen = () => {
         >
             <MainScreen
                 titleScreenRenderer={titleScreenRenderer}
+                focused={focused}
+                onFocus={newFocused => {
+                    setFocused(newFocused);
+                }}
                 canvasRef={canvasRef}
             />
             {loading ? (

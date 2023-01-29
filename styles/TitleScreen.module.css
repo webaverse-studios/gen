@@ -23,19 +23,93 @@
   display: none;
 }
 
+/* */
+
 .titleScreen .mainScreen .footer {
-  position: relative;
-  margin: 50px;
-  margin-top: auto;
+  --animation-offset: 150px;
+
+  position: absolute;
+  /* margin: 50px;
+  margin-top: auto; */
+  left: 30px;
+  right: 30px;
+  bottom: 0;
+  height: var(--animation-offset);
+  pointer-events: none;
+  user-select: none;
+}
+
+/* */
+
+.titleScreen .mainScreen .footer .warningLabel,
+.titleScreen .mainScreen .footer .slider
+{
+  transition: transform 0.5s cubic-bezier(0, 1, 0, 1);
+}
+
+/* */
+
+.titleScreen .mainScreen .footer .warningLabel {
+  position: absolute;
   padding: 10px;
   font-family: 'SF Movie Poster';
   font-size: 40px;
   line-height: 1;
-  /* letter-spacing: 1px; */
   align-items: center;
   background-color: #000;
   color: #FFF;
 }
+
+
+.titleScreen .mainScreen.focused .footer .warningLabel {
+  transform: translateY(var(--animation-offset));
+}
+
+/* */
+
+.titleScreen .mainScreen .footer .slider {
+  position: absolute;
+}
+
+.titleScreen .mainScreen .footer .slider .notches {
+  display: flex;
+  padding: 60px 10px;
+}
+
+.titleScreen .mainScreen .footer .slider .notches .notch {
+  display: inline-flex;
+  margin-right: 20px;
+  /* background-image: linear-gradient(to right, #080808, #111); */
+  background-color: #111;
+  border: 3px solid #FFFFFF08;
+  width: 50px;
+  height: 20px;
+  transform: skewX(-22deg);
+}
+.titleScreen .mainScreen .footer .slider .notches .notch.selected {
+  background-color: #333;
+}
+/* animate background-color */
+@keyframes loading {
+  0% {
+    background-color: #111;
+  }
+  50% {
+    background-color: #333;
+  }
+  100% {
+    background-color: #111;
+  }
+}
+.titleScreen .mainScreen .footer .slider .notches .notch.loading {
+  animation: loading 1s infinite;
+}
+
+.titleScreen .mainScreen:not(.focused) .footer .slider {
+  transform: translateY(var(--animation-offset));
+}
+
+/* */
 
 .titleScreen .mainScreen .footer .bold {
   /* font-family: 'SF Movie Poster Bold'; */
