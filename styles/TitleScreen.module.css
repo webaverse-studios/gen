@@ -38,7 +38,8 @@
 }
 
 .titleScreen .mainScreen .footer .bold {
-  font-family: 'SF Movie Poster Bold';
+  /* font-family: 'SF Movie Poster Bold'; */
+  font-weight: 600;
 }
 
 .titleScreen .mainScreen .footer .right {
