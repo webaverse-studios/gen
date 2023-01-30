@@ -49,7 +49,7 @@ import {
   floorNetResolution,
   floorNetPixelSize,
   physicsPixelStride,
-  portalExtrusion,
+  // portalExtrusion,
   entranceExitEmptyDiameter,
   entranceExitHeight,
   entranceExitWidth,
@@ -147,9 +147,6 @@ import {
 import {
   useRouter,
 } from '../../generators/router.js';
-import {
-  PortalMesh,
-} from '../../zine-aux/meshes/portal-mesh.js';
 // import {
 //   formatDatasetItems,
 //   formatDatasetItemsForPolyfill,
@@ -3186,35 +3183,6 @@ export class Metazine3DRenderer extends EventTarget {
     entranceExitMesh.updateMatrixWorld();
     this.entranceExitMesh = entranceExitMesh;
 
-    // portal mesh
-    this.portalMesh = null;
-    (async () => {
-      const portalScene = new THREE.Scene();
-      portalScene.autoUpdate = false;
-      {
-        gltfLoader.load('/models/skybox.glb', gltf => {
-          const skyboxMesh = gltf.scene;
-          portalScene.add(skyboxMesh);  
-          skyboxMesh.updateMatrixWorld();
-        }, undefined, err => {
-          console.warn(err);
-        });
-      }
-
-      const noiseImage = await loadImage('/images/noise.png');
-
-      const portalMesh = new PortalMesh({
-        renderer: this.renderer,
-        portalScene,
-        portalCamera: this.camera,
-        noiseImage,
-      });
-      portalMesh.position.set(0, 30, 0);
-      this.scene.add(portalMesh);
-      portalMesh.updateMatrixWorld();
-      this.portalMesh = portalMesh;
-    })();
-
     // map index mesh
     const mapIndex = this.metazine.mapIndexRenderer.getMapIndex();
     const mapIndexResolution = this.metazine.mapIndexRenderer.getMapIndexResolution();
@@ -3343,11 +3311,6 @@ export class Metazine3DRenderer extends EventTarget {
     this.storyTargetMesh.updateMatrixWorld();
 
     this.underfloorMesh.update();
-
-    const timestamp = performance.now();
-    if (this.portalMesh) {
-      this.portalMesh.update(timestamp);
-    }
 
     // render
     this.renderer.render(this.scene, this.camera);
