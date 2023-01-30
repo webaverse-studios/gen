@@ -350,6 +350,17 @@ const MainScreen = ({
     onFocus,
     canvasRef,
 }) => {
+    const _togglePointerLock = async () => {
+        const canvas = canvasRef.current;
+        if (canvas) {
+            if (!document.pointerLockElement) {
+              await canvas.requestPointerLock();
+            } else {
+                document.exitPointerLock();
+            }
+        }
+    };
+
     useEffect(() => {
         const pointerlockchange = e => {
             onFocus(document.pointerLockElement === canvasRef.current);
@@ -364,9 +375,24 @@ const MainScreen = ({
             passive: false,
         });
 
+        const keydown = e => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            switch (e.key) {
+                // space
+                case ' ': {
+                    _togglePointerLock();
+                    break;
+                }
+            }
+        };
+        document.addEventListener('keydown', keydown);
+
         return () => {
             document.removeEventListener('pointerlockchange', pointerlockchange);
             document.removeEventListener('wheel', wheel);
+            document.removeEventListener('keydown', keydown);
         };
     }, [canvasRef.current, onFocus]);
 
@@ -379,10 +405,7 @@ const MainScreen = ({
             <canvas className={classnames(
                 styles.canvas,
             )} onDoubleClick={async e => {
-                const canvas = canvasRef.current;
-                if (canvas) {
-                    await canvas.requestPointerLock();
-                }
+                await _togglePointerLock();
             }} ref={canvasRef} />
             <footer className={styles.footer}>
                 <div className={styles.warningLabel}>
