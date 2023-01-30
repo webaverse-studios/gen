@@ -274,10 +274,13 @@ const _makeMaterial = maxNumTextures => {
 //
 
 export class ParticleEmitter2 extends THREE.Object3D {
-  constructor(particleSystem) {
+  constructor(particleSystem, {
+    range = 1,
+  } = {}) {
     super();
 
     this.particleSystem = particleSystem;
+    this.range = range;
 
     this.timeout = null;
     const now = performance.now()
@@ -318,7 +321,11 @@ export class ParticleEmitter2 extends THREE.Object3D {
           const particle = this.particleSystem.addParticle(texture, {
             duration,
           });
-          particle.offset = new THREE.Vector3((-0.5 + Math.random()) * 2, (-0.5 + Math.random()) * 2, (-0.5 + Math.random()) * 2);
+          particle.offset = new THREE.Vector3(
+            (-0.5 + Math.random()) * 2 * this.range,
+            (-0.5 + Math.random()) * 2 * this.range,
+            (-0.5 + Math.random()) * 2 * this.range
+          );
           this.particles.push(particle);
 
           this.resetNextUpdate(timestamp);

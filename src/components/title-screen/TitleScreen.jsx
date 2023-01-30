@@ -233,9 +233,12 @@ class TitleScreenRenderer {
             particleSystemMesh.frustumCulled = false;
             scene.add(particleSystemMesh);
             particleSystemMesh.position.z = -1;
+            particleSystemMesh.scale.setScalar(0.5);
             particleSystemMesh.updateMatrixWorld();
 
-            particleEmitter = new ParticleEmitter2(particleSystemMesh);
+            particleEmitter = new ParticleEmitter2(particleSystemMesh, {
+                range: 0.3,
+            });
         })();
 
         // resize handler
