@@ -360,6 +360,12 @@ const MainScreen = ({
             }
         }
     };
+    const _reqestPointerLock = async () => {
+        const canvas = canvasRef.current;
+        if (canvas) {
+            await canvas.requestPointerLock();
+        }
+    };
 
     useEffect(() => {
         const pointerlockchange = e => {
@@ -405,7 +411,7 @@ const MainScreen = ({
             <canvas className={classnames(
                 styles.canvas,
             )} onDoubleClick={async e => {
-                await _togglePointerLock();
+                await _reqestPointerLock();
             }} ref={canvasRef} />
             <footer className={styles.footer}>
                 <div className={styles.warningLabel}>
