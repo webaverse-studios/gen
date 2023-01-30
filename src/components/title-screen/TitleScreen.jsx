@@ -57,16 +57,6 @@ const _loadImageArrayBuffer = async u => {
     const arrayBuffer = await res.arrayBuffer();
     return arrayBuffer;
 };
-/* const _loadVideo = async u => {
-    const v = document.createElement('video');
-    v.crossOrigin = 'Anonymous';
-    v.src = u;
-    await new Promise((accept, reject) => {
-        v.oncanplaythrough = accept;
-        v.onerror = reject;
-    });
-    return v;
-}; */
 
 //
 
@@ -82,7 +72,6 @@ const _saveFile = async (fileName, uint8Array) => {
     await w.close();
     // console.log('done saving');
 };
-// globalThis.saveFile = _saveFile;
 const _loadFile = async (fileName) => {
     const d = await navigator.storage.getDirectory();
     // console.log('open from d', d);
@@ -97,95 +86,6 @@ const _loadFile = async (fileName) => {
     // console.log('load result', uint8Array);
     return uint8Array;
 };
-// globalThis.loadFile = _loadFile;
-
-//
-
-/* class SparkleMesh extends THREE.InstancedMesh {
-    constructor() {
-        const planeGeometry = new THREE.PlaneGeometry(1, 1);
-        
-        const numSparkles = 32;
-        const instancedGeometry = new THREE.InstancedBufferGeometry();
-        instancedGeometry.copy(planeGeometry);
-
-        // sparkle index instance attribute
-        const sparkleIndices = new Float32Array(numSparkles);
-        for (let i = 0; i < numSparkles; i++) {
-            sparkleIndices[i] = i;
-        }
-        instancedGeometry.setAttribute('sparkleIndex', new THREE.InstancedBufferAttribute(sparkleIndices, 1));
-
-        const material = new THREE.ShaderMaterial({
-            uniforms: {
-                uTime: {
-                    value: 0,
-                    needsUpdate: true,
-                },
-                // quaternionMatrix: {
-                //     value: new THREE.Matrix4(),
-                //     needsUpdate: true,
-                // },
-            },
-            vertexShader: `\
-                // uniform mat4 quaternionMatrix;
-
-                varying vec2 vUv;
-
-                vec3 rotate_vertex_position(vec3 position, vec4 q) {
-                  return position + 2.0 * cross(q.xyz, cross(q.xyz, position) + q.w * position);
-                }
-
-                void main() {
-                    vUv = uv;
-
-                    vec3 p = position;
-                    // p = rotate_vertex_position(p, vec4(0., 0., 0., 1.));
-                    // gl_Position = projectionMatrix * modelMatrix * viewMatrix * instanceMatrix * vec4(p, 1.0);
-                    gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(p, 1.0);
-                    // gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
-                }
-            `,
-            fragmentShader: `\
-                uniform float uTime;
-                
-                varying vec2 vUv;
-
-                void main() {
-                    gl_FragColor = vec4(uTime, vUv, 1.);
-                }
-            `,
-        });
-
-        super(instancedGeometry, material, numSparkles);
-        
-        this.count = 0;
-        const instanceMatrix = localMatrix.identity();
-        for (let i = 0; i < numSparkles; i++) {
-            this.setMatrixAt(i, instanceMatrix);
-            this.count++;
-        }
-        this.instanceMatrix.needsUpdate = true;
-    }
-    update({
-        timestamp,
-        camera,
-    }) {
-        this.material.uniforms.uTime.value = timestamp;
-        this.material.uniforms.uTime.needsUpdate = true;
-
-        // globalThis.camera = camera;
-
-        // console.log('look', [
-        //     camera.position,
-        //     this.position,
-        // ]);
-
-        // this.quaternion.setFromAxisAngle(upVector, Math.PI / 4);
-        this.quaternion.copy(camera.quaternion);
-        this.updateMatrixWorld();
-    }
-} */
 
 //
 
@@ -340,12 +240,6 @@ class TitleScreenRenderer {
             particleEmitter = new ParticleEmitter2(particleSystemMesh);
         })();
 
-        // const sparkleMesh = new SparkleMesh();
-        // sparkleMesh.position.z = -1;
-        // sparkleMesh.updateMatrixWorld();
-        // scene.add(sparkleMesh);
-        // sparkleMesh.updateMatrixWorld();
-
         // resize handler
         const _setSize = () => {
             renderer.setSize(globalThis.innerWidth, globalThis.innerHeight);
@@ -403,20 +297,7 @@ class TitleScreenRenderer {
             const timestamp = performance.now();
             const timeDiff = timestamp - lastTimestamp;
 
-            /* // update variables
-            {
-                const timeDiffS = timeDiff / 1000;
-                const isFocused = !!document.pointerLockElement;
-                const animationRate = 0.3;
-                opacity += (isFocused ? -1 : 1) * timeDiffS / animationRate;
-                opacity = Math.min(Math.max(opacity, 0), 1);
-            } */
-
             // update meshes
-            // sparkleMesh.update({
-            //     timestamp,
-            //     camera,
-            // });
             if (videoMesh) {
                 const resolution = renderer.getSize(localVector2D);
                 videoMesh.update({
