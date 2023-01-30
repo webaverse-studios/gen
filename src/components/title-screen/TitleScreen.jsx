@@ -97,6 +97,37 @@ const _loadFile = async (fileName) => {
 
 //
 
+class LinearAnimation {
+    constructor({
+        startValue,
+        endValue,
+        startTime,
+        // endTime,
+        duration,
+    }) {
+        this.startValue = startValue;
+        this.endValue = endValue;
+        this.startTime = startTime;
+        // this.endTime = endTime;
+        this.duration = duration;
+    }
+    update(timestamp) {
+        const timeDiff = timestamp - this.startTime;
+        let f = timeDiff / this.duration;
+        const done = f >= 1;
+        f = Math.min(Math.max(f, 0), 1);
+        // f = cubicBezier(f);
+        const value = this.startValue + (this.endValue - this.startValue) * f;
+        // console.log('got done value', done, value);
+        return {
+            done,
+            value,
+        };
+    }
+}
+
+//
+
 class TitleScreenRenderer {
     constructor({
         canvas,
@@ -214,6 +245,7 @@ class TitleScreenRenderer {
 
         // portal mesh
         let portalMesh;
+        this.portalMesh = null;
         (async () => {
             const portalScene = new THREE.Scene();
             portalScene.autoUpdate = false;
@@ -236,11 +268,30 @@ class TitleScreenRenderer {
                 portalCamera: camera,
                 noiseImage,
             });
+            this.portalMesh = portalMesh;
             portalMesh.position.set(0, -1, -5);
-            portalMesh.scale.setScalar(3);
+            portalMesh.update = (update => {
+                const self = this;
+                function update2(timestamp) {
+                    self.portalAnimations = self.portalAnimations.filter(portalAnimation => {
+                        const {
+                            done,
+                            value,
+                        } = portalAnimation.update(timestamp);
+                        // console.log('got done value', done, value);
+                        portalMesh.setScale(value);
+                        return !done;
+                    });
+
+                    return update.apply(this, arguments);
+                }
+                return update2;
+            })(portalMesh.update);
             scene.add(portalMesh);
             portalMesh.updateMatrixWorld();
         })();
+        this.portalSizeIndex = 0;
+        this.portalAnimations = [];
 
         // particle system mesh
         let particleSystemMesh;
@@ -375,6 +426,29 @@ class TitleScreenRenderer {
             cancelAnimationFrame(frame);
         });
     }
+    static portalSizes = [
+        1,
+        0,
+        100,
+    ];
+    togglePortal() {
+        this.portalSizeIndex = (this.portalSizeIndex + 1) % TitleScreenRenderer.portalSizes.length;
+
+        const startTime = performance.now();
+        const nextSize = TitleScreenRenderer.portalSizes[this.portalSizeIndex];
+        // console.log('new animation', {
+        //     startTime,
+        //     duration: 1000,
+        //     startValue: this.portalMesh.getScale(),
+        //     endValue: nextSize,
+        // });
+        this.portalAnimations.push(new LinearAnimation({
+            startTime,
+            duration: 1000,
+            startValue: this.portalMesh.getScale(),
+            endValue: nextSize,
+        }));
+    }
     destroy() {
       for (let i = 0; i < this.cleanupFns.length; i++) {
         this.cleanupFns[i]();
@@ -428,6 +502,13 @@ const MainScreen = ({
                     e.stopPropagation();
                     
                     _togglePointerLock();
+                    break;
+                }
+                case 'p': {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    titleScreenRenderer.togglePortal();
                     break;
                 }
             }
