@@ -24,6 +24,9 @@ import {
 import{
     SceneGallery,
 } from '../image-gallery/SceneGallery.jsx';
+import {
+    VideoMesh,
+} from './video-mesh.js';
 
 import styles from '../../../styles/TitleScreen.module.css';
 
@@ -35,7 +38,13 @@ const cubicBezier = bezier(0, 1, 0, 1);
 
 //
 
+const localVector2D = new THREE.Vector2();
+// const localQuaternion = new THREE.Quaternion();
 const localMatrix = new THREE.Matrix4();
+
+// const zeroVector = new THREE.Vector3(0, 0, 0);
+// const oneVector = new THREE.Vector3(1, 1, 1);
+// const upVector = new THREE.Vector3(0, 1, 0);
 
 //
 
@@ -44,7 +53,7 @@ const _loadImageArrayBuffer = async u => {
     const arrayBuffer = await res.arrayBuffer();
     return arrayBuffer;
 };
-const _loadVideo = async u => {
+/* const _loadVideo = async u => {
     const v = document.createElement('video');
     v.crossOrigin = 'Anonymous';
     v.src = u;
@@ -53,7 +62,7 @@ const _loadVideo = async u => {
         v.onerror = reject;
     });
     return v;
-};
+}; */
 
 //
 
@@ -109,26 +118,28 @@ class SparkleMesh extends THREE.InstancedMesh {
                     value: 0,
                     needsUpdate: true,
                 },
-                cameraQuaternion: {
-                    value: new THREE.Vector4(),
-                    needsUpdate: true,
-                },
+                // quaternionMatrix: {
+                //     value: new THREE.Matrix4(),
+                //     needsUpdate: true,
+                // },
             },
             vertexShader: `\
-                uniform vec4 cameraQuaternion;
+                // uniform mat4 quaternionMatrix;
 
                 varying vec2 vUv;
 
                 vec3 rotate_vertex_position(vec3 position, vec4 q) {
-                return position + 2.0 * cross(q.xyz, cross(q.xyz, position) + q.w * position);
+                  return position + 2.0 * cross(q.xyz, cross(q.xyz, position) + q.w * position);
                 }
 
                 void main() {
                     vUv = uv;
 
                     vec3 p = position;
-                    p = rotate_vertex_position(p, cameraQuaternion);
-                    gl_Position = projectionMatrix * viewMatrix * modelMatrix * instanceMatrix * vec4(p, 1.0);
+                    // p = rotate_vertex_position(p, vec4(0., 0., 0., 1.));
+                    // gl_Position = projectionMatrix * modelMatrix * viewMatrix * instanceMatrix * vec4(p, 1.0);
+                    gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(p, 1.0);
+                    // gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
                 }
             `,
             fragmentShader: `\
@@ -148,6 +159,7 @@ class SparkleMesh extends THREE.InstancedMesh {
         const instanceMatrix = localMatrix.identity();
         for (let i = 0; i < numSparkles; i++) {
             this.setMatrixAt(i, instanceMatrix);
+            this.count++;
         }
         this.instanceMatrix.needsUpdate = true;
     }
@@ -158,8 +170,16 @@ class SparkleMesh extends THREE.InstancedMesh {
         this.material.uniforms.uTime.value = timestamp;
         this.material.uniforms.uTime.needsUpdate = true;
 
-        camera.quaternion.toArray(this.material.uniforms.cameraQuaternion.value);
-        this.material.uniforms.cameraQuaternion.needsUpdate = true;
+        // globalThis.camera = camera;
+
+        // console.log('look', [
+        //     camera.position,
+        //     this.position,
+        // ]);
+
+        // this.quaternion.setFromAxisAngle(upVector, Math.PI / 4);
+        this.quaternion.copy(camera.quaternion);
+        this.updateMatrixWorld();
     }
 }
 
@@ -239,9 +259,28 @@ class TitleScreenRenderer {
     
         // video mesh
         let video = null;
-        let videoTexture = null;
         let videoMesh = null;
         (async () => {
+            const hash = `36e34000e5ea02b0a5383ef28a0f45bb36b79949`;
+            const videoUrl = `https://cdn.jsdelivr.net/gh/webaverse/content@${hash}/videos/upstreet2.ktx2z`;
+            // const videoUrl = `/sm/spritesheet.ktx2z`;
+
+            // console.log('got video url', videoUrl);
+            const res = await fetch(videoUrl);
+            const blob = await res.blob();
+            const pack = await VideoMesh.loadPack([
+                blob,
+            ]);
+
+            // console.log('got video package', pack);
+
+            videoMesh = new VideoMesh({
+                pack,
+            });
+            videoMesh.frustumCulled = false;
+            scene.add(videoMesh);
+        })();
+        /* (async () => {
             const videoUrl = `${assetsBaseUrl}/videos/upstreet2.mp4`;
             // console.log('got video url', videoUrl);
             video = await _loadVideo(videoUrl);
@@ -261,106 +300,7 @@ class TitleScreenRenderer {
             this.cleanupFns.push(() => {
                 video.pause();
             });
-    
-            // full screen video mesh
-            const geometry = new THREE.PlaneGeometry(2, 2, 1, 1);
-    
-            videoTexture = new THREE.VideoTexture(video);
-            const videoMaterial = new THREE.ShaderMaterial({
-                uniforms: {
-                    map: {
-                        value: videoTexture,
-                        needsUpdate: true,
-                    },
-                    screenResolution: {
-                        value: new THREE.Vector2(canvas.width, canvas.height),
-                        needsUpdate: true,
-                    },
-                    videoResolution: {
-                        value: new THREE.Vector2(1980, 1080),
-                        needsUpdate: true,
-                    },
-                    offset: {
-                        value: new THREE.Vector2(0, -0.3),
-                        needsUpdate: true,
-                    },
-                    uOpacity: {
-                        value: 1,
-                        needsUpdate: true,
-                    },
-                },
-                vertexShader: `\
-                    uniform float uOpacity;
-                    varying vec2 vUv;
-    
-                    void main() {
-                        vUv = uv;
-
-                        vec3 p = position;
-                        p *= (1. + (1. - uOpacity) * 0.2);
-                        gl_Position = vec4(p, 1.0);
-                    }
-                `,
-                fragmentShader: `\
-                    uniform sampler2D map;
-                    uniform vec2 screenResolution;
-                    uniform vec2 videoResolution;
-                    uniform vec2 offset;
-                    uniform float uOpacity;
-                    varying vec2 vUv;
-    
-                    const vec3 baseColor = vec3(${
-                        new THREE.Color(0xd3d3d3).toArray().map(n => n.toFixed(8)).join(', ')
-                    });
-                    // const vec3 baseColor = vec3(0., 1., 0.);
-                    /* const vec3 baseColor = vec3(${
-                        new THREE.Color(0x01b140).toArray().map(n => n.toFixed(8)).join(', ')
-                    }); */
-    
-                    void main() {
-                        // adjust uv for the video aspect ratios of the screen and the video
-                        // to keep the video centered and unstretched regardless of the screen aspect ratio
-                        float screenAspectRatio = screenResolution.x / screenResolution.y;
-                        float videoAspectRatio = videoResolution.x / videoResolution.y;
-    
-                        vec2 uv = vUv;
-                        uv = (uv - 0.5) * 2.0; // [-1, 1]
-                        uv.y /= screenAspectRatio;
-                        uv.y *= videoAspectRatio;
-                        uv += offset;
-                        uv = (uv + 1.0) / 2.0; // [0, 1]
-                        
-                        gl_FragColor = texture2D(map, uv);
-    
-                        // float colorDistance = abs(gl_FragColor.r - baseColor.r) +
-                        //     abs(gl_FragColor.g - baseColor.g) +
-                        //     abs(gl_FragColor.b - baseColor.b);
-                        float colorDistance = distance(gl_FragColor.rgb, baseColor);
-                        if (colorDistance < 0.01) {
-                            discard;
-                        } else {
-                            gl_FragColor.a = min(max(colorDistance * 4., 0.0), 1.0);
-                        }
-
-                        gl_FragColor.a *= uOpacity;
-                    }
-                `,
-                side: THREE.DoubleSide,
-                transparent: true,
-                alphaToCoverage: true,
-                // alphaTest: 0.1,
-            });
-    
-            videoMesh = new THREE.Mesh(geometry, videoMaterial);
-            videoMesh.update = ({
-                opacity,
-            }) => {
-                videoMesh.material.uniforms.uOpacity.value = opacity;
-                videoMesh.material.uniforms.uOpacity.needsUpdate = true;
-            };
-            videoMesh.frustumCulled = false;
-            scene.add(videoMesh);
-        })();
+        })(); */
 
         const sparkleMesh = new SparkleMesh();
         sparkleMesh.position.z = -1;
@@ -440,8 +380,11 @@ class TitleScreenRenderer {
                 camera,
             });
             if (videoMesh) {
+                const resolution = renderer.getSize(localVector2D);
                 videoMesh.update({
+                    timestamp,
                     opacity: getCurrentOpacity(timestamp),
+                    resolution,
                 });
             }
             // update camera
@@ -511,7 +454,7 @@ const MainScreen = ({
             }} ref={canvasRef} />
             <footer className={styles.footer}>
                 <div className={styles.warningLabel}>
-                    <span className={styles.bold}>SEVERE WARNING:</span> This product is not intended for children under age sixty. <span className={styles.bold}>This is an AI generated product.</span> The ideas expressed are not proven to be safe. This product contains course language and due to its nature it should be viewed twice. Made by the Lisk.
+                    <span className={styles.bold}>SEVERE WARNING:</span> This product is not intended for children under age sixty. <span className={styles.bold}>This is an AI generated product.</span> The ideas expressed are not proven to be safe. This product contains cursed language and due to its nature it should be viewed twice. Made by the Lisk.
                 </div>
                 <div className={styles.slider}>
                     <div className={styles.notches}>
