@@ -3187,34 +3187,33 @@ export class Metazine3DRenderer extends EventTarget {
     this.entranceExitMesh = entranceExitMesh;
 
     // portal mesh
-    const portalScene = new THREE.Scene();
-    portalScene.autoUpdate = false;
-    {
-      gltfLoader.load('public/models/skybox.glb', gltf => {
-        const skyboxMesh = gltf.scene;
-        // skyboxMesh.scale.multiplyScalar(0.2);
+    this.portalMesh = null;
+    (async () => {
+      const portalScene = new THREE.Scene();
+      portalScene.autoUpdate = false;
+      {
+        gltfLoader.load('/models/skybox.glb', gltf => {
+          const skyboxMesh = gltf.scene;
+          portalScene.add(skyboxMesh);  
+          skyboxMesh.updateMatrixWorld();
+        }, undefined, err => {
+          console.warn(err);
+        });
+      }
 
-        // skyboxMesh.material = skyboxMesh.material.clone();
-        // skyboxMesh.material.side = THREE.BackSide;
-        
-        // this.scene.add(skyboxMesh);
-        portalScene.add(skyboxMesh);
-        globalThis.skyboxMesh = skyboxMesh;
+      const noiseImage = await loadImage('/images/noise.png');
 
-        skyboxMesh.updateMatrixWorld();
-      }, undefined, err => {
-        console.warn(err);
+      const portalMesh = new PortalMesh({
+        renderer: this.renderer,
+        portalScene,
+        portalCamera: this.camera,
+        noiseImage,
       });
-    }
-    const portalMesh = new PortalMesh({
-      renderer: this.renderer,
-      portalScene,
-      portalCamera: this.camera,
-    });
-    portalMesh.position.set(0, 30, 0);
-    this.scene.add(portalMesh);
-    portalMesh.updateMatrixWorld();
-    this.portalMesh = portalMesh;
+      portalMesh.position.set(0, 30, 0);
+      this.scene.add(portalMesh);
+      portalMesh.updateMatrixWorld();
+      this.portalMesh = portalMesh;
+    })();
 
     // map index mesh
     const mapIndex = this.metazine.mapIndexRenderer.getMapIndex();
@@ -3345,7 +3344,10 @@ export class Metazine3DRenderer extends EventTarget {
 
     this.underfloorMesh.update();
 
-    this.portalMesh.update();
+    const timestamp = performance.now();
+    if (this.portalMesh) {
+      this.portalMesh.update(timestamp);
+    }
 
     // render
     this.renderer.render(this.scene, this.camera);
