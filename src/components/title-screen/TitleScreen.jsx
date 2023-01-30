@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader.js';
 import {useState, useRef, useEffect} from 'react';
 import classnames from 'classnames';
 
@@ -31,6 +32,12 @@ import {
     ParticleEmitter2,
     ParticleSystemMesh,
 } from '../../zine-aux/meshes/particle-system.js';
+import {
+    PortalMesh,
+  } from '../../zine-aux/meshes/portal-mesh.js';
+import {
+    loadImage,
+} from '../../../utils.js';
 
 import styles from '../../../styles/TitleScreen.module.css';
 
@@ -53,7 +60,7 @@ const localMatrix = new THREE.Matrix4();
 
 //
 
-const _loadImageArrayBuffer = async u => {
+const _loadArrayBuffer = async u => {
     const res = await fetch(u);
     const arrayBuffer = await res.arrayBuffer();
     return arrayBuffer;
@@ -205,6 +212,36 @@ class TitleScreenRenderer {
             });
         })(); */
 
+        // portal mesh
+        let portalMesh;
+        (async () => {
+            const portalScene = new THREE.Scene();
+            portalScene.autoUpdate = false;
+            {
+                const gltfLoader = new GLTFLoader();
+                gltfLoader.load('/models/skybox.glb', gltf => {
+                    const skyboxMesh = gltf.scene;
+                    portalScene.add(skyboxMesh);  
+                    skyboxMesh.updateMatrixWorld();
+                }, undefined, err => {
+                  console.warn(err);
+                });
+            }
+
+            const noiseImage = await loadImage('/images/noise.png');
+
+            portalMesh = new PortalMesh({
+                renderer,
+                portalScene,
+                portalCamera: camera,
+                noiseImage,
+            });
+            portalMesh.position.set(0, -1, -5);
+            portalMesh.scale.setScalar(3);
+            scene.add(portalMesh);
+            portalMesh.updateMatrixWorld();
+        })();
+
         // particle system mesh
         let particleSystemMesh;
         let particleEmitter;
@@ -289,7 +326,7 @@ class TitleScreenRenderer {
         };
         document.addEventListener('pointerlockchange', pointerlockchange);
     
-        // frame loop
+        // render loop
         let lastTimestamp = performance.now();
         const _recurse = () => {
           frame = requestAnimationFrame(_recurse);
@@ -306,6 +343,9 @@ class TitleScreenRenderer {
                     opacity: getCurrentOpacity(timestamp),
                     resolution,
                 });
+            }
+            if (portalMesh) {
+                portalMesh.update(timestamp);
             }
             if (particleSystemMesh) {
                 particleEmitter.update({
@@ -524,7 +564,7 @@ const TitleScreen = () => {
 
                             const canvas = canvasRef.current;
                             if (canvas) {
-                                const imageArrayBuffer = await _loadImageArrayBuffer(u);
+                                const imageArrayBuffer = await _loadArrayBuffer(u);
                                 const uint8Array = await compileVirtualSceneExport(imageArrayBuffer);
 
                                 const titleScreenRenderer = new TitleScreenRenderer({
