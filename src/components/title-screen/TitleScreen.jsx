@@ -27,6 +27,10 @@ import{
 import {
     VideoMesh,
 } from './video-mesh.js';
+import {
+    ParticleEmitter2,
+    ParticleSystemMesh,
+} from './particle-system.js';
 
 import styles from '../../../styles/TitleScreen.module.css';
 
@@ -97,7 +101,7 @@ const _loadFile = async (fileName) => {
 
 //
 
-class SparkleMesh extends THREE.InstancedMesh {
+/* class SparkleMesh extends THREE.InstancedMesh {
     constructor() {
         const planeGeometry = new THREE.PlaneGeometry(1, 1);
         
@@ -181,7 +185,7 @@ class SparkleMesh extends THREE.InstancedMesh {
         this.quaternion.copy(camera.quaternion);
         this.updateMatrixWorld();
     }
-}
+} */
 
 //
 
@@ -272,8 +276,6 @@ class TitleScreenRenderer {
                 blob,
             ]);
 
-            // console.log('got video package', pack);
-
             videoMesh = new VideoMesh({
                 pack,
             });
@@ -302,11 +304,47 @@ class TitleScreenRenderer {
             });
         })(); */
 
-        const sparkleMesh = new SparkleMesh();
-        sparkleMesh.position.z = -1;
-        sparkleMesh.updateMatrixWorld();
-        scene.add(sparkleMesh);
-        sparkleMesh.updateMatrixWorld();
+        // particle system mesh
+        let particleSystemMesh;
+        let particleEmitter;
+        (async () => {
+            const particleName = 'Elements - Energy 017 Charge Up noCT noRSZ.mov';
+            const explosionName = 'Elements - Energy 119 Dissapear noCT noRSZ.mov';
+            const explosion2Name = 'Elements - Explosion 014 Hit Radial MIX noCT noRSZ.mov';
+            const particleNames = [
+                particleName,
+                explosionName,
+                explosion2Name,
+            ].map(s => s.replace(/\.mov$/, '.ktx2z'));
+
+            // const hash = `36e34000e5ea02b0a5383ef28a0f45bb36b79949`;
+            // const videoUrl = `https://cdn.jsdelivr.net/gh/webaverse/content@${hash}/videos/upstreet2.ktx2z`;
+            const videoUrls = particleNames.map(particleName => `/sm/${particleName}`);
+            console.log('video urls', videoUrls);
+
+            const files = await Promise.all(videoUrls.map(async videoUrl => {
+                const res = await fetch(videoUrl);
+                const blob = await res.blob();
+                return blob;
+            }));
+            const pack = await ParticleSystemMesh.loadPack(files);
+
+            particleSystemMesh = new ParticleSystemMesh({
+                pack,
+            });
+            particleSystemMesh.frustumCulled = false;
+            scene.add(particleSystemMesh);
+            particleSystemMesh.position.z = -1;
+            particleSystemMesh.updateMatrixWorld();
+
+            particleEmitter = new ParticleEmitter2(particleSystemMesh);
+        })();
+
+        // const sparkleMesh = new SparkleMesh();
+        // sparkleMesh.position.z = -1;
+        // sparkleMesh.updateMatrixWorld();
+        // scene.add(sparkleMesh);
+        // sparkleMesh.updateMatrixWorld();
 
         // resize handler
         const _setSize = () => {
@@ -375,16 +413,28 @@ class TitleScreenRenderer {
             } */
 
             // update meshes
-            sparkleMesh.update({
-                timestamp,
-                camera,
-            });
+            // sparkleMesh.update({
+            //     timestamp,
+            //     camera,
+            // });
             if (videoMesh) {
                 const resolution = renderer.getSize(localVector2D);
                 videoMesh.update({
                     timestamp,
                     opacity: getCurrentOpacity(timestamp),
                     resolution,
+                });
+            }
+            if (particleSystemMesh) {
+                particleEmitter.update({
+                    timestamp,
+                    localPlayer: particleSystemMesh,
+                });
+
+                particleSystemMesh.update({
+                    timestamp,
+                    timeDiff,
+                    camera,
                 });
             }
             // update camera
