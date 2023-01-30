@@ -382,12 +382,11 @@ const MainScreen = ({
         });
 
         const keydown = e => {
-            e.preventDefault();
-            e.stopPropagation();
-            
             switch (e.key) {
-                // space
                 case ' ': {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
                     _togglePointerLock();
                     break;
                 }
