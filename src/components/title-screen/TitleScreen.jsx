@@ -218,10 +218,7 @@ class TitleScreenRenderer {
                 explosion2Name,
             ].map(s => s.replace(/\.mov$/, '.ktx2z'));
 
-            // const hash = `36e34000e5ea02b0a5383ef28a0f45bb36b79949`;
-            // const videoUrl = `https://cdn.jsdelivr.net/gh/webaverse/content@${hash}/videos/upstreet2.ktx2z`;
             const videoUrls = particleNames.map(particleName => `${assetsBaseUrl}particles/${particleName}`);
-            // console.log('particle system video urls', videoUrls);
 
             const files = await Promise.all(videoUrls.map(async videoUrl => {
                 const res = await fetch(videoUrl);
