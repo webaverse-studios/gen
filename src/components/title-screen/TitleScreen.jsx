@@ -26,11 +26,11 @@ import{
 } from '../image-gallery/SceneGallery.jsx';
 import {
     VideoMesh,
-} from './video-mesh.js';
+} from '../../zine-aux/meshes/video-mesh.js';
 import {
     ParticleEmitter2,
     ParticleSystemMesh,
-} from './particle-system.js';
+} from '../../zine-aux/meshes/particle-system.js';
 
 import styles from '../../../styles/TitleScreen.module.css';
 
