@@ -36,7 +36,8 @@ import styles from '../../../styles/TitleScreen.module.css';
 
 //
 
-const assetsBaseUrl = `https://cdn.jsdelivr.net/gh/webaverse/content@main/`
+const hash = `8ebd78be3078833da10c95b565ee88b7cf6ba9e0`;
+const assetsBaseUrl = `https://cdn.jsdelivr.net/gh/webaverse/content@${hash}/`;
 const titleScreenZineFileName = 'title-screen.zine';
 const cubicBezier = bezier(0, 1, 0, 1);
 
@@ -165,8 +166,8 @@ class TitleScreenRenderer {
         let video = null;
         let videoMesh = null;
         (async () => {
-            const hash = `36e34000e5ea02b0a5383ef28a0f45bb36b79949`;
-            const videoUrl = `https://cdn.jsdelivr.net/gh/webaverse/content@${hash}/videos/upstreet2.ktx2z`;
+            const videoUrl = `${assetsBaseUrl}videos/upstreet2.ktx2z`;
+            
             // const videoUrl = `/sm/spritesheet.ktx2z`;
 
             // console.log('got video url', videoUrl);
@@ -219,8 +220,8 @@ class TitleScreenRenderer {
 
             // const hash = `36e34000e5ea02b0a5383ef28a0f45bb36b79949`;
             // const videoUrl = `https://cdn.jsdelivr.net/gh/webaverse/content@${hash}/videos/upstreet2.ktx2z`;
-            const videoUrls = particleNames.map(particleName => `/sm/${particleName}`);
-            console.log('video urls', videoUrls);
+            const videoUrls = particleNames.map(particleName => `${assetsBaseUrl}particles/${particleName}`);
+            // console.log('particle system video urls', videoUrls);
 
             const files = await Promise.all(videoUrls.map(async videoUrl => {
                 const res = await fetch(videoUrl);
