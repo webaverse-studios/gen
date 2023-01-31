@@ -570,11 +570,12 @@ export const applyNoise = (mesh) => {
 export const applyMask = (mesh) => {
   const {material} = mesh;
   const canvas = document.createElement('canvas');
-  const width = 512;
-  const height = 512;
+  const {width, height} = material.map.image;
   canvas.width = 512;
   canvas.height = 512;
   const renderer = makeRenderer(canvas);
+
+  renderer.setClearColor(0x000000, 1);
   renderer.setSize(width, height)
   renderer.autoClear = false;
 
@@ -604,7 +605,7 @@ export const applyMask = (mesh) => {
 
     void main() {
 
-      gl_FragColor = texture2D(uMap, vUv);
+      gl_FragColor = vec4(0, 0, 0, 0);
     }
   `,
     depthTest: false,
@@ -640,7 +641,7 @@ export const applyMask = (mesh) => {
     
     void main() {
           vec4 color = vec4(uColor, 1.);
-          gl_FragColor = vec4(color.rgb, 1);
+          gl_FragColor = color;
         }
     `,
     depthTest: false,

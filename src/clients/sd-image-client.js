@@ -327,9 +327,6 @@ export const new_img_inpainting = async ({
                                              seed = -1,
                                          } = {}) => {
 
-    console.log("ImgDataUrl", ImgDataUrl);
-    console.log("maskDataUrl", maskDataUrl);
-
     const res = await fetch(`${baseUrl}sdapi/v1/img2img`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -379,6 +376,42 @@ export const new_img_inpainting = async ({
     const base64img= images[0];
     const img = new Image();
     img.src = "data:image/png;base64,"+base64img;
-    document.body.appendChild(img);
+    return img;
+};
+
+export const upscale = async ({
+                                             width = 1024,
+                                             height = 1024,
+                                             ImgDataUrl = "",
+
+                                         } = {}) => {
+
+    console.log('upscale', width, height);
+    const res = await fetch(`${baseUrl}sdapi/v1/extra-single-image`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+        "resize_mode": 1,
+        "show_extras_results": true,
+        "gfpgan_visibility": 0,
+        "codeformer_visibility": 0,
+        "codeformer_weight": 0,
+        "upscaling_resize": 2,
+        "upscaling_resize_w": width,
+        "upscaling_resize_h": height,
+        "upscaling_crop": true,
+        "upscaler_1": "R-ESRGAN 4x+ Anime6B",
+        "upscaler_2": "R-ESRGAN 4x+ Anime6B",
+        "extras_upscaler_2_visibility": 0,
+        "upscale_first": false,
+        "image": ImgDataUrl,
+        }
+        )}
+    )
+    const r = await res.json();
+    console.log("response", r);
+    const base64img = r.image;
+    const img = new Image();
+    img.src = "data:image/png;base64,"+base64img;
     return img;
 };
