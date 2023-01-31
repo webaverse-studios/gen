@@ -435,16 +435,6 @@ class TitleScreenRenderer {
             endValue: nextSize,
         }));
     }
-    testMessage() {
-        const startTime = performance.now();
-        this.speechBubbleAnimations.push(new LinearAnimation({
-            startTime,
-            duration: 1000,
-            startValue: 0,
-            endValue: 1,
-            data: `I'm going places.`,
-        }));
-    }
     update(timestamp, timeDiff) {
         // update meshes
         if (this.videoMesh) {
@@ -488,12 +478,118 @@ class TitleScreenRenderer {
 
 //
 
+class SpeechBubbleObject extends THREE.Object3D {
+    constructor({
+        text,
+        updateFn,
+    }) {
+        super();
+
+        this.text = text;
+        this.updateFn = updateFn;
+
+        this.lastText = '';
+    }
+}
+class SpeechBubbleManager extends EventTarget {
+    constructor() {
+        super();
+
+        this.speechBubbles = [];
+    }
+    createSpeechBubble({
+        text = `I'm going places.`,
+        updateFn = () => true,
+    } = {}) {
+        const speechBubbleObject = new SpeechBubbleObject({
+            text,
+            updateFn,
+        });
+        this.speechBubbles.push(speechBubbleObject);
+        return speechBubbleObject;
+    }
+    removeSpeechBubble(speechBubble) {
+        const index = this.speechBubbles.indexOf(speechBubble);
+        if (index !== -1) {
+            this.speechBubbles.splice(index, 1);
+            speechBubble.parent && speechBubble.parent.remove(speechBubble);
+        } else {
+            throw new Error(`could not find speech bubble`);
+        }
+    }
+}
+const SpeechBubbles = ({
+    speechBubbleManager,
+}) => {
+    const [speechBubbleMessages, setSpeechBubbleMessages] = useState([]);
+    const [speechBubbleElCache, setSpeechBubbleElCache] = useState(() => new WeakMap());
+    const speechBubblesRef = useRef();
+
+    useEffect(() => {
+        const speechBubblesEl = speechBubblesRef.current;
+        if (speechBubbleManager && speechBubblesEl) {
+            const _recurse = () => {
+                frame = requestAnimationFrame(_recurse);
+
+                const timestamp = performance.now();
+                for (let i = 0; i < speechBubbleManager.speechBubbles.length; i++) {
+                    const speechBubble = speechBubbleManager.speechBubbles[i];
+                    const f = speechBubble.updateFn(timestamp);
+                    if (f >= 1) {
+                        // speechBubbleManager.speechBubbles.splice(i, 1);
+                        speechBubbleManager.removeSpeechBubble(speechBubble);
+                        i--;
+
+                        const el = speechBubbleElCache.get(speechBubble);
+                        if (!el) {
+                            console.warn('no speech bubble el in cache to delete', {speechBubbleElCache, speechBubble});
+                            debugger;
+                        }
+                        el.parentNode.removeChild(el);
+                        speechBubbleElCache.delete(speechBubble);
+                        
+                        continue;
+                    }
+                }
+
+                for (let i = 0; i < speechBubbleManager.speechBubbles.length; i++) {
+                    const speechBubble = speechBubbleManager.speechBubbles[i];
+                    let el = speechBubbleElCache.get(speechBubble);
+                    if (!el) {
+                        el = document.createElement('div');
+                        el.classList.add(styles.speechBubble);
+                        speechBubblesEl.appendChild(el);
+                        speechBubbleElCache.set(speechBubble, el);
+                    }
+                    if (speechBubble.text !== speechBubble.lastText) {
+                        el.innerText = speechBubble.text;
+                        speechBubble.lastText = speechBubble.text;
+                    }
+                }
+            };
+            let frame = requestAnimationFrame(_recurse);
+
+            return () => {
+                cancelAnimationFrame(frame);
+            };
+        }
+    }, [speechBubbleManager, speechBubblesRef.current]);
+
+    return (
+        <div className={styles.speechBubbles} ref={speechBubblesRef} />
+    );
+};
+
+//
+
 const MainScreen = ({
     titleScreenRenderer,
     focused,
     onFocus,
     canvasRef,
 }) => {
+    const [speechBubbleManager, setSpeechBubbleManager] = useState(() => new SpeechBubbleManager());
+
     const _togglePointerLock = async () => {
         const canvas = canvasRef.current;
         if (canvas) {
@@ -544,8 +640,17 @@ const MainScreen = ({
                 case 'm': {
                     e.preventDefault();
                     e.stopPropagation();
-
-                    titleScreenRenderer.testMessage();
+            
+                    const startTime = performance.now();
+                    const duration = 1000;
+                    titleScreenRenderer.createSpeechBubble({
+                        text: `I'm going places.`,
+                        updateFn(timestamp) {
+                            const timeDiff = timestamp - startTime;
+                            const f = timeDiff / duration;
+                            return f;
+                        },
+                    });
                     break;
                 }
             }
@@ -565,6 +670,9 @@ const MainScreen = ({
             titleScreenRenderer ? styles.enabled : null,
             focused ? styles.focused : null,
         )}>
+            <SpeechBubbles
+                speechBubbleManager={speechBubbleManager}
+            />
             <canvas className={classnames(
                 styles.canvas,
             )} onDoubleClick={async e => {
