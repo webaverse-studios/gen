@@ -489,7 +489,8 @@ class SpeechBubbleObject extends THREE.Object3D {
         this.text = text;
         this.updateFn = updateFn;
 
-        this.lastText = '';
+        this.textIndex = 0;
+        this.lastTextIndex = 0;
     }
 }
 class SpeechBubbleManager extends EventTarget {
@@ -569,12 +570,31 @@ class SpeechBubbleManager extends EventTarget {
             if (!el) {
                 el = document.createElement('div');
                 el.classList.add(styles.speechBubble);
+
+                const notchEl = document.createElement('div');
+                notchEl.classList.add(styles.notch);
+                el.appendChild(notchEl);
+
+                const textEl = document.createElement('div');
+                textEl.classList.add(styles.text);
+                el.appendChild(textEl);
+
+                const placeholderEl = document.createElement('div');
+                placeholderEl.classList.add(styles.placeholder);
+                el.appendChild(placeholderEl);
+                placeholderEl.innerText = speechBubble.text;
+
                 this.containerEl.appendChild(el);
                 this.speechBubbleElCache.set(speechBubble, el);
             }
-            if (speechBubble.text !== speechBubble.lastText) {
-                el.innerText = speechBubble.text;
-                speechBubble.lastText = speechBubble.text;
+            if (speechBubble.textIndex !== speechBubble.lastTextIndex) {
+                const currentText = speechBubble.text.slice(0, speechBubble.textIndex);
+
+                // const placeholderEl = el.querySelector(`.${styles.placeholder}`);
+                const textEl = el.querySelector(`.${styles.text}`);
+                textEl.innerText = currentText;
+
+                speechBubble.lastTextIndex = speechBubble.textIndex;
             }
         }
     }
@@ -668,7 +688,7 @@ const MainScreen = ({
         const canvas = canvasRef.current;
         if (canvas) {
             if (!document.pointerLockElement) {
-              await canvas.requestPointerLock();
+                await canvas.requestPointerLock();
             } else {
                 document.exitPointerLock();
             }
@@ -686,7 +706,6 @@ const MainScreen = ({
             const resize = () => {
                 const resolution = new THREE.Vector2();
                 titleScreenRenderer.renderer.getSize(resolution);
-                console.log('resize resolution', resolution.x, resolution.y);
                 setResolution(resolution);
             };
             titleScreenRenderer.addEventListener('resize', resize);
@@ -759,12 +778,16 @@ const MainScreen = ({
                     e.stopPropagation();
             
                     const startTime = performance.now();
-                    const duration = 1000;
-                    speechBubbleManager.createSpeechBubble({
+                    const duration = 100000000;
+                    const speechBubbleObject = speechBubbleManager.createSpeechBubble({
                         text: `I'm going places.`,
                         updateFn(timestamp) {
                             const timeDiff = timestamp - startTime;
                             const f = timeDiff / duration;
+
+                            const charN = Math.floor(f * this.text.length);
+                            this.textIndex = charN;
+
                             return f;
                         },
                     });
@@ -780,8 +803,6 @@ const MainScreen = ({
             document.removeEventListener('keydown', keydown);
         };
     }, [canvasRef.current, titleScreenRenderer, onFocus]);
-
-    console.log('render resolution', resolution.x, resolution.y);
 
     return (
         <div className={classnames(

@@ -18,6 +18,22 @@
   font-weight: 600;
 }
 
+@font-face {
+  font-family: 'Anime Ace';
+  src:  url('/fonts/animeace2_reg.ttf');
+  font-weight: 400;
+}
+@font-face {
+  font-family: 'Anime Ace';
+  src:  url('/fonts/animeace2_bld.ttf');
+  font-weight: 600;
+}
+
+/* @font-face {
+  font-family: 'Russo One';
+  src:  url('/fonts/RussoOne-Regular.ttf');
+} */
+
 /* @font-face {
   font-family: 'Plaza Regular';
   src:  url('/fonts/Plaza Regular.ttf');
