@@ -53,9 +53,11 @@ const cubicBezier = bezier(0, 1, 0, 1);
 
 //
 
+const localVector = new THREE.Vector3();
+const localVector2 = new THREE.Vector3();
 const localVector2D = new THREE.Vector2();
 // const localQuaternion = new THREE.Quaternion();
-const localMatrix = new THREE.Matrix4();
+// const localMatrix = new THREE.Matrix4();
 
 // const zeroVector = new THREE.Vector3(0, 0, 0);
 // const oneVector = new THREE.Vector3(1, 1, 1);
@@ -169,6 +171,7 @@ class TitleScreenRenderer extends EventTarget {
         // scene
         const scene = new THREE.Scene();
         scene.autoUpdate = false;
+        this.scene = scene;
 
         // camera
         const camera = new THREE.PerspectiveCamera();
@@ -495,15 +498,19 @@ class SpeechBubbleObject extends THREE.Object3D {
 }
 class SpeechBubbleManager extends EventTarget {
     constructor({
+        camera,
         containerEl,
     }) {
         super();
 
+        this.camera = camera;
         this.containerEl = containerEl;
         
         this.rect = null;
         this.speechBubbles = [];
         this.speechBubbleElCache = new WeakMap();
+        this.speechBubbleRectCache = new WeakMap();
+        this.speechBubbleCleanupFns = new WeakMap();
         this.cleanupFns = [];
 
         this.refreshRect();
@@ -519,6 +526,7 @@ class SpeechBubbleManager extends EventTarget {
         }
     }
     refreshRect() {
+        console.log('refresh rect');
         this.rect = this.containerEl.getBoundingClientRect();
     }
     createSpeechBubble({
@@ -545,28 +553,9 @@ class SpeechBubbleManager extends EventTarget {
         for (let i = 0; i < this.speechBubbles.length; i++) {
             const speechBubble = this.speechBubbles[i];
             const f = speechBubble.updateFn(timestamp);
-            if (f >= 1) {
-                this.removeSpeechBubble(speechBubble);
-                i--;
 
-                const el = this.speechBubbleElCache.get(speechBubble);
-                if (!el) {
-                    console.warn('no speech bubble el in cache to delete', {
-                        speechBubbleElCache: this.speechBubbleElCache,
-                        speechBubble,
-                    });
-                    debugger;
-                }
-                el.parentNode.removeChild(el);
-                this.speechBubbleElCache.delete(speechBubble);
-                
-                continue;
-            }
-        }
-
-        for (let i = 0; i < this.speechBubbles.length; i++) {
-            const speechBubble = this.speechBubbles[i];
             let el = this.speechBubbleElCache.get(speechBubble);
+            let rect = this.speechBubbleRectCache.get(speechBubble);
             if (!el) {
                 el = document.createElement('div');
                 el.classList.add(styles.speechBubble);
@@ -586,15 +575,56 @@ class SpeechBubbleManager extends EventTarget {
 
                 this.containerEl.appendChild(el);
                 this.speechBubbleElCache.set(speechBubble, el);
+
+                rect = el.getBoundingClientRect();
+                this.speechBubbleRectCache.set(speechBubble, rect);
+
+                {
+                    const resizeObserver = new ResizeObserver(() => {
+                        const rect = el.getBoundingClientRect();
+                        this.speechBubbleRectCache.set(speechBubble, rect);
+                    });
+                    resizeObserver.observe(el);
+                }
             }
-            if (speechBubble.textIndex !== speechBubble.lastTextIndex) {
-                const currentText = speechBubble.text.slice(0, speechBubble.textIndex);
+            
+            if (f >= 1) {
+                this.removeSpeechBubble(speechBubble);
+                i--;
 
-                // const placeholderEl = el.querySelector(`.${styles.placeholder}`);
-                const textEl = el.querySelector(`.${styles.text}`);
-                textEl.innerText = currentText;
+                el.parentNode.removeChild(el);
+                this.speechBubbleElCache.delete(speechBubble);
+                
+                continue;
+            } else {
+                // project the camera point
+                const screenPoint = localVector.copy(speechBubble.position)
+                    // .add(localVector2.set(0, 0.1, 0)) 
+                    .project(this.camera);
+                // flip y
+                screenPoint.y *= -1;
+                // convert to pixels
+                screenPoint.x = (screenPoint.x + 1) * this.rect.width / 2;
+                screenPoint.y = (screenPoint.y + 1) * this.rect.height / 2;
 
-                speechBubble.lastTextIndex = speechBubble.textIndex;
+                // adjust to center
+                screenPoint.x -= rect.width / 2;
+                screenPoint.y -= rect.height;
+                screenPoint.y -= 20;
+                
+                // apply transform style
+                el.style.transform = `translate3d(${screenPoint.x}px, ${screenPoint.y}px, 0)`;
+
+                // update the text
+                if (speechBubble.textIndex !== speechBubble.lastTextIndex) {
+                    const currentText = speechBubble.text.slice(0, speechBubble.textIndex);
+    
+                    // const placeholderEl = el.querySelector(`.${styles.placeholder}`);
+                    const textEl = el.querySelector(`.${styles.text}`);
+                    textEl.innerText = currentText;
+    
+                    speechBubble.lastTextIndex = speechBubble.textIndex;
+                }
             }
         }
     }
@@ -668,6 +698,18 @@ class SpeechBubbleManager extends EventTarget {
 
 //
 
+class CubeMesh extends THREE.Mesh {
+    constructor() {
+        const geometry = new THREE.BoxGeometry(0.02, 0.02, 0.02);
+        const material = new THREE.MeshBasicMaterial({
+            color: 0x00ff00,
+        });
+        super(geometry, material);
+    }
+}
+
+//
+
 const MainScreen = ({
     titleScreenRenderer,
     focused,
@@ -720,8 +762,9 @@ const MainScreen = ({
 
     useEffect(() => {
         const speechBubblesEl = speechBubblesRef.current;
-        if (speechBubblesEl) {
+        if (titleScreenRenderer && speechBubblesEl) {
             const speechBubbleManager = new SpeechBubbleManager({
+                camera: titleScreenRenderer.camera,
                 containerEl: speechBubblesEl,
             });
             setSpeechBubbleManager(speechBubbleManager);
@@ -741,7 +784,7 @@ const MainScreen = ({
                 cancelAnimationFrame(frame);
             };
         }
-    }, [speechBubblesRef.current]);
+    }, [titleScreenRenderer, speechBubblesRef.current]);
 
     useEffect(() => {
         const pointerlockchange = e => {
@@ -777,21 +820,48 @@ const MainScreen = ({
                     e.preventDefault();
                     e.stopPropagation();
             
-                    const startTime = performance.now();
-                    const duration = 4000;
-                    const speechBubbleObject = speechBubbleManager.createSpeechBubble({
-                        text: `I'm going places.`,
-                        updateFn(timestamp) {
-                            const timeDiff = timestamp - startTime;
-                            const f = timeDiff / duration;
-                            
-                            const f2 = Math.min(Math.max(f * 2, 0), 1);
-                            const charN = Math.floor(f2 * this.text.length);
-                            this.textIndex = charN;
+                    if (titleScreenRenderer && speechBubbleManager) {
+                        const startTime = performance.now();
+                        const duration = 8000;
+                        const startPosition = new THREE.Vector3(
+                            Math.random() - 0.5,
+                            Math.random() - 0.5,
+                            -1
+                        );
+                        const direction = new THREE.Vector3(
+                            Math.random() - 0.5,
+                            Math.random() - 0.5,
+                            0
+                        ).normalize();
+                        const speechBubbleObject = speechBubbleManager.createSpeechBubble({
+                            text: `I'm going places.`,
+                            updateFn(timestamp) {
+                                const timeDiff = timestamp - startTime;
+                                const f = timeDiff / duration;
+                                
+                                const f2 = Math.min(Math.max(f * 4, 0), 1);
+                                const charN = Math.floor(f2 * this.text.length);
+                                this.textIndex = charN;
 
-                            return f;
-                        },
-                    });
+                                this.position.copy(startPosition)
+                                    .add(
+                                        direction.clone()
+                                            .multiplyScalar(Math.sin(f * Math.PI * 2))
+                                    );
+                                this.updateMatrixWorld();
+
+                                return f;
+                            },
+                        });
+
+                        const cubeMesh = new CubeMesh();
+                        speechBubbleObject.add(cubeMesh);
+                        cubeMesh.updateMatrixWorld();
+
+                        titleScreenRenderer.scene.add(speechBubbleObject);
+                        speechBubbleObject.updateMatrixWorld();
+                    }
+                    
                     break;
                 }
             }
@@ -803,7 +873,7 @@ const MainScreen = ({
             document.removeEventListener('wheel', wheel);
             document.removeEventListener('keydown', keydown);
         };
-    }, [canvasRef.current, titleScreenRenderer, onFocus]);
+    }, [canvasRef.current, titleScreenRenderer, speechBubbleManager, onFocus]);
 
     return (
         <div className={classnames(
@@ -895,7 +965,7 @@ const TitleScreen = () => {
                             setTitleScreenRenderer(newTitleScreenRenderer);
                             setLoaded(true);
 
-                            console.log('done loading', newTitleScreenRenderer);
+                            // console.log('done loading', newTitleScreenRenderer);
                         } else {
                             throw new Error('no canvas');
                         }

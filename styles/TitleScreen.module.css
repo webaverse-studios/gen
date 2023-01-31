@@ -166,13 +166,14 @@
   top: 0;
   left: 0;
   display: flex;
-  background-color: #FF0000080;
-  border: 5px solid #000;
+  /* background-color: #FF0000080; */
+  /* border: 5px solid #000; */
   z-index: 1;
   /* width: 100vw;
   height: 100vh; */
+  overflow: hidden;
   pointer-events: none;
-  user-select: none;
+  /* user-select: none; */
 }
 
 .titleScreen .speechBubbles .speechBubble {
@@ -185,6 +186,7 @@
   letter-spacing: 1.5px;
   color: #FFF;
   font-family: 'Anime Ace';
+  pointer-events: all;
 }
 .titleScreen .speechBubbles .speechBubble .placeholder {
   position: relative;
@@ -198,6 +200,9 @@
   bottom: 0;
   left: calc(50% - 20px);
 }
+
+/* */
+
 .titleScreen .speechBubbles .speechBubble .notch::before {
   position: absolute;
   border-width: 0 20px 20px 0;
