@@ -34,7 +34,10 @@ import {
 } from '../../zine-aux/meshes/particle-system.js';
 import {
     PortalMesh,
-  } from '../../zine-aux/meshes/portal-mesh.js';
+} from '../../zine-aux/meshes/portal-mesh.js';
+import {
+    SpeechBubbleMesh,
+} from '../../zine-aux/meshes/speech-bubble-mesh.js';
 import {
     loadImage,
 } from '../../../utils.js';
@@ -195,7 +198,7 @@ class TitleScreenRenderer {
             zineCameraManager.setLockCamera(zineRenderer.camera);
             zineCameraManager.toggleCameraLock();
         })();
-    
+
         // video mesh
         let video = null;
         let videoMesh = null;
@@ -289,6 +292,18 @@ class TitleScreenRenderer {
         })();
         this.portalSizeIndex = 0;
         this.portalAnimations = [];
+
+        // speech bubble mesh
+        let speechBubbleMesh;
+        {
+            speechBubbleMesh = new SpeechBubbleMesh({
+                text: 'hello world',
+                fontSize: 0.1,
+            });
+            speechBubbleMesh.position.set(0, 2, -3);
+            scene.add(speechBubbleMesh);
+            speechBubbleMesh.updateMatrixWorld();
+        }
 
         // particle system mesh
         let particleSystemMesh;
