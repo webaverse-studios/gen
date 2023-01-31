@@ -1146,18 +1146,17 @@ export async function editTexture(mesh, prompt, symmetrical) {
 
         }
     }
+    // postprocessing to remove seams and super res
     const uv = extractUVMap({mesh: mesh});
     const padded_mask = padTexture({texture: uv, mask:mask_image});
     const super_res = await upscale({width:og_uv.width, height:og_uv.height, ImgDataUrl: padded_mask.toDataURL()});
 
-
-    const upscaled_mask = upscaleImage(padded_mask, super_res.width, super_res.height)
+    // there is a small hole transitioning from the original texture to the padding in the mask that needs to be filled
+    const closed_mask = erodeImage(dilateImage(padded_mask, 5), 5);
+    const upscaled_mask = upscaleImage(closed_mask, super_res.width, super_res.height);
     const masked_super_res = maskImage(super_res, upscaled_mask);
     const combined = overlayImages(og_uv, masked_super_res);
-
     const texture = new THREE.CanvasTexture(combined);
     mesh.material.map = texture.clone();
     console.log("DONE");
-
-
 }
