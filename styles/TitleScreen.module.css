@@ -188,6 +188,7 @@
 }
 .titleScreen .speechBubbles .speechBubble .placeholder {
   position: relative;
+  visibility: hidden;
 }
 .titleScreen .speechBubbles .speechBubble .text {
   position: absolute;

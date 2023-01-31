@@ -778,14 +778,15 @@ const MainScreen = ({
                     e.stopPropagation();
             
                     const startTime = performance.now();
-                    const duration = 100000000;
+                    const duration = 4000;
                     const speechBubbleObject = speechBubbleManager.createSpeechBubble({
                         text: `I'm going places.`,
                         updateFn(timestamp) {
                             const timeDiff = timestamp - startTime;
                             const f = timeDiff / duration;
-
-                            const charN = Math.floor(f * this.text.length);
+                            
+                            const f2 = Math.min(Math.max(f * 2, 0), 1);
+                            const charN = Math.floor(f2 * this.text.length);
                             this.textIndex = charN;
 
                             return f;
