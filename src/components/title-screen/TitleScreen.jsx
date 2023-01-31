@@ -35,9 +35,9 @@ import {
 import {
     PortalMesh,
 } from '../../zine-aux/meshes/portal-mesh.js';
-import {
-    SpeechBubbleMesh,
-} from '../../zine-aux/meshes/speech-bubble-mesh.js';
+// import {
+//     SpeechBubbleMesh,
+// } from '../../zine-aux/meshes/speech-bubble-mesh.js';
 import {
     loadImage,
 } from '../../../utils.js';
@@ -127,6 +127,19 @@ class LinearAnimation {
 
 //
 
+const SpeechBubble = ({
+    message,
+}) => {
+  return (
+    <div className={styles.speechBubble}>
+      <div className={styles.message}>{message}</div>
+      <div className={styles.notch} />
+    </div>
+  )
+};
+
+//
+
 class TitleScreenRenderer {
     constructor({
         canvas,
@@ -149,6 +162,7 @@ class TitleScreenRenderer {
             antialias: true,
             alpha: true,
         });
+        this.renderer = renderer;
     
         // scene
         const scene = new THREE.Scene();
@@ -156,6 +170,7 @@ class TitleScreenRenderer {
 
         // camera
         const camera = new THREE.PerspectiveCamera();
+        this.camera = camera;
 
         // camera manager
         const localPlayer = new THREE.Object3D();
@@ -200,8 +215,7 @@ class TitleScreenRenderer {
         })();
 
         // video mesh
-        let video = null;
-        let videoMesh = null;
+        this.videoMesh = null;
         (async () => {
             const videoUrl = `${assetsBaseUrl}videos/upstreet2.ktx2z`;
             
@@ -214,9 +228,10 @@ class TitleScreenRenderer {
                 blob,
             ]);
 
-            videoMesh = new VideoMesh({
+            const videoMesh = new VideoMesh({
                 pack,
             });
+            this.videoMesh = videoMesh;
             videoMesh.frustumCulled = false;
             scene.add(videoMesh);
         })();
@@ -243,7 +258,6 @@ class TitleScreenRenderer {
         })(); */
 
         // portal mesh
-        let portalMesh;
         this.portalMesh = null;
         (async () => {
             const portalScene = new THREE.Scene();
@@ -261,7 +275,7 @@ class TitleScreenRenderer {
 
             const noiseImage = await loadImage('/images/noise.png');
 
-            portalMesh = new PortalMesh({
+            const portalMesh = new PortalMesh({
                 renderer,
                 portalScene,
                 portalCamera: camera,
@@ -270,30 +284,13 @@ class TitleScreenRenderer {
             this.portalMesh = portalMesh;
             portalMesh.position.set(0, -1, -5);
             portalMesh.scale.setScalar(3);
-            portalMesh.update = (update => {
-                const self = this;
-                function update2(timestamp) {
-                    self.portalAnimations = self.portalAnimations.filter(portalAnimation => {
-                        const {
-                            done,
-                            value,
-                        } = portalAnimation.update(timestamp);
-                        // console.log('got done value', done, value);
-                        portalMesh.setScale(value);
-                        return !done;
-                    });
-
-                    return update.apply(this, arguments);
-                }
-                return update2;
-            })(portalMesh.update);
             scene.add(portalMesh);
             portalMesh.updateMatrixWorld();
         })();
         this.portalSizeIndex = 0;
         this.portalAnimations = [];
 
-        // speech bubble mesh
+        /* // speech bubble mesh
         let speechBubbleMesh;
         {
             speechBubbleMesh = new SpeechBubbleMesh({
@@ -303,11 +300,14 @@ class TitleScreenRenderer {
             speechBubbleMesh.position.set(0, 2, -3);
             scene.add(speechBubbleMesh);
             speechBubbleMesh.updateMatrixWorld();
-        }
+        } */
+
+        // speech bubble animations
+        this.speechBubbleAnimations = [];
 
         // particle system mesh
-        let particleSystemMesh;
-        let particleEmitter;
+        this.particleSystemMesh = null;
+        this.particleEmitter = null;
         (async () => {
             const particleName = 'Elements - Energy 017 Charge Up noCT noRSZ.mov';
             const explosionName = 'Elements - Energy 119 Dissapear noCT noRSZ.mov';
@@ -327,34 +327,36 @@ class TitleScreenRenderer {
             }));
             const pack = await ParticleSystemMesh.loadPack(files);
 
-            particleSystemMesh = new ParticleSystemMesh({
+            const particleSystemMesh = new ParticleSystemMesh({
                 pack,
             });
+            this.particleSystemMesh = particleSystemMesh;
             particleSystemMesh.frustumCulled = false;
             scene.add(particleSystemMesh);
             particleSystemMesh.position.z = -1;
             particleSystemMesh.scale.setScalar(0.5);
             particleSystemMesh.updateMatrixWorld();
 
-            particleEmitter = new ParticleEmitter2(particleSystemMesh, {
+            const particleEmitter = new ParticleEmitter2(particleSystemMesh, {
                 range: 0.3,
             });
+            this.particleEmitter = particleEmitter;
         })();
 
         // resize handler
         const _setSize = () => {
             renderer.setSize(globalThis.innerWidth, globalThis.innerHeight);
     
-            if (videoMesh) {
-                videoMesh.material.uniforms.screenResolution.value.set(
+            if (this.videoMesh) {
+                this.videoMesh.material.uniforms.screenResolution.value.set(
                     globalThis.innerWidth,
                     globalThis.innerHeight
                 );
-                videoMesh.material.uniforms.screenResolution.needsUpdate = true;
+                this.videoMesh.material.uniforms.screenResolution.needsUpdate = true;
             }
         };
         _setSize();
-        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setPixelRatio(globalThis.devicePixelRatio);
 
         const resize = e => {
             _setSize();
@@ -369,7 +371,7 @@ class TitleScreenRenderer {
         let startOpacity = 0;
         let endOpacity = 1;
         const opacityRate = 1;
-        const getCurrentOpacity = now => {
+        this.getCurrentOpacity = now => {
             const timeDiff = now - lastPointerLockChangeTime;
             const timeDiffS = timeDiff / 1000;
 
@@ -382,7 +384,7 @@ class TitleScreenRenderer {
         const pointerlockchange = e => {
             const now = performance.now();
 
-            startOpacity = getCurrentOpacity(now);
+            startOpacity = this.getCurrentOpacity(now);
             endOpacity = document.pointerLockElement ? 0 : 1;
 
             lastPointerLockChangeTime = now;
@@ -397,31 +399,9 @@ class TitleScreenRenderer {
           if (!document.hidden) {
             const timestamp = performance.now();
             const timeDiff = timestamp - lastTimestamp;
-
-            // update meshes
-            if (videoMesh) {
-                const resolution = renderer.getSize(localVector2D);
-                videoMesh.update({
-                    timestamp,
-                    opacity: getCurrentOpacity(timestamp),
-                    resolution,
-                });
-            }
-            if (portalMesh) {
-                portalMesh.update(timestamp);
-            }
-            if (particleSystemMesh) {
-                particleEmitter.update({
-                    timestamp,
-                    localPlayer: particleSystemMesh,
-                });
-
-                particleSystemMesh.update({
-                    timestamp,
-                    timeDiff,
-                    camera,
-                });
-            }
+            
+            // local update
+            this.update(timestamp, timeDiff);
             // update camera
             zineCameraManager.updatePost(timestamp, timeDiff);
             
@@ -454,6 +434,50 @@ class TitleScreenRenderer {
             startValue: this.portalMesh.getScale(),
             endValue: nextSize,
         }));
+    }
+    testMessage() {
+        const startTime = performance.now();
+        this.speechBubbleAnimations.push(new LinearAnimation({
+            startTime,
+            duration: 1000,
+            startValue: 0,
+            endValue: 1,
+            data: `I'm going places.`,
+        }));
+    }
+    update(timestamp, timeDiff) {
+        // update meshes
+        if (this.videoMesh) {
+            const resolution = this.renderer.getSize(localVector2D);
+            this.videoMesh.update({
+                timestamp,
+                opacity: this.getCurrentOpacity(timestamp),
+                resolution,
+            });
+        }
+        if (this.portalMesh) {
+            this.portalAnimations = this.portalAnimations.filter(portalAnimation => {
+                const {
+                    done,
+                    value,
+                } = portalAnimation.update(timestamp);
+                this.portalMesh.setScale(value);
+                return !done;
+            });
+            this.portalMesh.update(timestamp);
+        }
+        if (this.particleSystemMesh) {
+            this.particleEmitter.update({
+                timestamp,
+                localPlayer: this.particleSystemMesh,
+            });
+
+            this.particleSystemMesh.update({
+                timestamp,
+                timeDiff,
+                camera: this.camera,
+            });
+        }
     }
     destroy() {
       for (let i = 0; i < this.cleanupFns.length; i++) {
@@ -515,6 +539,13 @@ const MainScreen = ({
                     e.stopPropagation();
 
                     titleScreenRenderer.togglePortal();
+                    break;
+                }
+                case 'm': {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    titleScreenRenderer.testMessage();
                     break;
                 }
             }
