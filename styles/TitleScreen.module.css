@@ -29,14 +29,14 @@
   --animation-offset: 150px;
 
   position: absolute;
-  /* margin: 50px;
-  margin-top: auto; */
   left: 30px;
   right: 30px;
   bottom: 0;
   height: var(--animation-offset);
   pointer-events: none;
   user-select: none;
+
+  overflow: hidden;
 }
 
 /* */
@@ -157,4 +157,19 @@
 
 .titleScreen .gallery .imageWrap .image:not(.loaded) {
   visibility: hidden;
+}
+
+/* */
+
+.titleScreen .speechBubbles {
+  position: absolute;
+  top: 0;
+  left: 0;
+  background-color: #FF0000080;
+  border: 5px solid #000;
+  z-index: 1;
+  /* width: 100vw;
+  height: 100vh; */
+  pointer-events: none;
+  user-select: none;
 }

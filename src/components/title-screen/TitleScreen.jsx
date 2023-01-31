@@ -127,7 +127,7 @@ class LinearAnimation {
 
 //
 
-const SpeechBubble = ({
+/* const SpeechBubble = ({
     message,
 }) => {
   return (
@@ -136,15 +136,17 @@ const SpeechBubble = ({
       <div className={styles.notch} />
     </div>
   )
-};
+}; */
 
 //
 
-class TitleScreenRenderer {
+class TitleScreenRenderer extends EventTarget {
     constructor({
         canvas,
         uint8Array,
     }) {
+        super();
+
         this.canvas = canvas;
         this.uint8Array = uint8Array;
 
@@ -302,9 +304,6 @@ class TitleScreenRenderer {
             speechBubbleMesh.updateMatrixWorld();
         } */
 
-        // speech bubble animations
-        this.speechBubbleAnimations = [];
-
         // particle system mesh
         this.particleSystemMesh = null;
         this.particleEmitter = null;
@@ -360,6 +359,8 @@ class TitleScreenRenderer {
 
         const resize = e => {
             _setSize();
+
+            this.dispatchEvent(new MessageEvent('resize'));
         };
         globalThis.addEventListener('resize', resize);
         this.cleanupFns.push(() => {
@@ -492,10 +493,32 @@ class SpeechBubbleObject extends THREE.Object3D {
     }
 }
 class SpeechBubbleManager extends EventTarget {
-    constructor() {
+    constructor({
+        containerEl,
+    }) {
         super();
 
+        this.containerEl = containerEl;
+        
+        this.rect = null;
         this.speechBubbles = [];
+        this.speechBubbleElCache = new WeakMap();
+        this.cleanupFns = [];
+
+        this.refreshRect();
+        {
+            // resize observer on containerEl
+            const resizeObserver = new ResizeObserver(() => {
+                this.refreshRect();
+            });
+            resizeObserver.observe(this.containerEl);
+            this.cleanupFns.push(() => {
+                resizeObserver.disconnect();
+            });
+        }
+    }
+    refreshRect() {
+        this.rect = this.containerEl.getBoundingClientRect();
     }
     createSpeechBubble({
         text = `I'm going places.`,
@@ -517,8 +540,51 @@ class SpeechBubbleManager extends EventTarget {
             throw new Error(`could not find speech bubble`);
         }
     }
+    update(timestamp) {
+        for (let i = 0; i < this.speechBubbles.length; i++) {
+            const speechBubble = this.speechBubbles[i];
+            const f = speechBubble.updateFn(timestamp);
+            if (f >= 1) {
+                this.removeSpeechBubble(speechBubble);
+                i--;
+
+                const el = this.speechBubbleElCache.get(speechBubble);
+                if (!el) {
+                    console.warn('no speech bubble el in cache to delete', {
+                        speechBubbleElCache: this.speechBubbleElCache,
+                        speechBubble,
+                    });
+                    debugger;
+                }
+                el.parentNode.removeChild(el);
+                this.speechBubbleElCache.delete(speechBubble);
+                
+                continue;
+            }
+        }
+
+        for (let i = 0; i < this.speechBubbles.length; i++) {
+            const speechBubble = this.speechBubbles[i];
+            let el = this.speechBubbleElCache.get(speechBubble);
+            if (!el) {
+                el = document.createElement('div');
+                el.classList.add(styles.speechBubble);
+                this.containerEl.appendChild(el);
+                this.speechBubbleElCache.set(speechBubble, el);
+            }
+            if (speechBubble.text !== speechBubble.lastText) {
+                el.innerText = speechBubble.text;
+                speechBubble.lastText = speechBubble.text;
+            }
+        }
+    }
+    destroy() {
+        for (let i = 0; i < this.cleanupFns.length; i++) {
+            this.cleanupFns[i]();
+        }
+    }
 }
-const SpeechBubbles = ({
+/* const SpeechBubbles = ({
     speechBubbleManager,
 }) => {
     const [speechBubbleMessages, setSpeechBubbleMessages] = useState([]);
@@ -578,7 +644,7 @@ const SpeechBubbles = ({
     return (
         <div className={styles.speechBubbles} ref={speechBubblesRef} />
     );
-};
+}; */
 
 //
 
@@ -588,7 +654,15 @@ const MainScreen = ({
     onFocus,
     canvasRef,
 }) => {
-    const [speechBubbleManager, setSpeechBubbleManager] = useState(() => new SpeechBubbleManager());
+    const [resolution, setResolution] = useState(() => {
+        const resolution = new THREE.Vector2();
+        if (titleScreenRenderer) {
+            titleScreenRenderer.renderer.getSize(resolution);
+        }
+        return resolution;
+    });
+    const [speechBubbleManager, setSpeechBubbleManager] = useState(null);
+    const speechBubblesRef = useRef();
 
     const _togglePointerLock = async () => {
         const canvas = canvasRef.current;
@@ -600,12 +674,55 @@ const MainScreen = ({
             }
         }
     };
-    const _reqestPointerLock = async () => {
+    const _requestPointerLock = async () => {
         const canvas = canvasRef.current;
         if (canvas) {
             await canvas.requestPointerLock();
         }
     };
+
+    useEffect(() => {
+        if (titleScreenRenderer) {
+            const resize = () => {
+                const resolution = new THREE.Vector2();
+                titleScreenRenderer.renderer.getSize(resolution);
+                console.log('resize resolution', resolution.x, resolution.y);
+                setResolution(resolution);
+            };
+            titleScreenRenderer.addEventListener('resize', resize);
+
+            resize();
+
+            return () => {
+                titleScreenRenderer.removeEventListener('resize', resize);
+            };
+        }
+    }, [titleScreenRenderer]);
+
+    useEffect(() => {
+        const speechBubblesEl = speechBubblesRef.current;
+        if (speechBubblesEl) {
+            const speechBubbleManager = new SpeechBubbleManager({
+                containerEl: speechBubblesEl,
+            });
+            setSpeechBubbleManager(speechBubbleManager);
+
+            const _recurse = () => {
+                frame = requestAnimationFrame(_recurse);
+
+                const timestamp = performance.now();
+                speechBubbleManager.update(timestamp);
+            };
+            let frame = requestAnimationFrame(_recurse);
+
+            return () => {
+                speechBubbleManager.destroy();
+                setSpeechBubbleManager(null);
+
+                cancelAnimationFrame(frame);
+            };
+        }
+    }, [speechBubblesRef.current]);
 
     useEffect(() => {
         const pointerlockchange = e => {
@@ -643,7 +760,7 @@ const MainScreen = ({
             
                     const startTime = performance.now();
                     const duration = 1000;
-                    titleScreenRenderer.createSpeechBubble({
+                    speechBubbleManager.createSpeechBubble({
                         text: `I'm going places.`,
                         updateFn(timestamp) {
                             const timeDiff = timestamp - startTime;
@@ -662,7 +779,9 @@ const MainScreen = ({
             document.removeEventListener('wheel', wheel);
             document.removeEventListener('keydown', keydown);
         };
-    }, [canvasRef.current, onFocus]);
+    }, [canvasRef.current, titleScreenRenderer, onFocus]);
+
+    console.log('render resolution', resolution.x, resolution.y);
 
     return (
         <div className={classnames(
@@ -670,13 +789,18 @@ const MainScreen = ({
             titleScreenRenderer ? styles.enabled : null,
             focused ? styles.focused : null,
         )}>
-            <SpeechBubbles
-                speechBubbleManager={speechBubbleManager}
-            />
+            <div
+                className={styles.speechBubbles}
+                ref={speechBubblesRef}
+                style={{
+                    width: `${resolution.x}px`,
+                    height: `${resolution.y}px`,
+                }}
+            ></div>
             <canvas className={classnames(
                 styles.canvas,
             )} onDoubleClick={async e => {
-                await _reqestPointerLock();
+                await _requestPointerLock();
             }} ref={canvasRef} />
             <footer className={styles.footer}>
                 <div className={styles.warningLabel}>
