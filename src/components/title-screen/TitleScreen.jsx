@@ -60,12 +60,12 @@ const cubicBezier = bezier(0, 1, 0, 1);
 //
 
 const localVector = new THREE.Vector3();
-const localVector2 = new THREE.Vector3();
+// const localVector2 = new THREE.Vector3();
 const localVector2D = new THREE.Vector2();
 // const localQuaternion = new THREE.Quaternion();
 // const localMatrix = new THREE.Matrix4();
 
-// const zeroVector = new THREE.Vector3(0, 0, 0);
+const zeroVector = new THREE.Vector3(0, 0, 0);
 // const oneVector = new THREE.Vector3(1, 1, 1);
 // const upVector = new THREE.Vector3(0, 1, 0);
 
@@ -135,16 +135,134 @@ class LinearAnimation {
 
 //
 
-/* const SpeechBubble = ({
-    message,
-}) => {
-  return (
-    <div className={styles.speechBubble}>
-      <div className={styles.message}>{message}</div>
-      <div className={styles.notch} />
-    </div>
-  )
-}; */
+class LocalPlayer extends THREE.Object3D {
+    constructor() {
+        super();
+
+        // local player meshes
+        this.outlineMesh = null;
+        this.particleSystemMesh = null;
+        this.particleEmitter = null;
+        (async () => {
+            const r = 0.3;
+            const h = 1.6 - r * 2;
+
+            // particle mesh
+            {
+                const particleName = 'Elements - Energy 017 Charge Up noCT noRSZ.mov';
+                const explosionName = 'Elements - Energy 119 Dissapear noCT noRSZ.mov';
+                const explosion2Name = 'Elements - Explosion 014 Hit Radial MIX noCT noRSZ.mov';
+                const particleNames = [
+                    particleName,
+                    explosionName,
+                    explosion2Name,
+                ].map(s => s.replace(/\.mov$/, '.ktx2z'));
+
+                const videoUrls = particleNames.map(particleName => `${assetsBaseUrl}particles/${particleName}`);
+
+                const files = await Promise.all(videoUrls.map(async videoUrl => {
+                    const res = await fetch(videoUrl);
+                    const blob = await res.blob();
+                    return blob;
+                }));
+                const pack = await ParticleSystemMesh.loadPack(files);
+
+                const particleSystemMesh = new ParticleSystemMesh({
+                    pack,
+                });
+                this.particleSystemMesh = particleSystemMesh;
+                particleSystemMesh.frustumCulled = false;
+                this.add(particleSystemMesh);
+                particleSystemMesh.position.set(0, -h / 2, 0);
+                particleSystemMesh.updateMatrixWorld();
+
+                const particleEmitter = new ParticleEmitter2(particleSystemMesh, {
+                    range: 1,
+                });
+                this.particleEmitter = particleEmitter;
+            }
+
+            // outline mesh
+            {
+                const outlineMesh = new OutlineMesh({
+                    geometry: new CapsuleGeometry(r, r, h, 8)
+                      .rotateZ(Math.PI / 2)
+                      .translate(0, -h / 2, 0)
+                });
+                this.add(outlineMesh);
+                outlineMesh.updateMatrixWorld();
+                this.outlineMesh = outlineMesh;
+            }
+        })();
+    }
+    update({
+        timestamp,
+        timeDiff,
+        localPlayer,
+        camera,
+        keys,
+    }) {
+        const speed = 0.1;
+        const direction = new THREE.Vector3();
+        // console.log('got keys', [
+        //     keys.left,
+        //     keys.right,
+        //     keys.up,
+        //     keys.down,
+        // ]);
+        if (keys.right) {
+            direction.x += 1;
+        }
+        if (keys.left) {
+            direction.x -= 1;
+        }
+        if (keys.up) {
+            direction.z -= 1;
+        }
+        if (keys.down) {
+            direction.z += 1;
+        }
+        if (!direction.equals(zeroVector)) {
+            direction.normalize()
+                .multiplyScalar(speed);
+        }
+        this.position.add(direction);
+        this.updateMatrixWorld();
+
+        if (this.outlineMesh) {
+            this.outlineMesh.update(timestamp);
+        }
+        if (this.particleSystemMesh) {
+            this.particleEmitter.update({
+                timestamp,
+                localPlayer: this,
+            });
+
+            this.particleSystemMesh.update({
+                timestamp,
+                timeDiff,
+                camera,
+            });
+        }
+    }
+}
+
+//
+
+class KeysTracker {
+    constructor() {
+        this.left = false;
+        this.right = false;
+        this.up = false;
+        this.down = false;
+    }
+    reset() {
+        this.left = false;
+        this.right = false;
+        this.up = false;
+        this.down = false;
+    }
+}
 
 //
 
@@ -158,6 +276,9 @@ class TitleScreenRenderer extends EventTarget {
         this.canvas = canvas;
         this.uint8Array = uint8Array;
 
+        // locals
+        this.keys = new KeysTracker();
+
         // cleanup
         this.cleanupFns = [];
 
@@ -165,11 +286,6 @@ class TitleScreenRenderer extends EventTarget {
         this.cleanupFns.push(() => {
             cancelAnimationFrame(frame);
         });
-
-        // local player
-        const localPlayer = new THREE.Object3D();
-        localPlayer.position.z = -2;
-        localPlayer.updateMatrixWorld();
 
         // renderer
         const renderer = new THREE.WebGLRenderer({
@@ -188,6 +304,13 @@ class TitleScreenRenderer extends EventTarget {
         // camera
         const camera = new THREE.PerspectiveCamera();
         this.camera = camera;
+
+        // local player
+        const localPlayer = new LocalPlayer();
+        localPlayer.position.z = -2;
+        scene.add(localPlayer);
+        localPlayer.updateMatrixWorld();
+        this.localPlayer = localPlayer;
 
         // camera manager
         const zineCameraManager = new ZineCameraManager({
@@ -316,64 +439,6 @@ class TitleScreenRenderer extends EventTarget {
             speechBubbleMesh.updateMatrixWorld();
         } */
 
-        // local player meshes
-        this.outlineMesh = null;
-        this.particleSystemMesh = null;
-        this.particleEmitter = null;
-        (async () => {
-            const r = 0.3;
-            const h = 1.6 - r * 2;
-
-            // particle mesh
-            {
-                const particleName = 'Elements - Energy 017 Charge Up noCT noRSZ.mov';
-                const explosionName = 'Elements - Energy 119 Dissapear noCT noRSZ.mov';
-                const explosion2Name = 'Elements - Explosion 014 Hit Radial MIX noCT noRSZ.mov';
-                const particleNames = [
-                    particleName,
-                    explosionName,
-                    explosion2Name,
-                ].map(s => s.replace(/\.mov$/, '.ktx2z'));
-
-                const videoUrls = particleNames.map(particleName => `${assetsBaseUrl}particles/${particleName}`);
-
-                const files = await Promise.all(videoUrls.map(async videoUrl => {
-                    const res = await fetch(videoUrl);
-                    const blob = await res.blob();
-                    return blob;
-                }));
-                const pack = await ParticleSystemMesh.loadPack(files);
-
-                const particleSystemMesh = new ParticleSystemMesh({
-                    pack,
-                });
-                this.particleSystemMesh = particleSystemMesh;
-                particleSystemMesh.frustumCulled = false;
-                scene.add(particleSystemMesh);
-                particleSystemMesh.position.copy(localPlayer.position)
-                    .add(new THREE.Vector3(0, -h / 2, 0));
-                particleSystemMesh.updateMatrixWorld();
-
-                const particleEmitter = new ParticleEmitter2(particleSystemMesh, {
-                    range: 1,
-                });
-                this.particleEmitter = particleEmitter;
-            }
-
-            // outline mesh
-            {
-                const outlineMesh = new OutlineMesh({
-                    geometry: new CapsuleGeometry(r, r, h, 8)
-                      .rotateZ(Math.PI / 2)
-                      .translate(0, -h / 2, 0)
-                });
-                outlineMesh.position.copy(localPlayer.position);
-                scene.add(outlineMesh);
-                outlineMesh.updateMatrixWorld();
-                this.outlineMesh = outlineMesh;
-            }
-        })();
-
         // resize handler
         const _setSize = () => {
             renderer.setSize(globalThis.innerWidth, globalThis.innerHeight);
@@ -489,21 +554,12 @@ class TitleScreenRenderer extends EventTarget {
             });
             this.portalMesh.update(timestamp);
         }
-        if (this.outlineMesh) {
-            this.outlineMesh.update(timestamp);
-        }
-        if (this.particleSystemMesh) {
-            this.particleEmitter.update({
-                timestamp,
-                localPlayer: this.particleSystemMesh,
-            });
-
-            this.particleSystemMesh.update({
-                timestamp,
-                timeDiff,
-                camera: this.camera,
-            });
-        }
+        this.localPlayer.update({
+            timestamp,
+            timeDiff,
+            camera: this.camera,
+            keys: this.keys,
+        });
     }
     destroy() {
       for (let i = 0; i < this.cleanupFns.length; i++) {
@@ -963,6 +1019,10 @@ const TitleScreen = () => {
     useEffect(() => {
         const keydown = async e => {
             switch (e.key) {
+                case 'w': {
+                    titleScreenRenderer.keys.up = true;
+                    break;
+                }
                 case 's': {
                     if (e.ctrlKey) {
                         e.preventDefault();
@@ -973,7 +1033,17 @@ const TitleScreen = () => {
                         if (titleScreenRenderer) {
                             await _saveFile(titleScreenZineFileName, titleScreenRenderer.uint8Array);
                         }
+                    } else {
+                        titleScreenRenderer.keys.down = true;
                     }
+                    break;
+                }
+                case 'a': {
+                    titleScreenRenderer.keys.left = true;
+                    break;
+                }
+                case 'd': {
+                    titleScreenRenderer.keys.right = true;
                     break;
                 }
                 case 'o': {
@@ -1007,9 +1077,31 @@ const TitleScreen = () => {
             }
         };
         document.addEventListener('keydown', keydown);
+        const keyup = e => {
+            switch (e.key) {
+                case 'w': {
+                    titleScreenRenderer.keys.up = false;
+                    break;
+                }
+                case 's': {
+                    titleScreenRenderer.keys.down = false;
+                    break;
+                }
+                case 'a': {
+                    titleScreenRenderer.keys.left = false;
+                    break;
+                }
+                case 'd': {
+                    titleScreenRenderer.keys.right = false;
+                    break;
+                }
+            }
+        };
+        document.addEventListener('keyup', keyup);
 
         return () => {
             document.removeEventListener('keydown', keydown);
+            document.removeEventListener('keyup', keyup);
         };
     }, [canvasRef.current, titleScreenRenderer]);
 
