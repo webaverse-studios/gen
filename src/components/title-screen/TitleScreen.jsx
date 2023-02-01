@@ -13,9 +13,6 @@ import {
     ZineCameraManager,
 } from '../../zine-runtime/zine-camera.js';
 import bezier from '../../zine-runtime/easing.js';
-// import {
-//   compileScene, // XXX for remote compilation
-// } from '../../../zine-runtime/zine-remote-compiler.js';
 import {
     compileVirtualSceneExport,
 } from '../../generators/scene-generator.js';
@@ -41,12 +38,13 @@ import {
 import {
     OutlineMesh,
 } from '../../zine-aux/meshes/outline-mesh.js';
-// import {
-//     SpeechBubbleMesh,
-// } from '../../zine-aux/meshes/speech-bubble-mesh.js';
 import {
     loadImage,
 } from '../../../utils.js';
+
+import {
+    Hups,
+} from '../hups/Hups.jsx';
 
 import styles from '../../../styles/TitleScreen.module.css';
 
@@ -1051,7 +1049,7 @@ const TitleScreen = () => {
                         e.preventDefault();
                         e.stopPropagation();
 
-                        console.log('open', titleScreenRenderer);
+                        // console.log('open', titleScreenRenderer);
 
                         titleScreenRenderer && titleScreenRenderer.destroy();
                         setTitleScreenRenderer(null);
@@ -1116,6 +1114,9 @@ const TitleScreen = () => {
                     setFocused(newFocused);
                 }}
                 canvasRef={canvasRef}
+            />
+            <Hups
+                
             />
             {loading ? (
                 <div className={styles.header}>
