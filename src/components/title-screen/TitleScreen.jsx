@@ -35,6 +35,12 @@ import {
 import {
     PortalMesh,
 } from '../../zine-aux/meshes/portal-mesh.js';
+import {
+    CapsuleGeometry,
+} from '../../zine-aux/geometries/CapsuleGeometry.js';
+import {
+    OutlineMesh,
+} from '../../zine-aux/meshes/outline-mesh.js';
 // import {
 //     SpeechBubbleMesh,
 // } from '../../zine-aux/meshes/speech-bubble-mesh.js';
@@ -160,12 +166,18 @@ class TitleScreenRenderer extends EventTarget {
             cancelAnimationFrame(frame);
         });
 
+        // local player
+        const localPlayer = new THREE.Object3D();
+        localPlayer.position.z = -2;
+        localPlayer.updateMatrixWorld();
+
         // renderer
         const renderer = new THREE.WebGLRenderer({
             canvas,
             antialias: true,
             alpha: true,
         });
+        renderer.sortObjects = false;
         this.renderer = renderer;
     
         // scene
@@ -178,9 +190,6 @@ class TitleScreenRenderer extends EventTarget {
         this.camera = camera;
 
         // camera manager
-        const localPlayer = new THREE.Object3D();
-        localPlayer.position.z = -1;
-        localPlayer.updateMatrixWorld();
         const zineCameraManager = new ZineCameraManager({
             camera,
             localPlayer,
@@ -307,42 +316,62 @@ class TitleScreenRenderer extends EventTarget {
             speechBubbleMesh.updateMatrixWorld();
         } */
 
-        // particle system mesh
+        // local player meshes
+        this.outlineMesh = null;
         this.particleSystemMesh = null;
         this.particleEmitter = null;
         (async () => {
-            const particleName = 'Elements - Energy 017 Charge Up noCT noRSZ.mov';
-            const explosionName = 'Elements - Energy 119 Dissapear noCT noRSZ.mov';
-            const explosion2Name = 'Elements - Explosion 014 Hit Radial MIX noCT noRSZ.mov';
-            const particleNames = [
-                particleName,
-                explosionName,
-                explosion2Name,
-            ].map(s => s.replace(/\.mov$/, '.ktx2z'));
+            const r = 0.3;
+            const h = 1.6 - r * 2;
 
-            const videoUrls = particleNames.map(particleName => `${assetsBaseUrl}particles/${particleName}`);
+            // particle mesh
+            {
+                const particleName = 'Elements - Energy 017 Charge Up noCT noRSZ.mov';
+                const explosionName = 'Elements - Energy 119 Dissapear noCT noRSZ.mov';
+                const explosion2Name = 'Elements - Explosion 014 Hit Radial MIX noCT noRSZ.mov';
+                const particleNames = [
+                    particleName,
+                    explosionName,
+                    explosion2Name,
+                ].map(s => s.replace(/\.mov$/, '.ktx2z'));
 
-            const files = await Promise.all(videoUrls.map(async videoUrl => {
-                const res = await fetch(videoUrl);
-                const blob = await res.blob();
-                return blob;
-            }));
-            const pack = await ParticleSystemMesh.loadPack(files);
+                const videoUrls = particleNames.map(particleName => `${assetsBaseUrl}particles/${particleName}`);
 
-            const particleSystemMesh = new ParticleSystemMesh({
-                pack,
-            });
-            this.particleSystemMesh = particleSystemMesh;
-            particleSystemMesh.frustumCulled = false;
-            scene.add(particleSystemMesh);
-            particleSystemMesh.position.z = -1;
-            particleSystemMesh.scale.setScalar(0.5);
-            particleSystemMesh.updateMatrixWorld();
+                const files = await Promise.all(videoUrls.map(async videoUrl => {
+                    const res = await fetch(videoUrl);
+                    const blob = await res.blob();
+                    return blob;
+                }));
+                const pack = await ParticleSystemMesh.loadPack(files);
 
-            const particleEmitter = new ParticleEmitter2(particleSystemMesh, {
-                range: 0.3,
-            });
-            this.particleEmitter = particleEmitter;
+                const particleSystemMesh = new ParticleSystemMesh({
+                    pack,
+                });
+                this.particleSystemMesh = particleSystemMesh;
+                particleSystemMesh.frustumCulled = false;
+                scene.add(particleSystemMesh);
+                particleSystemMesh.position.copy(localPlayer.position)
+                    .add(new THREE.Vector3(0, -h / 2, 0));
+                particleSystemMesh.updateMatrixWorld();
+
+                const particleEmitter = new ParticleEmitter2(particleSystemMesh, {
+                    range: 1,
+                });
+                this.particleEmitter = particleEmitter;
+            }
+
+            // outline mesh
+            {
+                const outlineMesh = new OutlineMesh({
+                    geometry: new CapsuleGeometry(r, r, h, 8)
+                      .rotateZ(Math.PI / 2)
+                      .translate(0, -h / 2, 0)
+                });
+                outlineMesh.position.copy(localPlayer.position);
+                scene.add(outlineMesh);
+                outlineMesh.updateMatrixWorld();
+                this.outlineMesh = outlineMesh;
+            }
         })();
 
         // resize handler
@@ -460,6 +489,9 @@ class TitleScreenRenderer extends EventTarget {
             });
             this.portalMesh.update(timestamp);
         }
+        if (this.outlineMesh) {
+            this.outlineMesh.update(timestamp);
+        }
         if (this.particleSystemMesh) {
             this.particleEmitter.update({
                 timestamp,
@@ -526,7 +558,7 @@ class SpeechBubbleManager extends EventTarget {
         }
     }
     refreshRect() {
-        console.log('refresh rect');
+        // console.log('refresh rect');
         this.rect = this.containerEl.getBoundingClientRect();
     }
     createSpeechBubble({
