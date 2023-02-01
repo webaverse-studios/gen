@@ -154,6 +154,7 @@ import {PathMesh} from '../zine-aux/meshes/path-mesh.js';
 //
 
 const vqaClient = new VQAClient();
+const inverseRender = false; // XXX
 
 //
 
@@ -4627,29 +4628,31 @@ export async function compileVirtualScene(imageArrayBuffer) {
   }
   console.timeEnd('sphericalHarmonics');
 
-  console.time('inverseRender');
-  {
-    const pathNames = [
-      'albedo',
-      'shading',
-      'shadow',
-      'normal',
-    ];
-    for (const pathName of pathNames) {
-      // console.log('inverse render 1', {pathName});
-      const res = await fetch(`https://inverse-render-net.webaverse.com/${pathName}`, {
-        method: 'POST',
-        body: formData,
-      });
-      const arrayBuffer = await res.arrayBuffer();
-      // console.log('inverse render 2', {pathName, arrayBuffer});
-      const resultBlob = new Blob([arrayBuffer]);
-      const img = await blob2img(resultBlob);
-      img.classList.add(pathName);
-      document.body.appendChild(img);
+  if (inverseRender) {
+    console.time('inverseRender');
+    {
+      const pathNames = [
+        'albedo',
+        'shading',
+        'shadow',
+        'normal',
+      ];
+      for (const pathName of pathNames) {
+        // console.log('inverse render type', pathName);
+        const res = await fetch(`https://inverse-render-net.webaverse.com/${pathName}`, {
+          method: 'POST',
+          body: formData,
+        });
+        const arrayBuffer = await res.arrayBuffer();
+        // console.log('inverse render 2', {pathName, arrayBuffer});
+        const resultBlob = new Blob([arrayBuffer]);
+        const img = await blob2img(resultBlob);
+        img.classList.add(pathName);
+        document.body.appendChild(img);
+      }
     }
+    console.timeEnd('inverseRender');
   }
-  console.timeEnd('inverseRender');
 
   const geometry = pointCloudArrayBufferToGeometry(pointCloudArrayBuffer, width, height);
   const semanticSpecs = getSemanticSpecs({
