@@ -171,7 +171,7 @@ class LocalPlayer extends THREE.Object3D {
                 capsuleHeight,
                 contactOffset,
                 stepOffset,
-                this.position.clone().add(new THREE.Vector3(0, 2, 0))
+                this.position
             );
             return characterController;
         };
@@ -242,7 +242,7 @@ class LocalPlayer extends THREE.Object3D {
     }) {
         if (this.characterController) {
             const timeDiffS = timeDiff / 1000;
-            const speed = 4;
+            const speed = 40;
             const minDist = 0;
 
             const direction = new THREE.Vector3();
@@ -262,18 +262,14 @@ class LocalPlayer extends THREE.Object3D {
                 direction.normalize()
                     .multiplyScalar(speed);
             }
-            if (this.velocity.equals(zeroVector)) {
-                this.velocity.add(
-                    localVector.copy(direction)
-                        .multiplyScalar(timeDiffS)
-                );
-            }
-            this.updateMatrixWorld();
-
-            const displacement = localVector.add(
-                localVector2.copy(this.velocity)
+            this.velocity.add(
+                localVector.copy(direction)
                     .multiplyScalar(timeDiffS)
             );
+            this.updateMatrixWorld();
+
+            const displacement = localVector.copy(this.velocity)
+                .multiplyScalar(timeDiffS);
             // console.log('velocity add', localVector2.toArray().join(','));
 
             const physicsScene = physicsManager.getScene();
@@ -323,7 +319,6 @@ class LocalPlayer extends THREE.Object3D {
                         this.characterController,
                         this.characterController.position
                     );
-                    this.velocity.setScalar(0);
 
                     globalThis.lastPhysicsTimestamp = timestamp;
                 }
@@ -1234,7 +1229,14 @@ const TitleScreen = () => {
             document.removeEventListener('keydown', keydown);
             document.removeEventListener('keyup', keyup);
         };
-    }, [canvasRef.current, titleScreenRenderer]);
+    }, [
+        canvasRef.current,
+        titleScreenRenderer,
+        titleScreenRenderer?.keys.left,
+        titleScreenRenderer?.keys.right,
+        titleScreenRenderer?.keys.up,
+        titleScreenRenderer?.keys.down,
+    ]);
 
     return (
         <div
