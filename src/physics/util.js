@@ -1,9 +1,25 @@
 import * as THREE from 'three';
+import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import {IdAllocator} from '../../id-allocator.js';
+
+//
+
+const localVector = new THREE.Vector3();
+const localVector2 = new THREE.Vector3();
+const localVector3 = new THREE.Vector3();
+const localVector4 = new THREE.Vector3();
+const localVector5 = new THREE.Vector3();
+const localVector2D = new THREE.Vector2();
+const localMatrix = new THREE.Matrix4();
+const localMatrix2 = new THREE.Matrix4();
+
+//
 
 const physicsIdAllcator = new IdAllocator();
 export const getNextPhysicsId = physicsIdAllcator.alloc.bind(physicsIdAllcator);
 export const freePhysicsId = physicsIdAllcator.free.bind(physicsIdAllcator);
+
+//
 
 export function convertMeshToPhysicsMesh(topMesh) {
   const oldParent = topMesh.parent;
@@ -238,7 +254,6 @@ export const flipGeomeryUvs = (geometry) => {
 };
 
 export const updateRaycasterFromMouseEvent = (() => {
-  const localVector2D = new THREE.Vector2();
   return (renderer, camera, e, raycaster) => {
     const mouse = localVector2D;
     mouse.x =

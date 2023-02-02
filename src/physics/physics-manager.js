@@ -17,15 +17,18 @@ const localVector = new THREE.Vector3();
 
 //
 
-class PhysicsObjectTracker {
+export class PhysicsObjectTracker {
   constructor() {
     this.physicsObjects = new Map();
+  }
+  add(physicsObject) {
+    this.physicsObjects.set(physicsObject.physicsId, physicsObject);
   }
   getPhysicsObjectByPhysicsId(id) {
     return this.physicsObjects.get(id);
   }
 }
-const physicsObjectTracker = new PhysicsObjectTracker();
+export const physicsObjectTracker = new PhysicsObjectTracker();
 
 //
 
@@ -953,8 +956,7 @@ class PhysicsScene extends EventTarget {
         this.scene,
         physicsUpdates,
         t
-      )
-      // physicsUpdates.length = 0
+      );
       _updatePhysicsObjects(updatesOut);
     }
   }
@@ -1032,6 +1034,9 @@ const physicsManager = {
       this.scenes.set(instance, scene);
     }
     return scene;
+  },
+  async waitForLoad() {
+    await physx.waitForLoad();
   },
 };
 export default physicsManager;

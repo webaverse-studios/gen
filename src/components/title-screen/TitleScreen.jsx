@@ -41,11 +41,18 @@ import {
 import {
     loadImage,
 } from '../../../utils.js';
+import {
+    physicsObjectTracker,
+} from '../../physics/physics-manager.js';
 import physicsManager from '../../physics/physics-manager.js';
 
 import {
     Hups,
 } from '../hups/Hups.jsx';
+
+import {
+    getDoubleSidedGeometry,
+  } from '../../zine/zine-geometry-utils.js';
 
 import styles from '../../../styles/TitleScreen.module.css';
 
@@ -138,14 +145,43 @@ class LocalPlayer extends THREE.Object3D {
     constructor() {
         super();
 
+        // constants
+        const r = 0.3;
+        const aw = r * 2;
+        const ah = 1.6;
+        const h = ah - r * 2;
+
+        const _createCharacterCapsule = () => {
+            const characterWidth = aw;
+            const characterHeight = ah;
+        
+            const capsuleWidth = characterWidth / 2;
+            const capsuleHeight = characterHeight - characterWidth;
+        
+            const contactOffset = 0.01 * capsuleHeight;
+            const stepOffset = 0.1 * capsuleHeight;
+        
+            const physicsScene = physicsManager.getScene();
+
+            // let characterController = null;
+            // if (characterController) {
+            //     physicsScene.destroyCharacterController(characterController);
+            // }
+            const characterController = physicsScene.createCharacterController(
+                capsuleWidth,
+                capsuleHeight,
+                contactOffset,
+                stepOffset,
+                this.position
+            );
+        };
+
         // local player meshes
         this.outlineMesh = null;
         this.particleSystemMesh = null;
         this.particleEmitter = null;
+        this.characterCapsule = null;
         (async () => {
-            const r = 0.3;
-            const h = 1.6 - r * 2;
-
             // particle mesh
             {
                 const particleName = 'Elements - Energy 017 Charge Up noCT noRSZ.mov';
@@ -192,6 +228,7 @@ class LocalPlayer extends THREE.Object3D {
                 outlineMesh.updateMatrixWorld();
                 this.outlineMesh = outlineMesh;
             }
+            this.characterCapsule = _createCharacterCapsule();
         })();
     }
     update({
@@ -322,10 +359,12 @@ class TitleScreenRenderer extends EventTarget {
     
         // storyboard
         (async () => {
+            await physicsManager.waitForLoad();
+
             const zineStoryboard = new ZineStoryboard();
             await zineStoryboard.loadAsync(uint8Array);
             if (!live) return;
-    
+
             const panel0 = zineStoryboard.getPanel(0);
             const zineRenderer = new ZineRenderer({
                 panel: panel0,
@@ -335,6 +374,32 @@ class TitleScreenRenderer extends EventTarget {
             // scene mesh
             scene.add(zineRenderer.scene);
             zineRenderer.scene.updateMatrixWorld();
+
+            // scene physics
+            {
+                const {scenePhysicsMesh} = zineRenderer;
+                const geometry2 = getDoubleSidedGeometry(scenePhysicsMesh.geometry);
+        
+                const scenePhysicsMesh2 = new THREE.Mesh(geometry2, scenePhysicsMesh.material);
+                scenePhysicsMesh2.name = 'scenePhysicsMesh';
+                scenePhysicsMesh2.visible = false;
+                zineRenderer.transformScene.add(scenePhysicsMesh2);
+                this.scenePhysicsMesh = scenePhysicsMesh2;
+        
+                const physics = physicsManager.getScene();
+                const scenePhysicsObject = physics.addGeometry(scenePhysicsMesh2);
+                scenePhysicsObject.update = () => {
+                    scenePhysicsMesh2.matrixWorld.decompose(
+                        scenePhysicsObject.position,
+                        scenePhysicsObject.quaternion,
+                        scenePhysicsObject.scale
+                    );
+                    this.physics.setTransform(scenePhysicsObject, false);
+                };
+                this.scenePhysicsObject = scenePhysicsObject;
+                
+                physicsObjectTracker.add(scenePhysicsObject);
+            }
     
             // path mesh
             const splinePoints = zineRenderer.metadata.paths.map(p => new THREE.Vector3().fromArray(p.position));
@@ -486,7 +551,7 @@ class TitleScreenRenderer extends EventTarget {
             lastPointerLockChangeTime = now;
         };
         document.addEventListener('pointerlockchange', pointerlockchange);
-    
+
         // render loop
         let lastTimestamp = performance.now();
         const _recurse = () => {
@@ -498,9 +563,12 @@ class TitleScreenRenderer extends EventTarget {
             
             // local update
             this.update(timestamp, timeDiff);
+            // simulate physics
+            const physics = physicsManager.getScene();
+            physics.simulatePhysics(timeDiff);
             // update camera
             zineCameraManager.updatePost(timestamp, timeDiff);
-            
+
             // render
             renderer.render(scene, camera);
 
