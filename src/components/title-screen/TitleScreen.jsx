@@ -1,6 +1,9 @@
+import {NetworkRealms} from 'multiplayer-do/public/network-realms.mjs'
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader.js';
 import {useState, useRef, useEffect} from 'react';
+import {realmSize} from '../../../constants/map-constants.js';
+import {makeId} from '../../zine/id-utils.js';
 import classnames from 'classnames';
 
 import {
@@ -136,6 +139,8 @@ class LinearAnimation {
 class LocalPlayer extends THREE.Object3D {
     constructor() {
         super();
+
+        this.playerId = makeId();
 
         // local player meshes
         this.outlineMesh = null;
@@ -309,6 +314,19 @@ class TitleScreenRenderer extends EventTarget {
         scene.add(localPlayer);
         localPlayer.updateMatrixWorld();
         this.localPlayer = localPlayer;
+
+        // network realms
+        this.realms = null;
+        (async () => {
+            const room = 'ABCDEFGH';
+            await this.connectNetworkRealms(room);
+            console.debug('Multiplayer connected:', room);
+            console.debug('Player:', this.localPlayer.playerId);
+            this.cleanupFns.push(() => {
+                this.disconnectNetworkRealms();
+                console.log("Multiplayer disconnected");
+            });
+        })();
 
         // camera manager
         const zineCameraManager = new ZineCameraManager({
@@ -513,6 +531,27 @@ class TitleScreenRenderer extends EventTarget {
         this.cleanupFns.push(() => {
             cancelAnimationFrame(frame);
         });
+    }
+    async connectNetworkRealms(room) {
+        this.realms = new NetworkRealms(room, this.localPlayer.playerId);
+
+        const onConnect = async position => {
+            // Initialize network realms player.
+            this.realms.localPlayer.initializePlayer({
+              position,
+            }, {});
+        };
+
+        // Initiate network realms connection.
+        await this.realms.updatePosition(this.localPlayer.position.toArray(), realmSize, {
+            onConnect,
+        });
+    }
+    disconnectNetworkRealms() {
+        if (this.realms) {
+            this.realms.disconnect();
+            this.realms = null;
+        }
     }
     static portalSizes = [
         1,
