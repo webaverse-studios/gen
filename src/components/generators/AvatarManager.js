@@ -394,9 +394,6 @@ export class AvatarManager extends EventTarget {
       gltf,
       // gltf2,
     } = this;
-    // console.log('embody', {
-    //   gltf,
-    // });
     const avatar = await AvatarManager.makeAvatar({
       gltf,
       // gltf2,
