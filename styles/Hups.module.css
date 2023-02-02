@@ -1,0 +1,14 @@
+.hups {
+  display: flex;
+}
+
+/* */
+
+.hups .canvas {
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  width: 512px;
+  height: 512px;
+  background-color: red;
+}
