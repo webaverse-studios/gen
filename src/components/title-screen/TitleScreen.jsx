@@ -41,6 +41,7 @@ import {
 import {
     loadImage,
 } from '../../../utils.js';
+import physicsManager from '../../physics/physics-manager.js';
 
 import {
     Hups,
@@ -344,7 +345,6 @@ class TitleScreenRenderer extends EventTarget {
             pathMesh.updateMatrixWorld();
     
             // apply camera
-            // camera.copy(zineRenderer.camera);
             zineCameraManager.setLockCamera(zineRenderer.camera);
             zineCameraManager.toggleCameraLock();
         })();
@@ -1116,7 +1116,6 @@ const TitleScreen = () => {
                 canvasRef={canvasRef}
             />
             <Hups
-                
             />
             {loading ? (
                 <div className={styles.header}>
