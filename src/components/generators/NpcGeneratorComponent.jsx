@@ -1,20 +1,10 @@
 import {useState, useEffect, useRef} from 'react';
-// import ReactDOM from 'react-dom';
-// import ReactDOMClient from 'react-dom/client';
 import * as THREE from 'three';
 import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 import classnames from 'classnames';
 import * as WebMWriter from 'webm-writer';
 import alea from '../../utils/alea.js';
-// import {
-//   txt2img,
-//   img2img,
-// } from '../../clients/sd-image-client.js';
-// import {
-//   generateTextureMaps,
-// } from '../../clients/material-map-client.js';
-// import {mobUrls} from '../../constants/urls.js';
 import {
   makeRenderer,
   makeGltfLoader,
@@ -27,12 +17,6 @@ import {
   loadImage,
   fetchArrayBuffer,
 } from '../../../utils.js';
-// import {
-//   createSeedImage,
-// } from '../../../canvas/seed-image.js';
-// import {
-//   colors,
-// } from '../../constants/detectron-colors.js';
 import {
   blob2img,
   canvas2blob,
@@ -45,11 +29,6 @@ import {
 import {
   optimizeAvatarModel,
 } from '../../utils/avatar-optimizer.js';
-// import {
-//   preprocessMeshForTextureEdit,
-//   editMeshTextures,
-// } from '../../utils/model-utils.js';
-// import {downloadFile} from '../../utils/http-utils.js';
 import Avatar from '../../avatars/avatars.js';
 import {
   emotions as avatarEmotions,
@@ -57,9 +36,6 @@ import {
 import {
   AvatarRenderer,
 } from '../../avatars/avatar-renderer.js';
-// import {
-//   AvatarIconer,
-// } from '../../avatars/avatar-iconer.js';
 import {
   ArrowMesh,
 } from '../../generators/arrow-mesh.js';
@@ -67,9 +43,6 @@ import {
   maxAvatarQuality,
 } from '../../avatars/constants.js';
 import avatarsWasmManager from '../../avatars/avatars-wasm-manager.js';
-// import {
-//   makeId,
-// } from '../../../utils.js';
 import {
   AiClient,
 } from '../../../clients/ai/ai-client.js';
@@ -78,17 +51,20 @@ import {
 } from '../../../clients/database/database-client.js';
 import {
   getDatasetSpecs,
-  // getDatasetItems,
-  // getTrainingItems,
-  // getDatasetItemsForDatasetSpec,
 } from '../../dataset-engine/dataset-specs.js';
 import {
   DatasetGenerator,
-  // CachedDatasetGenerator,
 } from '../../dataset-engine/dataset-generator.js';
-import {PathMesh} from '../../zine-aux/meshes/path-mesh.js';
+import {AvatarManager} from './AvatarManager.js';
+import {AvatarToolsMesh} from './AvatarToolsMesh.js';
 
-//
+import {
+  makeRendererWithBackground,
+} from '../../utils/renderer-utils.js';
+import {
+  getMeshes,
+  loadGltf,
+} from '../../utils/mesh-utils.js';
 
 import Markdown from 'marked-react';
 
@@ -135,14 +111,6 @@ const localColor = new THREE.Color();
 
 const zeroVector = new THREE.Vector3(0, 0, 0);
 const upVector = new THREE.Vector3(0, 1, 0);
-
-//
-
-const makeRendererWithBackground = (canvas) => {
-  const renderer = makeRenderer(canvas);
-  renderer.setClearColor(0xFFFFFF, 1);
-  return renderer;
-};
 
 //
 
@@ -1390,23 +1358,6 @@ const idleAnimationName = 'idle.fbx';
 
 //
 
-const gltfLoader = makeGltfLoader();
-const getMeshes = model => {
-  const meshes = [];
-  model.traverse(o => {
-    if (o.isMesh) {
-      meshes.push(o);
-    }
-  });
-  return meshes;
-};
-const loadGltf = avatarUrl => {
-  const p = makePromise();
-  gltfLoader.load(avatarUrl, p.resolve, function onProgress(xhr) {
-    // console.log('progress', xhr.loaded / xhr.total);
-  }, p.reject);
-  return p;
-};
 const _hueShiftCtx = (ctx, shift) => {
   const imageData = ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height);
   const {data} = imageData;
@@ -1472,11 +1423,6 @@ const selectAvatar = async (rng = Math.random) => {
     }
     mesh.visible = false;
   }
-
-  // console.log('got categories', {
-  //   meshes,
-  //   categories,
-  // });
 
   // sort by name
   for (const categoryName in categories) {
@@ -1749,134 +1695,7 @@ const selectAvatar = async (rng = Math.random) => {
   await _updateClothing();
 
   return gltf;
-
-  /* // sort meshes
-  const categories = {};
-  for (const mesh of meshes) {
-    const {name} = mesh;
-    const categoryIndex = categorySpecs.findIndex(categorySpec => {
-      return categorySpec.regex.test(name);
-    });
-    if (categoryIndex !== -1) {
-      const categorySpec = categorySpecs[categoryIndex];
-      let entry = categories[categorySpec.name];
-      if (!entry) {
-        entry = {
-          meshes: [],
-        };
-        categories[categorySpec.name] = entry;
-      }
-      mesh.className = 'avatar';
-      mesh.metadata = categorySpec.metadata;
-      entry.meshes.push(mesh);
-    } else {
-      console.warn('failed to match mesh to category', name);
-      debugger;
-    }
-    mesh.visible = false;
-  }
-  // sort by name
-  for (const categoryName in categories) {
-    categories[categoryName].meshes.sort((a, b) => a.name.localeCompare(b.name));
-  }
-
-  // select and show a random mesh from each category
-  const categorySelections = {};
-  const _selectFromCategory = (name) => {
-    const category = categories[name];
-    const mesh = category.meshes[Math.floor(rng() * category.meshes.length)];
-    mesh.visible = true;
-    categorySelections[name] = mesh;
-  };
-  for (const categorySpec of categorySpecs) {
-    const {name, className} = categorySpec;
-    if (!['solo', 'clothing'].includes(className)) {
-      _selectFromCategory(name);
-    }
-  }
-  let isSolo = (categories['solo'] ?
-    (categories['solo'].meshes.length > 0)
-  :
-    false
-  ) && (rng() < 0.5);
-  if (isSolo) {
-    for (const categorySpec of categorySpecs) {
-      const {name, className} = categorySpec;
-      if (className === 'solo') {
-        _selectFromCategory(name);
-      }
-    }
-  } else {
-    for (const categorySpec of categorySpecs) {
-      const {name, className} = categorySpec;
-      if (className === 'clothing') {
-        _selectFromCategory(name);
-      }
-    }
-  }
-
-  // enable base meshes
-  for (const mesh of categories.body.meshes) {
-    mesh.visible = true;
-  }
-  for (const mesh of categories.head.meshes) {
-    mesh.visible = true;
-  }
-
-  // remove invisible meshes
-  for (const mesh of meshes) {
-    if (!mesh.visible) {
-      mesh.parent.remove(mesh);
-    }
-  }
-
-  // return
-  return gltf; */
 };
-
-//
-
-/* const gltfExporter = makeGltfExporter();
-const downloadGlb = async (gltf, name = 'avatar.vrm') => {
-  // export glb
-  const arrayBuffer = await new Promise((accept, reject) => {
-    gltfExporter.parse(
-      gltf.scene,
-      function onCompleted(arrayBuffer) {
-        accept(arrayBuffer);
-      }, function onError(error) {
-        reject(error);
-      },
-      {
-        binary: true,
-        onlyVisible: false,
-        // forceIndices: true,
-        // truncateDrawRange: false,
-        includeCustomExtensions: true,
-        vrm: true,
-        gltfObject: gltf,
-      },
-    );
-  });
-  const avatarBlob = new Blob([
-    arrayBuffer,
-  ], {
-    type: 'model/gltf-binary',
-  });
-  const url = URL.createObjectURL(avatarBlob);
-
-  downloadFile(avatarBlob, name);
-};
-const generateAvatars = async () => {
-  const numAvatarsPerIndex = 10;
-  for (let i = 0; i < avatarUrls.length; i++) {
-    for (let j = 0; j < numAvatarsPerIndex; j++) {
-      const gltf = await selectAvatar();
-      await downloadGlb(gltf, `avatar_${i}_${j}.vrm`);
-    }
-  }
-};
-globalThis.generateAvatars = generateAvatars; */
 
 //
 
@@ -1917,285 +1736,6 @@ const _lookAt = (camera, boundingBox) => {
   camera.position.set(0, size.y / 2, -1);
 
   fitCameraToBoundingBox(camera, boundingBox, 0.65);
-};
-
-//
-
-class AvatarManager extends EventTarget {
-  constructor(canvas) {
-    super();
-
-    this.renderer = null;
-    this.scene = null;
-    this.camera = null;
-    this.controls = null;
-    this.gltf = null;
-    // this.gltf2 = null;
-
-    this.avatar = null;
-
-    this.loadPromise = (async () => {
-      const {
-        renderer,
-        scene,
-        camera,
-        controls,
-        gltf,
-        // gltf2,
-      } = await AvatarManager.makeContext(canvas);
-
-      this.renderer = renderer;
-      this.scene = scene;
-      this.camera = camera;
-      this.controls = controls;
-      this.gltf = gltf;
-      // this.gltf2 = gltf2;
-
-      const avatarToolsMesh = new AvatarToolsMesh({
-        avatarManager: this,
-      });
-      scene.add(avatarToolsMesh);
-      this.avatarToolsMesh = avatarToolsMesh;
-    })();
-
-    this.lastTimestamp = performance.now();
-  }
-  static async makeContext(canvas) {
-    const renderer = makeRendererWithBackground(canvas);
-
-    const scene = new THREE.Scene();
-    scene.autoUpdate = false;
-
-    const camera = makeDefaultCamera();
-    camera.position.set(0, 0.9, -2);
-    camera.quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI);
-    camera.updateMatrixWorld();
-
-    const light = new THREE.DirectionalLight(0xffffff, 2);
-    light.position.set(1, 2, 3);
-    light.updateMatrixWorld();
-    scene.add(light);
-
-    const ambientLight = new THREE.AmbientLight(0xffffff, 1);
-    scene.add(ambientLight);
-
-    const controls = new OrbitControls(camera, canvas);
-    controls.minDistance = 1;
-    controls.maxDistance = 100;
-    controls.target.copy(camera.position);
-    controls.target.z = 0;
-    controls.update();
-    
-    const gltf = await selectAvatar(makeRng());      
-    scene.add(gltf.scene);
-    gltf.scene.updateMatrixWorld();
-
-    // const gltf2 = await selectAvatar(makeRng());
-    
-    return {
-      renderer,
-      scene,
-      camera,
-      controls,
-      gltf,
-      // gltf2,
-    };
-  }
-  static async makeAvatar({
-    gltf,
-    // gltf2,
-  }) {
-    const avatarRenderer = new AvatarRenderer({
-      gltf,
-      // gltf2,
-      quality: maxAvatarQuality,
-    });
-    await avatarRenderer.waitForLoad();
-  
-    const avatar = new Avatar(avatarRenderer, {
-      fingers: true,
-      hair: true,
-      visemes: true,
-      debug: false,
-    });
-    avatar.setTopEnabled(false);
-    avatar.setHandEnabled(0, false);
-    avatar.setHandEnabled(1, false);
-    avatar.setBottomEnabled(false);
-    avatar.inputs.hmd.position.y = avatar.height;
-    // avatar.inputs.hmd.quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI);
-    avatar.inputs.hmd.updateMatrixWorld();
-
-    return avatar;
-  }
-  update() {
-    const {
-      renderer,
-      scene,
-      camera,
-    } = this;
-
-    const timestamp = performance.now();
-    const timeDiff = timestamp - this.lastTimestamp;
-    this.dispatchEvent(new MessageEvent('update', {
-      data: {
-        timestamp,
-        timeDiff,
-      },
-    }));
-    this.lastTimestamp = timestamp;
-
-    this.avatarToolsMesh.update();
-    
-    renderer.render(scene, camera);
-  }
-  waitForLoad() {
-    return this.loadPromise;
-  }
-  async createImage() {
-    const {
-      gltf,
-    } = this;
-    const width = 300;
-    const height = 300;
-
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    canvas.classList.add('avatarImageCanvas');
-
-    const emotion = '';
-    
-    const img = await screenshotAvatarGltf({
-      gltf,
-      width,
-      height,
-      canvas,
-      emotion,
-    });
-    return img;
-  }
-  async createIcons() {
-    // XXX
-  }
-  async createVideo() {
-    await Promise.all([
-      Avatar.waitForLoad(),
-      avatarsWasmManager.waitForLoad(),
-    ]);
-
-    const animations = Avatar.getAnimations();
-    const idleAnimation = animations.find(a => a.name === idleAnimationName);
-    const idleAnimationDuration = idleAnimation.duration;
-
-    const width = 512;
-    const height = 512;
-
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-
-    const {
-      renderer,
-      scene,
-      camera,
-      controls,
-      gltf,
-      // gltf2,
-    } = await AvatarManager.makeContext(canvas);
-
-    const avatar = await AvatarManager.makeAvatar({
-      gltf,
-      // gltf2,
-    });
-    // avatar.inputs.hmd.position.y = 0;
-    // avatar.inputs.hmd.updateMatrixWorld();
-
-    scene.add(gltf.scene);
-
-    avatar.update(0, 0); // compute the bounding box
-    gltf.scene.updateMatrixWorld();
-    const boundingBox = new THREE.Box3().setFromObject(gltf.scene);
-
-    const writeCanvas = document.createElement('canvas');
-    writeCanvas.width = width;
-    writeCanvas.height = height;
-    const writeCtx = writeCanvas.getContext('2d');
-
-    const videoWriter = new WebMWriter({
-      quality: 1,
-      fileWriter: null,
-      fd: null,
-      frameDuration: null,
-      frameRate: FPS,
-    });
-
-    const _pushFrame = () => {
-      writeCtx.drawImage(renderer.domElement, 0, 0);
-      videoWriter.addFrame(writeCanvas);
-    };
-
-    let now = 0;
-    const timeDiff = 1000 / FPS;
-    while (now < idleAnimationDuration * 1000) {
-      avatar.update(now, timeDiff);
-
-      _lookAt(camera, boundingBox);
-
-      renderer.clear();
-      renderer.render(scene, camera);
-
-      _pushFrame();
-      
-      now += timeDiff;
-    }
-
-    const blob = await videoWriter.complete();
-
-    const video = document.createElement('video');
-    video.muted = true;
-    video.autoplay = true;
-    await new Promise((accept, reject) => {
-      video.oncanplaythrough = accept;
-      video.onerror = reject;
-      video.src = URL.createObjectURL(blob);
-    });
-    video.style.cssText = `\
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 512px;
-      background: red;
-    `;
-    video.loop = true;
-    document.body.appendChild(video);
-  }
-  async embody() {
-    await Promise.all([
-      Avatar.waitForLoad(),
-      avatarsWasmManager.waitForLoad(),
-    ]);
-
-    const {
-      gltf,
-      // gltf2,
-    } = this;
-    const avatar = await AvatarManager.makeAvatar({
-      gltf,
-      // gltf2,
-    });
-    this.avatar = avatar;
-
-    this.scene.add(gltf.scene);
-
-    this.addEventListener('update', e => {
-      const {timestamp, timeDiff} = e.data;
-      avatar.update(timestamp, timeDiff);
-
-      // gltf2.scene.updateMatrixWorld();
-      // gltf.scene.updateMatrixWorld();
-    });
-  }
 };
 
 //
@@ -2496,327 +2036,6 @@ const cancelEvent = e => {
   e.preventDefault();
   e.stopPropagation();
 };
-
-//
-
-class FloorMesh extends THREE.Mesh {
-  constructor() {
-    const geometry = new THREE.PlaneBufferGeometry(30, 30)
-      .rotateX(-Math.PI / 2);
-    const material = new THREE.MeshBasicMaterial({
-      // color: 0xEEEEEE,
-      color: 0x000000,
-      // opacity: 0.5,
-      // transparent: true,
-    });
-    super(geometry, material);
-  }
-}
-
-//
-
-class DropMesh extends THREE.Mesh {
-  constructor() {
-    const h = 2;
-    const railGeometry = new THREE.BoxGeometry(0.02, h, 0.02)
-      .translate(0, h / 2, 0);
-    const partIds = new Float32Array(railGeometry.attributes.position.count).fill(1);
-    railGeometry.setAttribute('partId', new THREE.BufferAttribute(partIds, 1));
-
-    const h2 = 0.2;
-    const headGeometry = new THREE.CylinderGeometry(0.2, 0.03, h2, 16)
-      .translate(0, h2 / 2, 0);
-    const partIds2 = new Float32Array(railGeometry.attributes.position.count).fill(2);
-    headGeometry.setAttribute('partId', new THREE.BufferAttribute(partIds2, 1));
-    
-    const geometry = BufferGeometryUtils.mergeBufferGeometries([
-      railGeometry,
-      headGeometry,
-    ]);
-    const material = new THREE.ShaderMaterial({
-      // color: 0xff0000,
-      uniforms: {
-        uTime: {
-          value: 0,
-          needsUpdate: true,
-        },
-      },
-      vertexShader: `\
-        attribute float partId;
-
-        varying vec2 vUv;
-        flat varying float vPartId;
-
-        void main() {
-          vUv = uv;
-          vPartId = partId;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        }
-      `,
-      fragmentShader: `\
-        uniform float uTime;
-        varying vec2 vUv;
-        flat varying float vPartId;
-
-        void main() {
-          float f = mod(uTime / 1000., 1.);
-          gl_FragColor = vec4(f, vPartId, 0., 1.);
-        }
-      `,
-      transparent: true,
-    });
-    super(geometry, material);
-  }
-  update() {
-    const now = performance.now();
-    this.material.uniforms.uTime.value = now;
-    this.material.uniforms.uTime.needsUpdate = true;
-  }
-}
-
-//
-
-class AvatarToolsMesh extends THREE.Object3D {
-  static tools = [
-    'camera',
-    'move',
-  ];
-  
-  constructor({
-    avatarManager,
-  }) {
-    super();
-
-    // args
-    this.avatarManager = avatarManager;
-    
-    const {
-      camera,
-      controls,
-    } = avatarManager;
-    const canvas = avatarManager.renderer.domElement;
-    // if (!camera || !controls || !canvas) {
-    //   console.log('got', {camera, controls});
-    //   debugger;
-    // }
-    this.camera = camera;
-    this.controls = controls;
-    this.canvas = canvas;
-
-    // scene
-    // const scene = new THREE.Scene();
-    // scene.autoUpdate = true;
-    // this.scene = scene;
-
-    // floor mesh
-    const floorMesh = new FloorMesh();
-    floorMesh.frustumCulled = false;
-    this.add(floorMesh);
-    floorMesh.updateMatrixWorld();
-    this.floorMesh = floorMesh;
-
-    // arrow mesh
-    const arrowMesh = new ArrowMesh();
-    arrowMesh.geometry = arrowMesh.geometry.clone()
-      .rotateX(Math.PI)
-      .scale(0.1, 0.1, 0.1)
-      .translate(0, 0.2, 0)
-    arrowMesh.visible = false;
-    this.add(arrowMesh);
-    arrowMesh.updateMatrixWorld();
-    this.arrowMesh = arrowMesh;
-
-    // drop mesh
-    const dropMesh = new DropMesh();
-    arrowMesh.add(dropMesh);
-    dropMesh.updateMatrixWorld();
-    this.dropMesh = dropMesh;
-
-    // path mesh
-    const pathMesh = new PathMesh();
-    pathMesh.frustumCulled = false;
-    // this.zineRenderer.transformScene.add(pathMesh);
-    this.add(pathMesh);
-    pathMesh.updateMatrixWorld();
-    this.pathMesh = pathMesh;
-
-    // state
-    this.toolIndex = 0;
-    this.mouse = new THREE.Vector2();
-    this.cleanup = null;
-    
-    // intitialize
-    this.#listen();
-  }
-  get tool() {
-    return AvatarToolsMesh.tools[this.toolIndex];
-  }
-  set tool(tool) {
-    throw new Error('not implemented');
-    /* const toolIndex = AvatarToolsMesh.tools.indexOf(tool);
-    if (toolIndex !== -1) {
-      this.setToolIndex(toolIndex);
-    } */
-  }
-  setToolIndex(toolIndex) {
-    this.toolIndex = toolIndex;
-    this.dispatchEvent({
-      type: 'toolchange',
-      tool: this.tool,
-    });
-  }
-  update() {
-    this.arrowMesh.visible = false;
-    
-    if (this.tool === 'move') {
-      // console.log('update move');
-  
-      const intersectFloor = (mouse, camera, vectorTarget) => {
-        const floorPlane = localPlane.setFromNormalAndCoplanarPoint(
-          upVector,
-          zeroVector
-        );
-        localRaycaster.setFromCamera(mouse, camera);
-        return localRaycaster.ray.intersectPlane(floorPlane, vectorTarget);
-      };
-      const intersection = intersectFloor(this.mouse, this.camera, localVector);
-
-      // console.log('intersect', this.mouse.toArray(), this.camera.position.toArray(), intersection && intersection.toArray());
-      if (intersection) {
-        this.arrowMesh.position.copy(intersection);
-        this.arrowMesh.updateMatrixWorld();
-        this.arrowMesh.visible = true;
-       }
-
-       this.dropMesh.update();
-    }
-  }
-  #listen() {
-    const keydown = e => {
-      switch (e.key) {
-        case '1':
-        case '2':
-        case '3':
-        case '4':
-        case '5':
-        case '6':
-        case '7':
-        case '8':
-        case '9':
-        {
-          cancelEvent(e);
-
-          const keyIndex = parseInt(e.key, 10) - 1;
-          this.setToolIndex(keyIndex);
-          break;
-        }
-        case 't': {
-          if (document.activeElement) {
-            // nothing
-          } else {
-            cancelEvent(e);
-            // XXX enable talk
-            console.log('enable talk');
-          }
-          break;
-        }
-      }
-    };
-    document.addEventListener('keydown', keydown);
-
-    const mousemove = e => {
-      const rect = this.canvas.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-
-      this.mouse.set(
-        (x / rect.width) * 2 - 1,
-        -(y / rect.height) * 2 + 1
-      );
-    };
-    this.canvas.addEventListener('mousemove', mousemove);
-
-    const mousedown = e => {
-      cancelEvent(e);
-
-      if (this.tool === 'move') {
-        if (this.avatarManager.avatar) {
-          const points = (() => {
-            const startPosition = localVector2.copy(this.avatarManager.avatar.inputs.hmd.position)
-              .add(
-                localVector3.set(0, -this.avatarManager.avatar.height, 0)
-              );
-            const endPosition = this.arrowMesh.position;
-
-            const stepSize = 1;
-            const points = [];
-            const direction = endPosition.clone()
-              .sub(startPosition);
-            const distance = direction.length();
-            direction.normalize();
-            for (let d = 0; d < distance; d += stepSize) {
-              const point = startPosition.clone()
-                .add(direction.clone().multiplyScalar(d));
-              points.push(point);
-            }
-            points.push(endPosition.clone());
-
-            // make this a directional walk from the entrance to the exit
-            // const depthFloats = floorHeightfield;
-            // const yOffset = 0.10;
-            const rng = alea('paths');
-            for (let i = 0; i < points.length; i++) {
-              // const labelSpec = portalLabels[i];
-              // const normal = localVector.fromArray(labelSpec.normal);
-              // const center = localVector2.fromArray(labelSpec.center);
-              const center = points[i];
-              
-              // portal center in world space, 1m in front of the center
-              const portalCenter = localVector3.copy(center)
-              if (i !== 0 && i !== points.length - 1) {
-                const prevCenter = points[i - 1];
-                localQuaternion.setFromRotationMatrix(
-                  localMatrix.lookAt(
-                    prevCenter,
-                    endPosition,
-                    upVector
-                  )
-                );
-                portalCenter.add(localVector4.set((rng() - 0.5) * 2 * 0.3, 0, 0).applyQuaternion(localQuaternion));
-              }
-              // portalCenter.add(upVector);
-              portalCenter.y += 0.1;
-              center.copy(portalCenter);
-            }
-
-            return points;
-          })();
-          this.pathMesh.geometry = PathMesh.makeGeometry(points);
-          this.pathMesh.visible = points.length > 0;
-        }
-      }
-    };
-    this.canvas.addEventListener('mousedown', mousedown);
-
-    const toolchange = e => {
-      console.log('update', e.tool);
-      this.controls.enabled = e.tool === 'camera';
-    };
-    this.addEventListener('toolchange', toolchange);
-
-    this.cleanup = () => {
-      document.removeEventListener('keydown', keydown);
-      this.canvas.removeEventListener('mousemove', mousemove);
-      this.canvas.removeEventListener('mousedown', mousedown);
-      this.removeEventListener('toolchange', toolchange);
-    };
-  }
-  destroy() {
-    this.cleanup();
-  }
-}
-
-//
 
 // const transparentPng1Px = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
 const MessageText = ({
@@ -3282,9 +2501,20 @@ const NpcGeneratorComponent = () => {
           avatarsWasmManager.waitForLoad(),
         ]);
 
+        const gltf = await selectAvatar();
+
         // avatar manager
-        const avatarManager = new AvatarManager(canvas);
+        const avatarManager = new AvatarManager({
+          canvas,
+          gltf,
+        });
         await avatarManager.waitForLoad();
+
+        const avatarToolsMesh = new AvatarToolsMesh({
+          avatarManager,
+        });
+        avatarManager.scene.add(avatarToolsMesh);
+        avatarToolsMesh.updateMatrixWorld();
         setAvatarManager(avatarManager);
 
         // emotions
@@ -3323,7 +2553,9 @@ const NpcGeneratorComponent = () => {
         // animate
         const _render = () => {
           requestAnimationFrame(_render);
+
           avatarManager.update();
+          avatarToolsMesh.update();
         };
         requestAnimationFrame(_render);
       } finally {

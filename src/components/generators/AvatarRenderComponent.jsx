@@ -3,7 +3,7 @@ import {makeDefaultCamera, makeRenderer, pushMeshes} from "../../zine/zine-utils
 import * as THREE from "three";
 import {OrbitControls} from "../../../packages/three/examples/jsm/controls/OrbitControls.js";
 import styles from "../../../styles/AvatarGenerator.module.css";
-import {getMeshes} from "./AvatarGeneratorComponent.jsx";
+import {getMeshes} from "../../utils/mesh-utils.js";
 import {editTexture} from "../../generators/avatar-generator.js";
 
 // 3D Canvas to render avatar
@@ -43,7 +43,7 @@ function SkinnedMesh3DRenderer(props) {
 
 const defaultPrompt = 'Blue jean shorts, 3D model';
 
-function MeshSelector(props){
+function MeshSelector(props) {
     const [prompt, setPrompt] = useState(defaultPrompt);
     const [symmetrical, setSymmetrical] = useState(false);
     const [imageAiModel, setImageAiModel] = useState('sd');
@@ -114,7 +114,7 @@ const Avatar3DCanvas = ({
 };
 
 export class AvatarRenderer extends EventTarget {
-    constructor(model, canvas){
+    constructor(model, canvas) {
         super();
 
         this.canvas = canvas;
@@ -191,8 +191,8 @@ export class AvatarRenderer extends EventTarget {
 
 
 export const AvatarRendererComponent = ({
-                                            model,
-                                        }) => {
+    model,
+}) => {
     const renderer_3D= new THREE.WebGLRenderer({
         alpha: true,
         antialias: true,
@@ -223,6 +223,4 @@ export const AvatarRendererComponent = ({
         </div>
 
     );
-}
-
-
+};

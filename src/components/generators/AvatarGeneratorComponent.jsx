@@ -1,21 +1,18 @@
-import {useState, useEffect, useRef} from 'react';
+import {useState} from 'react';
 import * as THREE from 'three';
-// import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 import alea from '../../utils/alea.js';
-import {makeDefaultCamera, makeGltfExporter, makeGltfLoader, makeRenderer} from "../../zine/zine-utils.js";
+import {makeGltfLoader} from "../../zine/zine-utils.js";
 import {makePromise} from "../../../utils.js";
 import styles from "../../../styles/AvatarGenerator.module.css";
 import {AvatarRendererComponent} from "./AvatarRenderComponent.jsx";
+import {getMeshes} from "../../utils/mesh-utils.js";
 
-
-// setting up constants
 const avatarUrls = [
   `/models/Avatar_Bases/Hacker Class/HackerClassMaster_v2.1_Guilty.vrm`,
   `/models/Avatar_Bases/Drophunter Class/DropHunter_Master_v2_Guilty.vrm`,
 ];
 
 const seed = 'lol';
-globalThis.seed = seed;
 const rng = alea(seed);
 const hairShift = rng() * Math.PI * 2;
 const clothingShift = rng() * Math.PI * 2;
@@ -142,16 +139,6 @@ const size = 1024;
 
 // model loading and mesh extraction utils
 const gltfLoader = makeGltfLoader();
-const gltfExporter = makeGltfExporter();
-export const getMeshes = model => {
-  const meshes = [];
-  model.traverse(o => {
-    if (o.isMesh) {
-      meshes.push(o);
-    }
-  });
-  return meshes;
-};
 
 const loadGltf = avatarUrl => {
   const p = makePromise();
