@@ -222,6 +222,18 @@ class Player extends THREE.Object3D {
 }
 
 class LocalPlayer extends Player {
+    constructor(playerId) {
+        super(playerId);
+        this.realmsPlayer = null;
+        this.position.set(0, 0, -2);
+        this.lastPosition = new THREE.Vector3();
+        this.updateMatrixWorld();
+    }
+    setRealmsPlayer(realmsPlayer) {
+        this.realmsPlayer = realmsPlayer;
+        this.realmsPlayer.setKeyValue('position', this.position.toArray());
+        this.lastPosition.copy(this.position);
+    }
     update({
         timestamp,
         timeDiff,
@@ -255,6 +267,11 @@ class LocalPlayer extends Player {
         this.position.add(direction);
         this.updateMatrixWorld();
 
+        if (this.realmsPlayer && !this.position.equals(this.lastPosition)) {
+            this.realmsPlayer.setKeyValue('position', this.position.toArray());
+            this.lastPosition.copy(this.position);
+        }
+
         super.update({
             timestamp,
             timeDiff,
@@ -264,6 +281,20 @@ class LocalPlayer extends Player {
 }
 
 class RemotePlayer extends Player {
+    constructor(playerId, realmsPlayer) {
+        super(playerId);
+
+        this.position.fromArray(realmsPlayer.getKeyValue('position'));
+        this.updateMatrixWorld();
+
+        realmsPlayer.addEventListener('update', e => {
+            const {key, val} = e.data;
+            if (key === 'position') {
+                this.position.fromArray(val);
+                this.updateMatrixWorld();
+            }
+        });
+    }
 }
 
 //
@@ -326,9 +357,7 @@ class TitleScreenRenderer extends EventTarget {
 
         // local player
         const localPlayer = new LocalPlayer(makeId());
-        localPlayer.position.z = -2;
         scene.add(localPlayer);
-        localPlayer.updateMatrixWorld();
         this.localPlayer = localPlayer;
 
         // remote players
@@ -352,11 +381,9 @@ class TitleScreenRenderer extends EventTarget {
             const onVirtualPlayersJoin = e => {
                 const {playerId, player} = e.data;
                 console.log('Player joined:', playerId);
-                const remotePlayer = new RemotePlayer(playerId);
+                const remotePlayer = new RemotePlayer(playerId, player);
                 this.remotePlayers.set(playerId, remotePlayer);
-                remotePlayer.position.z = -2;
                 scene.add(remotePlayer);
-                scene.updateMatrixWorld();
             };
             virtualPlayers.addEventListener('join', onVirtualPlayersJoin);
             this.cleanupFns.push(() => {
@@ -592,6 +619,7 @@ class TitleScreenRenderer extends EventTarget {
                 this.realms.localPlayer.initializePlayer({
                   position,
                 }, {});
+                this.localPlayer.setRealmsPlayer(this.realms.localPlayer);
             };
 
             // Initiate network realms connection.
