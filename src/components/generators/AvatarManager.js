@@ -4,7 +4,7 @@ import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 import Avatar from '../../avatars/avatars.js';
 import avatarsWasmManager from '../../avatars/avatars-wasm-manager.js';
 
-import {AvatarRenderer} from '../../avatars/avatar-renderer.js';
+import {AvatarQuality} from '../../avatars/avatar-quality.js';
 
 import {AudioRecognizer} from '../../avatars/audio-recognizer.js';
 import MicrophoneWorker from '../../avatars/microphone-worker.js';
