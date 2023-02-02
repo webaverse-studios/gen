@@ -136,11 +136,11 @@ class LinearAnimation {
 
 //
 
-class LocalPlayer extends THREE.Object3D {
-    constructor() {
+class Player extends THREE.Object3D {
+    constructor(playerId) {
         super();
 
-        this.playerId = makeId();
+        this.playerId = playerId;
 
         // local player meshes
         this.outlineMesh = null;
@@ -201,7 +201,30 @@ class LocalPlayer extends THREE.Object3D {
     update({
         timestamp,
         timeDiff,
-        localPlayer,
+        camera,
+    }) {
+        if (this.outlineMesh) {
+            this.outlineMesh.update(timestamp);
+        }
+        if (this.particleSystemMesh) {
+            this.particleEmitter.update({
+                timestamp,
+                player: this,
+            });
+
+            this.particleSystemMesh.update({
+                timestamp,
+                timeDiff,
+                camera,
+            });
+        }
+    }
+}
+
+class LocalPlayer extends Player {
+    update({
+        timestamp,
+        timeDiff,
         camera,
         keys,
     }) {
@@ -232,22 +255,15 @@ class LocalPlayer extends THREE.Object3D {
         this.position.add(direction);
         this.updateMatrixWorld();
 
-        if (this.outlineMesh) {
-            this.outlineMesh.update(timestamp);
-        }
-        if (this.particleSystemMesh) {
-            this.particleEmitter.update({
-                timestamp,
-                localPlayer: this,
-            });
+        super.update({
+            timestamp,
+            timeDiff,
+            camera,
+        });
+  }
+}
 
-            this.particleSystemMesh.update({
-                timestamp,
-                timeDiff,
-                camera,
-            });
-        }
-    }
+class RemotePlayer extends Player {
 }
 
 //
@@ -309,11 +325,14 @@ class TitleScreenRenderer extends EventTarget {
         this.camera = camera;
 
         // local player
-        const localPlayer = new LocalPlayer();
+        const localPlayer = new LocalPlayer(makeId());
         localPlayer.position.z = -2;
         scene.add(localPlayer);
         localPlayer.updateMatrixWorld();
         this.localPlayer = localPlayer;
+
+        // remote players
+        this.remotePlayers = new Map();  // Map<playerId, RemotePlayer>
 
         // network realms
         this.realms = null;
@@ -333,6 +352,11 @@ class TitleScreenRenderer extends EventTarget {
             const onVirtualPlayersJoin = e => {
                 const {playerId, player} = e.data;
                 console.log('Player joined:', playerId);
+                const remotePlayer = new RemotePlayer(playerId);
+                this.remotePlayers.set(playerId, remotePlayer);
+                remotePlayer.position.z = -2;
+                scene.add(remotePlayer);
+                scene.updateMatrixWorld();
             };
             virtualPlayers.addEventListener('join', onVirtualPlayersJoin);
             this.cleanupFns.push(() => {
@@ -341,6 +365,13 @@ class TitleScreenRenderer extends EventTarget {
             const onVirtualPlayersLeave = e => {
                 const {playerId} = e.data;
                 console.log('Player left:', playerId);
+                const remotePlayer = this.remotePlayers.get(playerId);
+                if (remotePlayer) {
+                    scene.remove(remotePlayer);
+                    this.remotePlayers.delete(playerId);
+                } else {
+                    console.error('Remote player to remove not found');
+                }
             };
             virtualPlayers.addEventListener('leave', onVirtualPlayersLeave);
             this.cleanupFns.push(() => {
@@ -619,6 +650,13 @@ class TitleScreenRenderer extends EventTarget {
             camera: this.camera,
             keys: this.keys,
         });
+        for (const player of this.remotePlayers.values()) {
+            player.update({
+                timestamp,
+                timeDiff,
+                camera: this.camera,
+            });
+        }
     }
     destroy() {
       for (let i = 0; i < this.cleanupFns.length; i++) {
