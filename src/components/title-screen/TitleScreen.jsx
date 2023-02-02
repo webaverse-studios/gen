@@ -1279,6 +1279,7 @@ const TitleScreen = () => {
     const [loaded, setLoaded] = useState(false);
     const [focused, setFocused] = useState(false);
     const [titleScreenRenderer, setTitleScreenRenderer] = useState(null);
+    const [hups, setHups] = useState([]);
 
     const canvasRef = useRef();
 
@@ -1361,6 +1362,13 @@ const TitleScreen = () => {
                     titleScreenRenderer.keys.right = false;
                     break;
                 }
+                case 'k': {
+                    const newHup = {
+                        id: makeId(8),
+                    };
+                    setHups([...hups, newHup]);
+                    break;
+                }
             }
         };
         document.addEventListener('keyup', keyup);
@@ -1390,8 +1398,7 @@ const TitleScreen = () => {
                 }}
                 canvasRef={canvasRef}
             />
-            <Hups
-            />
+            {hups.map(hup => <Hups hup={hup} key={hup.id} />)}
             {loading ? (
                 <div className={styles.header}>
                     loading...
