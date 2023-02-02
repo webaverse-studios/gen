@@ -256,6 +256,7 @@ export class AvatarManager extends EventTarget {
     renderer.render(scene, camera);
   } */
   async waitForLoad() {
+    throw new Error('no need to wait for load');
     // return this.loadPromise;
   }
   async createImage() {
