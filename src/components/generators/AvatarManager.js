@@ -271,6 +271,8 @@ export class AvatarManager extends EventTarget {
     canvas.classList.add('avatarImageCanvas');
 
     const emotion = '';
+
+    this.emobodied = true;
     
     const img = await screenshotAvatarGltf({
       gltf,
@@ -380,6 +382,9 @@ export class AvatarManager extends EventTarget {
     document.body.appendChild(video);
   }
   async embody() {
+    if (this.emobodied) return;
+    this.emobodied = true;
+
     await Promise.all([
       Avatar.waitForLoad(),
       avatarsWasmManager.waitForLoad(),
