@@ -2554,7 +2554,7 @@ const NpcGeneratorComponent = () => {
         const _render = () => {
           requestAnimationFrame(_render);
 
-          avatarManager.update();
+          // avatarManager.update();
           avatarToolsMesh.update();
         };
         requestAnimationFrame(_render);
