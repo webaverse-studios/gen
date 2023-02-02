@@ -6,6 +6,9 @@ import avatarsWasmManager from '../../avatars/avatars-wasm-manager.js';
 
 import {AvatarRenderer} from '../../avatars/avatar-renderer.js';
 
+import {AudioRecognizer} from '../../avatars/audio-recognizer.js';
+import MicrophoneWorker from '../../avatars/microphone-worker.js';
+
 // import {
 //   makeRendererWithBackground,
 // } from '../../utils/renderer-utils.js';
@@ -14,7 +17,113 @@ import {
   makeDefaultCamera,
 } from '../../zine/zine-utils.js';
 
+import {
+  voiceEndpointsUrl,
+  voiceEndpointBaseUrl,
+} from '../../voice-engine/voice-constants.js';
+
+// import {VoicePack, VoicePackVoicer} from '../../voice-engine/voice-output/voice-pack-voicer.js';
+import {VoiceEndpoint, VoiceEndpointVoicer} from '../../voice-engine/voice-output/voice-endpoint-voicer.js';
+
 import {maxAvatarQuality} from '../../avatars/constants.js';
+
+import microphoneWorkletUrl from '../../avatars/microphone-worklet.js?url';
+
+//
+
+// // voice packs
+// export const voicePacksUrl = `https://webaverse.github.io/voicepacks/all_packs.json`;
+// // voice endpoints
+// export const voiceEndpointBaseUrl = `https://voice-cw.webaverse.com/tts`;
+// export const voiceEndpointsUrl = `https://raw.githubusercontent.com/webaverse/tiktalknet/main/model_lists/all_models.json`;
+
+//
+
+class AvatarAudio {
+  constructor({
+    audioContext,
+    avatar,
+  }) {
+    this.audioContext = audioContext;
+    this.avatar = avatar;
+
+    this.audioWorker = null;
+    this.microphoneWorker = null;
+
+    this.volume = 0;
+    this.vowels = Float32Array.from([1, 0, 0, 0, 0]);
+    this.manuallySetMouth = false;
+  }
+
+  #audioRecognizer;
+  getAudioRecognizer() {
+    if (!this.#audioRecognizer) {
+      const {audioContext} = this;
+      this.#audioRecognizer = new AudioRecognizer({
+        sampleRate: audioContext.sampleRate,
+      });
+    }
+    return this.#audioRecognizer;
+  }
+  setAudioEnabled(enabled) {
+    // cleanup
+    if (this.audioWorker) {
+      this.audioWorker.close();
+      this.audioWorker = null;
+    }
+
+    // setup
+    if (enabled) {
+      this.avatar.volume = 0;
+
+      const {audioContext} = this;
+      if (audioContext.state === 'suspended') {
+        (async () => {
+          await audioContext.resume();
+        })();
+      }
+
+      const audioRecognizer = this.getAudioRecognizer();
+      audioRecognizer.addEventListener('result', e => {
+        this.avatar.vowels.set(e.data);
+      });
+
+      this.audioWorker = new MicrophoneWorker({
+        audioContext,
+        muted: false,
+        emitVolume: true,
+        emitBuffer: true,
+      });
+
+      const _volume = e => {
+        // the mouth is manually overridden by the CharacterBehavior class which is attached to all players
+        // this happens when a player is eating fruit or yelling while making an attack
+        if (!this.manuallySetMouth) {
+          this.avatar.volume = e.data;
+        }
+      }
+      const _buffer = e => {
+        audioRecognizer.send(e.data);
+      }
+      this.audioWorker.addEventListener('volume', _volume);
+      this.audioWorker.addEventListener('buffer', _buffer);
+    } else {
+      this.avatar.volume = 0;
+    }
+  }
+  ensure() {
+    if (!this.audioWorker) {
+      this.setAudioEnabled(true);
+    }
+  }
+  getAudioInput() {
+    return this.audioWorker.getInput();
+  }
+  destroy() {
+    this.#audioRecognizer.destroy();
+    this.audioWorker.close();
+  }
+}
 
 //
 
