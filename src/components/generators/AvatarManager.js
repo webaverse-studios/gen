@@ -402,6 +402,47 @@ export class AvatarManager extends EventTarget {
 
     this.scene.add(gltf.scene);
 
+    const makeVoiceEndpoint = (voiceId) => {
+      if (!voiceId) throw new Error('voice Id is null')
+      // const self = this;
+      const url = `${voiceEndpointBaseUrl}?voice=${encodeURIComponent(voiceId)}`;
+      // this.voiceEndpoint = new VoiceEndpoint(url);
+      return new VoiceEndpoint(url);
+    };
+
+    const keydown = async e => {
+      switch (e.key) {
+        case 'l': {
+          const voiceEndpoint = makeVoiceEndpoint('1jLX0Py6j8uY93Fjf2l0HOZQYXiShfWUO');
+          
+          const audioContext = new AudioContext();
+          audioContext.gain = audioContext.createGain();
+          audioContext.gain.connect(audioContext.destination);
+
+          await audioContext.audioWorklet.addModule(microphoneWorkletUrl);
+          
+          const avatarAudio = new AvatarAudio({
+            audioContext,
+            avatar: this.avatar,
+          });
+          const voicer = new VoiceEndpointVoicer(voiceEndpoint, {
+            avatarAudio,
+            audioContext,
+          });
+          
+          const message = `I got it!`;
+          const preloadedMessage = await voicer.preloadMessage(message);
+
+          await voicer.start(preloadedMessage);
+
+          avatarAudio.destroy();
+
+          break;
+        }
+      }
+    };
+    document.addEventListener('keydown', keydown);
+
     let lastTimestamp = performance.now();
     const _recurse = () => {
       frame = requestAnimationFrame(_recurse);
@@ -412,24 +453,10 @@ export class AvatarManager extends EventTarget {
 
       this.controls.update();
 
-      // console.log('render', {
-      //   gltf,
-      // });
-
       this.renderer.render(this.scene, this.camera);
 
       lastTimestamp = timestamp;
     };
     let frame = requestAnimationFrame(_recurse);
-
-    /* this.addEventListener('update', e => {
-      const {timestamp, timeDiff} = e.data;
-      avatar.update(timestamp, timeDiff);
-
-      this.controls.update();
-
-      // gltf2.scene.updateMatrixWorld();
-      // gltf.scene.updateMatrixWorld();
-    }); */
   }
 }
