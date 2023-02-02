@@ -62,11 +62,12 @@ const hash = `8ebd78be3078833da10c95b565ee88b7cf6ba9e0`;
 const assetsBaseUrl = `https://cdn.jsdelivr.net/gh/webaverse/content@${hash}/`;
 const titleScreenZineFileName = 'title-screen.zine';
 const cubicBezier = bezier(0, 1, 0, 1);
+const gravity = new THREE.Vector3(0, -9.8, 0);
 
 //
 
 const localVector = new THREE.Vector3();
-// const localVector2 = new THREE.Vector3();
+const localVector2 = new THREE.Vector3();
 const localVector2D = new THREE.Vector2();
 // const localQuaternion = new THREE.Quaternion();
 // const localMatrix = new THREE.Matrix4();
@@ -141,22 +142,20 @@ class LinearAnimation {
 
 //
 
+const r = 0.3;
+const aw = r * 2;
+const ah = 1.6;
+const h = ah - r * 2;
 class LocalPlayer extends THREE.Object3D {
     constructor() {
         super();
 
-        // constants
-        const r = 0.3;
-        const aw = r * 2;
-        const ah = 1.6;
-        const h = ah - r * 2;
-
-        const _createCharacterCapsule = () => {
+        const _createCharacterController = () => {
             const characterWidth = aw;
             const characterHeight = ah;
         
             const capsuleWidth = characterWidth / 2;
-            const capsuleHeight = characterHeight - characterWidth;
+            const capsuleHeight = characterHeight;
         
             const contactOffset = 0.01 * capsuleHeight;
             const stepOffset = 0.1 * capsuleHeight;
@@ -172,15 +171,16 @@ class LocalPlayer extends THREE.Object3D {
                 capsuleHeight,
                 contactOffset,
                 stepOffset,
-                this.position
+                this.position.clone().add(new THREE.Vector3(0, 2, 0))
             );
+            return characterController;
         };
 
         // local player meshes
         this.outlineMesh = null;
         this.particleSystemMesh = null;
         this.particleEmitter = null;
-        this.characterCapsule = null;
+        this.characterController = null;
         (async () => {
             // particle mesh
             {
@@ -228,8 +228,10 @@ class LocalPlayer extends THREE.Object3D {
                 outlineMesh.updateMatrixWorld();
                 this.outlineMesh = outlineMesh;
             }
-            this.characterCapsule = _createCharacterCapsule();
+            this.characterController = _createCharacterController();
         })();
+
+        this.velocity = new THREE.Vector3(0, 0, 0);
     }
     update({
         timestamp,
@@ -238,32 +240,95 @@ class LocalPlayer extends THREE.Object3D {
         camera,
         keys,
     }) {
-        const speed = 0.1;
-        const direction = new THREE.Vector3();
-        // console.log('got keys', [
-        //     keys.left,
-        //     keys.right,
-        //     keys.up,
-        //     keys.down,
-        // ]);
-        if (keys.right) {
-            direction.x += 1;
+        if (this.characterController) {
+            const timeDiffS = timeDiff / 1000;
+            const speed = 4;
+            const minDist = 0;
+
+            const direction = new THREE.Vector3();
+            if (keys.right) {
+                direction.x += 1;
+            }
+            if (keys.left) {
+                direction.x -= 1;
+            }
+            if (keys.up) {
+                direction.z -= 1;
+            }
+            if (keys.down) {
+                direction.z += 1;
+            }
+            if (!direction.equals(zeroVector)) {
+                direction.normalize()
+                    .multiplyScalar(speed);
+            }
+            if (this.velocity.equals(zeroVector)) {
+                this.velocity.add(
+                    localVector.copy(direction)
+                        .multiplyScalar(timeDiffS)
+                );
+            }
+            this.updateMatrixWorld();
+
+            const displacement = localVector.add(
+                localVector2.copy(this.velocity)
+                    .multiplyScalar(timeDiffS)
+            );
+            // console.log('velocity add', localVector2.toArray().join(','));
+
+            const physicsScene = physicsManager.getScene();
+            const positionXZBefore = localVector2D.set(this.characterController.position.x, this.characterController.position.z);
+            const positionYBefore = this.characterController.position.y;
+            const flags = physicsScene.moveCharacterController(
+              this.characterController,
+              displacement,
+              minDist,
+              timeDiffS,
+              this.characterController.position
+            );
+            this.position.copy(this.characterController.position);
+            this.updateMatrixWorld();
+
+            this.velocity.add(
+                localVector2.copy(gravity)
+                    .multiplyScalar(timeDiffS)
+            );
+            // console.log('got velocity', this.velocity.toArray().join(','));
+            {
+                // const collided = flags !== 0;
+                let grounded = !!(flags & 0x1);
+
+                if (grounded) {
+                    this.velocity.setScalar(0);
+
+                    // physicsScene.setCharacterControllerPosition(
+                    //     this.characterController,
+                    //     localVector2
+                    // );
+                }
+            }
+
+            {
+                if (!globalThis.lastPhysicsTimestamp) {
+                    globalThis.lastPhysicsTimestamp = 0;
+                }
+                const lastTimeDiff = timestamp - globalThis.lastPhysicsTimestamp;
+                // globalThis.lastPhysicsTimestamp = timestamp;
+                if (lastTimeDiff > 2000) {
+                    // console.log('reset');
+                    this.characterController.position.y += 2;
+                    // this.characterController.updateMatrixWorld();
+
+                    physicsScene.setCharacterControllerPosition(
+                        this.characterController,
+                        this.characterController.position
+                    );
+                    this.velocity.setScalar(0);
+
+                    globalThis.lastPhysicsTimestamp = timestamp;
+                }
+            }
         }
-        if (keys.left) {
-            direction.x -= 1;
-        }
-        if (keys.up) {
-            direction.z -= 1;
-        }
-        if (keys.down) {
-            direction.z += 1;
-        }
-        if (!direction.equals(zeroVector)) {
-            direction.normalize()
-                .multiplyScalar(speed);
-        }
-        this.position.add(direction);
-        this.updateMatrixWorld();
 
         if (this.outlineMesh) {
             this.outlineMesh.update(timestamp);
