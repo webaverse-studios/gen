@@ -318,6 +318,7 @@ class TitleScreenRenderer extends EventTarget {
         // network realms
         this.realms = null;
         (async () => {
+            // room
             const room = 'ABCDEFGH';
             await this.connectNetworkRealms(room);
             console.debug('Multiplayer connected:', room);
@@ -325,6 +326,25 @@ class TitleScreenRenderer extends EventTarget {
             this.cleanupFns.push(() => {
                 this.disconnectNetworkRealms();
                 console.log("Multiplayer disconnected");
+            });
+
+            // remote players
+            const virtualPlayers = this.realms.getVirtualPlayers();
+            const onVirtualPlayersJoin = e => {
+                const {playerId, player} = e.data;
+                console.log('Player joined:', playerId);
+            };
+            virtualPlayers.addEventListener('join', onVirtualPlayersJoin);
+            this.cleanupFns.push(() => {
+                virtualPlayers.removeEventListener('join', onVirtualPlayersJoin);
+            });
+            const onVirtualPlayersLeave = e => {
+                const {playerId} = e.data;
+                console.log('Player left:', playerId);
+            };
+            virtualPlayers.addEventListener('leave', onVirtualPlayersLeave);
+            this.cleanupFns.push(() => {
+                virtualPlayers.removeEventListener('leave', onVirtualPlayersLeave);
             });
         })();
 
@@ -535,17 +555,19 @@ class TitleScreenRenderer extends EventTarget {
     async connectNetworkRealms(room) {
         this.realms = new NetworkRealms(room, this.localPlayer.playerId);
 
-        const onConnect = async position => {
-            // Initialize network realms player.
-            this.realms.localPlayer.initializePlayer({
-              position,
-            }, {});
-        };
+        (async () => {
+            const onConnect = async position => {
+                // Initialize network realms player.
+                this.realms.localPlayer.initializePlayer({
+                  position,
+                }, {});
+            };
 
-        // Initiate network realms connection.
-        await this.realms.updatePosition(this.localPlayer.position.toArray(), realmSize, {
-            onConnect,
-        });
+            // Initiate network realms connection.
+            await this.realms.updatePosition(this.localPlayer.position.toArray(), realmSize, {
+                onConnect,
+            });
+        })();
     }
     disconnectNetworkRealms() {
         if (this.realms) {
