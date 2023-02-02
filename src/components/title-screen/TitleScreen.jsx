@@ -45,6 +45,15 @@ import {
     physicsObjectTracker,
 } from '../../physics/physics-manager.js';
 import physicsManager from '../../physics/physics-manager.js';
+import {
+    CharacterPhysics,
+} from '../../physics/character-physics.js';
+import {
+    loadGltf,
+} from "../../utils/mesh-utils.js";
+import {
+    AvatarManager,
+} from '../generators/AvatarManager.js';
 
 import {
     Hups,
@@ -52,9 +61,13 @@ import {
 
 import {
     getDoubleSidedGeometry,
-  } from '../../zine/zine-geometry-utils.js';
+} from '../../zine/zine-geometry-utils.js';
+import avatarsWasmManager from '../../avatars/avatars-wasm-manager.js';
 
 import styles from '../../../styles/TitleScreen.module.css';
+import {makeId} from '../../physics/util.js';
+
+import Avatar from '../../avatars/avatars.js';
 
 //
 
@@ -62,7 +75,8 @@ const hash = `8ebd78be3078833da10c95b565ee88b7cf6ba9e0`;
 const assetsBaseUrl = `https://cdn.jsdelivr.net/gh/webaverse/content@${hash}/`;
 const titleScreenZineFileName = 'title-screen.zine';
 const cubicBezier = bezier(0, 1, 0, 1);
-const gravity = new THREE.Vector3(0, -9.8, 0);
+// const gravity = new THREE.Vector3(0, -9.8, 0);
+const avatarUrl = `/avatars/Scillia_Drophunter_V19.vrm`;
 
 //
 
@@ -83,6 +97,30 @@ const _loadArrayBuffer = async u => {
     const arrayBuffer = await res.arrayBuffer();
     return arrayBuffer;
 };
+
+//
+
+class ActionManager {
+    constructor() {
+        this.actions = new Map();
+    }
+    getAction(actionName) {
+        return this.actions.get(actionName);
+    }
+    setAction(actionName, action) {
+        this.actions.set(actionName, action);
+    }
+    hasAction() {
+        return false;
+    }
+    setControlAction(actionName, controlName, controlAction) {
+        // const action = this.actions.get(actionName);
+        // if (action) {
+        //     action.setControlAction(controlName, controlAction);
+        // }
+        throw new Error('not implemented: set control action');
+    }
+}
 
 //
 
@@ -146,41 +184,38 @@ const r = 0.3;
 const aw = r * 2;
 const ah = 1.6;
 const h = ah - r * 2;
+const widthPadding = 0.25; // we calculate width from shoulders, but we need a little padding
+/* const _createCharacterController = (position) => {
+    const characterWidth = aw;
+    const characterHeight = ah;
+
+    const capsuleWidth = characterWidth / 2;
+    const capsuleHeight = characterHeight;
+
+    const contactOffset = 0.01 * capsuleHeight;
+    const stepOffset = 0.1 * capsuleHeight;
+
+    const physicsScene = physicsManager.getScene();
+
+    const characterController = physicsScene.createCharacterController(
+        capsuleWidth,
+        capsuleHeight,
+        contactOffset,
+        stepOffset,
+        position
+    );
+    return characterController;
+}; */
 class LocalPlayer extends THREE.Object3D {
     constructor() {
         super();
-
-        const _createCharacterController = () => {
-            const characterWidth = aw;
-            const characterHeight = ah;
-        
-            const capsuleWidth = characterWidth / 2;
-            const capsuleHeight = characterHeight;
-        
-            const contactOffset = 0.01 * capsuleHeight;
-            const stepOffset = 0.1 * capsuleHeight;
-        
-            const physicsScene = physicsManager.getScene();
-
-            // let characterController = null;
-            // if (characterController) {
-            //     physicsScene.destroyCharacterController(characterController);
-            // }
-            const characterController = physicsScene.createCharacterController(
-                capsuleWidth,
-                capsuleHeight,
-                contactOffset,
-                stepOffset,
-                this.position
-            );
-            return characterController;
-        };
 
         // local player meshes
         this.outlineMesh = null;
         this.particleSystemMesh = null;
         this.particleEmitter = null;
         this.characterController = null;
+        this.characterPhysics = null;
         (async () => {
             // particle mesh
             {
@@ -222,13 +257,42 @@ class LocalPlayer extends THREE.Object3D {
                 const outlineMesh = new OutlineMesh({
                     geometry: new CapsuleGeometry(r, r, h, 8)
                       .rotateZ(Math.PI / 2)
-                      .translate(0, -h / 2, 0)
+                      .translate(0, -h / 2, 0),
                 });
                 this.add(outlineMesh);
                 outlineMesh.updateMatrixWorld();
                 this.outlineMesh = outlineMesh;
             }
-            this.characterController = _createCharacterController();
+
+            // avatar
+            await Promise.all([
+                Avatar.waitForLoad(),
+                avatarsWasmManager.waitForLoad(),
+            ]);
+            {
+                const gltf = await loadGltf(avatarUrl);  
+                const avatar = await AvatarManager.makeAvatar({
+                    gltf,
+                });
+                this.avatar = avatar;
+            }
+
+            // character physics
+            {
+                const actionManager = new ActionManager();
+                this.characterPhysics = new CharacterPhysics({
+                    avatar: this.avatar,
+                    actionManager,
+                });
+                // console.log('character physics 1', this.avatar, this.characterPhysics);
+                this.characterPhysics.loadCharacterController(
+                    this.avatar.shoulderWidth + widthPadding,
+                    this.avatar.height,
+                );
+                // console.log('character physics 2', this.avatar, this.characterPhysics);
+                const physicsScene = physicsManager.getScene();
+                physicsScene.disableGeometryQueries(this.characterPhysics.characterController);
+            }
         })();
 
         this.velocity = new THREE.Vector3(0, 0, 0);
@@ -240,7 +304,7 @@ class LocalPlayer extends THREE.Object3D {
         camera,
         keys,
     }) {
-        if (this.characterController) {
+        /* if (this.characterController) {
             const timeDiffS = timeDiff / 1000;
             const speed = 40;
             const minDist = 0;
@@ -270,11 +334,8 @@ class LocalPlayer extends THREE.Object3D {
 
             const displacement = localVector.copy(this.velocity)
                 .multiplyScalar(timeDiffS);
-            // console.log('velocity add', localVector2.toArray().join(','));
 
             const physicsScene = physicsManager.getScene();
-            const positionXZBefore = localVector2D.set(this.characterController.position.x, this.characterController.position.z);
-            const positionYBefore = this.characterController.position.y;
             const flags = physicsScene.moveCharacterController(
               this.characterController,
               displacement,
@@ -289,40 +350,119 @@ class LocalPlayer extends THREE.Object3D {
                 localVector2.copy(gravity)
                     .multiplyScalar(timeDiffS)
             );
-            // console.log('got velocity', this.velocity.toArray().join(','));
             {
-                // const collided = flags !== 0;
                 let grounded = !!(flags & 0x1);
 
                 if (grounded) {
                     this.velocity.setScalar(0);
-
-                    // physicsScene.setCharacterControllerPosition(
-                    //     this.characterController,
-                    //     localVector2
-                    // );
                 }
             }
+        } */
+        if (this.characterPhysics) {
+            const timeDiffS = timeDiff / 1000;
+            this.characterPhysics.update(timestamp, timeDiffS);
 
-            {
-                if (!globalThis.lastPhysicsTimestamp) {
-                    globalThis.lastPhysicsTimestamp = 0;
+            const applyCharacterPhysicsToAvatar = (characterPhysics, avatar) => {
+                const {
+                    characterController,
+                } = characterPhysics;
+                avatar.inputs.hmd.position.copy(characterController.position);
+                avatar.inputs.hmd.quaternion.copy(characterController.quaternion);
+                
+                // avatar.inputs.leftGamepad.position.copy(character.leftHand.position);
+                // avatar.inputs.leftGamepad.quaternion.copy(character.leftHand.quaternion);
+                // avatar.inputs.rightGamepad.position.copy(character.rightHand.position);
+                // avatar.inputs.rightGamepad.quaternion.copy(character.rightHand.quaternion);
+                avatar.inputs.leftGamepad.position.set(NaN, NaN, NaN);
+                avatar.inputs.leftGamepad.quaternion.set(NaN, NaN, NaN, NaN);
+                avatar.inputs.rightGamepad.position.set(NaN, NaN, NaN);
+                avatar.inputs.rightGamepad.quaternion.set(NaN, NaN, NaN, NaN);
+            };
+
+            avatarsWasmManager.physxWorker.updateInterpolationAnimationAvatar(this.avatar.animationAvatarPtr, timeDiff);
+            applyCharacterPhysicsToAvatar(this.characterPhysics, this.avatar);
+            this.avatar.update(timestamp, timeDiff);
+
+            /* updateAvatar(timestamp, timeDiff) {
+                if (this.avatar) {
+                    const timeDiffS = timeDiff / 1000;
+                    this.avatarCharacterSfx.update(timestamp, timeDiffS);
+                    this.avatarCharacterFx.update(timestamp, timeDiffS);
+                    this.characterHitter.update(timestamp, timeDiffS);
+                    this.avatarFace.update(timestamp, timeDiffS);
+            
+                    physx.physxWorker.updateInterpolationAnimationAvatar(this.avatar.animationAvatarPtr, timeDiff);
+            
+                    const session = _getSession();
+                    const mirrors = metaversefile.getMirrors();
+                    applyCharacterToAvatar(this, session, this.avatar, mirrors);
+            
+                    this.avatar.update(timestamp, timeDiff);
+            
+                    this.characterHups.update(timestamp);
                 }
-                const lastTimeDiff = timestamp - globalThis.lastPhysicsTimestamp;
-                // globalThis.lastPhysicsTimestamp = timestamp;
-                if (lastTimeDiff > 2000) {
-                    // console.log('reset');
-                    this.characterController.position.y += 2;
-                    // this.characterController.updateMatrixWorld();
+            } */
 
-                    physicsScene.setCharacterControllerPosition(
-                        this.characterController,
-                        this.characterController.position
-                    );
+            // this.avatarBinding = {
+            //     position: this.positionInterpolant.get(),
+            //     quaternion: this.quaternionInterpolant.get(),
+            // };
+            // this.leftHand = new AvatarHand();
+            // this.rightHand = new AvatarHand();
+        
+            // class AvatarHand extends THREE.Object3D {
+            //     constructor() {
+            //         super();
+                
+            //         this.pointer = 0;
+            //         this.grab = 0;
+            //         this.enabled = false;
+            //     }
+            // }
 
-                    globalThis.lastPhysicsTimestamp = timestamp;
+            /* export function applyCharacterTransformsToAvatar(character, session, rig) {
+                if (!session) {
+                  rig.inputs.hmd.position.copy(character.avatarBinding.position);
+                  rig.inputs.hmd.quaternion.copy(character.avatarBinding.quaternion);
+                  rig.inputs.leftGamepad.position.copy(character.leftHand.position);
+                  rig.inputs.leftGamepad.quaternion.copy(character.leftHand.quaternion);
+                  rig.inputs.rightGamepad.position.copy(character.rightHand.position);
+                  rig.inputs.rightGamepad.quaternion.copy(character.rightHand.quaternion);
                 }
-            }
+            } */
+
+            /* export function applyCharacterMetaTransformsToAvatar(character, session, rig) {
+                if (!session) {
+                  rig.velocity.copy(character.characterPhysics.velocity);
+                }
+              } */
+              /* export function applyCharacterModesToAvatar(character, session, rig) {
+                for (let i = 0; i < 2; i++) {
+                  rig.setHandEnabled(i, character.hands[i].enabled);
+                }
+                rig.setTopEnabled(
+                  (!!session && (rig.inputs.leftGamepad.enabled || rig.inputs.rightGamepad.enabled)),
+                );
+                rig.setBottomEnabled(
+                  (
+                    rig.getTopEnabled()
+                  ) &&
+                  rig.velocity.length() < 0.001,
+                );
+              } */
+
+            /* export function applyCharacterToAvatar(character, session, rig, mirrors) {
+                applyCharacterTransformsToAvatar(character, session, rig);
+                applyCharacterMetaTransformsToAvatar(character, session, rig);
+                
+                applyCharacterModesToAvatar(character, session, rig);
+                applyCharacterActionsToAvatar(character, rig);
+                applyCharacterHeadTargetToAvatar(character, rig);
+                applyCharacterEyesToAvatar(character, rig) || applyMirrorsToAvatar(character, rig, mirrors);
+                
+                applyFacePoseToAvatar(character, rig);
+                applyCharacterPoseToAvatar(character, rig);
+            } */
         }
 
         if (this.outlineMesh) {
