@@ -47,6 +47,7 @@ import {
 import physicsManager from '../../physics/physics-manager.js';
 import {
     CharacterPhysics,
+    capsuleToAvatarHmd,
 } from '../../physics/character-physics.js';
 import {
     loadGltf,
@@ -358,13 +359,14 @@ class LocalPlayer {
                     characterController,
                 } = characterPhysics;
                 // local player
-                this.placeholderMesh.position.copy(characterController.position);
+                capsuleToAvatarHmd(characterController.position, this.avatar, this.placeholderMesh.position);
+                // this.placeholderMesh.position.copy(characterController.position);
                 this.placeholderMesh.quaternion.copy(characterController.quaternion);
                 this.placeholderMesh.updateMatrixWorld();
 
                 // avatar
-                avatar.inputs.hmd.position.copy(characterController.position);
-                avatar.inputs.hmd.quaternion.copy(characterController.quaternion);
+                avatar.inputs.hmd.position.copy(this.placeholderMesh.position);
+                avatar.inputs.hmd.quaternion.copy(this.placeholderMesh.quaternion);
                 // XXX deliberately set gamepads to NaN to see if it's still used (probably is for VR)
                 avatar.inputs.leftGamepad.position.set(NaN, NaN, NaN);
                 avatar.inputs.leftGamepad.quaternion.set(NaN, NaN, NaN, NaN);

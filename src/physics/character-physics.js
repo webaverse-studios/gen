@@ -38,7 +38,7 @@ export const avatarHmdToCapsule = (() => {
 export const capsuleToAvatarHmd = (() => {
   const localVector = new THREE.Vector3();
   return (capsulePosition, avatar, target) => {
-    return target.copy(capsule.position)
+    return target.copy(capsulePosition)
       .add(localVector.set(0, avatar.height / 2, 0));
   };
 })();
