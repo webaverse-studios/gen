@@ -181,7 +181,7 @@ class LinearAnimation {
 //
 
 const r = 0.3;
-const aw = r * 2;
+// const aw = r * 2;
 const ah = 1.6;
 const h = ah - r * 2;
 const widthPadding = 0.25; // we calculate width from shoulders, but we need a little padding
