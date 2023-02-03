@@ -68,6 +68,10 @@ import avatarsWasmManager from '../../avatars/avatars-wasm-manager.js';
 import styles from '../../../styles/TitleScreen.module.css';
 import {makeId} from '../../physics/util.js';
 
+import {
+    StoryTargetMesh,
+  } from '../../generators/story-target-mesh.js';
+
 import Avatar from '../../avatars/avatars.js';
 
 //
@@ -84,10 +88,11 @@ const avatarUrl = `/avatars/Scillia_Drophunter_V19.vrm`;
 const localVector = new THREE.Vector3();
 const localVector2 = new THREE.Vector3();
 const localVector2D = new THREE.Vector2();
-// const localQuaternion = new THREE.Quaternion();
-// const localMatrix = new THREE.Matrix4();
+const localQuaternion = new THREE.Quaternion();
+const localMatrix = new THREE.Matrix4();
+const localRaycaster = new THREE.Raycaster();
 
-const zeroVector = new THREE.Vector3(0, 0, 0);
+// const zeroVector = new THREE.Vector3(0, 0, 0);
 // const oneVector = new THREE.Vector3(1, 1, 1);
 // const upVector = new THREE.Vector3(0, 1, 0);
 
@@ -407,6 +412,99 @@ class KeysTracker {
 
 //
 
+class PanelInstanceManager extends THREE.Object3D {
+    constructor({
+      zineCameraManager,
+      physics,
+    }) {
+      super();
+  
+      this.name = 'panelInstanceManager';
+  
+      this.zineCameraManager = zineCameraManager;
+      this.physics = physics;
+  
+      this.panelIndex = 0;
+      this.panelInstances = [];
+  
+      // story target mesh
+      const storyTargetMesh = new StoryTargetMesh();
+      storyTargetMesh.frustumCulled = false;
+      storyTargetMesh.visible = false;
+      this.add(storyTargetMesh);
+      this.storyTargetMesh = storyTargetMesh;
+    }
+    #pushRaycast() {
+      const wallPhysicsObjects = [];
+      for (let i = 0; i < this.panelInstances.length; i++) {
+        const panelInstance = this.panelInstances[i];
+        for (let j = 0; j < panelInstance.wallPhysicsObjects.length; j++) {
+          const wallPhysicsObject = panelInstance.wallPhysicsObjects[j];
+          this.physics.disableGeometryQueries(wallPhysicsObject);
+          wallPhysicsObjects.push(wallPhysicsObject);
+        }
+      }
+      return () => {
+        for (let i = 0; i < wallPhysicsObjects.length; i++) {
+          const wallPhysicsObject = wallPhysicsObjects[i];
+          this.physics.enableGeometryQueries(wallPhysicsObject);
+        }
+      }
+    }
+    update({
+      mousePosition,
+    }) {
+      const {physics} = this;
+  
+      // update for entrance/exit transitions
+      const _updatePanelInstances = () => {
+        for (const panelInstance of this.panelInstances) {
+          panelInstance.update();
+        }
+      };
+      _updatePanelInstances();
+  
+      // update cursor
+      const _updateStoryTargetMesh = () => {
+        this.storyTargetMesh.visible = false;
+        
+        if (this.zineCameraManager.cameraLocked) {
+          localVector2D.copy(mousePosition);
+          localVector2D.y = -localVector2D.y;
+          
+          // raycast
+          {
+            localRaycaster.setFromCamera(localVector2D, this.zineCameraManager.camera);
+  
+            let result;
+            {
+              const popRaycast = this.#pushRaycast(); // disable walls
+              result = physics.raycast(
+                localRaycaster.ray.origin,
+                localQuaternion.setFromRotationMatrix(
+                  localMatrix.lookAt(
+                    localVector.set(0, 0, 0),
+                    localRaycaster.ray.direction,
+                    localVector2.set(0, 1, 0)
+                  )
+                )
+              );
+              popRaycast();
+            }
+            if (result) {
+              this.storyTargetMesh.position.fromArray(result.point);
+            }
+            this.storyTargetMesh.visible = !!result;
+          }
+          this.storyTargetMesh.updateMatrixWorld();
+        }
+      };
+      _updateStoryTargetMesh();
+    }
+  }
+
+//
+
 class TitleScreenRenderer extends EventTarget {
     constructor({
         canvas,
@@ -472,6 +570,7 @@ class TitleScreenRenderer extends EventTarget {
             zineRenderer.scene.updateMatrixWorld();
 
             // scene physics
+            const physics = physicsManager.getScene();
             {
                 const {scenePhysicsMesh} = zineRenderer;
                 const geometry2 = getDoubleSidedGeometry(scenePhysicsMesh.geometry);
@@ -481,8 +580,7 @@ class TitleScreenRenderer extends EventTarget {
                 scenePhysicsMesh2.visible = false;
                 zineRenderer.transformScene.add(scenePhysicsMesh2);
                 this.scenePhysicsMesh = scenePhysicsMesh2;
-        
-                const physics = physicsManager.getScene();
+
                 const scenePhysicsObject = physics.addGeometry(scenePhysicsMesh2);
                 scenePhysicsObject.update = () => {
                     scenePhysicsMesh2.matrixWorld.decompose(
@@ -508,6 +606,15 @@ class TitleScreenRenderer extends EventTarget {
             this.zineCameraManager = zineCameraManager;
             this.zineCameraManager.setLockCamera(zineRenderer.camera);
             this.zineCameraManager.toggleCameraLock();
+
+            // panel instance manager
+            const panelInstanceManager = new PanelInstanceManager({
+                zineCameraManager,
+                physics,
+            });
+            scene.add(panelInstanceManager);
+            panelInstanceManager.updateMatrixWorld();
+            this.panelInstanceManager = panelInstanceManager;
     
             // path mesh
             const splinePoints = zineRenderer.metadata.paths.map(p => new THREE.Vector3().fromArray(p.position));
@@ -657,14 +764,21 @@ class TitleScreenRenderer extends EventTarget {
         document.addEventListener('pointerlockchange', pointerlockchange);
 
         const mousemove = e => {
-            this.zineCameraManager.handleMouseMove(e);
+            if (this.zineCameraManager) {
+                this.zineCameraManager.handleMouseMove(e);
+            }
         };
-        renderer.domElement.addEventListener('mousemove', mousemove);
-
+        canvas.addEventListener('mousemove', mousemove);
         const wheel = e => {
-            this.zineCameraManager.handleMouseWheel(e);
+            if (this.zineCameraManager) {
+                this.zineCameraManager.handleMouseWheel(e);
+            }
         };
-        document.addEventListener('wheel', wheel);
+        canvas.addEventListener('wheel', wheel);
+        this.cleanupFns.push(() => {
+            canvas.removeEventListener('mousemove', mousemove);
+            canvas.removeEventListener('wheel', wheel);
+        });
 
         // render loop
         let lastTimestamp = performance.now();
@@ -736,6 +850,12 @@ class TitleScreenRenderer extends EventTarget {
                 return !done;
             });
             this.portalMesh.update(timestamp);
+        }
+        if (this.panelInstanceManager) {
+            const {mousePosition} = this.zineCameraManager;
+            this.panelInstanceManager.update({
+                mousePosition,
+            });
         }
         if (this.localPlayer) {
             this.localPlayer.update({
