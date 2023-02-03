@@ -1235,11 +1235,15 @@ const TitleScreen = () => {
     useEffect(() => {
         const keydown = async e => {
             switch (e.key) {
-                case 'w': {
+                case 'w':
+                case 'W':
+                {
                     titleScreenRenderer.keys.up = true;
                     break;
                 }
-                case 's': {
+                case 's':
+                case 'S':
+                {
                     if (e.ctrlKey) {
                         e.preventDefault();
                         e.stopPropagation();
@@ -1254,15 +1258,20 @@ const TitleScreen = () => {
                     }
                     break;
                 }
-                case 'a': {
+                case 'a':
+                case 'A':
+                {
                     titleScreenRenderer.keys.left = true;
                     break;
                 }
-                case 'd': {
+                case 'd':
+                case 'D':
+                {
                     titleScreenRenderer.keys.right = true;
                     break;
                 }
-                case 'o': {
+                case 'o':
+                {
                     if (e.ctrlKey) {
                         e.preventDefault();
                         e.stopPropagation();
@@ -1295,23 +1304,32 @@ const TitleScreen = () => {
         document.addEventListener('keydown', keydown);
         const keyup = e => {
             switch (e.key) {
-                case 'w': {
+                case 'w':
+                case 'W':
+                {
                     titleScreenRenderer.keys.up = false;
                     break;
                 }
-                case 's': {
+                case 's':
+                case 'S':
+                {
                     titleScreenRenderer.keys.down = false;
                     break;
                 }
-                case 'a': {
+                case 'a':
+                case 'A':
+                {
                     titleScreenRenderer.keys.left = false;
                     break;
                 }
-                case 'd': {
+                case 'd':
+                case 'D':
+                {
                     titleScreenRenderer.keys.right = false;
                     break;
                 }
-                case 'k': {
+                case 'k':
+                {
                     const newHup = {
                         id: makeId(8),
                     };
