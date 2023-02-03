@@ -100,17 +100,17 @@ import styles from '../../../styles/NpcGenerator.module.css';
 //
 
 const localVector = new THREE.Vector3();
-const localVector2 = new THREE.Vector3();
-const localVector3 = new THREE.Vector3();
-const localVector4 = new THREE.Vector3();
-const localQuaternion = new THREE.Quaternion();
-const localMatrix = new THREE.Matrix4();
-const localPlane = new THREE.Plane();
-const localRaycaster = new THREE.Raycaster();
+// const localVector2 = new THREE.Vector3();
+// const localVector3 = new THREE.Vector3();
+// const localVector4 = new THREE.Vector3();
+// const localQuaternion = new THREE.Quaternion();
+// const localMatrix = new THREE.Matrix4();
+// const localPlane = new THREE.Plane();
+// const localRaycaster = new THREE.Raycaster();
 const localColor = new THREE.Color();
 
-const zeroVector = new THREE.Vector3(0, 0, 0);
-const upVector = new THREE.Vector3(0, 1, 0);
+// const zeroVector = new THREE.Vector3(0, 0, 0);
+// const upVector = new THREE.Vector3(0, 1, 0);
 
 //
 
@@ -126,7 +126,7 @@ const loadDatasetGenerator = async () => {
 
 //
 
-const FPS = 60;
+// const FPS = 60;
 
 //
 
