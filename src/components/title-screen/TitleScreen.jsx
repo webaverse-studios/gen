@@ -76,8 +76,29 @@ import {
     ActionManager,
 } from './ActionManager.js';
 
+import {
+    getFloorNetPhysicsMesh,
+} from '../../zine/zine-mesh-utils.js';
+
+import {
+    // reconstructPointCloudFromDepthField,
+    // setCameraViewPositionFromOrthographicViewZ,
+    // getDepthFloatsFromPointCloud,
+    // depthFloat32ArrayToOrthographicGeometry,
+    // getDepthFloat32ArrayWorldPosition,
+    // getDoubleSidedGeometry,
+    getGeometryHeights,
+  } from '../../zine/zine-geometry-utils.js';
 
 import Avatar from '../../avatars/avatars.js';
+
+import {
+    setPerspectiveCameraFromJson,
+    setOrthographicCameraFromJson,
+} from '../../zine/zine-camera-utils.js';
+import {
+    floorNetResolution,
+} from '../../zine/zine-constants.js';
 
 //
 
@@ -86,6 +107,7 @@ const assetsBaseUrl = `https://cdn.jsdelivr.net/gh/webaverse/content@${hash}/`;
 const titleScreenZineFileName = 'title-screen.zine';
 const cubicBezier = bezier(0, 1, 0, 1);
 // const gravity = new THREE.Vector3(0, -9.8, 0);
+const heightfieldScale = 0.1; // must fit heightfield in int16
 const avatarUrl = `/avatars/Scillia_Drophunter_V19.vrm`;
 
 //
@@ -96,6 +118,7 @@ const localVector2D = new THREE.Vector2();
 const localQuaternion = new THREE.Quaternion();
 const localMatrix = new THREE.Matrix4();
 const localRaycaster = new THREE.Raycaster();
+const localOrthographicCamera = new THREE.OrthographicCamera();
 
 // const zeroVector = new THREE.Vector3(0, 0, 0);
 // const oneVector = new THREE.Vector3(1, 1, 1);
@@ -636,6 +659,69 @@ class TitleScreenRenderer extends EventTarget {
 
                     physicsObjectTracker.add(planePhysicsObject);
                 }
+            }
+
+            // floor net physics
+            {
+                const {panel} = zineRenderer;
+                const layer1 = panel.getLayer(1);
+                const floorResolution = layer1.getData('floorResolution');
+                const floorNetDepths = layer1.getData('floorNetDepths');
+                const floorNetCameraJson = layer1.getData('floorNetCameraJson');
+
+                // camera
+                // const camera = setPerspectiveCameraFromJson(localCamera, cameraJson);
+                const floorNetCamera = setOrthographicCameraFromJson(localOrthographicCamera, floorNetCameraJson);
+
+                const [
+                    floorWidth,
+                    floorHeight,
+                ] = floorResolution;
+        
+                const floorNetPhysicsMaterial = new THREE.MeshPhongMaterial({
+                    color: 0xFF0000,
+                    side: THREE.BackSide,
+                    transparent: true,
+                    opacity: 0.5,
+                });
+                const floorNetPhysicsMesh = getFloorNetPhysicsMesh({
+                    floorNetDepths,
+                    floorNetCamera,
+                    material: floorNetPhysicsMaterial,
+                });
+                floorNetPhysicsMesh.name = 'floorNetPhysicsMesh';
+                floorNetPhysicsMesh.visible = false;
+                zineRenderer.transformScene.add(floorNetPhysicsMesh);
+                this.floorNetPhysicsMesh = floorNetPhysicsMesh;
+        
+                const numRows = floorWidth;
+                const numColumns = floorHeight;
+                const heights = getGeometryHeights(
+                    floorNetPhysicsMesh.geometry,
+                    floorWidth,
+                    floorHeight,
+                    heightfieldScale
+                );
+                const floorNetPhysicsObject = physics.addHeightFieldGeometry(
+                    floorNetPhysicsMesh,
+                    numRows,
+                    numColumns,
+                    heights,
+                    heightfieldScale,
+                    floorNetResolution,
+                    floorNetResolution
+                );
+                floorNetPhysicsObject.update = () => {
+                    floorNetPhysicsMesh.matrixWorld.decompose(
+                        floorNetPhysicsObject.position,
+                        floorNetPhysicsObject.quaternion,
+                        floorNetPhysicsObject.scale
+                    );
+                    physics.setTransform(floorNetPhysicsObject, false);
+                };
+                this.floorNetPhysicsObject = floorNetPhysicsObject;
+
+                physicsObjectTracker.add(floorNetPhysicsObject);
             }
 
             // camera manager
