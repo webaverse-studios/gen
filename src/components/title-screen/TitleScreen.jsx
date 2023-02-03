@@ -193,7 +193,6 @@ class LocalPlayer extends THREE.Object3D {
         this.outlineMesh = null;
         this.particleSystemMesh = null;
         this.particleEmitter = null;
-        this.characterController = null;
         this.characterPhysics = null;
         (async () => {
             // particle mesh
