@@ -339,14 +339,13 @@ class LocalPlayer extends Player {
         super(playerId, true);
         this.realmsPlayer = null;
         this.lastPosition = new THREE.Vector3();
-        this.position.set(0, 0, -2);
-        this.placeholderMesh.position.copy(this.position);
+        this.placeholderMesh.position.z = -4;
         this.placeholderMesh.updateMatrixWorld();
     }
     setRealmsPlayer(realmsPlayer) {
         this.realmsPlayer = realmsPlayer;
-        this.realmsPlayer.setKeyValue('position', this.position.toArray());
-        this.lastPosition.copy(this.position);
+        this.realmsPlayer.setKeyValue('position', this.placeholderMesh.position.toArray());
+        this.lastPosition.copy(this.placeholderMesh.position);
     }
     update({
         timestamp,
@@ -401,6 +400,11 @@ class LocalPlayer extends Player {
             avatarsWasmManager.physxWorker.updateInterpolationAnimationAvatar(this.avatar.animationAvatarPtr, timeDiff);
             applyCharacterPhysicsToAvatar(this.characterPhysics, this.avatar);
             this.avatar.update(timestamp, timeDiff);
+
+            if (this.realmsPlayer && !this.placeholderMesh.position.equals(this.lastPosition)) {
+                this.realmsPlayer.setKeyValue('position', this.placeholderMesh.position.toArray());
+                this.lastPosition.copy(this.placeholderMesh.position);
+            }
         }
 
         super.update({
@@ -415,14 +419,18 @@ class RemotePlayer extends Player {
     constructor(playerId, realmsPlayer) {
         super(playerId, false);
 
-        this.position.fromArray(realmsPlayer.getKeyValue('position'));
+        this.placeholderMesh.position.fromArray(realmsPlayer.getKeyValue('position'));
         this.placeholderMesh.updateMatrixWorld();
 
         realmsPlayer.addEventListener('update', e => {
             const {key, val} = e.data;
             if (key === 'position') {
-                this.position.fromArray(val);
+                // local player
+                this.placeholderMesh.position.fromArray(val);
                 this.placeholderMesh.updateMatrixWorld();
+
+                // avatar
+                this.avatar?.inputs.hmd.position.fromArray(val);
             }
         });
     }
@@ -489,7 +497,6 @@ class TitleScreenRenderer extends EventTarget {
         // local player
         const localPlayer = new LocalPlayer(makeId(8));
         scene.add(localPlayer.placeholderMesh);
-        localPlayer.placeholderMesh.updateMatrixWorld();
         this.localPlayer = localPlayer;
 
         // remote players
