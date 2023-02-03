@@ -569,7 +569,7 @@ class TitleScreenRenderer extends EventTarget {
                         scenePhysicsObject.quaternion,
                         scenePhysicsObject.scale
                     );
-                    this.physics.setTransform(scenePhysicsObject, false);
+                    physics.setTransform(scenePhysicsObject, false);
                 };
                 this.scenePhysicsObject = scenePhysicsObject;
                 
@@ -775,6 +775,12 @@ class TitleScreenRenderer extends EventTarget {
             // simulate physics
             const physics = physicsManager.getScene();
             physics.simulatePhysics(timeDiff);
+
+            // update scene physics
+            if (this.scenePhysicsObject) {
+                this.scenePhysicsObject.update();
+            }
+            
             
             // update camera
             if (this.zineCameraManager) {
