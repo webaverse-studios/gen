@@ -181,31 +181,10 @@ class LinearAnimation {
 //
 
 const r = 0.3;
-const aw = r * 2;
+// const aw = r * 2;
 const ah = 1.6;
 const h = ah - r * 2;
 const widthPadding = 0.25; // we calculate width from shoulders, but we need a little padding
-/* const _createCharacterController = (position) => {
-    const characterWidth = aw;
-    const characterHeight = ah;
-
-    const capsuleWidth = characterWidth / 2;
-    const capsuleHeight = characterHeight;
-
-    const contactOffset = 0.01 * capsuleHeight;
-    const stepOffset = 0.1 * capsuleHeight;
-
-    const physicsScene = physicsManager.getScene();
-
-    const characterController = physicsScene.createCharacterController(
-        capsuleWidth,
-        capsuleHeight,
-        contactOffset,
-        stepOffset,
-        position
-    );
-    return characterController;
-}; */
 class LocalPlayer extends THREE.Object3D {
     constructor() {
         super();
@@ -214,7 +193,6 @@ class LocalPlayer extends THREE.Object3D {
         this.outlineMesh = null;
         this.particleSystemMesh = null;
         this.particleEmitter = null;
-        this.characterController = null;
         this.characterPhysics = null;
         (async () => {
             // particle mesh
@@ -280,16 +258,18 @@ class LocalPlayer extends THREE.Object3D {
             // character physics
             {
                 const actionManager = new ActionManager();
+                // intialize position to local player position, since it is used by character controller initialization
+                this.avatar.inputs.hmd.position.copy(this.position);
+                this.avatar.inputs.hmd.quaternion.copy(this.quaternion);
+
                 this.characterPhysics = new CharacterPhysics({
                     avatar: this.avatar,
                     actionManager,
                 });
-                // console.log('character physics 1', this.avatar, this.characterPhysics);
                 this.characterPhysics.loadCharacterController(
                     this.avatar.shoulderWidth + widthPadding,
                     this.avatar.height,
                 );
-                // console.log('character physics 2', this.avatar, this.characterPhysics);
                 const physicsScene = physicsManager.getScene();
                 physicsScene.disableGeometryQueries(this.characterPhysics.characterController);
             }
@@ -304,11 +284,7 @@ class LocalPlayer extends THREE.Object3D {
         camera,
         keys,
     }) {
-        /* if (this.characterController) {
-            const timeDiffS = timeDiff / 1000;
-            const speed = 40;
-            const minDist = 0;
-
+        if (this.characterPhysics) {
             const direction = new THREE.Vector3();
             if (keys.right) {
                 direction.x += 1;
@@ -322,43 +298,14 @@ class LocalPlayer extends THREE.Object3D {
             if (keys.down) {
                 direction.z += 1;
             }
-            if (!direction.equals(zeroVector)) {
-                direction.normalize()
-                    .multiplyScalar(speed);
-            }
-            this.velocity.add(
-                localVector.copy(direction)
-                    .multiplyScalar(timeDiffS)
-            );
-            this.updateMatrixWorld();
-
-            const displacement = localVector.copy(this.velocity)
-                .multiplyScalar(timeDiffS);
-
-            const physicsScene = physicsManager.getScene();
-            const flags = physicsScene.moveCharacterController(
-              this.characterController,
-              displacement,
-              minDist,
-              timeDiffS,
-              this.characterController.position
-            );
-            this.position.copy(this.characterController.position);
-            this.updateMatrixWorld();
-
-            this.velocity.add(
-                localVector2.copy(gravity)
-                    .multiplyScalar(timeDiffS)
-            );
+            direction.normalize();
             {
-                let grounded = !!(flags & 0x1);
-
-                if (grounded) {
-                    this.velocity.setScalar(0);
-                }
+                const speed = 3;
+                const velocity = localVector.copy(direction)
+                  .multiplyScalar(speed);
+                this.characterPhysics.applyWasd(velocity, timeDiff);
             }
-        } */
-        if (this.characterPhysics) {
+
             const timeDiffS = timeDiff / 1000;
             this.characterPhysics.update(timestamp, timeDiffS);
 
@@ -366,13 +313,15 @@ class LocalPlayer extends THREE.Object3D {
                 const {
                     characterController,
                 } = characterPhysics;
+                // local player
+                this.position.copy(characterController.position);
+                this.quaternion.copy(characterController.quaternion);
+                this.updateMatrixWorld();
+
+                // avatar
                 avatar.inputs.hmd.position.copy(characterController.position);
                 avatar.inputs.hmd.quaternion.copy(characterController.quaternion);
-                
-                // avatar.inputs.leftGamepad.position.copy(character.leftHand.position);
-                // avatar.inputs.leftGamepad.quaternion.copy(character.leftHand.quaternion);
-                // avatar.inputs.rightGamepad.position.copy(character.rightHand.position);
-                // avatar.inputs.rightGamepad.quaternion.copy(character.rightHand.quaternion);
+                // XXX deliberately set gamepads to NaN to see if it's still used (probably is for VR)
                 avatar.inputs.leftGamepad.position.set(NaN, NaN, NaN);
                 avatar.inputs.leftGamepad.quaternion.set(NaN, NaN, NaN, NaN);
                 avatar.inputs.rightGamepad.position.set(NaN, NaN, NaN);
@@ -1286,11 +1235,15 @@ const TitleScreen = () => {
     useEffect(() => {
         const keydown = async e => {
             switch (e.key) {
-                case 'w': {
+                case 'w':
+                case 'W':
+                {
                     titleScreenRenderer.keys.up = true;
                     break;
                 }
-                case 's': {
+                case 's':
+                case 'S':
+                {
                     if (e.ctrlKey) {
                         e.preventDefault();
                         e.stopPropagation();
@@ -1305,15 +1258,20 @@ const TitleScreen = () => {
                     }
                     break;
                 }
-                case 'a': {
+                case 'a':
+                case 'A':
+                {
                     titleScreenRenderer.keys.left = true;
                     break;
                 }
-                case 'd': {
+                case 'd':
+                case 'D':
+                {
                     titleScreenRenderer.keys.right = true;
                     break;
                 }
-                case 'o': {
+                case 'o':
+                {
                     if (e.ctrlKey) {
                         e.preventDefault();
                         e.stopPropagation();
@@ -1346,23 +1304,32 @@ const TitleScreen = () => {
         document.addEventListener('keydown', keydown);
         const keyup = e => {
             switch (e.key) {
-                case 'w': {
+                case 'w':
+                case 'W':
+                {
                     titleScreenRenderer.keys.up = false;
                     break;
                 }
-                case 's': {
+                case 's':
+                case 'S':
+                {
                     titleScreenRenderer.keys.down = false;
                     break;
                 }
-                case 'a': {
+                case 'a':
+                case 'A':
+                {
                     titleScreenRenderer.keys.left = false;
                     break;
                 }
-                case 'd': {
+                case 'd':
+                case 'D':
+                {
                     titleScreenRenderer.keys.right = false;
                     break;
                 }
-                case 'k': {
+                case 'k':
+                {
                     const newHup = {
                         id: makeId(8),
                     };
