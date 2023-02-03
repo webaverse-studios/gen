@@ -4,7 +4,10 @@ import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 import Avatar from '../../avatars/avatars.js';
 import avatarsWasmManager from '../../avatars/avatars-wasm-manager.js';
 
-import {AvatarRenderer} from '../../avatars/avatar-renderer.js';
+import {AvatarQuality} from '../../avatars/avatar-quality.js';
+
+import {AudioRecognizer} from '../../avatars/audio-recognizer.js';
+import MicrophoneWorker from '../../avatars/microphone-worker.js';
 
 // import {
 //   makeRendererWithBackground,
@@ -14,7 +17,113 @@ import {
   makeDefaultCamera,
 } from '../../zine/zine-utils.js';
 
+import {
+  voiceEndpointsUrl,
+  voiceEndpointBaseUrl,
+} from '../../voice-engine/voice-constants.js';
+
+// import {VoicePack, VoicePackVoicer} from '../../voice-engine/voice-output/voice-pack-voicer.js';
+import {VoiceEndpoint, VoiceEndpointVoicer} from '../../voice-engine/voice-output/voice-endpoint-voicer.js';
+
 import {maxAvatarQuality} from '../../avatars/constants.js';
+
+import microphoneWorkletUrl from '../../avatars/microphone-worklet.js?url';
+
+//
+
+// // voice packs
+// export const voicePacksUrl = `https://webaverse.github.io/voicepacks/all_packs.json`;
+// // voice endpoints
+// export const voiceEndpointBaseUrl = `https://voice-cw.webaverse.com/tts`;
+// export const voiceEndpointsUrl = `https://raw.githubusercontent.com/webaverse/tiktalknet/main/model_lists/all_models.json`;
+
+//
+
+class AvatarAudio {
+  constructor({
+    audioContext,
+    avatar,
+  }) {
+    this.audioContext = audioContext;
+    this.avatar = avatar;
+
+    this.audioWorker = null;
+    this.microphoneWorker = null;
+
+    this.volume = 0;
+    this.vowels = Float32Array.from([1, 0, 0, 0, 0]);
+    this.manuallySetMouth = false;
+  }
+
+  #audioRecognizer;
+  getAudioRecognizer() {
+    if (!this.#audioRecognizer) {
+      const {audioContext} = this;
+      this.#audioRecognizer = new AudioRecognizer({
+        sampleRate: audioContext.sampleRate,
+      });
+    }
+    return this.#audioRecognizer;
+  }
+  setAudioEnabled(enabled) {
+    // cleanup
+    if (this.audioWorker) {
+      this.audioWorker.close();
+      this.audioWorker = null;
+    }
+
+    // setup
+    if (enabled) {
+      this.avatar.volume = 0;
+
+      const {audioContext} = this;
+      if (audioContext.state === 'suspended') {
+        (async () => {
+          await audioContext.resume();
+        })();
+      }
+
+      const audioRecognizer = this.getAudioRecognizer();
+      audioRecognizer.addEventListener('result', e => {
+        this.avatar.vowels.set(e.data);
+      });
+
+      this.audioWorker = new MicrophoneWorker({
+        audioContext,
+        muted: false,
+        emitVolume: true,
+        emitBuffer: true,
+      });
+
+      const _volume = e => {
+        // the mouth is manually overridden by the CharacterBehavior class which is attached to all players
+        // this happens when a player is eating fruit or yelling while making an attack
+        if (!this.manuallySetMouth) {
+          this.avatar.volume = e.data;
+        }
+      }
+      const _buffer = e => {
+        audioRecognizer.send(e.data);
+      }
+      this.audioWorker.addEventListener('volume', _volume);
+      this.audioWorker.addEventListener('buffer', _buffer);
+    } else {
+      this.avatar.volume = 0;
+    }
+  }
+  ensure() {
+    if (!this.audioWorker) {
+      this.setAudioEnabled(true);
+    }
+  }
+  getAudioInput() {
+    return this.audioWorker.getInput();
+  }
+  destroy() {
+    this.#audioRecognizer.destroy();
+    this.audioWorker.close();
+  }
+}
 
 //
 
@@ -30,36 +139,26 @@ export class AvatarManager extends EventTarget {
     this.camera = null;
     this.controls = null;
     this.gltf = gltf;
-    // this.gltf2 = null;
 
     this.avatar = null;
 
-    // this.loadPromise = (async () => {
-      const {
-        renderer,
-        scene,
-        camera,
-        controls,
-        // gltf,
-        // gltf2,
-      } = AvatarManager.makeContext(canvas, gltf);
+    const {
+      renderer,
+      scene,
+      camera,
+      controls,
+    } = AvatarManager.makeContext(canvas, gltf);
 
-      this.renderer = renderer;
-      this.scene = scene;
-      this.camera = camera;
-      this.controls = controls;
-      // this.gltf = gltf;
-      // this.gltf2 = gltf2;
-    // })();
-
-    // this.lastTimestamp = performance.now();
+    this.renderer = renderer;
+    this.scene = scene;
+    this.camera = camera;
+    this.controls = controls;
   }
   static makeContext(canvas, gltf) {
     // if (!canvas || !gltf) {
     //   debugger;
     // }
 
-    // const renderer = makeRendererWithBackground(canvas);
     const renderer = makeRenderer(canvas);
 
     const scene = new THREE.Scene();
@@ -85,33 +184,26 @@ export class AvatarManager extends EventTarget {
     controls.target.z = 0;
     controls.update();
     
-    // const gltf = await selectAvatar(makeRng());      
     scene.add(gltf.scene);
     gltf.scene.updateMatrixWorld();
 
-    // const gltf2 = await selectAvatar(makeRng());
-    
     return {
       renderer,
       scene,
       camera,
       controls,
-      // gltf,
-      // gltf2,
     };
   }
   static async makeAvatar({
     gltf,
-    // gltf2,
   }) {
-    const avatarRenderer = new AvatarRenderer({
+    const avatarQuality = new AvatarQuality({
       gltf,
-      // gltf2,
       quality: maxAvatarQuality,
     });
-    await avatarRenderer.waitForLoad();
+    await avatarQuality.waitForLoad();
   
-    const avatar = new Avatar(avatarRenderer, {
+    const avatar = new Avatar(avatarQuality, {
       fingers: true,
       hair: true,
       visemes: true,
@@ -127,26 +219,8 @@ export class AvatarManager extends EventTarget {
 
     return avatar;
   }
-  /* update() {
-    const {
-      renderer,
-      scene,
-      camera,
-    } = this;
-
-    const timestamp = performance.now();
-    const timeDiff = timestamp - this.lastTimestamp;
-    this.dispatchEvent(new MessageEvent('update', {
-      data: {
-        timestamp,
-        timeDiff,
-      },
-    }));
-    this.lastTimestamp = timestamp;
-    
-    renderer.render(scene, camera);
-  } */
   async waitForLoad() {
+    throw new Error('no need to wait for load');
     // return this.loadPromise;
   }
   async createImage() {
@@ -162,6 +236,8 @@ export class AvatarManager extends EventTarget {
     canvas.classList.add('avatarImageCanvas');
 
     const emotion = '';
+
+    this.emobodied = true;
     
     const img = await screenshotAvatarGltf({
       gltf,
@@ -200,8 +276,6 @@ export class AvatarManager extends EventTarget {
       scene,
       camera,
       controls,
-      // gltf,
-      // gltf2,
     } = AvatarManager.makeContext(canvas, gltf);
 
     const avatar = await AvatarManager.makeAvatar({
@@ -271,6 +345,9 @@ export class AvatarManager extends EventTarget {
     document.body.appendChild(video);
   }
   async embody() {
+    if (this.emobodied) return;
+    this.emobodied = true;
+
     await Promise.all([
       Avatar.waitForLoad(),
       avatarsWasmManager.waitForLoad(),
@@ -280,9 +357,6 @@ export class AvatarManager extends EventTarget {
       gltf,
       // gltf2,
     } = this;
-    // console.log('embody', {
-    //   gltf,
-    // });
     const avatar = await AvatarManager.makeAvatar({
       gltf,
       // gltf2,
@@ -290,6 +364,47 @@ export class AvatarManager extends EventTarget {
     this.avatar = avatar;
 
     this.scene.add(gltf.scene);
+
+    const makeVoiceEndpoint = (voiceId) => {
+      if (!voiceId) throw new Error('voice Id is null')
+      // const self = this;
+      const url = `${voiceEndpointBaseUrl}?voice=${encodeURIComponent(voiceId)}`;
+      // this.voiceEndpoint = new VoiceEndpoint(url);
+      return new VoiceEndpoint(url);
+    };
+
+    const keydown = async e => {
+      switch (e.key) {
+        case 'l': {
+          const voiceEndpoint = makeVoiceEndpoint('1jLX0Py6j8uY93Fjf2l0HOZQYXiShfWUO');
+          
+          const audioContext = new AudioContext();
+          audioContext.gain = audioContext.createGain();
+          audioContext.gain.connect(audioContext.destination);
+
+          await audioContext.audioWorklet.addModule(microphoneWorkletUrl);
+          
+          const avatarAudio = new AvatarAudio({
+            audioContext,
+            avatar: this.avatar,
+          });
+          const voicer = new VoiceEndpointVoicer(voiceEndpoint, {
+            avatarAudio,
+            audioContext,
+          });
+          
+          const message = `I got it!`;
+          const preloadedMessage = await voicer.preloadMessage(message);
+
+          await voicer.start(preloadedMessage);
+
+          avatarAudio.destroy();
+
+          break;
+        }
+      }
+    };
+    document.addEventListener('keydown', keydown);
 
     let lastTimestamp = performance.now();
     const _recurse = () => {
@@ -301,24 +416,10 @@ export class AvatarManager extends EventTarget {
 
       this.controls.update();
 
-      // console.log('render', {
-      //   gltf,
-      // });
-
       this.renderer.render(this.scene, this.camera);
 
       lastTimestamp = timestamp;
     };
     let frame = requestAnimationFrame(_recurse);
-
-    /* this.addEventListener('update', e => {
-      const {timestamp, timeDiff} = e.data;
-      avatar.update(timestamp, timeDiff);
-
-      this.controls.update();
-
-      // gltf2.scene.updateMatrixWorld();
-      // gltf.scene.updateMatrixWorld();
-    }); */
   }
 }

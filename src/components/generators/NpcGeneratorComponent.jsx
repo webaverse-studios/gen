@@ -1,6 +1,6 @@
 import {useState, useEffect, useRef} from 'react';
 import * as THREE from 'three';
-import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+// import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 import classnames from 'classnames';
 import * as WebMWriter from 'webm-writer';
@@ -33,12 +33,12 @@ import Avatar from '../../avatars/avatars.js';
 import {
   emotions as avatarEmotions,
 } from '../../avatars/emotes/emotions.js';
-import {
-  AvatarRenderer,
-} from '../../avatars/avatar-renderer.js';
-import {
-  ArrowMesh,
-} from '../../generators/arrow-mesh.js';
+// import {
+//   AvatarQuality,
+// } from '../../avatars/avatar-quality.js';
+// import {
+//   ArrowMesh,
+// } from '../../generators/arrow-mesh.js';
 import {
   maxAvatarQuality,
 } from '../../avatars/constants.js';
@@ -100,17 +100,17 @@ import styles from '../../../styles/NpcGenerator.module.css';
 //
 
 const localVector = new THREE.Vector3();
-const localVector2 = new THREE.Vector3();
-const localVector3 = new THREE.Vector3();
-const localVector4 = new THREE.Vector3();
-const localQuaternion = new THREE.Quaternion();
-const localMatrix = new THREE.Matrix4();
-const localPlane = new THREE.Plane();
-const localRaycaster = new THREE.Raycaster();
+// const localVector2 = new THREE.Vector3();
+// const localVector3 = new THREE.Vector3();
+// const localVector4 = new THREE.Vector3();
+// const localQuaternion = new THREE.Quaternion();
+// const localMatrix = new THREE.Matrix4();
+// const localPlane = new THREE.Plane();
+// const localRaycaster = new THREE.Raycaster();
 const localColor = new THREE.Color();
 
-const zeroVector = new THREE.Vector3(0, 0, 0);
-const upVector = new THREE.Vector3(0, 1, 0);
+// const zeroVector = new THREE.Vector3(0, 0, 0);
+// const upVector = new THREE.Vector3(0, 1, 0);
 
 //
 
@@ -126,7 +126,7 @@ const loadDatasetGenerator = async () => {
 
 //
 
-const FPS = 60;
+// const FPS = 60;
 
 //
 
@@ -179,7 +179,7 @@ const getAudioContext = (() => {
   avatar.destroy();
   return result;
 }; */
-const screenshotAvatarGltf = async ({
+/* const screenshotAvatarGltf = async ({
   gltf = null,
   width = 300,
   height = 300,
@@ -208,7 +208,7 @@ const screenshotAvatarGltf = async ({
   });
   avatar.destroy();
   return result;
-};
+}; */
 const createAvatarForScreenshot = avatarRenderer => {
   const avatar = new Avatar(avatarRenderer, {
     fingers: true,
@@ -2508,7 +2508,7 @@ const NpcGeneratorComponent = () => {
           canvas,
           gltf,
         });
-        await avatarManager.waitForLoad();
+        // await avatarManager.waitForLoad();
 
         const avatarToolsMesh = new AvatarToolsMesh({
           avatarManager,
@@ -2554,7 +2554,7 @@ const NpcGeneratorComponent = () => {
         const _render = () => {
           requestAnimationFrame(_render);
 
-          avatarManager.update();
+          // avatarManager.update();
           avatarToolsMesh.update();
         };
         requestAnimationFrame(_render);

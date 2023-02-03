@@ -3,7 +3,6 @@ import * as THREE from 'three';
 import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader.js';
 import {useState, useRef, useEffect} from 'react';
 import {realmSize} from '../../../constants/map-constants.js';
-import {makeId} from '../../zine/id-utils.js';
 import classnames from 'classnames';
 
 import {
@@ -44,12 +43,33 @@ import {
 import {
     loadImage,
 } from '../../../utils.js';
+import {
+    physicsObjectTracker,
+} from '../../physics/physics-manager.js';
+import physicsManager from '../../physics/physics-manager.js';
+import {
+    CharacterPhysics,
+} from '../../physics/character-physics.js';
+import {
+    loadGltf,
+} from "../../utils/mesh-utils.js";
+import {
+    AvatarManager,
+} from '../generators/AvatarManager.js';
 
 import {
     Hups,
 } from '../hups/Hups.jsx';
 
+import {
+    getDoubleSidedGeometry,
+} from '../../zine/zine-geometry-utils.js';
+import avatarsWasmManager from '../../avatars/avatars-wasm-manager.js';
+
 import styles from '../../../styles/TitleScreen.module.css';
+import {makeId} from '../../physics/util.js';
+
+import Avatar from '../../avatars/avatars.js';
 
 //
 
@@ -57,11 +77,13 @@ const hash = `8ebd78be3078833da10c95b565ee88b7cf6ba9e0`;
 const assetsBaseUrl = `https://cdn.jsdelivr.net/gh/webaverse/content@${hash}/`;
 const titleScreenZineFileName = 'title-screen.zine';
 const cubicBezier = bezier(0, 1, 0, 1);
+// const gravity = new THREE.Vector3(0, -9.8, 0);
+const avatarUrl = `/avatars/Scillia_Drophunter_V19.vrm`;
 
 //
 
 const localVector = new THREE.Vector3();
-// const localVector2 = new THREE.Vector3();
+const localVector2 = new THREE.Vector3();
 const localVector2D = new THREE.Vector2();
 // const localQuaternion = new THREE.Quaternion();
 // const localMatrix = new THREE.Matrix4();
@@ -77,6 +99,30 @@ const _loadArrayBuffer = async u => {
     const arrayBuffer = await res.arrayBuffer();
     return arrayBuffer;
 };
+
+//
+
+class ActionManager {
+    constructor() {
+        this.actions = new Map();
+    }
+    getAction(actionName) {
+        return this.actions.get(actionName);
+    }
+    setAction(actionName, action) {
+        this.actions.set(actionName, action);
+    }
+    hasAction() {
+        return false;
+    }
+    setControlAction(actionName, controlName, controlAction) {
+        // const action = this.actions.get(actionName);
+        // if (action) {
+        //     action.setControlAction(controlName, controlAction);
+        // }
+        throw new Error('not implemented: set control action');
+    }
+}
 
 //
 
@@ -136,71 +182,61 @@ class LinearAnimation {
 
 //
 
-class Player extends THREE.Object3D {
-    constructor(playerId) {
-        super();
+const makePlaceholderMesh = () => {
+    const object = new THREE.Object3D();
 
-        this.playerId = playerId;
-
-        // local player meshes
-        this.outlineMesh = null;
-        this.particleSystemMesh = null;
-        this.particleEmitter = null;
-        (async () => {
-            const r = 0.3;
-            const h = 1.6 - r * 2;
-
-            // particle mesh
-            {
-                const particleName = 'Elements - Energy 017 Charge Up noCT noRSZ.mov';
-                const explosionName = 'Elements - Energy 119 Dissapear noCT noRSZ.mov';
-                const explosion2Name = 'Elements - Explosion 014 Hit Radial MIX noCT noRSZ.mov';
-                const particleNames = [
-                    particleName,
-                    explosionName,
-                    explosion2Name,
-                ].map(s => s.replace(/\.mov$/, '.ktx2z'));
-
-                const videoUrls = particleNames.map(particleName => `${assetsBaseUrl}particles/${particleName}`);
-
-                const files = await Promise.all(videoUrls.map(async videoUrl => {
-                    const res = await fetch(videoUrl);
-                    const blob = await res.blob();
-                    return blob;
-                }));
-                const pack = await ParticleSystemMesh.loadPack(files);
-
-                const particleSystemMesh = new ParticleSystemMesh({
-                    pack,
-                });
-                this.particleSystemMesh = particleSystemMesh;
-                particleSystemMesh.frustumCulled = false;
-                this.add(particleSystemMesh);
-                particleSystemMesh.position.set(0, -h / 2, 0);
-                particleSystemMesh.updateMatrixWorld();
-
-                const particleEmitter = new ParticleEmitter2(particleSystemMesh, {
-                    range: 1,
-                });
-                this.particleEmitter = particleEmitter;
-            }
-
-            // outline mesh
-            {
-                const outlineMesh = new OutlineMesh({
-                    geometry: new CapsuleGeometry(r, r, h, 8)
-                      .rotateZ(Math.PI / 2)
-                      .translate(0, -h / 2, 0)
-                });
-                this.add(outlineMesh);
-                outlineMesh.updateMatrixWorld();
-                this.outlineMesh = outlineMesh;
-            }
-        })();
+    // outline mesh
+    let outlineMesh;
+    {
+        outlineMesh = new OutlineMesh({
+            geometry: new CapsuleGeometry(r, r, h, 8)
+              .rotateZ(Math.PI / 2)
+              .translate(0, -h / 2, 0),
+        });
+        object.add(outlineMesh);
+        outlineMesh.updateMatrixWorld();
+        object.outlineMesh = outlineMesh;
     }
-    update({
+
+    // particle mesh
+    (async () => {
+        const particleName = 'Elements - Energy 017 Charge Up noCT noRSZ.mov';
+        const explosionName = 'Elements - Energy 119 Dissapear noCT noRSZ.mov';
+        const explosion2Name = 'Elements - Explosion 014 Hit Radial MIX noCT noRSZ.mov';
+        const particleNames = [
+            particleName,
+            explosionName,
+            explosion2Name,
+        ].map(s => s.replace(/\.mov$/, '.ktx2z'));
+
+        const videoUrls = particleNames.map(particleName => `${assetsBaseUrl}particles/${particleName}`);
+
+        const files = await Promise.all(videoUrls.map(async videoUrl => {
+            const res = await fetch(videoUrl);
+            const blob = await res.blob();
+            return blob;
+        }));
+        const pack = await ParticleSystemMesh.loadPack(files);
+
+        const particleSystemMesh = new ParticleSystemMesh({
+            pack,
+        });
+        object.particleSystemMesh = particleSystemMesh;
+        particleSystemMesh.frustumCulled = false;
+        object.add(particleSystemMesh);
+        particleSystemMesh.position.set(0, -h / 2, 0);
+        particleSystemMesh.updateMatrixWorld();
+
+        const particleEmitter = new ParticleEmitter2(particleSystemMesh, {
+            range: 1,
+        });
+        object.particleEmitter = particleEmitter;
+    })();
+    
+    object.update = function({
         timestamp,
         timeDiff,
+        localPlayer,
         camera,
     }) {
         if (this.outlineMesh) {
@@ -209,7 +245,7 @@ class Player extends THREE.Object3D {
         if (this.particleSystemMesh) {
             this.particleEmitter.update({
                 timestamp,
-                player: this,
+                localPlayer,
             });
 
             this.particleSystemMesh.update({
@@ -218,16 +254,94 @@ class Player extends THREE.Object3D {
                 camera,
             });
         }
+    };
+
+    return object;
+};
+
+const r = 0.3;
+// const aw = r * 2;
+const ah = 1.6;
+const h = ah - r * 2;
+const widthPadding = 0.25; // we calculate width from shoulders, but we need a little padding
+class Player {
+    constructor(playerId, usePhysics) {
+        this.playerId = playerId;
+
+        // player meshes
+        this.placeholderMesh = makePlaceholderMesh();
+
+        this.outlineMesh = null;
+        this.particleSystemMesh = null;
+        this.particleEmitter = null;
+        this.characterPhysics = null;
+        (async () => {
+            // avatar
+            await Promise.all([
+                Avatar.waitForLoad(),
+                avatarsWasmManager.waitForLoad(),
+            ]);
+            {
+                const gltf = await loadGltf(avatarUrl);  
+                const avatar = await AvatarManager.makeAvatar({
+                    gltf,
+                });
+                this.avatar = avatar;
+            }
+
+            // character physics
+            if (usePhysics) {
+                const actionManager = new ActionManager();
+                // intialize position to local player position, since it is used by character controller initialization
+                this.avatar.inputs.hmd.position.copy(this.placeholderMesh.position);
+                this.avatar.inputs.hmd.quaternion.copy(this.placeholderMesh.quaternion);
+
+                this.characterPhysics = new CharacterPhysics({
+                    avatar: this.avatar,
+                    actionManager,
+                });
+                this.characterPhysics.loadCharacterController(
+                    this.avatar.shoulderWidth + widthPadding,
+                    this.avatar.height,
+                );
+                const physicsScene = physicsManager.getScene();
+                physicsScene.disableGeometryQueries(this.characterPhysics.characterController);
+            }
+        })();
+
+        this.velocity = new THREE.Vector3(0, 0, 0);
+    }
+    get position() {
+        return this.placeholderMesh.position;
+    }
+    get quaternion() {
+        return this.placeholderMesh.quaternion;
+    }
+    get scale() {
+        return this.placeholderMesh.scale;
+    }
+    update({
+        timestamp,
+        timeDiff,
+        camera,
+    }) {
+        this.placeholderMesh.update({
+            timestamp,
+            timeDiff,
+            localPlayer: this,
+            camera,
+        });
     }
 }
 
 class LocalPlayer extends Player {
     constructor(playerId) {
-        super(playerId);
+        super(playerId, true);
         this.realmsPlayer = null;
-        this.position.set(0, 0, -2);
         this.lastPosition = new THREE.Vector3();
-        this.updateMatrixWorld();
+        this.position.set(0, 0, -2);
+        this.placeholderMesh.position.copy(this.position);
+        this.placeholderMesh.updateMatrixWorld();
     }
     setRealmsPlayer(realmsPlayer) {
         this.realmsPlayer = realmsPlayer;
@@ -240,36 +354,53 @@ class LocalPlayer extends Player {
         camera,
         keys,
     }) {
-        const speed = 0.1;
-        const direction = new THREE.Vector3();
-        // console.log('got keys', [
-        //     keys.left,
-        //     keys.right,
-        //     keys.up,
-        //     keys.down,
-        // ]);
-        if (keys.right) {
-            direction.x += 1;
-        }
-        if (keys.left) {
-            direction.x -= 1;
-        }
-        if (keys.up) {
-            direction.z -= 1;
-        }
-        if (keys.down) {
-            direction.z += 1;
-        }
-        if (!direction.equals(zeroVector)) {
-            direction.normalize()
-                .multiplyScalar(speed);
-        }
-        this.position.add(direction);
-        this.updateMatrixWorld();
+        if (this.characterPhysics) {
+            const direction = new THREE.Vector3();
+            if (keys.right) {
+                direction.x += 1;
+            }
+            if (keys.left) {
+                direction.x -= 1;
+            }
+            if (keys.up) {
+                direction.z -= 1;
+            }
+            if (keys.down) {
+                direction.z += 1;
+            }
+            direction.normalize();
+            {
+                const speed = 3;
+                const velocity = localVector.copy(direction)
+                  .multiplyScalar(speed);
+                this.characterPhysics.applyWasd(velocity, timeDiff);
+            }
 
-        if (this.realmsPlayer && !this.position.equals(this.lastPosition)) {
-            this.realmsPlayer.setKeyValue('position', this.position.toArray());
-            this.lastPosition.copy(this.position);
+            const timeDiffS = timeDiff / 1000;
+            this.characterPhysics.update(timestamp, timeDiffS);
+
+            const applyCharacterPhysicsToAvatar = (characterPhysics, avatar) => {
+                const {
+                    characterController,
+                } = characterPhysics;
+                // local player
+                this.placeholderMesh.position.copy(characterController.position);
+                this.placeholderMesh.quaternion.copy(characterController.quaternion);
+                this.placeholderMesh.updateMatrixWorld();
+
+                // avatar
+                avatar.inputs.hmd.position.copy(characterController.position);
+                avatar.inputs.hmd.quaternion.copy(characterController.quaternion);
+                // XXX deliberately set gamepads to NaN to see if it's still used (probably is for VR)
+                avatar.inputs.leftGamepad.position.set(NaN, NaN, NaN);
+                avatar.inputs.leftGamepad.quaternion.set(NaN, NaN, NaN, NaN);
+                avatar.inputs.rightGamepad.position.set(NaN, NaN, NaN);
+                avatar.inputs.rightGamepad.quaternion.set(NaN, NaN, NaN, NaN);
+            };
+
+            avatarsWasmManager.physxWorker.updateInterpolationAnimationAvatar(this.avatar.animationAvatarPtr, timeDiff);
+            applyCharacterPhysicsToAvatar(this.characterPhysics, this.avatar);
+            this.avatar.update(timestamp, timeDiff);
         }
 
         super.update({
@@ -277,21 +408,21 @@ class LocalPlayer extends Player {
             timeDiff,
             camera,
         });
-  }
+    }
 }
 
 class RemotePlayer extends Player {
     constructor(playerId, realmsPlayer) {
-        super(playerId);
+        super(playerId, false);
 
         this.position.fromArray(realmsPlayer.getKeyValue('position'));
-        this.updateMatrixWorld();
+        this.placeholderMesh.updateMatrixWorld();
 
         realmsPlayer.addEventListener('update', e => {
             const {key, val} = e.data;
             if (key === 'position') {
                 this.position.fromArray(val);
-                this.updateMatrixWorld();
+                this.placeholderMesh.updateMatrixWorld();
             }
         });
     }
@@ -356,12 +487,78 @@ class TitleScreenRenderer extends EventTarget {
         this.camera = camera;
 
         // local player
-        const localPlayer = new LocalPlayer(makeId());
-        scene.add(localPlayer);
+        const localPlayer = new LocalPlayer(makeId(8));
+        scene.add(localPlayer.placeholderMesh);
+        localPlayer.placeholderMesh.updateMatrixWorld();
         this.localPlayer = localPlayer;
 
         // remote players
         this.remotePlayers = new Map();  // Map<playerId, RemotePlayer>
+
+        // storyboard
+        (async () => {
+            await physicsManager.waitForLoad();
+
+            const zineStoryboard = new ZineStoryboard();
+            await zineStoryboard.loadAsync(uint8Array);
+            if (!live) return;
+
+            const panel0 = zineStoryboard.getPanel(0);
+            const zineRenderer = new ZineRenderer({
+                panel: panel0,
+                alignFloor: true,
+            });
+    
+            // scene mesh
+            scene.add(zineRenderer.scene);
+            zineRenderer.scene.updateMatrixWorld();
+
+            // scene physics
+            {
+                const {scenePhysicsMesh} = zineRenderer;
+                const geometry2 = getDoubleSidedGeometry(scenePhysicsMesh.geometry);
+        
+                const scenePhysicsMesh2 = new THREE.Mesh(geometry2, scenePhysicsMesh.material);
+                scenePhysicsMesh2.name = 'scenePhysicsMesh';
+                scenePhysicsMesh2.visible = false;
+                zineRenderer.transformScene.add(scenePhysicsMesh2);
+                this.scenePhysicsMesh = scenePhysicsMesh2;
+        
+                const physics = physicsManager.getScene();
+                const scenePhysicsObject = physics.addGeometry(scenePhysicsMesh2);
+                scenePhysicsObject.update = () => {
+                    scenePhysicsMesh2.matrixWorld.decompose(
+                        scenePhysicsObject.position,
+                        scenePhysicsObject.quaternion,
+                        scenePhysicsObject.scale
+                    );
+                    this.physics.setTransform(scenePhysicsObject, false);
+                };
+                this.scenePhysicsObject = scenePhysicsObject;
+                
+                physicsObjectTracker.add(scenePhysicsObject);
+            }
+
+            // camera manager
+            const zineCameraManager = new ZineCameraManager({
+                camera,
+                localPlayer,
+            }, {
+                normalizeView: false,
+                followView: false,
+            });
+            this.zineCameraManager = zineCameraManager;
+            this.zineCameraManager.setLockCamera(zineRenderer.camera);
+            this.zineCameraManager.toggleCameraLock();
+    
+            // path mesh
+            const splinePoints = zineRenderer.metadata.paths.map(p => new THREE.Vector3().fromArray(p.position));
+            const pathMesh = new PathMesh(splinePoints, {
+                animate: true,
+            });
+            scene.add(pathMesh);
+            pathMesh.updateMatrixWorld();
+        })();
 
         // network realms
         this.realms = null;
@@ -383,7 +580,7 @@ class TitleScreenRenderer extends EventTarget {
                 console.log('Player joined:', playerId);
                 const remotePlayer = new RemotePlayer(playerId, player);
                 this.remotePlayers.set(playerId, remotePlayer);
-                scene.add(remotePlayer);
+                scene.add(remotePlayer.placeholderMesh);
             };
             virtualPlayers.addEventListener('join', onVirtualPlayersJoin);
             this.cleanupFns.push(() => {
@@ -394,7 +591,7 @@ class TitleScreenRenderer extends EventTarget {
                 console.log('Player left:', playerId);
                 const remotePlayer = this.remotePlayers.get(playerId);
                 if (remotePlayer) {
-                    scene.remove(remotePlayer);
+                    scene.remove(remotePlayer.placeholderMesh);
                     this.remotePlayers.delete(playerId);
                 } else {
                     console.error('Remote player to remove not found');
@@ -404,45 +601,6 @@ class TitleScreenRenderer extends EventTarget {
             this.cleanupFns.push(() => {
                 virtualPlayers.removeEventListener('leave', onVirtualPlayersLeave);
             });
-        })();
-
-        // camera manager
-        const zineCameraManager = new ZineCameraManager({
-            camera,
-            localPlayer,
-        }, {
-            normalizeView: false,
-            followView: false,
-        });
-    
-        // storyboard
-        (async () => {
-            const zineStoryboard = new ZineStoryboard();
-            await zineStoryboard.loadAsync(uint8Array);
-            if (!live) return;
-    
-            const panel0 = zineStoryboard.getPanel(0);
-            const zineRenderer = new ZineRenderer({
-                panel: panel0,
-                alignFloor: true,
-            });
-    
-            // scene mesh
-            scene.add(zineRenderer.scene);
-            zineRenderer.scene.updateMatrixWorld();
-    
-            // path mesh
-            const splinePoints = zineRenderer.metadata.paths.map(p => new THREE.Vector3().fromArray(p.position));
-            const pathMesh = new PathMesh(splinePoints, {
-                animate: true,
-            });
-            scene.add(pathMesh);
-            pathMesh.updateMatrixWorld();
-    
-            // apply camera
-            // camera.copy(zineRenderer.camera);
-            zineCameraManager.setLockCamera(zineRenderer.camera);
-            zineCameraManager.toggleCameraLock();
         })();
 
         // video mesh
@@ -582,7 +740,7 @@ class TitleScreenRenderer extends EventTarget {
             lastPointerLockChangeTime = now;
         };
         document.addEventListener('pointerlockchange', pointerlockchange);
-    
+
         // render loop
         let lastTimestamp = performance.now();
         const _recurse = () => {
@@ -594,9 +752,15 @@ class TitleScreenRenderer extends EventTarget {
             
             // local update
             this.update(timestamp, timeDiff);
-            // update camera
-            zineCameraManager.updatePost(timestamp, timeDiff);
+            // simulate physics
+            const physics = physicsManager.getScene();
+            physics.simulatePhysics(timeDiff);
             
+            // update camera
+            if (this.zineCameraManager) {
+                this.zineCameraManager.updatePost(timestamp, timeDiff);
+            }
+
             // render
             renderer.render(scene, camera);
 
@@ -672,18 +836,20 @@ class TitleScreenRenderer extends EventTarget {
             });
             this.portalMesh.update(timestamp);
         }
-        this.localPlayer.update({
-            timestamp,
-            timeDiff,
-            camera: this.camera,
-            keys: this.keys,
-        });
+        if (this.localPlayer) {
+            this.localPlayer.update({
+                timestamp,
+                timeDiff,
+                camera: this.camera,
+                keys: this.keys,
+            });
         for (const player of this.remotePlayers.values()) {
             player.update({
                 timestamp,
                 timeDiff,
                 camera: this.camera,
             });
+        }
         }
     }
     destroy() {
@@ -1138,17 +1304,22 @@ const TitleScreen = () => {
     const [loaded, setLoaded] = useState(false);
     const [focused, setFocused] = useState(false);
     const [titleScreenRenderer, setTitleScreenRenderer] = useState(null);
+    const [hups, setHups] = useState([]);
 
     const canvasRef = useRef();
 
     useEffect(() => {
         const keydown = async e => {
             switch (e.key) {
-                case 'w': {
+                case 'w':
+                case 'W':
+                {
                     titleScreenRenderer.keys.up = true;
                     break;
                 }
-                case 's': {
+                case 's':
+                case 'S':
+                {
                     if (e.ctrlKey) {
                         e.preventDefault();
                         e.stopPropagation();
@@ -1163,15 +1334,20 @@ const TitleScreen = () => {
                     }
                     break;
                 }
-                case 'a': {
+                case 'a':
+                case 'A':
+                {
                     titleScreenRenderer.keys.left = true;
                     break;
                 }
-                case 'd': {
+                case 'd':
+                case 'D':
+                {
                     titleScreenRenderer.keys.right = true;
                     break;
                 }
-                case 'o': {
+                case 'o':
+                {
                     if (e.ctrlKey) {
                         e.preventDefault();
                         e.stopPropagation();
@@ -1204,20 +1380,36 @@ const TitleScreen = () => {
         document.addEventListener('keydown', keydown);
         const keyup = e => {
             switch (e.key) {
-                case 'w': {
+                case 'w':
+                case 'W':
+                {
                     titleScreenRenderer.keys.up = false;
                     break;
                 }
-                case 's': {
+                case 's':
+                case 'S':
+                {
                     titleScreenRenderer.keys.down = false;
                     break;
                 }
-                case 'a': {
+                case 'a':
+                case 'A':
+                {
                     titleScreenRenderer.keys.left = false;
                     break;
                 }
-                case 'd': {
+                case 'd':
+                case 'D':
+                {
                     titleScreenRenderer.keys.right = false;
+                    break;
+                }
+                case 'k':
+                {
+                    const newHup = {
+                        id: makeId(8),
+                    };
+                    setHups([...hups, newHup]);
                     break;
                 }
             }
@@ -1228,7 +1420,14 @@ const TitleScreen = () => {
             document.removeEventListener('keydown', keydown);
             document.removeEventListener('keyup', keyup);
         };
-    }, [canvasRef.current, titleScreenRenderer]);
+    }, [
+        canvasRef.current,
+        titleScreenRenderer,
+        titleScreenRenderer?.keys.left,
+        titleScreenRenderer?.keys.right,
+        titleScreenRenderer?.keys.up,
+        titleScreenRenderer?.keys.down,
+    ]);
 
     return (
         <div
@@ -1242,9 +1441,7 @@ const TitleScreen = () => {
                 }}
                 canvasRef={canvasRef}
             />
-            <Hups
-                
-            />
+            {hups.map(hup => <Hups hup={hup} key={hup.id} />)}
             {loading ? (
                 <div className={styles.header}>
                     loading...
