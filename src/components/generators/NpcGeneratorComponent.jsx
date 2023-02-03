@@ -179,7 +179,7 @@ const getAudioContext = (() => {
   avatar.destroy();
   return result;
 }; */
-const screenshotAvatarGltf = async ({
+/* const screenshotAvatarGltf = async ({
   gltf = null,
   width = 300,
   height = 300,
@@ -208,7 +208,7 @@ const screenshotAvatarGltf = async ({
   });
   avatar.destroy();
   return result;
-};
+}; */
 const createAvatarForScreenshot = avatarRenderer => {
   const avatar = new Avatar(avatarRenderer, {
     fingers: true,
