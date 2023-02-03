@@ -70,7 +70,12 @@ import {makeId} from '../../physics/util.js';
 
 import {
     StoryTargetMesh,
-  } from '../../generators/story-target-mesh.js';
+} from '../../generators/story-target-mesh.js';
+
+import {
+    ActionManager,
+} from './ActionManager.js';
+
 
 import Avatar from '../../avatars/avatars.js';
 
@@ -103,30 +108,6 @@ const _loadArrayBuffer = async u => {
     const arrayBuffer = await res.arrayBuffer();
     return arrayBuffer;
 };
-
-//
-
-class ActionManager {
-    constructor() {
-        this.actions = new Map();
-    }
-    getAction(actionName) {
-        return this.actions.get(actionName);
-    }
-    setAction(actionName, action) {
-        this.actions.set(actionName, action);
-    }
-    hasAction() {
-        return false;
-    }
-    setControlAction(actionName, controlName, controlAction) {
-        // const action = this.actions.get(actionName);
-        // if (action) {
-        //     action.setControlAction(controlName, controlAction);
-        // }
-        throw new Error('not implemented: set control action');
-    }
-}
 
 //
 
