@@ -234,7 +234,7 @@ const collectEntranceExits = panelSpecs => {
         quaternion,
         scale
       )
-        .premultiply(panelSpec.matrixWorld)
+        .premultiply(panelSpec.transformScene.matrixWorld)
         .decompose(position, quaternion, scale);
       return {
         ...eel,
