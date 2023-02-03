@@ -445,6 +445,13 @@ class TitleScreenRenderer extends EventTarget {
         // camera
         const camera = new THREE.PerspectiveCamera();
         this.camera = camera;
+
+        // local player
+        const localPlayer = new LocalPlayer();
+        localPlayer.placeholderMesh.position.z = -2;
+        scene.add(localPlayer.object);
+        localPlayer.object.updateMatrixWorld();
+        this.localPlayer = localPlayer;
     
         // storyboard
         (async () => {
@@ -489,13 +496,6 @@ class TitleScreenRenderer extends EventTarget {
                 
                 physicsObjectTracker.add(scenePhysicsObject);
             }
-
-            // local player
-            const localPlayer = new LocalPlayer();
-            localPlayer.placeholderMesh.position.z = -2;
-            scene.add(localPlayer.object);
-            localPlayer.object.updateMatrixWorld();
-            this.localPlayer = localPlayer;
 
             // camera manager
             const zineCameraManager = new ZineCameraManager({
