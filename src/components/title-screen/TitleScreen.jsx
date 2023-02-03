@@ -264,8 +264,9 @@ const h = ah - r * 2;
 const widthPadding = 0.25; // we calculate width from shoulders, but we need a little padding
 class LocalPlayer {
     constructor() {
-        // local player meshes
+        this.object = new THREE.Object3D();
         this.placeholderMesh = makePlaceholderMesh();
+        this.object.add(this.placeholderMesh);
 
         this.outlineMesh = null;
         this.particleSystemMesh = null;
@@ -283,6 +284,10 @@ class LocalPlayer {
                     gltf,
                 });
                 this.avatar = avatar;
+
+                this.object.add(gltf.scene);
+                this.object.updateMatrixWorld();
+                // globalThis.gltf = gltf;
             }
 
             // character physics
@@ -486,8 +491,8 @@ class TitleScreenRenderer extends EventTarget {
             // local player
             const localPlayer = new LocalPlayer();
             localPlayer.placeholderMesh.position.z = -2;
-            scene.add(localPlayer.placeholderMesh);
-            localPlayer.placeholderMesh.updateMatrixWorld();
+            scene.add(localPlayer.object);
+            localPlayer.object.updateMatrixWorld();
             this.localPlayer = localPlayer;
 
             // camera manager
