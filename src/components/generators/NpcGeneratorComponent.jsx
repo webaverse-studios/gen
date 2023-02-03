@@ -1,6 +1,6 @@
 import {useState, useEffect, useRef} from 'react';
 import * as THREE from 'three';
-import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+// import * as BufferGeometryUtils from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 import classnames from 'classnames';
 import * as WebMWriter from 'webm-writer';
@@ -33,12 +33,12 @@ import Avatar from '../../avatars/avatars.js';
 import {
   emotions as avatarEmotions,
 } from '../../avatars/emotes/emotions.js';
-import {
-  AvatarRenderer,
-} from '../../avatars/avatar-renderer.js';
-import {
-  ArrowMesh,
-} from '../../generators/arrow-mesh.js';
+// import {
+//   AvatarQuality,
+// } from '../../avatars/avatar-quality.js';
+// import {
+//   ArrowMesh,
+// } from '../../generators/arrow-mesh.js';
 import {
   maxAvatarQuality,
 } from '../../avatars/constants.js';
@@ -2508,7 +2508,7 @@ const NpcGeneratorComponent = () => {
           canvas,
           gltf,
         });
-        await avatarManager.waitForLoad();
+        // await avatarManager.waitForLoad();
 
         const avatarToolsMesh = new AvatarToolsMesh({
           avatarManager,
@@ -2554,7 +2554,7 @@ const NpcGeneratorComponent = () => {
         const _render = () => {
           requestAnimationFrame(_render);
 
-          avatarManager.update();
+          // avatarManager.update();
           avatarToolsMesh.update();
         };
         requestAnimationFrame(_render);

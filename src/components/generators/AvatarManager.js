@@ -4,7 +4,7 @@ import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 import Avatar from '../../avatars/avatars.js';
 import avatarsWasmManager from '../../avatars/avatars-wasm-manager.js';
 
-import {AvatarRenderer} from '../../avatars/avatar-renderer.js';
+import {AvatarQuality} from '../../avatars/avatar-quality.js';
 
 import {AudioRecognizer} from '../../avatars/audio-recognizer.js';
 import MicrophoneWorker from '../../avatars/microphone-worker.js';
@@ -139,36 +139,26 @@ export class AvatarManager extends EventTarget {
     this.camera = null;
     this.controls = null;
     this.gltf = gltf;
-    // this.gltf2 = null;
 
     this.avatar = null;
 
-    // this.loadPromise = (async () => {
-      const {
-        renderer,
-        scene,
-        camera,
-        controls,
-        // gltf,
-        // gltf2,
-      } = AvatarManager.makeContext(canvas, gltf);
+    const {
+      renderer,
+      scene,
+      camera,
+      controls,
+    } = AvatarManager.makeContext(canvas, gltf);
 
-      this.renderer = renderer;
-      this.scene = scene;
-      this.camera = camera;
-      this.controls = controls;
-      // this.gltf = gltf;
-      // this.gltf2 = gltf2;
-    // })();
-
-    // this.lastTimestamp = performance.now();
+    this.renderer = renderer;
+    this.scene = scene;
+    this.camera = camera;
+    this.controls = controls;
   }
   static makeContext(canvas, gltf) {
     // if (!canvas || !gltf) {
     //   debugger;
     // }
 
-    // const renderer = makeRendererWithBackground(canvas);
     const renderer = makeRenderer(canvas);
 
     const scene = new THREE.Scene();
@@ -194,33 +184,26 @@ export class AvatarManager extends EventTarget {
     controls.target.z = 0;
     controls.update();
     
-    // const gltf = await selectAvatar(makeRng());      
     scene.add(gltf.scene);
     gltf.scene.updateMatrixWorld();
 
-    // const gltf2 = await selectAvatar(makeRng());
-    
     return {
       renderer,
       scene,
       camera,
       controls,
-      // gltf,
-      // gltf2,
     };
   }
   static async makeAvatar({
     gltf,
-    // gltf2,
   }) {
-    const avatarRenderer = new AvatarRenderer({
+    const avatarQuality = new AvatarQuality({
       gltf,
-      // gltf2,
       quality: maxAvatarQuality,
     });
-    await avatarRenderer.waitForLoad();
+    await avatarQuality.waitForLoad();
   
-    const avatar = new Avatar(avatarRenderer, {
+    const avatar = new Avatar(avatarQuality, {
       fingers: true,
       hair: true,
       visemes: true,
@@ -236,26 +219,8 @@ export class AvatarManager extends EventTarget {
 
     return avatar;
   }
-  /* update() {
-    const {
-      renderer,
-      scene,
-      camera,
-    } = this;
-
-    const timestamp = performance.now();
-    const timeDiff = timestamp - this.lastTimestamp;
-    this.dispatchEvent(new MessageEvent('update', {
-      data: {
-        timestamp,
-        timeDiff,
-      },
-    }));
-    this.lastTimestamp = timestamp;
-    
-    renderer.render(scene, camera);
-  } */
   async waitForLoad() {
+    throw new Error('no need to wait for load');
     // return this.loadPromise;
   }
   async createImage() {
@@ -311,8 +276,6 @@ export class AvatarManager extends EventTarget {
       scene,
       camera,
       controls,
-      // gltf,
-      // gltf2,
     } = AvatarManager.makeContext(canvas, gltf);
 
     const avatar = await AvatarManager.makeAvatar({

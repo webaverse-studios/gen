@@ -36,7 +36,6 @@ export const AvatarCanvas = ({
           canvas,
           gltf,
         });
-        await avatarManager.waitForLoad();
         if (!live) return;
 
         await avatarManager.embody();
