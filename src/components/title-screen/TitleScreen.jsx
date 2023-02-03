@@ -180,68 +180,98 @@ class LinearAnimation {
 
 //
 
+const makePlaceholderMesh = () => {
+    const object = new THREE.Object3D();
+
+    // outline mesh
+    let outlineMesh;
+    {
+        outlineMesh = new OutlineMesh({
+            geometry: new CapsuleGeometry(r, r, h, 8)
+              .rotateZ(Math.PI / 2)
+              .translate(0, -h / 2, 0),
+        });
+        object.add(outlineMesh);
+        outlineMesh.updateMatrixWorld();
+        object.outlineMesh = outlineMesh;
+    }
+
+    // particle mesh
+    (async () => {
+        const particleName = 'Elements - Energy 017 Charge Up noCT noRSZ.mov';
+        const explosionName = 'Elements - Energy 119 Dissapear noCT noRSZ.mov';
+        const explosion2Name = 'Elements - Explosion 014 Hit Radial MIX noCT noRSZ.mov';
+        const particleNames = [
+            particleName,
+            explosionName,
+            explosion2Name,
+        ].map(s => s.replace(/\.mov$/, '.ktx2z'));
+
+        const videoUrls = particleNames.map(particleName => `${assetsBaseUrl}particles/${particleName}`);
+
+        const files = await Promise.all(videoUrls.map(async videoUrl => {
+            const res = await fetch(videoUrl);
+            const blob = await res.blob();
+            return blob;
+        }));
+        const pack = await ParticleSystemMesh.loadPack(files);
+
+        const particleSystemMesh = new ParticleSystemMesh({
+            pack,
+        });
+        object.particleSystemMesh = particleSystemMesh;
+        particleSystemMesh.frustumCulled = false;
+        object.add(particleSystemMesh);
+        particleSystemMesh.position.set(0, -h / 2, 0);
+        particleSystemMesh.updateMatrixWorld();
+
+        const particleEmitter = new ParticleEmitter2(particleSystemMesh, {
+            range: 1,
+        });
+        object.particleEmitter = particleEmitter;
+    })();
+    
+    object.update = function({
+        timestamp,
+        timeDiff,
+        localPlayer,
+        camera,
+    }) {
+        if (this.outlineMesh) {
+            this.outlineMesh.update(timestamp);
+        }
+        if (this.particleSystemMesh) {
+            this.particleEmitter.update({
+                timestamp,
+                localPlayer,
+            });
+
+            this.particleSystemMesh.update({
+                timestamp,
+                timeDiff,
+                camera,
+            });
+        }
+    };
+
+    return object;
+};
+
 const r = 0.3;
 // const aw = r * 2;
 const ah = 1.6;
 const h = ah - r * 2;
 const widthPadding = 0.25; // we calculate width from shoulders, but we need a little padding
-class LocalPlayer extends THREE.Object3D {
+class LocalPlayer {
     constructor() {
-        super();
-
         // local player meshes
+        this.placeholderMesh = makePlaceholderMesh();
+
         this.outlineMesh = null;
         this.particleSystemMesh = null;
         this.particleEmitter = null;
         this.characterPhysics = null;
         (async () => {
-            // particle mesh
-            {
-                const particleName = 'Elements - Energy 017 Charge Up noCT noRSZ.mov';
-                const explosionName = 'Elements - Energy 119 Dissapear noCT noRSZ.mov';
-                const explosion2Name = 'Elements - Explosion 014 Hit Radial MIX noCT noRSZ.mov';
-                const particleNames = [
-                    particleName,
-                    explosionName,
-                    explosion2Name,
-                ].map(s => s.replace(/\.mov$/, '.ktx2z'));
-
-                const videoUrls = particleNames.map(particleName => `${assetsBaseUrl}particles/${particleName}`);
-
-                const files = await Promise.all(videoUrls.map(async videoUrl => {
-                    const res = await fetch(videoUrl);
-                    const blob = await res.blob();
-                    return blob;
-                }));
-                const pack = await ParticleSystemMesh.loadPack(files);
-
-                const particleSystemMesh = new ParticleSystemMesh({
-                    pack,
-                });
-                this.particleSystemMesh = particleSystemMesh;
-                particleSystemMesh.frustumCulled = false;
-                this.add(particleSystemMesh);
-                particleSystemMesh.position.set(0, -h / 2, 0);
-                particleSystemMesh.updateMatrixWorld();
-
-                const particleEmitter = new ParticleEmitter2(particleSystemMesh, {
-                    range: 1,
-                });
-                this.particleEmitter = particleEmitter;
-            }
-
-            // outline mesh
-            {
-                const outlineMesh = new OutlineMesh({
-                    geometry: new CapsuleGeometry(r, r, h, 8)
-                      .rotateZ(Math.PI / 2)
-                      .translate(0, -h / 2, 0),
-                });
-                this.add(outlineMesh);
-                outlineMesh.updateMatrixWorld();
-                this.outlineMesh = outlineMesh;
-            }
-
             // avatar
             await Promise.all([
                 Avatar.waitForLoad(),
@@ -259,8 +289,8 @@ class LocalPlayer extends THREE.Object3D {
             {
                 const actionManager = new ActionManager();
                 // intialize position to local player position, since it is used by character controller initialization
-                this.avatar.inputs.hmd.position.copy(this.position);
-                this.avatar.inputs.hmd.quaternion.copy(this.quaternion);
+                this.avatar.inputs.hmd.position.copy(this.placeholderMesh.position);
+                this.avatar.inputs.hmd.quaternion.copy(this.placeholderMesh.quaternion);
 
                 this.characterPhysics = new CharacterPhysics({
                     avatar: this.avatar,
@@ -276,6 +306,15 @@ class LocalPlayer extends THREE.Object3D {
         })();
 
         this.velocity = new THREE.Vector3(0, 0, 0);
+    }
+    get position() {
+        return this.placeholderMesh.position;
+    }
+    get quaternion() {
+        return this.placeholderMesh.quaternion;
+    }
+    get scale() {
+        return this.placeholderMesh.scale;
     }
     update({
         timestamp,
@@ -314,9 +353,9 @@ class LocalPlayer extends THREE.Object3D {
                     characterController,
                 } = characterPhysics;
                 // local player
-                this.position.copy(characterController.position);
-                this.quaternion.copy(characterController.quaternion);
-                this.updateMatrixWorld();
+                this.placeholderMesh.position.copy(characterController.position);
+                this.placeholderMesh.quaternion.copy(characterController.quaternion);
+                this.placeholderMesh.updateMatrixWorld();
 
                 // avatar
                 avatar.inputs.hmd.position.copy(characterController.position);
@@ -331,104 +370,14 @@ class LocalPlayer extends THREE.Object3D {
             avatarsWasmManager.physxWorker.updateInterpolationAnimationAvatar(this.avatar.animationAvatarPtr, timeDiff);
             applyCharacterPhysicsToAvatar(this.characterPhysics, this.avatar);
             this.avatar.update(timestamp, timeDiff);
-
-            /* updateAvatar(timestamp, timeDiff) {
-                if (this.avatar) {
-                    const timeDiffS = timeDiff / 1000;
-                    this.avatarCharacterSfx.update(timestamp, timeDiffS);
-                    this.avatarCharacterFx.update(timestamp, timeDiffS);
-                    this.characterHitter.update(timestamp, timeDiffS);
-                    this.avatarFace.update(timestamp, timeDiffS);
-            
-                    physx.physxWorker.updateInterpolationAnimationAvatar(this.avatar.animationAvatarPtr, timeDiff);
-            
-                    const session = _getSession();
-                    const mirrors = metaversefile.getMirrors();
-                    applyCharacterToAvatar(this, session, this.avatar, mirrors);
-            
-                    this.avatar.update(timestamp, timeDiff);
-            
-                    this.characterHups.update(timestamp);
-                }
-            } */
-
-            // this.avatarBinding = {
-            //     position: this.positionInterpolant.get(),
-            //     quaternion: this.quaternionInterpolant.get(),
-            // };
-            // this.leftHand = new AvatarHand();
-            // this.rightHand = new AvatarHand();
-        
-            // class AvatarHand extends THREE.Object3D {
-            //     constructor() {
-            //         super();
-                
-            //         this.pointer = 0;
-            //         this.grab = 0;
-            //         this.enabled = false;
-            //     }
-            // }
-
-            /* export function applyCharacterTransformsToAvatar(character, session, rig) {
-                if (!session) {
-                  rig.inputs.hmd.position.copy(character.avatarBinding.position);
-                  rig.inputs.hmd.quaternion.copy(character.avatarBinding.quaternion);
-                  rig.inputs.leftGamepad.position.copy(character.leftHand.position);
-                  rig.inputs.leftGamepad.quaternion.copy(character.leftHand.quaternion);
-                  rig.inputs.rightGamepad.position.copy(character.rightHand.position);
-                  rig.inputs.rightGamepad.quaternion.copy(character.rightHand.quaternion);
-                }
-            } */
-
-            /* export function applyCharacterMetaTransformsToAvatar(character, session, rig) {
-                if (!session) {
-                  rig.velocity.copy(character.characterPhysics.velocity);
-                }
-              } */
-              /* export function applyCharacterModesToAvatar(character, session, rig) {
-                for (let i = 0; i < 2; i++) {
-                  rig.setHandEnabled(i, character.hands[i].enabled);
-                }
-                rig.setTopEnabled(
-                  (!!session && (rig.inputs.leftGamepad.enabled || rig.inputs.rightGamepad.enabled)),
-                );
-                rig.setBottomEnabled(
-                  (
-                    rig.getTopEnabled()
-                  ) &&
-                  rig.velocity.length() < 0.001,
-                );
-              } */
-
-            /* export function applyCharacterToAvatar(character, session, rig, mirrors) {
-                applyCharacterTransformsToAvatar(character, session, rig);
-                applyCharacterMetaTransformsToAvatar(character, session, rig);
-                
-                applyCharacterModesToAvatar(character, session, rig);
-                applyCharacterActionsToAvatar(character, rig);
-                applyCharacterHeadTargetToAvatar(character, rig);
-                applyCharacterEyesToAvatar(character, rig) || applyMirrorsToAvatar(character, rig, mirrors);
-                
-                applyFacePoseToAvatar(character, rig);
-                applyCharacterPoseToAvatar(character, rig);
-            } */
         }
 
-        if (this.outlineMesh) {
-            this.outlineMesh.update(timestamp);
-        }
-        if (this.particleSystemMesh) {
-            this.particleEmitter.update({
-                timestamp,
-                localPlayer: this,
-            });
-
-            this.particleSystemMesh.update({
-                timestamp,
-                timeDiff,
-                camera,
-            });
-        }
+        this.placeholderMesh.update({
+            timestamp,
+            timeDiff,
+            localPlayer: this,
+            camera,
+        });
     }
 }
 
@@ -489,22 +438,6 @@ class TitleScreenRenderer extends EventTarget {
         // camera
         const camera = new THREE.PerspectiveCamera();
         this.camera = camera;
-
-        // local player
-        const localPlayer = new LocalPlayer();
-        localPlayer.position.z = -2;
-        scene.add(localPlayer);
-        localPlayer.updateMatrixWorld();
-        this.localPlayer = localPlayer;
-
-        // camera manager
-        const zineCameraManager = new ZineCameraManager({
-            camera,
-            localPlayer,
-        }, {
-            normalizeView: false,
-            followView: false,
-        });
     
         // storyboard
         (async () => {
@@ -549,6 +482,25 @@ class TitleScreenRenderer extends EventTarget {
                 
                 physicsObjectTracker.add(scenePhysicsObject);
             }
+
+            // local player
+            const localPlayer = new LocalPlayer();
+            localPlayer.placeholderMesh.position.z = -2;
+            scene.add(localPlayer.placeholderMesh);
+            localPlayer.placeholderMesh.updateMatrixWorld();
+            this.localPlayer = localPlayer;
+
+            // camera manager
+            const zineCameraManager = new ZineCameraManager({
+                camera,
+                localPlayer,
+            }, {
+                normalizeView: false,
+                followView: false,
+            });
+            this.zineCameraManager = zineCameraManager;
+            this.zineCameraManager.setLockCamera(zineRenderer.camera);
+            this.zineCameraManager.toggleCameraLock();
     
             // path mesh
             const splinePoints = zineRenderer.metadata.paths.map(p => new THREE.Vector3().fromArray(p.position));
@@ -557,10 +509,6 @@ class TitleScreenRenderer extends EventTarget {
             });
             scene.add(pathMesh);
             pathMesh.updateMatrixWorld();
-    
-            // apply camera
-            zineCameraManager.setLockCamera(zineRenderer.camera);
-            zineCameraManager.toggleCameraLock();
         })();
 
         // video mesh
@@ -715,8 +663,11 @@ class TitleScreenRenderer extends EventTarget {
             // simulate physics
             const physics = physicsManager.getScene();
             physics.simulatePhysics(timeDiff);
+            
             // update camera
-            zineCameraManager.updatePost(timestamp, timeDiff);
+            if (this.zineCameraManager) {
+                this.zineCameraManager.updatePost(timestamp, timeDiff);
+            }
 
             // render
             renderer.render(scene, camera);
@@ -769,12 +720,14 @@ class TitleScreenRenderer extends EventTarget {
             });
             this.portalMesh.update(timestamp);
         }
-        this.localPlayer.update({
-            timestamp,
-            timeDiff,
-            camera: this.camera,
-            keys: this.keys,
-        });
+        if (this.localPlayer) {
+            this.localPlayer.update({
+                timestamp,
+                timeDiff,
+                camera: this.camera,
+                keys: this.keys,
+            });
+        }
     }
     destroy() {
       for (let i = 0; i < this.cleanupFns.length; i++) {
