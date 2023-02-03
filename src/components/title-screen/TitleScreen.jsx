@@ -185,27 +185,6 @@ const r = 0.3;
 const ah = 1.6;
 const h = ah - r * 2;
 const widthPadding = 0.25; // we calculate width from shoulders, but we need a little padding
-/* const _createCharacterController = (position) => {
-    const characterWidth = aw;
-    const characterHeight = ah;
-
-    const capsuleWidth = characterWidth / 2;
-    const capsuleHeight = characterHeight;
-
-    const contactOffset = 0.01 * capsuleHeight;
-    const stepOffset = 0.1 * capsuleHeight;
-
-    const physicsScene = physicsManager.getScene();
-
-    const characterController = physicsScene.createCharacterController(
-        capsuleWidth,
-        capsuleHeight,
-        contactOffset,
-        stepOffset,
-        position
-    );
-    return characterController;
-}; */
 class LocalPlayer extends THREE.Object3D {
     constructor() {
         super();
