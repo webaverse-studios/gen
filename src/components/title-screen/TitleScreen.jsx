@@ -553,7 +553,9 @@ class TitleScreenRenderer extends EventTarget {
             // scene physics
             const physics = physicsManager.getScene();
             {
-                const {scenePhysicsMesh} = zineRenderer;
+                const {
+                    scenePhysicsMesh,
+                } = zineRenderer;
                 const geometry2 = getDoubleSidedGeometry(scenePhysicsMesh.geometry);
         
                 const scenePhysicsMesh2 = new THREE.Mesh(geometry2, scenePhysicsMesh.material);
@@ -574,6 +576,66 @@ class TitleScreenRenderer extends EventTarget {
                 this.scenePhysicsObject = scenePhysicsObject;
                 
                 physicsObjectTracker.add(scenePhysicsObject);
+
+                // globalThis.THREE = THREE;
+                // globalThis.transformScene = zineRenderer.transformScene;
+                // globalThis.scenePhysicsObject = scenePhysicsObject;
+                // globalThis.scenePhysicsMesh2 = scenePhysicsMesh2;
+            }
+
+            // wall plane meshes
+            // planes[0] = right
+            // planes[1] = left
+            // planes[2] = bottom
+            // planes[3] = top
+            // planes[4] = far
+            // planes[5] = near
+            this.wallPhysicsObjects = [];
+            {
+                const {
+                    wallPlaneMeshes,
+                } = zineRenderer;
+
+                for (let i = 0; i < wallPlaneMeshes.length; i++) {
+                    const wallPlaneMesh = wallPlaneMeshes[i];
+                    // wallPlaneMesh.visible = true;
+
+                    const _getTransform = () => {
+                        const position = new THREE.Vector3();
+                        const quaternion = new THREE.Quaternion();
+                        const scale = new THREE.Vector3();
+                        wallPlaneMesh.matrixWorld.decompose(position, quaternion, scale);
+                        return {
+                            position,
+                            quaternion,
+                            // scale,
+                        };
+                    };
+
+                    const {
+                        position: centerPoint,
+                        quaternion: planeQuaternion,
+                    } = _getTransform();
+                    const dynamic = false;
+                    const planePhysicsObject = physics.addPlaneGeometry(
+                        centerPoint,
+                        planeQuaternion,
+                        dynamic
+                    );
+                    planePhysicsObject.update = () => {
+                        const {
+                            position: centerPoint,
+                            quaternion: planeQuaternion,
+                        } = _getTransform();
+                        planePhysicsObject.position.copy(centerPoint);
+                        planePhysicsObject.quaternion.copy(planeQuaternion);
+
+                        physics.setTransform(planePhysicsObject, false);
+                    };
+                    this.wallPhysicsObjects.push(planePhysicsObject);
+
+                    physicsObjectTracker.add(planePhysicsObject);
+                }
             }
 
             // camera manager
