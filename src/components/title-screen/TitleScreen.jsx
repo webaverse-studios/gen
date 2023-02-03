@@ -656,6 +656,16 @@ class TitleScreenRenderer extends EventTarget {
         };
         document.addEventListener('pointerlockchange', pointerlockchange);
 
+        const mousemove = e => {
+            this.zineCameraManager.handleMouseMove(e);
+        };
+        renderer.domElement.addEventListener('mousemove', mousemove);
+
+        const wheel = e => {
+            this.zineCameraManager.handleMouseWheel(e);
+        };
+        document.addEventListener('wheel', wheel);
+
         // render loop
         let lastTimestamp = performance.now();
         const _recurse = () => {
