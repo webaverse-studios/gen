@@ -242,7 +242,7 @@ const makePlaceholderMesh = () => {
         object.particleSystemMesh = particleSystemMesh;
         particleSystemMesh.frustumCulled = false;
         object.add(particleSystemMesh);
-        particleSystemMesh.position.set(0, -h / 2, 0);
+        // particleSystemMesh.position.set(0, -h / 2, 0);
         particleSystemMesh.updateMatrixWorld();
 
         const particleEmitter = new ParticleEmitter2(particleSystemMesh, {
