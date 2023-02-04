@@ -743,7 +743,7 @@ class TitleScreenRenderer extends EventTarget {
 
         // network realms
         this.realms = null;
-        (async () => {
+        const multiplayerConnect = async () => {
             // room
             const room = 'ABCDEFGH';
             await this.connectNetworkRealms(room);
@@ -782,7 +782,17 @@ class TitleScreenRenderer extends EventTarget {
             this.cleanupFns.push(() => {
                 virtualPlayers.removeEventListener('leave', onVirtualPlayersLeave);
             });
-        })();
+        };
+        const keydown = e => {
+            switch (e.key) {
+                case 'm': {
+                    multiplayerConnect();
+                    globalThis.removeEventListener('keydown', keydown);
+                    break;
+                }
+            }
+        };
+        globalThis.addEventListener('keydown', keydown);
 
         // video mesh
         this.videoMesh = null;
@@ -1408,7 +1418,7 @@ const MainScreen = ({
                     titleScreenRenderer.togglePortal();
                     break;
                 }
-                case 'm': {
+                case 'n': {
                     e.preventDefault();
                     e.stopPropagation();
             
