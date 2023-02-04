@@ -49,6 +49,7 @@ import {
 import physicsManager from '../../physics/physics-manager.js';
 import {
     CharacterPhysics,
+    capsuleToAvatarHmd,
 } from '../../physics/character-physics.js';
 import {
     loadGltf,
@@ -69,7 +70,37 @@ import avatarsWasmManager from '../../avatars/avatars-wasm-manager.js';
 import styles from '../../../styles/TitleScreen.module.css';
 import {makeId} from '../../physics/util.js';
 
+import {
+    StoryTargetMesh,
+} from '../../generators/story-target-mesh.js';
+
+import {
+    ActionManager,
+} from './ActionManager.js';
+
+import {
+    getFloorNetPhysicsMesh,
+} from '../../zine/zine-mesh-utils.js';
+
+import {
+    // reconstructPointCloudFromDepthField,
+    // setCameraViewPositionFromOrthographicViewZ,
+    // getDepthFloatsFromPointCloud,
+    // depthFloat32ArrayToOrthographicGeometry,
+    // getDepthFloat32ArrayWorldPosition,
+    // getDoubleSidedGeometry,
+    getGeometryHeights,
+  } from '../../zine/zine-geometry-utils.js';
+
 import Avatar from '../../avatars/avatars.js';
+
+import {
+    setPerspectiveCameraFromJson,
+    setOrthographicCameraFromJson,
+} from '../../zine/zine-camera-utils.js';
+import {
+    floorNetResolution,
+} from '../../zine/zine-constants.js';
 
 //
 
@@ -78,6 +109,7 @@ const assetsBaseUrl = `https://cdn.jsdelivr.net/gh/webaverse/content@${hash}/`;
 const titleScreenZineFileName = 'title-screen.zine';
 const cubicBezier = bezier(0, 1, 0, 1);
 // const gravity = new THREE.Vector3(0, -9.8, 0);
+const heightfieldScale = 0.1; // must fit heightfield in int16
 const avatarUrl = `/avatars/Scillia_Drophunter_V19.vrm`;
 
 //
@@ -85,10 +117,12 @@ const avatarUrl = `/avatars/Scillia_Drophunter_V19.vrm`;
 const localVector = new THREE.Vector3();
 const localVector2 = new THREE.Vector3();
 const localVector2D = new THREE.Vector2();
-// const localQuaternion = new THREE.Quaternion();
-// const localMatrix = new THREE.Matrix4();
+const localQuaternion = new THREE.Quaternion();
+const localMatrix = new THREE.Matrix4();
+const localRaycaster = new THREE.Raycaster();
+const localOrthographicCamera = new THREE.OrthographicCamera();
 
-const zeroVector = new THREE.Vector3(0, 0, 0);
+// const zeroVector = new THREE.Vector3(0, 0, 0);
 // const oneVector = new THREE.Vector3(1, 1, 1);
 // const upVector = new THREE.Vector3(0, 1, 0);
 
@@ -99,30 +133,6 @@ const _loadArrayBuffer = async u => {
     const arrayBuffer = await res.arrayBuffer();
     return arrayBuffer;
 };
-
-//
-
-class ActionManager {
-    constructor() {
-        this.actions = new Map();
-    }
-    getAction(actionName) {
-        return this.actions.get(actionName);
-    }
-    setAction(actionName, action) {
-        this.actions.set(actionName, action);
-    }
-    hasAction() {
-        return false;
-    }
-    setControlAction(actionName, controlName, controlAction) {
-        // const action = this.actions.get(actionName);
-        // if (action) {
-        //     action.setControlAction(controlName, controlAction);
-        // }
-        throw new Error('not implemented: set control action');
-    }
-}
 
 //
 
@@ -267,9 +277,11 @@ const widthPadding = 0.25; // we calculate width from shoulders, but we need a l
 class Player {
     constructor(playerId, usePhysics) {
         this.playerId = playerId;
+        this.object = new THREE.Object3D();
 
         // player meshes
         this.placeholderMesh = makePlaceholderMesh();
+        this.object.add(this.placeholderMesh);
 
         this.outlineMesh = null;
         this.particleSystemMesh = null;
@@ -287,6 +299,10 @@ class Player {
                     gltf,
                 });
                 this.avatar = avatar;
+
+                this.object.add(gltf.scene);
+                this.object.updateMatrixWorld();
+                // globalThis.gltf = gltf;
             }
 
             // character physics
@@ -383,13 +399,14 @@ class LocalPlayer extends Player {
                     characterController,
                 } = characterPhysics;
                 // local player
-                this.placeholderMesh.position.copy(characterController.position);
+                capsuleToAvatarHmd(characterController.position, this.avatar, this.placeholderMesh.position);
+                // this.placeholderMesh.position.copy(characterController.position);
                 this.placeholderMesh.quaternion.copy(characterController.quaternion);
                 this.placeholderMesh.updateMatrixWorld();
 
                 // avatar
-                avatar.inputs.hmd.position.copy(characterController.position);
-                avatar.inputs.hmd.quaternion.copy(characterController.quaternion);
+                avatar.inputs.hmd.position.copy(this.placeholderMesh.position);
+                avatar.inputs.hmd.quaternion.copy(this.placeholderMesh.quaternion);
                 // XXX deliberately set gamepads to NaN to see if it's still used (probably is for VR)
                 avatar.inputs.leftGamepad.position.set(NaN, NaN, NaN);
                 avatar.inputs.leftGamepad.quaternion.set(NaN, NaN, NaN, NaN);
@@ -455,6 +472,99 @@ class KeysTracker {
 
 //
 
+class PanelInstanceManager extends THREE.Object3D {
+    constructor({
+      zineCameraManager,
+      physics,
+    }) {
+      super();
+  
+      this.name = 'panelInstanceManager';
+  
+      this.zineCameraManager = zineCameraManager;
+      this.physics = physics;
+  
+      this.panelIndex = 0;
+      this.panelInstances = [];
+  
+      // story target mesh
+      const storyTargetMesh = new StoryTargetMesh();
+      storyTargetMesh.frustumCulled = false;
+      storyTargetMesh.visible = false;
+      this.add(storyTargetMesh);
+      this.storyTargetMesh = storyTargetMesh;
+    }
+    #pushRaycast() {
+      const wallPhysicsObjects = [];
+      for (let i = 0; i < this.panelInstances.length; i++) {
+        const panelInstance = this.panelInstances[i];
+        for (let j = 0; j < panelInstance.wallPhysicsObjects.length; j++) {
+          const wallPhysicsObject = panelInstance.wallPhysicsObjects[j];
+          this.physics.disableGeometryQueries(wallPhysicsObject);
+          wallPhysicsObjects.push(wallPhysicsObject);
+        }
+      }
+      return () => {
+        for (let i = 0; i < wallPhysicsObjects.length; i++) {
+          const wallPhysicsObject = wallPhysicsObjects[i];
+          this.physics.enableGeometryQueries(wallPhysicsObject);
+        }
+      }
+    }
+    update({
+      mousePosition,
+    }) {
+      const {physics} = this;
+  
+      // update for entrance/exit transitions
+      const _updatePanelInstances = () => {
+        for (const panelInstance of this.panelInstances) {
+          panelInstance.update();
+        }
+      };
+      _updatePanelInstances();
+  
+      // update cursor
+      const _updateStoryTargetMesh = () => {
+        this.storyTargetMesh.visible = false;
+        
+        if (this.zineCameraManager.cameraLocked) {
+          localVector2D.copy(mousePosition);
+          localVector2D.y = -localVector2D.y;
+          
+          // raycast
+          {
+            localRaycaster.setFromCamera(localVector2D, this.zineCameraManager.camera);
+  
+            let result;
+            {
+              const popRaycast = this.#pushRaycast(); // disable walls
+              result = physics.raycast(
+                localRaycaster.ray.origin,
+                localQuaternion.setFromRotationMatrix(
+                  localMatrix.lookAt(
+                    localVector.set(0, 0, 0),
+                    localRaycaster.ray.direction,
+                    localVector2.set(0, 1, 0)
+                  )
+                )
+              );
+              popRaycast();
+            }
+            if (result) {
+              this.storyTargetMesh.position.fromArray(result.point);
+            }
+            this.storyTargetMesh.visible = !!result;
+          }
+          this.storyTargetMesh.updateMatrixWorld();
+        }
+      };
+      _updateStoryTargetMesh();
+    }
+  }
+
+//
+
 class TitleScreenRenderer extends EventTarget {
     constructor({
         canvas,
@@ -496,7 +606,7 @@ class TitleScreenRenderer extends EventTarget {
 
         // local player
         const localPlayer = new LocalPlayer(makeId(8));
-        scene.add(localPlayer.placeholderMesh);
+        scene.add(localPlayer.object);
         this.localPlayer = localPlayer;
 
         // remote players
@@ -521,8 +631,11 @@ class TitleScreenRenderer extends EventTarget {
             zineRenderer.scene.updateMatrixWorld();
 
             // scene physics
+            const physics = physicsManager.getScene();
             {
-                const {scenePhysicsMesh} = zineRenderer;
+                const {
+                    scenePhysicsMesh,
+                } = zineRenderer;
                 const geometry2 = getDoubleSidedGeometry(scenePhysicsMesh.geometry);
         
                 const scenePhysicsMesh2 = new THREE.Mesh(geometry2, scenePhysicsMesh.material);
@@ -530,8 +643,7 @@ class TitleScreenRenderer extends EventTarget {
                 scenePhysicsMesh2.visible = false;
                 zineRenderer.transformScene.add(scenePhysicsMesh2);
                 this.scenePhysicsMesh = scenePhysicsMesh2;
-        
-                const physics = physicsManager.getScene();
+
                 const scenePhysicsObject = physics.addGeometry(scenePhysicsMesh2);
                 scenePhysicsObject.update = () => {
                     scenePhysicsMesh2.matrixWorld.decompose(
@@ -539,13 +651,135 @@ class TitleScreenRenderer extends EventTarget {
                         scenePhysicsObject.quaternion,
                         scenePhysicsObject.scale
                     );
-                    this.physics.setTransform(scenePhysicsObject, false);
+                    physics.setTransform(scenePhysicsObject, false);
                 };
                 this.scenePhysicsObject = scenePhysicsObject;
                 
                 physicsObjectTracker.add(scenePhysicsObject);
+
+                // globalThis.THREE = THREE;
+                // globalThis.transformScene = zineRenderer.transformScene;
+                // globalThis.scenePhysicsObject = scenePhysicsObject;
+                // globalThis.scenePhysicsMesh2 = scenePhysicsMesh2;
             }
 
+            // wall plane meshes
+            // planes[0] = right
+            // planes[1] = left
+            // planes[2] = bottom
+            // planes[3] = top
+            // planes[4] = far
+            // planes[5] = near
+            this.wallPhysicsObjects = [];
+            {
+                const {
+                    wallPlaneMeshes,
+                } = zineRenderer;
+
+                for (let i = 0; i < wallPlaneMeshes.length; i++) {
+                    const wallPlaneMesh = wallPlaneMeshes[i];
+                    // wallPlaneMesh.visible = true;
+
+                    const _getTransform = () => {
+                        const position = new THREE.Vector3();
+                        const quaternion = new THREE.Quaternion();
+                        const scale = new THREE.Vector3();
+                        wallPlaneMesh.matrixWorld.decompose(position, quaternion, scale);
+                        return {
+                            position,
+                            quaternion,
+                            // scale,
+                        };
+                    };
+
+                    const {
+                        position: centerPoint,
+                        quaternion: planeQuaternion,
+                    } = _getTransform();
+                    const dynamic = false;
+                    const planePhysicsObject = physics.addPlaneGeometry(
+                        centerPoint,
+                        planeQuaternion,
+                        dynamic
+                    );
+                    planePhysicsObject.update = () => {
+                        const {
+                            position: centerPoint,
+                            quaternion: planeQuaternion,
+                        } = _getTransform();
+                        planePhysicsObject.position.copy(centerPoint);
+                        planePhysicsObject.quaternion.copy(planeQuaternion);
+
+                        physics.setTransform(planePhysicsObject, false);
+                    };
+                    this.wallPhysicsObjects.push(planePhysicsObject);
+
+                    physicsObjectTracker.add(planePhysicsObject);
+                }
+            }
+
+            // floor net physics
+            {
+                const {panel} = zineRenderer;
+                const layer1 = panel.getLayer(1);
+                const floorResolution = layer1.getData('floorResolution');
+                const floorNetDepths = layer1.getData('floorNetDepths');
+                const floorNetCameraJson = layer1.getData('floorNetCameraJson');
+
+                // camera
+                // const camera = setPerspectiveCameraFromJson(localCamera, cameraJson);
+                const floorNetCamera = setOrthographicCameraFromJson(localOrthographicCamera, floorNetCameraJson);
+
+                const [
+                    floorWidth,
+                    floorHeight,
+                ] = floorResolution;
+        
+                const floorNetPhysicsMaterial = new THREE.MeshPhongMaterial({
+                    color: 0xFF0000,
+                    side: THREE.BackSide,
+                    transparent: true,
+                    opacity: 0.5,
+                });
+                const floorNetPhysicsMesh = getFloorNetPhysicsMesh({
+                    floorNetDepths,
+                    floorNetCamera,
+                    material: floorNetPhysicsMaterial,
+                });
+                floorNetPhysicsMesh.name = 'floorNetPhysicsMesh';
+                floorNetPhysicsMesh.visible = false;
+                zineRenderer.transformScene.add(floorNetPhysicsMesh);
+                this.floorNetPhysicsMesh = floorNetPhysicsMesh;
+        
+                const numRows = floorWidth;
+                const numColumns = floorHeight;
+                const heights = getGeometryHeights(
+                    floorNetPhysicsMesh.geometry,
+                    floorWidth,
+                    floorHeight,
+                    heightfieldScale
+                );
+                const floorNetPhysicsObject = physics.addHeightFieldGeometry(
+                    floorNetPhysicsMesh,
+                    numRows,
+                    numColumns,
+                    heights,
+                    heightfieldScale,
+                    floorNetResolution,
+                    floorNetResolution
+                );
+                floorNetPhysicsObject.update = () => {
+                    floorNetPhysicsMesh.matrixWorld.decompose(
+                        floorNetPhysicsObject.position,
+                        floorNetPhysicsObject.quaternion,
+                        floorNetPhysicsObject.scale
+                    );
+                    physics.setTransform(floorNetPhysicsObject, false);
+                };
+                this.floorNetPhysicsObject = floorNetPhysicsObject;
+
+                physicsObjectTracker.add(floorNetPhysicsObject);
+            }
             // camera manager
             const zineCameraManager = new ZineCameraManager({
                 camera,
@@ -557,6 +791,15 @@ class TitleScreenRenderer extends EventTarget {
             this.zineCameraManager = zineCameraManager;
             this.zineCameraManager.setLockCamera(zineRenderer.camera);
             this.zineCameraManager.toggleCameraLock();
+
+            // panel instance manager
+            const panelInstanceManager = new PanelInstanceManager({
+                zineCameraManager,
+                physics,
+            });
+            scene.add(panelInstanceManager);
+            panelInstanceManager.updateMatrixWorld();
+            this.panelInstanceManager = panelInstanceManager;
     
             // path mesh
             const splinePoints = zineRenderer.metadata.paths.map(p => new THREE.Vector3().fromArray(p.position));
@@ -748,6 +991,23 @@ class TitleScreenRenderer extends EventTarget {
         };
         document.addEventListener('pointerlockchange', pointerlockchange);
 
+        const mousemove = e => {
+            if (this.zineCameraManager) {
+                this.zineCameraManager.handleMouseMove(e);
+            }
+        };
+        canvas.addEventListener('mousemove', mousemove);
+        const wheel = e => {
+            if (this.zineCameraManager) {
+                this.zineCameraManager.handleMouseWheel(e);
+            }
+        };
+        canvas.addEventListener('wheel', wheel);
+        this.cleanupFns.push(() => {
+            canvas.removeEventListener('mousemove', mousemove);
+            canvas.removeEventListener('wheel', wheel);
+        });
+
         // render loop
         let lastTimestamp = performance.now();
         const _recurse = () => {
@@ -762,6 +1022,12 @@ class TitleScreenRenderer extends EventTarget {
             // simulate physics
             const physics = physicsManager.getScene();
             physics.simulatePhysics(timeDiff);
+
+            // update scene physics
+            if (this.scenePhysicsObject) {
+                this.scenePhysicsObject.update();
+            }
+            
             
             // update camera
             if (this.zineCameraManager) {
@@ -842,6 +1108,12 @@ class TitleScreenRenderer extends EventTarget {
                 return !done;
             });
             this.portalMesh.update(timestamp);
+        }
+        if (this.panelInstanceManager) {
+            const {mousePosition} = this.zineCameraManager;
+            this.panelInstanceManager.update({
+                mousePosition,
+            });
         }
         if (this.localPlayer) {
             this.localPlayer.update({

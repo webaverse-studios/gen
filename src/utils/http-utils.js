@@ -12,15 +12,11 @@ export const getFormData = o => {
 };
 
 export function downloadFile(file, filename) {
-  const blobURL = URL.createObjectURL(file);
-  const tempLink = document.createElement('a');
-  tempLink.style.display = 'none';
-  tempLink.href = blobURL;
-  tempLink.setAttribute('download', filename);
-
-  document.body.appendChild(tempLink);
-  tempLink.click();
-  document.body.removeChild(tempLink);
+  // trigger download of the file using a fake dom node
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(file);
+  a.download = filename;
+  a.click();
 }
 
 let ids = 0;

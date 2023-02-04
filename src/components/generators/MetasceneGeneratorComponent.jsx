@@ -234,7 +234,7 @@ const collectEntranceExits = panelSpecs => {
         quaternion,
         scale
       )
-        .premultiply(panelSpec.matrixWorld)
+        .premultiply(panelSpec.transformScene.matrixWorld)
         .decompose(position, quaternion, scale);
       return {
         ...eel,
@@ -1783,7 +1783,7 @@ const flipUint8ArrayX = (uint8Array, width, height) => {
 
 //
 
-const getRenderSpecsFromZineRenderers = zineRenderers => {
+/* const getRenderSpecsFromZineRenderers = zineRenderers => {
   return zineRenderers.map((zineRenderer, index) => {
     const {panel} = zineRenderer;
     const layers = panel.getLayers();
@@ -1817,7 +1817,7 @@ const getRenderSpecsFromZineRenderers = zineRenderers => {
       matrixWorld,
     };
   });
-};
+}; */
 /* const getMapIndexFromZineRenderersFull = ({
   zineRenderers,
   camera,
