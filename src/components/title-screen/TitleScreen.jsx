@@ -288,6 +288,8 @@ class LocalPlayer {
         this.placeholderMesh = makePlaceholderMesh();
         this.object.add(this.placeholderMesh);
 
+        this.loaded = false;
+
         this.outlineMesh = null;
         this.particleSystemMesh = null;
         this.particleEmitter = null;
@@ -328,6 +330,8 @@ class LocalPlayer {
                 const physicsScene = physicsManager.getScene();
                 physicsScene.disableGeometryQueries(this.characterPhysics.characterController);
             }
+
+            this.loaded = true;
         })();
 
         this.velocity = new THREE.Vector3(0, 0, 0);
