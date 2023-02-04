@@ -6,3 +6,4 @@ export const chunksPerView = Math.ceil(worldWidth / chunkSize) + 1;
 export const baseLod1Range = Math.ceil(worldWidth / chunkSize / 2);
 export const spacing = 1;
 export const maxChunks = 2048;
+export const realmSize = 256;

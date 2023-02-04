@@ -21,7 +21,8 @@ const vercelJson = JSON.parse(fs.readFileSync('./vercel.json', 'utf8'));
 
 const SERVER_NAME = 'local.webaverse.com';
 
-const port = parseInt(process.env.PORT, 10) || 9999;
+const SERVER_PORT = parseInt(process.env.PORT, 10) || 9999;
+const MULTIPLAYER_PORT = 2222;
 
 //
 
@@ -49,13 +50,50 @@ class DatabaseServer {
     });
     this.cp = cp;
   }
-  destory() {
+  destroy() {
     this.cp.kill();
   }
 }
 const databaseServer = new DatabaseServer();
 process.on('exit', () => {
-  databaseServer.destory();
+  databaseServer.destroy();
+});
+
+//
+
+class MultiplayerServer {
+  //  You can load the multiplayer-do example app to check that the server is running: http://127.0.0.1:2222/
+  constructor() {
+    const dirname = path.dirname(import.meta.url.replace(/^file:\/\//, ''));
+
+    const multiplayerPath = path.join(dirname, 'packages', 'multiplayer-do');
+    const wranglerPath = path.join(dirname, 'node_modules', 'wrangler');
+    const cp = child_process.spawn(
+      process.argv[0],
+      [wranglerPath, 'dev', '-l', '--port', MULTIPLAYER_PORT + ''],
+      {
+        cwd: multiplayerPath,
+        env: {
+          ...process.env,
+          PORT: MULTIPLAYER_PORT,
+        },
+      }
+    );
+
+    cp.stdout.pipe(process.stdout);
+    cp.stderr.pipe(process.stderr);
+    cp.on('error', err => {
+      console.warn(err.stack);
+    });
+    this.cp = cp;
+  }
+  destroy() {
+    this.cp.kill();
+  }
+}
+const multiplayerServer = new MultiplayerServer();
+process.on('exit', () => {
+  multiplayerServer.destroy();
 });
 
 //
@@ -125,7 +163,7 @@ const _setHeaders = res => {
   });
 
   const isHttps = !process.env.HTTP_ONLY && (!!certs.key && !!certs.cert);
-  // const wsPort = port + 1;
+  // const wsPort = SERVER_PORT + 1;
 
   const _makeHttpServer = () => isHttps ? https.createServer(certs, app) : http.createServer(app);
   const httpServer = _makeHttpServer();
@@ -137,7 +175,7 @@ const _setHeaders = res => {
       // force: true,
       hmr: {
         server: httpServer,
-        port,
+        port: SERVER_PORT,
         // overlay: false,
       },
     },
@@ -146,13 +184,13 @@ const _setHeaders = res => {
   app.use(viteServer.middlewares);
   
   await new Promise((accept, reject) => {
-    httpServer.listen(port, '0.0.0.0', () => {
+    httpServer.listen(SERVER_PORT, '0.0.0.0', () => {
       accept();
     });
     httpServer.on('error', reject);
   });
   // console.log('pid', process.pid);
-  console.log(`  > Local: http${isHttps ? 's' : ''}://${SERVER_NAME}:${port}/`);
+  console.log(`  > Local: http${isHttps ? 's' : ''}://${SERVER_NAME}:${SERVER_PORT}/`);
 })();
 
 process.on('disconnect', function() {

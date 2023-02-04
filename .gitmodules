@@ -28,3 +28,6 @@
 [submodule "src/zine-runtime"]
 	path = src/zine-runtime
 	url = https://github.com/webaverse/zine-runtime
+[submodule "packages/multiplayer-do"]
+	path = packages/multiplayer-do
+	url = https://github.com/webaverse/multiplayer-do.git
