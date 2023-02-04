@@ -2,6 +2,7 @@ import path from 'path';
 import http from 'http';
 import https from 'https';
 import fs from 'fs';
+import url from 'url';
 import child_process from 'child_process';
 
 import express from 'express';
@@ -72,6 +73,10 @@ const certs = {
   key: _tryReadFile('./certs/privkey.pem') || _tryReadFile('./certs-local/privkey.pem'),
   cert: _tryReadFile('./certs/fullchain.pem') || _tryReadFile('./certs-local/fullchain.pem'),
 };
+const tmpDir = `/tmp/webaverse-dev-server`;
+fs.mkdirSync(tmpDir, {
+  recursive: true,
+});
 
 //
 
@@ -86,22 +91,38 @@ const _setHeaders = res => {
 
 //
 
-// const serveDirectories = [
-//   '/packages/scenes/',
-//   '/packages/characters/',
-//   // '/packages/wsrtc/',
-// ];
-/* const _proxyFile = (req, res, u) => {
-  u = path.join(dirname, u);
-  // console.log('proxy file', u);
-  const rs = fs.createReadStream(u);
-  rs.on('error', err => {
-    console.warn(err);
-    res.statusCode = 404;
-    res.end(err.stack);
-  });
-  rs.pipe(res);
-}; */
+const _proxyTmp = (req, res) => {
+  const o = url.parse(req.url);
+  const p = path.join(tmpDir, o.path.replace(/^\/tmp\//, ''));
+
+  // console.log('got tmp request', req.method, req.url, p);
+
+  if (req.method === 'GET') {
+    const rs = fs.createReadStream(p);
+    rs.on('error', err => {
+      console.warn(err);
+      res.statusCode = 500;
+      res.end(err.stack);
+    });
+    rs.pipe(res);
+  } else if (['PUT', 'POST'].includes(req.method)) {
+    const ws = fs.createWriteStream(p);
+    ws.on('error', err => {
+      console.warn(err);
+      res.statusCode = 500;
+      res.end(err.stack);
+    });
+    ws.on('finish', () => {
+      res.end();
+    });
+    req.pipe(ws);
+  } else if (req.method === 'OPTIONS') {
+    res.end();
+  } else {
+    res.statusCode = 400;
+    res.end('not implemented');
+  }
+};
 
 // main
 
@@ -110,7 +131,9 @@ const _setHeaders = res => {
   app.all('*', async (req, res, next) => {
     _setHeaders(res);
 
-    if ([
+    if (req.url.startsWith('/tmp/')) {
+      _proxyTmp(req, res);
+    } else if ([
       '/api/ai/',
       '/api/image-ai/',
     ].some(prefix => req.url.startsWith(prefix))) {
