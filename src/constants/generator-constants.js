@@ -10,5 +10,5 @@ export const controlsMinDistance = 1;
 export const controlsMaxDistance = 300;
 
 // for passing off to the dev server
-export const devServerUrl = `https://local.webaverse.com`;
-export const devServerTmpUrl = `${devServerUrl}/tmp`;
+// export const devServerUrl = globalThis.location.protocol + '//' + globalThis.location.host;
+export const devServerTmpUrl = globalThis.location.protocol + '//' + globalThis.location.host + '/tmp';
