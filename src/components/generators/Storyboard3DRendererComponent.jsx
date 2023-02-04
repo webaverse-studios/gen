@@ -21,9 +21,9 @@ import {
 } from '../../zine/zine-constants.js';
 import {zineMagicBytes} from '../../zine/zine-format.js';
 import {useRouter} from '../../generators/router.js';
-import {
-  devServerUrl,
-} from '../../constants/generator-constants.js';
+// import {
+//   devServerUrl,
+// } from '../../constants/generator-constants.js';
 
 //
 
@@ -121,6 +121,25 @@ export const Storyboard3DRendererComponent = ({
             const blob = await getZineFileBlob();
             openZineFile(blob);
           }}>Send to app</button>
+          <button className={styles.button} onClick={async e => {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const blob = await getZineFileBlob();
+
+            // upload tmp file
+            const u = await zineFile2Url(blob);
+
+            // compute open url
+            const u2 = new URL(globalThis.location.href);
+            u2.searchParams.set('tab', 'titleScreen');
+            u2.searchParams.set('src', u);
+
+            console.log('send to u2', u2);
+
+            // const router = useRouter();
+            // router.pushUrl(u2.href);
+          }}>Send to title</button>
           <button className={styles.button} onClick={async e => {
             const blob = await getZineFileBlob();
             const src = await zineFile2Url(blob);
