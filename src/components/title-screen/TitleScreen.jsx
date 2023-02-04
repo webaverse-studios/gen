@@ -362,7 +362,7 @@ class LocalPlayer extends Player {
         super(playerId, true);
         this.realmsPlayer = null;
         this.lastPosition = new THREE.Vector3();
-        this.placeholderMesh.position.z = -4;
+        this.placeholderMesh.position.z = -2;
         this.placeholderMesh.updateMatrixWorld();
     }
     setRealmsPlayer(realmsPlayer) {
