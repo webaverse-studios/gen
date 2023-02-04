@@ -305,13 +305,13 @@ class Player {
                 // globalThis.gltf = gltf;
             }
 
+            // intialize position to local player position, since it is used by character controller initialization
+            this.avatar.inputs.hmd.position.copy(this.placeholderMesh.position);
+            this.avatar.inputs.hmd.quaternion.copy(this.placeholderMesh.quaternion);
+
             // character physics
             if (usePhysics) {
                 const actionManager = new ActionManager();
-                // intialize position to local player position, since it is used by character controller initialization
-                this.avatar.inputs.hmd.position.copy(this.placeholderMesh.position);
-                this.avatar.inputs.hmd.quaternion.copy(this.placeholderMesh.quaternion);
-
                 this.characterPhysics = new CharacterPhysics({
                     avatar: this.avatar,
                     actionManager,
@@ -449,6 +449,19 @@ class RemotePlayer extends Player {
                 // avatar
                 this.avatar?.inputs.hmd.position.fromArray(val);
             }
+        });
+    }
+    update({
+        timestamp,
+        timeDiff,
+        camera,
+    }) {
+        this.avatar?.update(timestamp, timeDiff);
+
+        super.update({
+            timestamp,
+            timeDiff,
+            camera,
         });
     }
 }
@@ -830,7 +843,7 @@ class TitleScreenRenderer extends EventTarget {
                 console.log('Player joined:', playerId);
                 const remotePlayer = new RemotePlayer(playerId, player);
                 this.remotePlayers.set(playerId, remotePlayer);
-                scene.add(remotePlayer.placeholderMesh);
+                scene.add(remotePlayer.object);
             };
             virtualPlayers.addEventListener('join', onVirtualPlayersJoin);
             this.cleanupFns.push(() => {
