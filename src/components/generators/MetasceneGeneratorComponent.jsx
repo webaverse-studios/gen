@@ -3371,7 +3371,7 @@ export class Metazine3DRenderer extends EventTarget {
     }
 
     if (panelSpec) {
-      const backOffsetVector = new THREE.Vector3(0, 1, 1);
+      // const backOffsetVector = new THREE.Vector3(0, 1, 1);
 
       // bounding box
       const boundingBox = new THREE.Box3(
