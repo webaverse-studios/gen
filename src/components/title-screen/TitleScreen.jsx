@@ -68,9 +68,9 @@ import avatarsWasmManager from '../../avatars/avatars-wasm-manager.js';
 import styles from '../../../styles/TitleScreen.module.css';
 import {makeId} from '../../physics/util.js';
 
-import {
-    StoryTargetMesh,
-} from '../../generators/story-target-mesh.js';
+// import {
+//     StoryTargetMesh,
+// } from '../../generators/story-target-mesh.js';
 
 import {
     ActionManager,
@@ -79,6 +79,9 @@ import {
 import {
     getFloorNetPhysicsMesh,
 } from '../../zine/zine-mesh-utils.js';
+import {
+    PanelInstanceManager,
+} from '../../zine-runtime/zine-manager.js';
 
 import {useRouter} from '../../generators/router.js';
 
@@ -423,99 +426,6 @@ class KeysTracker {
 
 //
 
-class PanelInstanceManager extends THREE.Object3D {
-    constructor({
-      zineCameraManager,
-      physics,
-    }) {
-      super();
-  
-      this.name = 'panelInstanceManager';
-  
-      this.zineCameraManager = zineCameraManager;
-      this.physics = physics;
-  
-      this.panelIndex = 0;
-      this.panelInstances = [];
-  
-      // story target mesh
-      const storyTargetMesh = new StoryTargetMesh();
-      storyTargetMesh.frustumCulled = false;
-      storyTargetMesh.visible = false;
-      this.add(storyTargetMesh);
-      this.storyTargetMesh = storyTargetMesh;
-    }
-    #pushRaycast() {
-      const wallPhysicsObjects = [];
-      for (let i = 0; i < this.panelInstances.length; i++) {
-        const panelInstance = this.panelInstances[i];
-        for (let j = 0; j < panelInstance.wallPhysicsObjects.length; j++) {
-          const wallPhysicsObject = panelInstance.wallPhysicsObjects[j];
-          this.physics.disableGeometryQueries(wallPhysicsObject);
-          wallPhysicsObjects.push(wallPhysicsObject);
-        }
-      }
-      return () => {
-        for (let i = 0; i < wallPhysicsObjects.length; i++) {
-          const wallPhysicsObject = wallPhysicsObjects[i];
-          this.physics.enableGeometryQueries(wallPhysicsObject);
-        }
-      }
-    }
-    update({
-      mousePosition,
-    }) {
-      const {physics} = this;
-  
-      // update for entrance/exit transitions
-      const _updatePanelInstances = () => {
-        for (const panelInstance of this.panelInstances) {
-          panelInstance.update();
-        }
-      };
-      _updatePanelInstances();
-  
-      // update cursor
-      const _updateStoryTargetMesh = () => {
-        this.storyTargetMesh.visible = false;
-        
-        if (this.zineCameraManager.cameraLocked) {
-          localVector2D.copy(mousePosition);
-          localVector2D.y = -localVector2D.y;
-          
-          // raycast
-          {
-            localRaycaster.setFromCamera(localVector2D, this.zineCameraManager.camera);
-  
-            let result;
-            {
-              const popRaycast = this.#pushRaycast(); // disable walls
-              result = physics.raycast(
-                localRaycaster.ray.origin,
-                localQuaternion.setFromRotationMatrix(
-                  localMatrix.lookAt(
-                    localVector.set(0, 0, 0),
-                    localRaycaster.ray.direction,
-                    localVector2.set(0, 1, 0)
-                  )
-                )
-              );
-              popRaycast();
-            }
-            if (result) {
-              this.storyTargetMesh.position.fromArray(result.point);
-            }
-            this.storyTargetMesh.visible = !!result;
-          }
-          this.storyTargetMesh.updateMatrixWorld();
-        }
-      };
-      _updateStoryTargetMesh();
-    }
-  }
-
-//
-
 class TitleScreenRenderer extends EventTarget {
     constructor({
         canvas,
@@ -570,19 +480,19 @@ class TitleScreenRenderer extends EventTarget {
             await zineStoryboard.loadAsync(uint8Array);
             if (!live) return;
 
-            const panel0 = zineStoryboard.getPanel(0);
-            const zineRenderer = new ZineRenderer({
-                panel: panel0,
-                alignFloor: true,
-            });
+            // const panel0 = zineStoryboard.getPanel(0);
+            // const zineRenderer = new ZineRenderer({
+            //     panel: panel0,
+            //     alignFloor: true,
+            // });
     
-            // scene mesh
-            scene.add(zineRenderer.scene);
-            zineRenderer.scene.updateMatrixWorld();
+            // // scene mesh
+            // scene.add(zineRenderer.scene);
+            // zineRenderer.scene.updateMatrixWorld();
 
             // scene physics
             const physics = physicsManager.getScene();
-            {
+            /* {
                 const {
                     scenePhysicsMesh,
                 } = zineRenderer;
@@ -606,130 +516,7 @@ class TitleScreenRenderer extends EventTarget {
                 this.scenePhysicsObject = scenePhysicsObject;
                 
                 physicsObjectTracker.add(scenePhysicsObject);
-
-                // globalThis.THREE = THREE;
-                // globalThis.transformScene = zineRenderer.transformScene;
-                // globalThis.scenePhysicsObject = scenePhysicsObject;
-                // globalThis.scenePhysicsMesh2 = scenePhysicsMesh2;
-            }
-
-            // wall plane meshes
-            // planes[0] = right
-            // planes[1] = left
-            // planes[2] = bottom
-            // planes[3] = top
-            // planes[4] = far
-            // planes[5] = near
-            this.wallPhysicsObjects = [];
-            {
-                const {
-                    wallPlaneMeshes,
-                } = zineRenderer;
-
-                for (let i = 0; i < wallPlaneMeshes.length; i++) {
-                    const wallPlaneMesh = wallPlaneMeshes[i];
-                    // wallPlaneMesh.visible = true;
-
-                    const _getTransform = () => {
-                        const position = new THREE.Vector3();
-                        const quaternion = new THREE.Quaternion();
-                        const scale = new THREE.Vector3();
-                        wallPlaneMesh.matrixWorld.decompose(position, quaternion, scale);
-                        return {
-                            position,
-                            quaternion,
-                            // scale,
-                        };
-                    };
-
-                    const {
-                        position: centerPoint,
-                        quaternion: planeQuaternion,
-                    } = _getTransform();
-                    const dynamic = false;
-                    const planePhysicsObject = physics.addPlaneGeometry(
-                        centerPoint,
-                        planeQuaternion,
-                        dynamic
-                    );
-                    planePhysicsObject.update = () => {
-                        const {
-                            position: centerPoint,
-                            quaternion: planeQuaternion,
-                        } = _getTransform();
-                        planePhysicsObject.position.copy(centerPoint);
-                        planePhysicsObject.quaternion.copy(planeQuaternion);
-
-                        physics.setTransform(planePhysicsObject, false);
-                    };
-                    this.wallPhysicsObjects.push(planePhysicsObject);
-
-                    physicsObjectTracker.add(planePhysicsObject);
-                }
-            }
-
-            // floor net physics
-            {
-                const {panel} = zineRenderer;
-                const layer1 = panel.getLayer(1);
-                const floorResolution = layer1.getData('floorResolution');
-                const floorNetDepths = layer1.getData('floorNetDepths');
-                const floorNetCameraJson = layer1.getData('floorNetCameraJson');
-
-                // camera
-                // const camera = setPerspectiveCameraFromJson(localCamera, cameraJson);
-                const floorNetCamera = setOrthographicCameraFromJson(localOrthographicCamera, floorNetCameraJson);
-
-                const [
-                    floorWidth,
-                    floorHeight,
-                ] = floorResolution;
-        
-                const floorNetPhysicsMaterial = new THREE.MeshPhongMaterial({
-                    color: 0xFF0000,
-                    side: THREE.BackSide,
-                    transparent: true,
-                    opacity: 0.5,
-                });
-                const floorNetPhysicsMesh = getFloorNetPhysicsMesh({
-                    floorNetDepths,
-                    floorNetCamera,
-                    material: floorNetPhysicsMaterial,
-                });
-                floorNetPhysicsMesh.name = 'floorNetPhysicsMesh';
-                floorNetPhysicsMesh.visible = false;
-                zineRenderer.transformScene.add(floorNetPhysicsMesh);
-                this.floorNetPhysicsMesh = floorNetPhysicsMesh;
-        
-                const numRows = floorWidth;
-                const numColumns = floorHeight;
-                const heights = getGeometryHeights(
-                    floorNetPhysicsMesh.geometry,
-                    floorWidth,
-                    floorHeight,
-                    heightfieldScale
-                );
-                const floorNetPhysicsObject = physics.addHeightFieldGeometry(
-                    floorNetPhysicsMesh,
-                    numRows,
-                    numColumns,
-                    heights,
-                    heightfieldScale,
-                    floorNetResolution,
-                    floorNetResolution
-                );
-                floorNetPhysicsObject.update = () => {
-                    floorNetPhysicsMesh.matrixWorld.decompose(
-                        floorNetPhysicsObject.position,
-                        floorNetPhysicsObject.quaternion,
-                        floorNetPhysicsObject.scale
-                    );
-                    physics.setTransform(floorNetPhysicsObject, false);
-                };
-                this.floorNetPhysicsObject = floorNetPhysicsObject;
-
-                physicsObjectTracker.add(floorNetPhysicsObject);
-            }
+            } */
 
             // camera manager
             const zineCameraManager = new ZineCameraManager({
@@ -740,20 +527,22 @@ class TitleScreenRenderer extends EventTarget {
                 followView: false,
             });
             this.zineCameraManager = zineCameraManager;
-            this.zineCameraManager.setLockCamera(zineRenderer.camera);
+            this.zineCameraManager.setLockCamera(camera);
             this.zineCameraManager.toggleCameraLock();
 
             // panel instance manager
-            const panelInstanceManager = new PanelInstanceManager({
+            const panelInstanceManager = new PanelInstanceManager(zineStoryboard, {
                 zineCameraManager,
                 physics,
+                localPlayer,
             });
             scene.add(panelInstanceManager);
             panelInstanceManager.updateMatrixWorld();
             this.panelInstanceManager = panelInstanceManager;
-    
+
             // path mesh
-            const splinePoints = zineRenderer.metadata.paths.map(p => new THREE.Vector3().fromArray(p.position));
+            const panel0Instance = panelInstanceManager.panelInstances[0];
+            const splinePoints = panel0Instance.zineRenderer.metadata.paths.map(p => new THREE.Vector3().fromArray(p.position));
             const pathMesh = new PathMesh(splinePoints, {
                 animate: true,
             });
@@ -925,21 +714,24 @@ class TitleScreenRenderer extends EventTarget {
             const timestamp = performance.now();
             const timeDiff = timestamp - lastTimestamp;
             
-            // local update
-            this.update(timestamp, timeDiff);
-            // simulate physics
-            const physics = physicsManager.getScene();
-            physics.simulatePhysics(timeDiff);
+            // if panels are loaded
+            if (this.panelInstanceManager) {
+                // local update
+                this.update(timestamp, timeDiff);
 
-            // update scene physics
-            if (this.scenePhysicsObject) {
-                this.scenePhysicsObject.update();
-            }
-            
-            
-            // update camera
-            if (this.zineCameraManager) {
-                this.zineCameraManager.updatePost(timestamp, timeDiff);
+                // simulate physics
+                const physics = physicsManager.getScene();
+                physics.simulatePhysics(timeDiff);
+
+                // update scene physics
+                if (this.scenePhysicsObject) {
+                    this.scenePhysicsObject.update();
+                }
+
+                // update camera
+                if (this.zineCameraManager) {
+                    this.zineCameraManager.updatePost(timestamp, timeDiff);
+                }
             }
 
             // render
