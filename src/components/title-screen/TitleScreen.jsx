@@ -1,6 +1,8 @@
+import {NetworkRealms} from 'multiplayer-do/public/network-realms.mjs'
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader.js';
 import {useState, useRef, useEffect} from 'react';
+import {realmSize} from '../../../constants/map-constants.js';
 import classnames from 'classnames';
 
 import {
@@ -282,9 +284,12 @@ const r = 0.3;
 const ah = 1.6;
 const h = ah - r * 2;
 const widthPadding = 0.25; // we calculate width from shoulders, but we need a little padding
-class LocalPlayer {
-    constructor() {
+class Player {
+    constructor(playerId, usePhysics) {
+        this.playerId = playerId;
         this.object = new THREE.Object3D();
+
+        // player meshes
         this.placeholderMesh = makePlaceholderMesh();
         this.object.add(this.placeholderMesh);
 
@@ -312,13 +317,13 @@ class LocalPlayer {
                 // globalThis.gltf = gltf;
             }
 
-            // character physics
-            {
-                const actionManager = new ActionManager();
-                // intialize position to local player position, since it is used by character controller initialization
-                this.avatar.inputs.hmd.position.copy(this.placeholderMesh.position);
-                this.avatar.inputs.hmd.quaternion.copy(this.placeholderMesh.quaternion);
+            // intialize position to local player position, since it is used by character controller initialization
+            this.avatar.inputs.hmd.position.copy(this.placeholderMesh.position);
+            this.avatar.inputs.hmd.quaternion.copy(this.placeholderMesh.quaternion);
 
+            // character physics
+            if (usePhysics) {
+                const actionManager = new ActionManager();
                 this.characterPhysics = new CharacterPhysics({
                     avatar: this.avatar,
                     actionManager,
@@ -348,7 +353,33 @@ class LocalPlayer {
     update({
         timestamp,
         timeDiff,
-        localPlayer,
+        camera,
+    }) {
+        this.placeholderMesh.update({
+            timestamp,
+            timeDiff,
+            localPlayer: this,
+            camera,
+        });
+    }
+}
+
+class LocalPlayer extends Player {
+    constructor(playerId) {
+        super(playerId, true);
+        this.realmsPlayer = null;
+        this.lastPosition = new THREE.Vector3();
+        this.placeholderMesh.position.z = -2;
+        this.placeholderMesh.updateMatrixWorld();
+    }
+    setRealmsPlayer(realmsPlayer) {
+        this.realmsPlayer = realmsPlayer;
+        this.realmsPlayer.setKeyValue('position', this.placeholderMesh.position.toArray());
+        this.lastPosition.copy(this.placeholderMesh.position);
+    }
+    update({
+        timestamp,
+        timeDiff,
         camera,
         keys,
     }) {
@@ -400,12 +431,50 @@ class LocalPlayer {
             avatarsWasmManager.physxWorker.updateInterpolationAnimationAvatar(this.avatar.animationAvatarPtr, timeDiff);
             applyCharacterPhysicsToAvatar(this.characterPhysics, this.avatar);
             this.avatar.update(timestamp, timeDiff);
+
+            if (this.realmsPlayer && !this.placeholderMesh.position.equals(this.lastPosition)) {
+                this.realmsPlayer.setKeyValue('position', this.placeholderMesh.position.toArray());
+                this.lastPosition.copy(this.placeholderMesh.position);
+            }
         }
 
-        this.placeholderMesh.update({
+        super.update({
             timestamp,
             timeDiff,
-            localPlayer: this,
+            camera,
+        });
+    }
+}
+
+class RemotePlayer extends Player {
+    constructor(playerId, realmsPlayer) {
+        super(playerId, false);
+
+        this.placeholderMesh.position.fromArray(realmsPlayer.getKeyValue('position'));
+        this.placeholderMesh.updateMatrixWorld();
+
+        realmsPlayer.addEventListener('update', e => {
+            const {key, val} = e.data;
+            if (key === 'position') {
+                // local player
+                this.placeholderMesh.position.fromArray(val);
+                this.placeholderMesh.updateMatrixWorld();
+
+                // avatar
+                this.avatar?.inputs.hmd.position.fromArray(val);
+            }
+        });
+    }
+    update({
+        timestamp,
+        timeDiff,
+        camera,
+    }) {
+        this.avatar?.update(timestamp, timeDiff);
+
+        super.update({
+            timestamp,
+            timeDiff,
             camera,
         });
     }
@@ -470,12 +539,13 @@ class TitleScreenRenderer extends EventTarget {
         this.camera = camera;
 
         // local player
-        const localPlayer = new LocalPlayer();
-        localPlayer.placeholderMesh.position.z = -2;
+        const localPlayer = new LocalPlayer(makeId(8));
         scene.add(localPlayer.object);
-        localPlayer.object.updateMatrixWorld();
         this.localPlayer = localPlayer;
-    
+
+        // remote players
+        this.remotePlayers = new Map();  // Map<playerId, RemotePlayer>
+
         // storyboard
         (async () => {
             await physicsManager.waitForLoad();
@@ -520,6 +590,123 @@ class TitleScreenRenderer extends EventTarget {
                 this.scenePhysicsObject = scenePhysicsObject;
                 
                 physicsObjectTracker.add(scenePhysicsObject);
+
+                // wall plane meshes
+            // planes[0] = right
+            // planes[1] = left
+            // planes[2] = bottom
+            // planes[3] = top
+            // planes[4] = far
+            // planes[5] = near
+            this.wallPhysicsObjects = [];
+            {
+                const {
+                    wallPlaneMeshes,
+                } = zineRenderer;
+
+                for (let i = 0; i < wallPlaneMeshes.length; i++) {
+                    const wallPlaneMesh = wallPlaneMeshes[i];
+                    // wallPlaneMesh.visible = true;
+
+                    const _getTransform = () => {
+                        const position = new THREE.Vector3();
+                        const quaternion = new THREE.Quaternion();
+                        const scale = new THREE.Vector3();
+                        wallPlaneMesh.matrixWorld.decompose(position, quaternion, scale);
+                        return {
+                            position,
+                            quaternion,
+                            // scale,
+                        };
+                    };
+
+                    const {
+                        position: centerPoint,
+                        quaternion: planeQuaternion,
+                    } = _getTransform();
+                    const dynamic = false;
+                    const planePhysicsObject = physics.addPlaneGeometry(
+                        centerPoint,
+                        planeQuaternion,
+                        dynamic
+                    );
+                    planePhysicsObject.update = () => {
+                        const {
+                            position: centerPoint,
+                            quaternion: planeQuaternion,
+                        } = _getTransform();
+                        planePhysicsObject.position.copy(centerPoint);
+                        planePhysicsObject.quaternion.copy(planeQuaternion);
+
+                        physics.setTransform(planePhysicsObject, false);
+                    };
+                    this.wallPhysicsObjects.push(planePhysicsObject);
+
+                    physicsObjectTracker.add(planePhysicsObject);
+                }
+            }
+
+            // floor net physics
+            {
+                const {panel} = zineRenderer;
+                const layer1 = panel.getLayer(1);
+                const floorResolution = layer1.getData('floorResolution');
+                const floorNetDepths = layer1.getData('floorNetDepths');
+                const floorNetCameraJson = layer1.getData('floorNetCameraJson');
+
+                // camera
+                // const camera = setPerspectiveCameraFromJson(localCamera, cameraJson);
+                const floorNetCamera = setOrthographicCameraFromJson(localOrthographicCamera, floorNetCameraJson);
+
+                const [
+                    floorWidth,
+                    floorHeight,
+                ] = floorResolution;
+        
+                const floorNetPhysicsMaterial = new THREE.MeshPhongMaterial({
+                    color: 0xFF0000,
+                    side: THREE.BackSide,
+                    transparent: true,
+                    opacity: 0.5,
+                });
+                const floorNetPhysicsMesh = getFloorNetPhysicsMesh({
+                    floorNetDepths,
+                    floorNetCamera,
+                    material: floorNetPhysicsMaterial,
+                });
+                floorNetPhysicsMesh.name = 'floorNetPhysicsMesh';
+                floorNetPhysicsMesh.visible = false;
+                zineRenderer.transformScene.add(floorNetPhysicsMesh);
+                this.floorNetPhysicsMesh = floorNetPhysicsMesh;
+        
+                const numRows = floorWidth;
+                const numColumns = floorHeight;
+                const heights = getGeometryHeights(
+                    floorNetPhysicsMesh.geometry,
+                    floorWidth,
+                    floorHeight,
+                    heightfieldScale
+                );
+                const floorNetPhysicsObject = physics.addHeightFieldGeometry(
+                    floorNetPhysicsMesh,
+                    numRows,
+                    numColumns,
+                    heights,
+                    heightfieldScale,
+                    floorNetResolution,
+                    floorNetResolution
+                );
+                floorNetPhysicsObject.update = () => {
+                    floorNetPhysicsMesh.matrixWorld.decompose(
+                        floorNetPhysicsObject.position,
+                        floorNetPhysicsObject.quaternion,
+                        floorNetPhysicsObject.scale
+                    );
+                    physics.setTransform(floorNetPhysicsObject, false);
+                };
+                this.floorNetPhysicsObject = floorNetPhysicsObject;
+
+                physicsObjectTracker.add(floorNetPhysicsObject);
             } */
 
             // camera manager
@@ -552,6 +739,49 @@ class TitleScreenRenderer extends EventTarget {
             });
             scene.add(pathMesh);
             pathMesh.updateMatrixWorld();
+        })();
+
+        // network realms
+        this.realms = null;
+        (async () => {
+            // room
+            const room = 'ABCDEFGH';
+            await this.connectNetworkRealms(room);
+            console.debug('Multiplayer connected:', room);
+            console.debug('Player:', this.localPlayer.playerId);
+            this.cleanupFns.push(() => {
+                this.disconnectNetworkRealms();
+                console.log("Multiplayer disconnected");
+            });
+
+            // remote players
+            const virtualPlayers = this.realms.getVirtualPlayers();
+            const onVirtualPlayersJoin = e => {
+                const {playerId, player} = e.data;
+                console.log('Player joined:', playerId);
+                const remotePlayer = new RemotePlayer(playerId, player);
+                this.remotePlayers.set(playerId, remotePlayer);
+                scene.add(remotePlayer.object);
+            };
+            virtualPlayers.addEventListener('join', onVirtualPlayersJoin);
+            this.cleanupFns.push(() => {
+                virtualPlayers.removeEventListener('join', onVirtualPlayersJoin);
+            });
+            const onVirtualPlayersLeave = e => {
+                const {playerId} = e.data;
+                console.log('Player left:', playerId);
+                const remotePlayer = this.remotePlayers.get(playerId);
+                if (remotePlayer) {
+                    scene.remove(remotePlayer.placeholderMesh);
+                    this.remotePlayers.delete(playerId);
+                } else {
+                    console.error('Remote player to remove not found');
+                }
+            };
+            virtualPlayers.addEventListener('leave', onVirtualPlayersLeave);
+            this.cleanupFns.push(() => {
+                virtualPlayers.removeEventListener('leave', onVirtualPlayersLeave);
+            });
         })();
 
         // video mesh
@@ -751,6 +981,30 @@ class TitleScreenRenderer extends EventTarget {
             cancelAnimationFrame(frame);
         });
     }
+    async connectNetworkRealms(room) {
+        this.realms = new NetworkRealms(room, this.localPlayer.playerId);
+
+        (async () => {
+            const onConnect = async position => {
+                // Initialize network realms player.
+                this.realms.localPlayer.initializePlayer({
+                  position,
+                }, {});
+                this.localPlayer.setRealmsPlayer(this.realms.localPlayer);
+            };
+
+            // Initiate network realms connection.
+            await this.realms.updatePosition(this.localPlayer.position.toArray(), realmSize, {
+                onConnect,
+            });
+        })();
+    }
+    disconnectNetworkRealms() {
+        if (this.realms) {
+            this.realms.disconnect();
+            this.realms = null;
+        }
+    }
     static portalSizes = [
         1,
         0,
@@ -802,6 +1056,13 @@ class TitleScreenRenderer extends EventTarget {
                 camera: this.camera,
                 keys: this.keys,
             });
+        for (const player of this.remotePlayers.values()) {
+            player.update({
+                timestamp,
+                timeDiff,
+                camera: this.camera,
+            });
+        }
         }
     }
     destroy() {
