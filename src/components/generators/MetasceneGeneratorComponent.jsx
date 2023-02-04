@@ -41,6 +41,7 @@ import {
 import {
   mainImageKey,
   promptKey,
+  isRootKey,
 } from '../../zine/zine-data-specs.js';
 import {
   panelSize,
@@ -2296,6 +2297,7 @@ class MetazineLoader {
       const layer0 = panel.getLayer(0);
       const imageArrayBuffer = layer0.getData(mainImageKey);
       const prompt = layer0.getData(promptKey);
+      const isRoot = layer0.getData(isRootKey);
       const layer1 = panel.getLayer(1);
       const positionArray = layer1.getData('position');
       const quaternionArray = layer1.getData('quaternion');
@@ -2318,7 +2320,6 @@ class MetazineLoader {
       const panelSpec = new THREE.Object3D();
       panelSpec.name = fileName;
       panelSpec.description = prompt;
-      const isRoot = this.freeList.isEmpty();
       panelSpec.index = this.freeList.alloc(1);
       panelSpec.isRoot = isRoot;
       // NOTE: the file is needed during export
@@ -2382,6 +2383,7 @@ class MetazineLoader {
 
       return panelSpec;
     };
+    
     const panelSpecs = panels.map(panel => loadPanel(panel));
     return panelSpecs;
   }
@@ -2530,6 +2532,20 @@ export class Metazine extends EventTarget {
         )
       );
       const newPanelSpecs = panelSpecsArray.flat();
+
+      const _setRoot = panelSpecs => {
+        let rootPanelIndex = panelSpecs.findIndex(panelSpec => panelSpec.isRoot);
+        if (rootPanelIndex === -1) {
+          rootPanelIndex = 0;
+        }
+        for (let i = 0; i < panelSpecs.length; i++) {
+          const panelSpec = panelSpecs[i];
+          panelSpec.isRoot = i === rootPanelIndex;
+          console.log('post load set is root', i, panelSpec.isRoot);
+        }
+      };
+      _setRoot(newPanelSpecs);
+
       this.renderPanelSpecs.push(...newPanelSpecs);
     }
     console.timeEnd('loadPanels');
@@ -2826,6 +2842,7 @@ export class Metazine extends EventTarget {
       const panelSpec = this.renderPanelSpecs[i];
       const {
         file: zineFile,
+        isRoot,
         entranceExitLocations,
       } = panelSpec;
       
@@ -2844,8 +2861,16 @@ export class Metazine extends EventTarget {
         const layerIds = storyboard.zd.getKeys([
           panelId,
         ]);
-        const layer1Id = layerIds[1];
+        const [
+          layer0Id,
+          layer1Id,
+        ] = layerIds;
         
+        storyboard.zd.setData([
+          panelId,
+          layer0Id,
+          isRootKey,
+        ], isRoot);
         storyboard.zd.setData([
           panelId,
           layer1Id,
