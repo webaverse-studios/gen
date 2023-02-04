@@ -4839,6 +4839,29 @@ const MetasceneGeneratorComponent = () => {
                 });
                 openZineFile(blob);
               }}>Metazine to app</button>
+              <button className={styles.button} onClick={async e => {
+                e.preventDefault();
+                e.stopPropagation();
+
+                const uint8Array = await metazine.exportAsync();
+                const blob = new Blob([
+                  zineMagicBytes,
+                  uint8Array,
+                ], {
+                  type: 'application/octet-stream',
+                });
+
+                // upload tmp file
+                const u = await zineFile2Url(blob);
+
+                // compute open url
+                const u2 = new URL(globalThis.location.href);
+                u2.searchParams.set('tab', 'titleScreen');
+                u2.searchParams.set('src', u);
+
+                const router = useRouter();
+                router.pushUrl(u2.href);
+              }}>Metazine to title</button>
             </div>
             <div className={styles.sidebar}>
               {loading ?
