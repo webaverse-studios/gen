@@ -80,6 +80,8 @@ import {
     getFloorNetPhysicsMesh,
 } from '../../zine/zine-mesh-utils.js';
 
+import {useRouter} from '../../generators/router.js';
+
 import {
     // reconstructPointCloudFromDepthField,
     // setCameraViewPositionFromOrthographicViewZ,
@@ -91,6 +93,9 @@ import {
   } from '../../zine/zine-geometry-utils.js';
 
 import Avatar from '../../avatars/avatars.js';
+import {
+    zineMagicBytes,
+} from '../../zine/zine-constants.js';
 
 import {
     setPerspectiveCameraFromJson,
@@ -123,6 +128,8 @@ const localOrthographicCamera = new THREE.OrthographicCamera();
 // const zeroVector = new THREE.Vector3(0, 0, 0);
 // const oneVector = new THREE.Vector3(1, 1, 1);
 // const upVector = new THREE.Vector3(0, 1, 0);
+
+const textDecoder = new TextDecoder();
 
 //
 
@@ -1448,6 +1455,10 @@ const MainScreen = ({
 
 //
 
+const seenRouters = new WeakMap();
+
+//
+
 const TitleScreen = () => {
     const [loading, setLoading] = useState(false);
     const [loaded, setLoaded] = useState(false);
@@ -1456,6 +1467,61 @@ const TitleScreen = () => {
     const [hups, setHups] = useState([]);
 
     const canvasRef = useRef();
+
+    const setSrc = async src => {
+        if (src) {
+          const res = await fetch(src);
+          const arrayBuffer = await res.arrayBuffer();
+    
+          // check magic bytes
+          const firstBytes = new Uint8Array(arrayBuffer, 0, zineMagicBytes.length);
+          const firstBytesString = textDecoder.decode(firstBytes);
+          if (firstBytesString === zineMagicBytes) {
+            const uint8Array = new Uint8Array(arrayBuffer, zineMagicBytes.length);
+            // await onPanelsLoad(uint8Array);
+            console.log('load bytes', uint8Array);
+
+            // titleScreenRenderer && titleScreenRenderer.destroy();
+            // setTitleScreenRenderer(null);
+
+            const canvas = canvasRef.current;
+            if (canvas) {
+                // const uint8Array = await _loadFile(titleScreenZineFileName);
+
+                const newTitleScreenRenderer = new TitleScreenRenderer({
+                    canvas,
+                    uint8Array,
+                });
+                setTitleScreenRenderer(newTitleScreenRenderer);
+                setLoaded(true);
+
+                // console.log('done loading', newTitleScreenRenderer);
+            } else {
+                throw new Error('no canvas');
+            }
+          } else {
+            console.warn('got invalid file', {firstBytes, firstBytesString});
+          }
+        }
+      };
+      useEffect(() => {
+        const router = useRouter();
+        if (!seenRouters.has(router)) {
+            seenRouters.set(router, true);
+            
+            if (router.currentSrc) {
+                setSrc(router.currentSrc);
+            }
+            const srcchange = e => {
+                const {src} = e.data;
+                setSrc(src);
+            };
+            router.addEventListener('srcchange', srcchange);
+            return () => {
+              router.removeEventListener('srcchange', srcchange);
+            };
+        }
+      }, []);
 
     useEffect(() => {
         const keydown = async e => {
