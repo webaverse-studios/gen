@@ -1479,7 +1479,6 @@ const TitleScreen = () => {
           if (firstBytesString === zineMagicBytes) {
             const uint8Array = new Uint8Array(arrayBuffer, zineMagicBytes.length);
             // await onPanelsLoad(uint8Array);
-            console.log('load bytes', uint8Array);
 
             // titleScreenRenderer && titleScreenRenderer.destroy();
             // setTitleScreenRenderer(null);
