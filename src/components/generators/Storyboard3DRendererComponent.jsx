@@ -135,10 +135,8 @@ export const Storyboard3DRendererComponent = ({
             u2.searchParams.set('tab', 'titleScreen');
             u2.searchParams.set('src', u);
 
-            console.log('send to u2', u2);
-
-            // const router = useRouter();
-            // router.pushUrl(u2.href);
+            const router = useRouter();
+            router.pushUrl(u2.href);
           }}>Send to title</button>
           <button className={styles.button} onClick={async e => {
             const blob = await getZineFileBlob();
