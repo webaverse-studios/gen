@@ -133,6 +133,7 @@ const localOrthographicCamera = new THREE.OrthographicCamera();
 // const zeroVector = new THREE.Vector3(0, 0, 0);
 // const oneVector = new THREE.Vector3(1, 1, 1);
 // const upVector = new THREE.Vector3(0, 1, 0);
+const y180Quaternion = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI);
 
 const textDecoder = new TextDecoder();
 
@@ -554,160 +555,8 @@ class TitleScreenRenderer extends EventTarget {
             await zineStoryboard.loadAsync(uint8Array);
             if (!live) return;
 
-            // const panel0 = zineStoryboard.getPanel(0);
-            // const zineRenderer = new ZineRenderer({
-            //     panel: panel0,
-            //     alignFloor: true,
-            // });
-    
-            // // scene mesh
-            // scene.add(zineRenderer.scene);
-            // zineRenderer.scene.updateMatrixWorld();
-
             // scene physics
             const physics = physicsManager.getScene();
-            /* {
-                const {
-                    scenePhysicsMesh,
-                } = zineRenderer;
-                const geometry2 = getDoubleSidedGeometry(scenePhysicsMesh.geometry);
-        
-                const scenePhysicsMesh2 = new THREE.Mesh(geometry2, scenePhysicsMesh.material);
-                scenePhysicsMesh2.name = 'scenePhysicsMesh';
-                scenePhysicsMesh2.visible = false;
-                zineRenderer.transformScene.add(scenePhysicsMesh2);
-                this.scenePhysicsMesh = scenePhysicsMesh2;
-
-                const scenePhysicsObject = physics.addGeometry(scenePhysicsMesh2);
-                scenePhysicsObject.update = () => {
-                    scenePhysicsMesh2.matrixWorld.decompose(
-                        scenePhysicsObject.position,
-                        scenePhysicsObject.quaternion,
-                        scenePhysicsObject.scale
-                    );
-                    physics.setTransform(scenePhysicsObject, false);
-                };
-                this.scenePhysicsObject = scenePhysicsObject;
-                
-                physicsObjectTracker.add(scenePhysicsObject);
-
-                // wall plane meshes
-            // planes[0] = right
-            // planes[1] = left
-            // planes[2] = bottom
-            // planes[3] = top
-            // planes[4] = far
-            // planes[5] = near
-            this.wallPhysicsObjects = [];
-            {
-                const {
-                    wallPlaneMeshes,
-                } = zineRenderer;
-
-                for (let i = 0; i < wallPlaneMeshes.length; i++) {
-                    const wallPlaneMesh = wallPlaneMeshes[i];
-                    // wallPlaneMesh.visible = true;
-
-                    const _getTransform = () => {
-                        const position = new THREE.Vector3();
-                        const quaternion = new THREE.Quaternion();
-                        const scale = new THREE.Vector3();
-                        wallPlaneMesh.matrixWorld.decompose(position, quaternion, scale);
-                        return {
-                            position,
-                            quaternion,
-                            // scale,
-                        };
-                    };
-
-                    const {
-                        position: centerPoint,
-                        quaternion: planeQuaternion,
-                    } = _getTransform();
-                    const dynamic = false;
-                    const planePhysicsObject = physics.addPlaneGeometry(
-                        centerPoint,
-                        planeQuaternion,
-                        dynamic
-                    );
-                    planePhysicsObject.update = () => {
-                        const {
-                            position: centerPoint,
-                            quaternion: planeQuaternion,
-                        } = _getTransform();
-                        planePhysicsObject.position.copy(centerPoint);
-                        planePhysicsObject.quaternion.copy(planeQuaternion);
-
-                        physics.setTransform(planePhysicsObject, false);
-                    };
-                    this.wallPhysicsObjects.push(planePhysicsObject);
-
-                    physicsObjectTracker.add(planePhysicsObject);
-                }
-            }
-
-            // floor net physics
-            {
-                const {panel} = zineRenderer;
-                const layer1 = panel.getLayer(1);
-                const floorResolution = layer1.getData('floorResolution');
-                const floorNetDepths = layer1.getData('floorNetDepths');
-                const floorNetCameraJson = layer1.getData('floorNetCameraJson');
-
-                // camera
-                // const camera = setPerspectiveCameraFromJson(localCamera, cameraJson);
-                const floorNetCamera = setOrthographicCameraFromJson(localOrthographicCamera, floorNetCameraJson);
-
-                const [
-                    floorWidth,
-                    floorHeight,
-                ] = floorResolution;
-        
-                const floorNetPhysicsMaterial = new THREE.MeshPhongMaterial({
-                    color: 0xFF0000,
-                    side: THREE.BackSide,
-                    transparent: true,
-                    opacity: 0.5,
-                });
-                const floorNetPhysicsMesh = getFloorNetPhysicsMesh({
-                    floorNetDepths,
-                    floorNetCamera,
-                    material: floorNetPhysicsMaterial,
-                });
-                floorNetPhysicsMesh.name = 'floorNetPhysicsMesh';
-                floorNetPhysicsMesh.visible = false;
-                zineRenderer.transformScene.add(floorNetPhysicsMesh);
-                this.floorNetPhysicsMesh = floorNetPhysicsMesh;
-        
-                const numRows = floorWidth;
-                const numColumns = floorHeight;
-                const heights = getGeometryHeights(
-                    floorNetPhysicsMesh.geometry,
-                    floorWidth,
-                    floorHeight,
-                    heightfieldScale
-                );
-                const floorNetPhysicsObject = physics.addHeightFieldGeometry(
-                    floorNetPhysicsMesh,
-                    numRows,
-                    numColumns,
-                    heights,
-                    heightfieldScale,
-                    floorNetResolution,
-                    floorNetResolution
-                );
-                floorNetPhysicsObject.update = () => {
-                    floorNetPhysicsMesh.matrixWorld.decompose(
-                        floorNetPhysicsObject.position,
-                        floorNetPhysicsObject.quaternion,
-                        floorNetPhysicsObject.scale
-                    );
-                    physics.setTransform(floorNetPhysicsObject, false);
-                };
-                this.floorNetPhysicsObject = floorNetPhysicsObject;
-
-                physicsObjectTracker.add(floorNetPhysicsObject);
-            } */
 
             // camera manager
             const zineCameraManager = new ZineCameraManager({
@@ -739,6 +588,59 @@ class TitleScreenRenderer extends EventTarget {
             });
             scene.add(pathMesh);
             pathMesh.updateMatrixWorld();
+
+            const selectedPanel = panelInstanceManager.panelInstances.find(p => p.selected);
+            if (!selectedPanel) {
+                throw new Error('no selected panel');
+            }
+            const {
+                entranceExitLocations,
+            } = selectedPanel.zineRenderer.metadata;
+            // console.log('got eels', entranceExitLocations);
+            for (let i = 0; i < entranceExitLocations.length; i++) {
+                const eel = entranceExitLocations[i];
+                const {
+                  panelIndex,
+                  entranceIndex,
+                } = eel;
+
+                if (panelIndex !== -1 && entranceIndex !== -1) {
+                    const portalScene = new THREE.Scene();
+                    portalScene.autoUpdate = false;
+                    {
+                        const gltfLoader = new GLTFLoader();
+                        gltfLoader.load('/models/skybox.glb', gltf => {
+                            const skyboxMesh = gltf.scene;
+                            portalScene.add(skyboxMesh);  
+                            skyboxMesh.updateMatrixWorld();
+                        }, undefined, err => {
+                            console.warn(err);
+                        });
+                    }
+
+                    const noiseImage = await loadImage('/images/noise.png');
+
+                    const portalMesh = new PortalMesh({
+                        renderer,
+                        portalScene,
+                        portalCamera: camera,
+                        noiseImage,
+                    });
+                    portalMesh.position.fromArray(eel.position)
+                        .add(
+                            localVector.set(0, eel.size[1] / 2, 0)
+                                .applyQuaternion(localQuaternion.fromArray(eel.quaternion))
+                        );
+                    portalMesh.quaternion.fromArray(eel.quaternion)
+                        .multiply(y180Quaternion);
+                    portalMesh.scale.fromArray(eel.size);
+                    portalMesh.scale.x = portalMesh.scale.y;
+                    portalMesh.scale.z = 1;
+                    selectedPanel.zineRenderer.transformScene.add(portalMesh);
+                    portalMesh.updateMatrixWorld();
+                    this.portalMeshes.push(portalMesh);
+                }
+            }
         })();
 
         // network realms
@@ -815,58 +717,9 @@ class TitleScreenRenderer extends EventTarget {
             videoMesh.frustumCulled = false;
             scene.add(videoMesh);
         })();
-        /* (async () => {
-            const videoUrl = `${assetsBaseUrl}/videos/upstreet2.mp4`;
-            // console.log('got video url', videoUrl);
-            video = await _loadVideo(videoUrl);
-            if (!live) return;
-            
-            video.muted = true;
-            video.play();
-            video.loop = true;
-            // video.playbackRate = 2;
-            video.style.cssText = `\
-                position: absolute;
-                top: 0;
-                left: 0;
-            `;
-            // document.body.appendChild(video);
-
-            this.cleanupFns.push(() => {
-                video.pause();
-            });
-        })(); */
 
         // portal mesh
-        this.portalMesh = null;
-        (async () => {
-            const portalScene = new THREE.Scene();
-            portalScene.autoUpdate = false;
-            {
-                const gltfLoader = new GLTFLoader();
-                gltfLoader.load('/models/skybox.glb', gltf => {
-                    const skyboxMesh = gltf.scene;
-                    portalScene.add(skyboxMesh);  
-                    skyboxMesh.updateMatrixWorld();
-                }, undefined, err => {
-                  console.warn(err);
-                });
-            }
-
-            const noiseImage = await loadImage('/images/noise.png');
-
-            const portalMesh = new PortalMesh({
-                renderer,
-                portalScene,
-                portalCamera: camera,
-                noiseImage,
-            });
-            this.portalMesh = portalMesh;
-            portalMesh.position.set(0, -1, -5);
-            portalMesh.scale.setScalar(3);
-            scene.add(portalMesh);
-            portalMesh.updateMatrixWorld();
-        })();
+        this.portalMeshes = [];
         this.portalSizeIndex = 0;
         this.portalAnimations = [];
 
@@ -1025,10 +878,11 @@ class TitleScreenRenderer extends EventTarget {
 
         const startTime = performance.now();
         const nextSize = TitleScreenRenderer.portalSizes[this.portalSizeIndex];
+        const portalMesh0 = this.portalMeshes[0];
         this.portalAnimations.push(new LinearAnimation({
             startTime,
             duration: 1000,
-            startValue: this.portalMesh.getScale(),
+            startValue: portalMesh0.getScale(),
             endValue: nextSize,
         }));
     }
@@ -1042,16 +896,24 @@ class TitleScreenRenderer extends EventTarget {
                 resolution,
             });
         }
-        if (this.portalMesh) {
+        if (this.portalMeshes.length > 0) {
+            // update animations and calculate scale
+            const portalMesh0 = this.portalMeshes[0];
+            let scale = portalMesh0.getScale();
             this.portalAnimations = this.portalAnimations.filter(portalAnimation => {
                 const {
                     done,
                     value,
                 } = portalAnimation.update(timestamp);
-                this.portalMesh.setScale(value);
+                scale = value;
                 return !done;
             });
-            this.portalMesh.update(timestamp);
+            // update portal meshes
+            for (let i = 0; i < this.portalMeshes.length; i++) {
+                const portalMesh = this.portalMeshes[i];
+                portalMesh.setScale(scale);
+                portalMesh.update(timestamp);
+            }
         }
         if (this.panelInstanceManager) {
             const {mousePosition} = this.zineCameraManager;
