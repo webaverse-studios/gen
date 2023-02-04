@@ -9,13 +9,13 @@ class Router extends EventTarget {
     const _update = () => {
       this.handleUrlUpdate(globalThis.location.href);
     };
-    window.addEventListener('popstate', _update);
-    window.addEventListener('load', _update, {
+    globalThis.addEventListener('popstate', _update);
+    globalThis.addEventListener('load', _update, {
       once: true,
     });
   }
   pushUrl(u) {
-    window.history.pushState({}, '', u);
+    globalThis.history.pushState({}, '', u);
     this.handleUrlUpdate(u);
   }
   handleUrlUpdate(urlString) {
