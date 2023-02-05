@@ -1,0 +1,18 @@
+.quest {
+  position: 'fixed';
+  top: 0;
+  left: 0;
+  z-index: 3;
+  background-color: #222;
+  color: #FFF;
+  user-select: none;
+  width: 500px;
+  transform: translate(-500px, 0);
+  transition: all 0.5s cubic-bezier(0, 1, 0, 1);
+}
+.quest.animate {
+  transform: translate(0, 0);
+}
+.quest .objectives {
+  white-space: pre-wrap;
+}
