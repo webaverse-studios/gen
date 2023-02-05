@@ -1458,6 +1458,9 @@ const Quest = ({
             <div className={styles.description}>
                 {Description}
             </div>
+            <div className={styles.objectives}>
+                {Objectives.join('\n')}
+            </div>
         </div>
     </div>);
 }

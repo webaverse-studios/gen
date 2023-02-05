@@ -237,3 +237,6 @@
 .quest.animate {
   transform: translate(0, 0);
 }
+.quest .objectives {
+  white-space: pre-wrap;
+}
