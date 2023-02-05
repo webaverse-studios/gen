@@ -2646,8 +2646,8 @@ export class Metazine extends EventTarget {
     });
 
     // iteratively connect additional panels
-    let numIntersects = 0;
-    const maxNumIntersects = 100;
+    // let numIntersects = 0;
+    // const maxNumIntersects = 100;
     while (
       candidateExitSpecs.length > 0 &&
       candidateEntrancePanelSpecs.length > 0
