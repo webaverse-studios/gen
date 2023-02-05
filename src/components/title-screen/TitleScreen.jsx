@@ -8,9 +8,9 @@ import classnames from 'classnames';
 import {
     ZineStoryboard,
 } from '../../zine/zine-format.js';
-import {
-    ZineRenderer,
-} from '../../zine/zine-renderer.js';
+// import {
+//     ZineRenderer,
+// } from '../../zine/zine-renderer.js';
 import {
     ZineCameraManager,
 } from '../../zine-runtime/zine-camera.js';
@@ -43,9 +43,9 @@ import {
 import {
     loadImage,
 } from '../../../utils.js';
-import {
-    physicsObjectTracker,
-} from '../../physics/physics-manager.js';
+// import {
+//     physicsObjectTracker,
+// } from '../../physics/physics-manager.js';
 import physicsManager from '../../physics/physics-manager.js';
 import {
     CharacterPhysics,
@@ -62,9 +62,9 @@ import {
     Hups,
 } from '../hups/Hups.jsx';
 
-import {
-    getDoubleSidedGeometry,
-} from '../../zine/zine-geometry-utils.js';
+// import {
+//     getDoubleSidedGeometry,
+// } from '../../zine/zine-geometry-utils.js';
 import avatarsWasmManager from '../../avatars/avatars-wasm-manager.js';
 
 import styles from '../../../styles/TitleScreen.module.css';
@@ -78,37 +78,31 @@ import {
     ActionManager,
 } from './ActionManager.js';
 
-import {
-    getFloorNetPhysicsMesh,
-} from '../../zine/zine-mesh-utils.js';
+// import {
+//     getFloorNetPhysicsMesh,
+// } from '../../zine/zine-mesh-utils.js';
 import {
     PanelInstanceManager,
 } from '../../zine-runtime/zine-manager.js';
 
 import {useRouter} from '../../generators/router.js';
 
-import {
-    // reconstructPointCloudFromDepthField,
-    // setCameraViewPositionFromOrthographicViewZ,
-    // getDepthFloatsFromPointCloud,
-    // depthFloat32ArrayToOrthographicGeometry,
-    // getDepthFloat32ArrayWorldPosition,
-    // getDoubleSidedGeometry,
-    getGeometryHeights,
-  } from '../../zine/zine-geometry-utils.js';
+// import {
+//     getGeometryHeights,
+//   } from '../../zine/zine-geometry-utils.js';
 
 import Avatar from '../../avatars/avatars.js';
 import {
     zineMagicBytes,
 } from '../../zine/zine-constants.js';
 
-import {
-    setPerspectiveCameraFromJson,
-    setOrthographicCameraFromJson,
-} from '../../zine/zine-camera-utils.js';
-import {
-    floorNetResolution,
-} from '../../zine/zine-constants.js';
+// import {
+//     setPerspectiveCameraFromJson,
+//     setOrthographicCameraFromJson,
+// } from '../../zine/zine-camera-utils.js';
+// import {
+//     floorNetResolution,
+// } from '../../zine/zine-constants.js';
 
 //
 
@@ -117,7 +111,7 @@ const assetsBaseUrl = `https://cdn.jsdelivr.net/gh/webaverse/content@${hash}/`;
 const titleScreenZineFileName = 'title-screen.zine';
 const cubicBezier = bezier(0, 1, 0, 1);
 // const gravity = new THREE.Vector3(0, -9.8, 0);
-const heightfieldScale = 0.1; // must fit heightfield in int16
+// const heightfieldScale = 0.1; // must fit heightfield in int16
 const avatarUrl = `/avatars/Scillia_Drophunter_V19.vrm`;
 
 //
