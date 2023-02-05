@@ -14,7 +14,6 @@ export const Quest = ({
     live = true,
     onZombie = () => {},
 }) => {
-    console.log('render quest', Name, live);
     const [animateIn, setAnimateIn] = useState(false);
     const [animateOut, setAnimateOut] = useState(false);
     const nodeRef = useRef(null);
