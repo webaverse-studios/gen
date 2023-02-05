@@ -781,10 +781,11 @@ const getRaycastedCameraEntranceLocation = (() => {
     );
     if (cameraDistance !== null) {
       // ensure there is space for the player to stand
+      const portalOffset = 0.5;
       const targetPosition = getFloorHit(
         position,
         quaternion,
-        localVector2.set(0, 0, -cameraDistance)
+        localVector2.set(0, 0, -cameraDistance - portalOffset)
           .applyQuaternion(quaternion),
         depthFloatsRaw,
         floorPlaneJson,
