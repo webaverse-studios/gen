@@ -2,6 +2,7 @@ import {NetworkRealms} from 'multiplayer-do/public/network-realms.mjs'
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader.js';
 import {useState, useRef, useEffect} from 'react';
+import {flushSync} from 'react-dom'; // Note: react-dom, not react
 import {realmSize} from '../../../constants/map-constants.js';
 import classnames from 'classnames';
 
@@ -1433,8 +1434,8 @@ const TitleScreen = () => {
             console.warn('got invalid file', {firstBytes, firstBytesString});
           }
         }
-      };
-      useEffect(() => {
+    };
+    useEffect(() => {
         const router = useRouter();
         if (!seenRouters.has(router)) {
             seenRouters.set(router, true);
@@ -1451,7 +1452,7 @@ const TitleScreen = () => {
               router.removeEventListener('srcchange', srcchange);
             };
         }
-      }, []);
+    }, []);
 
     useEffect(() => {
         const keydown = async e => {
@@ -1489,6 +1490,19 @@ const TitleScreen = () => {
                 case 'D':
                 {
                     titleScreenRenderer.keys.right = true;
+                    break;
+                }
+                case 'k':
+                case 'K':
+                {
+                    const newHup = {
+                        id: makeId(8),
+                    };
+                    const newHups = hups.slice();
+                    newHups.push(newHup);
+                    flushSync(() => {
+                        setHups(newHups);
+                    });
                     break;
                 }
                 case 'o':
@@ -1549,14 +1563,6 @@ const TitleScreen = () => {
                     titleScreenRenderer.keys.right = false;
                     break;
                 }
-                case 'k':
-                {
-                    const newHup = {
-                        id: makeId(8),
-                    };
-                    setHups([...hups, newHup]);
-                    break;
-                }
             }
         };
         document.addEventListener('keyup', keyup);
@@ -1568,10 +1574,10 @@ const TitleScreen = () => {
     }, [
         canvasRef.current,
         titleScreenRenderer,
-        titleScreenRenderer?.keys.left,
-        titleScreenRenderer?.keys.right,
-        titleScreenRenderer?.keys.up,
-        titleScreenRenderer?.keys.down,
+        // titleScreenRenderer?.keys.left,
+        // titleScreenRenderer?.keys.right,
+        // titleScreenRenderer?.keys.up,
+        // titleScreenRenderer?.keys.down,
     ]);
 
     return (
@@ -1586,7 +1592,9 @@ const TitleScreen = () => {
                 }}
                 canvasRef={canvasRef}
             />
-            {hups.map(hup => <Hups hup={hup} key={hup.id} />)}
+            {hups.map(hup => (
+                <Hups hup={hup} key={hup.id} />
+            ))}
             {loading ? (
                 <div className={styles.header}>
                     loading...
