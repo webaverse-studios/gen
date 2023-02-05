@@ -1431,16 +1431,10 @@ const Quest = ({
             console.log('set animate out', true);
             setAnimateOut(true);
 
-            console.log('animate out');
-
-            // wait for transitionEnd
-
             const nodeEl = nodeRef.current;
             const transitionEnd = e => {
                 if (e.target === nodeEl) {
-                    console.log('transition end');
                     nodeEl.removeEventListener('transitionend', transitionEnd);
-                    // nodeEl.remove();
                     onZombie();
                 }
             };
@@ -1452,19 +1446,11 @@ const Quest = ({
         }
     }, [nodeRef.current, live]);
 
-    // useEffect(() => {
-    //    console.log('got ref', nodeRef.current);
-    // }, [nodeRef.current]);
-
     const animate = animateIn && !animateOut;
-    console.log('render animate', animate);
     return (<div className={classnames(
         styles.quest,
         animate ? styles.animate : null,
     )} ref={nodeRef}>
-        {/* <div className={styles.image}>
-            <img src={Image} />
-        </div> */}
         <div className={styles.content}>
             <div className={styles.name}>
                 {Name}
@@ -1472,11 +1458,6 @@ const Quest = ({
             <div className={styles.description}>
                 {Description}
             </div>
-            {/* <div className={styles.objectives}>
-                {Objectives.map((objective, i) => <div key={i} className={styles.objective}>
-                    {objective}
-                </div>)}
-            </div> */}
         </div>
     </div>);
 }
