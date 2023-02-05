@@ -105,6 +105,15 @@ import {
 //     floorNetResolution,
 // } from '../../zine/zine-constants.js';
 
+import {
+    getDatasetSpecs,
+} from '../../dataset-engine/dataset-specs.js';
+import {
+    DatasetGenerator,
+} from '../../dataset-engine/dataset-generator.js';
+
+import {AiClient} from '../../../clients/ai/ai-client.js';
+
 //
 
 const hash = `8ebd78be3078833da10c95b565ee88b7cf6ba9e0`;
@@ -114,6 +123,10 @@ const cubicBezier = bezier(0, 1, 0, 1);
 // const gravity = new THREE.Vector3(0, -9.8, 0);
 // const heightfieldScale = 0.1; // must fit heightfield in int16
 const avatarUrl = `/avatars/Scillia_Drophunter_V19.vrm`;
+
+//
+
+const aiClient = new AiClient();
 
 //
 
@@ -1391,12 +1404,100 @@ const seenRouters = new WeakMap();
 
 //
 
+const Quest = ({
+    Name,
+    Description,
+    Image,
+    Objectives,
+    live = true,
+    onZombie = () => {},
+}) => {
+    const [animateIn, setAnimateIn] = useState(false);
+    const [animateOut, setAnimateOut] = useState(false);
+    const nodeRef = useRef(null);
+
+    useEffect(() => {
+        if (!animateIn) {
+            const frame = requestAnimationFrame(() => {
+                setAnimateIn(true);
+            });
+            return () => {
+                cancelAnimationFrame(frame);
+            };
+        }
+    }, [animateIn]);
+    useEffect(() => {
+        if (nodeRef.current && !live) {
+            console.log('set animate out', true);
+            setAnimateOut(true);
+
+            console.log('animate out');
+
+            // wait for transitionEnd
+
+            const nodeEl = nodeRef.current;
+            const transitionEnd = e => {
+                if (e.target === nodeEl) {
+                    console.log('transition end');
+                    nodeEl.removeEventListener('transitionend', transitionEnd);
+                    // nodeEl.remove();
+                    onZombie();
+                }
+            };
+            nodeEl.addEventListener('transitionend', transitionEnd);
+
+            return () => {
+                nodeEl.removeEventListener('transitionend', transitionEnd);
+            };
+        }
+    }, [nodeRef.current, live]);
+
+    // useEffect(() => {
+    //    console.log('got ref', nodeRef.current);
+    // }, [nodeRef.current]);
+
+    const animate = animateIn && !animateOut;
+    console.log('render animate', animate);
+    return (<div className={classnames(
+        styles.quest,
+        animate ? styles.animate : null,
+    )} ref={nodeRef}>
+        {/* <div className={styles.image}>
+            <img src={Image} />
+        </div> */}
+        <div className={styles.content}>
+            <div className={styles.name}>
+                {Name}
+            </div>
+            <div className={styles.description}>
+                {Description}
+            </div>
+            {/* <div className={styles.objectives}>
+                {Objectives.map((objective, i) => <div key={i} className={styles.objective}>
+                    {objective}
+                </div>)}
+            </div> */}
+        </div>
+    </div>);
+}
+
+//
+
 const TitleScreen = () => {
     const [loading, setLoading] = useState(false);
     const [loaded, setLoaded] = useState(false);
     const [focused, setFocused] = useState(false);
+    
     const [titleScreenRenderer, setTitleScreenRenderer] = useState(null);
+    
     const [hups, setHups] = useState([]);
+
+    const [live, setLive] = useState(false);
+    const [Name, setName] = useState('');
+    const [Description, setDescription] = useState('');
+    const [Image, setImage] = useState('');
+    const [Objectives, setObjectives] = useState([]);
+    const [Reward, setReward] = useState('');
 
     const canvasRef = useRef();
 
@@ -1505,6 +1606,52 @@ const TitleScreen = () => {
                     });
                     break;
                 }
+                case 'q':
+                case 'Q':
+                {
+                    if (!live) {
+                        // setLoreEnabled(true);
+
+                        flushSync(() => {
+                          setLive(true);
+                        });
+
+                        const datasetSpecs = await getDatasetSpecs();
+                        const datasetGenerator = new DatasetGenerator({
+                            datasetSpecs,
+                            aiClient,
+                            // fillRatio: 0.5,
+                        });
+                        const questSpec = await datasetGenerator.generateItem('quest', {
+                            // Name: 'Death Mountain',
+                            // Description: 'A mountain in the middle of a desert.',
+                        }, {
+                            // keys: ['Image'],
+                        });
+                        console.log('got quest spec', questSpec);
+                        flushSync(() => {
+                            const {
+                                Name,
+                                Description,
+                                Image,
+                                Objectives,
+                                Reward,
+                            } = questSpec;
+                            setName(Name);
+                            setDescription(Description);
+                            setImage(Image);
+                            setObjectives(Objectives.split(/\n+/));
+                            setReward(Reward);
+                        });
+                    } else {
+                        console.log('clear quest spec');
+                        flushSync(() => {
+                            setLive(false);
+                        });
+                    }
+                    
+                    break;
+                }
                 case 'o':
                 {
                     if (e.ctrlKey) {
@@ -1574,16 +1721,32 @@ const TitleScreen = () => {
     }, [
         canvasRef.current,
         titleScreenRenderer,
-        // titleScreenRenderer?.keys.left,
-        // titleScreenRenderer?.keys.right,
-        // titleScreenRenderer?.keys.up,
-        // titleScreenRenderer?.keys.down,
+        Name,
     ]);
+
+    const onZombie = () => {
+        flushSync(() => {
+            setName('');
+            setDescription('');
+            setImage('');
+            setObjectives([]);
+            setReward('');
+        });
+    };
 
     return (
         <div
             className={styles.titleScreen}
         >
+            {Name ? <Quest
+                Name={Name}
+                Description={Description}
+                Image={Image}
+                Objectives={Objectives}
+                Reward={Reward}
+                live={live}
+                onZombie={onZombie}
+            /> : null}
             <MainScreen
                 titleScreenRenderer={titleScreenRenderer}
                 focused={focused}
