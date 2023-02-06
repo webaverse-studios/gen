@@ -1300,13 +1300,13 @@ const MainScreen = ({
         };
         document.addEventListener('pointerlockchange', pointerlockchange);
 
-        const wheel = e => {
-            e.preventDefault();
-            e.stopPropagation();
-        };
-        document.addEventListener('wheel', wheel, {
-            passive: false,
-        });
+        // const wheel = e => {
+        //     e.preventDefault();
+        //     e.stopPropagation();
+        // };
+        // document.addEventListener('wheel', wheel, {
+        //     passive: false,
+        // });
 
         const keydown = e => {
             switch (e.key) {
@@ -1378,7 +1378,7 @@ const MainScreen = ({
 
         return () => {
             document.removeEventListener('pointerlockchange', pointerlockchange);
-            document.removeEventListener('wheel', wheel);
+            // document.removeEventListener('wheel', wheel);
             document.removeEventListener('keydown', keydown);
         };
     }, [canvasRef.current, titleScreenRenderer, speechBubbleManager, onFocus]);
