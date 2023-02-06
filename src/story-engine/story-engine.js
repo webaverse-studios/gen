@@ -110,8 +110,8 @@ const getMarkdownImagesAsync = async (text, {
     const alt = img.getAttribute('alt');
     const match = alt.match(/^(?:([^\|]*)\|)?([\s\S]*)$/);
     if (match) {
-      const altText = match[1].trim();
-      const promptText = match[2].trim();
+      const altText = (match[1] ?? '').trim();
+      const promptText = (match[2] ?? '').trim();
       return [
         promptText,
         altText,
@@ -142,11 +142,11 @@ const getMainImagePromptsAltsAsync = async (messages, {
     const imgPromptsAlts = await getMarkdownImagesAsync(text, {
       abortController,
     });
-    console.log('check images text', {
-      object: message.object,
-      text,
-      imgPromptsAlts,
-    })
+    // console.log('check images text', {
+    //   object: message.object,
+    //   text,
+    //   imgPromptsAlts,
+    // });
     return imgPromptsAlts;
   }));
 };
@@ -172,7 +172,7 @@ export class StoryManager {
   }) {
     this.generators = generators;
   }
-  async createConversationAsync() {
+  async createFakeConversationAsync() {
     let [
       character1,
       setting,
@@ -208,6 +208,22 @@ export class StoryManager {
     });
 
     await conversation.updateImagesAsync();
+    return conversation;
+  }
+  createConversation({
+    setting = null,
+  } = {}) {
+    const conversation = new NLPConversation(undefined, this);
+
+    if (setting) {
+      setting = formatObject(setting);
+      conversation.createHeroMessage('setting', {
+        name: setting.name,
+        description: setting.description,
+        image: setting.image,
+      });
+    }
+
     return conversation;
   }
   async nextAsync(conversation, {
