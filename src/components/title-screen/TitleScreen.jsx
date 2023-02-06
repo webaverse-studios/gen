@@ -115,6 +115,9 @@ import {
 import {
     Quest,
 } from './Quest.jsx';
+import {
+  StoryUI,
+} from '../story/Story.jsx';
 
 import {AiClient} from '../../../clients/ai/ai-client.js';
 
@@ -142,9 +145,6 @@ const localMatrix = new THREE.Matrix4();
 const localRaycaster = new THREE.Raycaster();
 const localOrthographicCamera = new THREE.OrthographicCamera();
 
-// const zeroVector = new THREE.Vector3(0, 0, 0);
-// const oneVector = new THREE.Vector3(1, 1, 1);
-// const upVector = new THREE.Vector3(0, 1, 0);
 const y180Quaternion = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI);
 
 const textDecoder = new TextDecoder();
@@ -161,28 +161,22 @@ const _loadArrayBuffer = async u => {
 
 const _saveFile = async (fileName, uint8Array) => {
     const d = await navigator.storage.getDirectory();
-    // console.log('save to d', d, titleScreenRenderer.uint8Array);
     const fh = await d.getFileHandle(fileName, {
         create: true,
     });
-    // write titleScreenRenderer.uint8Array to f
     const w = await fh.createWritable();
     await w.write(uint8Array);
     await w.close();
-    // console.log('done saving');
 };
 const _loadFile = async (fileName) => {
     const d = await navigator.storage.getDirectory();
-    // console.log('open from d', d);
     const fh = await d.getFileHandle(fileName, {
         create: false,
     });
     // get file size
     const f = await fh.getFile();
-    // console.log('file size', f, f.size);
     const arrayBuffer = await f.arrayBuffer();
     const uint8Array = new Uint8Array(arrayBuffer);
-    // console.log('load result', uint8Array);
     return uint8Array;
 };
 
@@ -568,7 +562,7 @@ class TitleScreenRenderer extends EventTarget {
         this.remotePlayers = new Map();  // Map<playerId, RemotePlayer>
 
         // storyboard
-        (async () => {
+        this.loadPromise = (async () => {
             await physicsManager.waitForLoad();
 
             const zineStoryboard = new ZineStoryboard();
@@ -742,18 +736,6 @@ class TitleScreenRenderer extends EventTarget {
         this.portalMeshes = [];
         this.portalSizeIndex = 0;
         this.portalAnimations = [];
-
-        /* // speech bubble mesh
-        let speechBubbleMesh;
-        {
-            speechBubbleMesh = new SpeechBubbleMesh({
-                text: 'hello world',
-                fontSize: 0.1,
-            });
-            speechBubbleMesh.position.set(0, 2, -3);
-            scene.add(speechBubbleMesh);
-            speechBubbleMesh.updateMatrixWorld();
-        } */
 
         // resize handler
         const _setSize = () => {
@@ -956,6 +938,9 @@ class TitleScreenRenderer extends EventTarget {
             });
         }
         }
+    }
+    waitForLoad() {
+        return this.loadPromise;
     }
     destroy() {
       for (let i = 0; i < this.cleanupFns.length; i++) {
@@ -1198,6 +1183,7 @@ const MainScreen = ({
     titleScreenRenderer,
     focused,
     onFocus,
+    storyOpen,
     canvasRef,
 }) => {
     const [resolution, setResolution] = useState(() => {
@@ -1207,6 +1193,9 @@ const MainScreen = ({
         }
         return resolution;
     });
+    
+    const [lore, setLore] = useState(null);
+
     const [speechBubbleManager, setSpeechBubbleManager] = useState(null);
     const speechBubblesRef = useRef();
 
@@ -1227,23 +1216,39 @@ const MainScreen = ({
         }
     };
 
+    // initialize lore
     useEffect(() => {
-        if (titleScreenRenderer) {
-            const resize = () => {
-                const resolution = new THREE.Vector2();
-                titleScreenRenderer.renderer.getSize(resolution);
-                setResolution(resolution);
-            };
-            titleScreenRenderer.addEventListener('resize', resize);
+        if (titleScreenRenderer && !lore) {
+            let live = true;
 
-            resize();
+            (async () => {
+                await titleScreenRenderer.waitForLoad();
+                if (!live) return;
+
+                const {
+                    panelIndex,
+                    panelInstances,
+                } = titleScreenRenderer.panelInstanceManager;
+                const panelInstance = panelInstances[0];
+                const {
+                    zineRenderer,
+                } = panelInstance;
+                const {
+                    metadata,
+                } = zineRenderer;
+                const {
+                    lore,
+                } = metadata;
+                setLore(lore);
+            })();
 
             return () => {
-                titleScreenRenderer.removeEventListener('resize', resize);
+                live = false;
             };
         }
-    }, [titleScreenRenderer]);
+    }, [titleScreenRenderer, lore]);
 
+    // initialize speech bubble manager
     useEffect(() => {
         const speechBubblesEl = speechBubblesRef.current;
         if (titleScreenRenderer && speechBubblesEl) {
@@ -1270,6 +1275,25 @@ const MainScreen = ({
         }
     }, [titleScreenRenderer, speechBubblesRef.current]);
 
+    // handle resize
+    useEffect(() => {
+        if (titleScreenRenderer) {
+            const resize = () => {
+                const resolution = new THREE.Vector2();
+                titleScreenRenderer.renderer.getSize(resolution);
+                setResolution(resolution);
+            };
+            titleScreenRenderer.addEventListener('resize', resize);
+
+            resize();
+
+            return () => {
+                titleScreenRenderer.removeEventListener('resize', resize);
+            };
+        }
+    }, [titleScreenRenderer]);
+
+    // hanle events
     useEffect(() => {
         const pointerlockchange = e => {
             onFocus(document.pointerLockElement === canvasRef.current);
@@ -1359,11 +1383,17 @@ const MainScreen = ({
         };
     }, [canvasRef.current, titleScreenRenderer, speechBubbleManager, onFocus]);
 
+    // console.log('try render story ui', {
+    //     storyOpen,
+    //     lore,
+    // });
+
     return (
         <div className={classnames(
             styles.mainScreen,
             titleScreenRenderer ? styles.enabled : null,
             focused ? styles.focused : null,
+            storyOpen ? styles.storyOpen : null,
         )}>
             <div
                 className={styles.speechBubbles}
@@ -1378,6 +1408,11 @@ const MainScreen = ({
             )} onDoubleClick={async e => {
                 await _requestPointerLock();
             }} ref={canvasRef} />
+            {(storyOpen && lore) ?
+                <StoryUI
+                    lore={lore}
+                />
+            : null}
             <footer className={styles.footer}>
                 <div className={styles.warningLabel}>
                     <span className={styles.bold}>SEVERE WARNING:</span> This product is not intended for children under age sixty. <span className={styles.bold}>This is an AI generated product.</span> The ideas expressed are not proven to be safe. This product contains cursed language and due to its nature it should be viewed twice. Made by the Lisk.
@@ -1416,6 +1451,7 @@ const TitleScreen = () => {
     const [titleScreenRenderer, setTitleScreenRenderer] = useState(null);
     
     const [hups, setHups] = useState([]);
+    const [storyOpen, setStoryOpen] = useState(false);
 
     const [live, setLive] = useState(false);
     const [Name, setName] = useState('');
@@ -1436,23 +1472,15 @@ const TitleScreen = () => {
           const firstBytesString = textDecoder.decode(firstBytes);
           if (firstBytesString === zineMagicBytes) {
             const uint8Array = new Uint8Array(arrayBuffer, zineMagicBytes.length);
-            // await onPanelsLoad(uint8Array);
-
-            // titleScreenRenderer && titleScreenRenderer.destroy();
-            // setTitleScreenRenderer(null);
 
             const canvas = canvasRef.current;
             if (canvas) {
-                // const uint8Array = await _loadFile(titleScreenZineFileName);
-
                 const newTitleScreenRenderer = new TitleScreenRenderer({
                     canvas,
                     uint8Array,
                 });
                 setTitleScreenRenderer(newTitleScreenRenderer);
                 setLoaded(true);
-
-                // console.log('done loading', newTitleScreenRenderer);
             } else {
                 throw new Error('no canvas');
             }
@@ -1518,8 +1546,8 @@ const TitleScreen = () => {
                     titleScreenRenderer.keys.right = true;
                     break;
                 }
-                case 'k':
-                case 'K':
+                case 'j':
+                case 'J':
                 {
                     const newHup = {
                         id: makeId(8),
@@ -1528,6 +1556,14 @@ const TitleScreen = () => {
                     newHups.push(newHup);
                     flushSync(() => {
                         setHups(newHups);
+                    });
+                    break;
+                }
+                case 'l':
+                case 'L':
+                {
+                    flushSync(() => {
+                        setStoryOpen(!storyOpen);
                     });
                     break;
                 }
@@ -1647,6 +1683,7 @@ const TitleScreen = () => {
         canvasRef.current,
         titleScreenRenderer,
         Name,
+        storyOpen,
     ]);
 
     const onZombie = () => {
@@ -1661,7 +1698,10 @@ const TitleScreen = () => {
 
     return (
         <div
-            className={styles.titleScreen}
+            className={classnames(
+                styles.titleScreen,
+                // storyOpen ? styles.storyOpen : null,
+            )}
         >
             {Name ? <Quest
                 Name={Name}
@@ -1678,6 +1718,7 @@ const TitleScreen = () => {
                 onFocus={newFocused => {
                     setFocused(newFocused);
                 }}
+                storyOpen={storyOpen}
                 canvasRef={canvasRef}
             />
             {hups.map(hup => (
