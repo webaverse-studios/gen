@@ -2541,7 +2541,6 @@ export class Metazine extends EventTarget {
         for (let i = 0; i < panelSpecs.length; i++) {
           const panelSpec = panelSpecs[i];
           panelSpec.isRoot = i === rootPanelIndex;
-          console.log('post load set is root', i, panelSpec.isRoot);
         }
       };
       _setRoot(newPanelSpecs);
