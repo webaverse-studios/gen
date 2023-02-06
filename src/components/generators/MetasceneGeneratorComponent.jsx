@@ -2732,18 +2732,10 @@ export class Metazine extends EventTarget {
         // remember indices in both directions
         let entrancePanelIndex;
         let exitPanelIndex;
-        // if (entrancePanelSpec === exitPanelSpec) {
-        //   console.warn('same panel', entrancePanelSpec, exitPanelSpec);
-        //   debugger;
-        // }
         {
           // exit location
           entrancePanelIndex = exitPanelSpec.index;
           const entranceLocationIndex = entrancePanelSpec.entranceExitLocations.indexOf(entranceLocation);
-          // if (entranceLocationIndex === -1) {
-          //   console.warn('no entrance location index', entrancePanelSpec, exitPanelSpec, entrancePanelIndex, exitPanelIndex, this.renderPanelSpecs);
-          //   debugger;
-          // }
           exitLocation.panelIndex = entrancePanelIndex;
           exitLocation.entranceIndex = entranceLocationIndex;
         }
@@ -2751,14 +2743,9 @@ export class Metazine extends EventTarget {
           // entrance location
           exitPanelIndex = entrancePanelSpec.index;
           const exitLocationIndex = exitPanelSpec.entranceExitLocations.indexOf(exitLocation);
-          // if (exitLocationIndex === -1) {
-          //   console.warn('no exit location index', entrancePanelSpec, exitPanelSpec, entrancePanelIndex, exitPanelIndex, this.renderPanelSpecs);
-          //   debugger;
-          // }
           entranceLocation.panelIndex = exitPanelIndex;
           entranceLocation.entranceIndex = exitLocationIndex;
         }
-        // console.log('entrance panel index', entrancePanelSpec, exitPanelSpec, entrancePanelIndex, exitPanelIndex, this.renderPanelSpecs);
 
         // latch fixed exit location
         const exitParentMatrixWorld = exitPanelSpec.transformScene.matrixWorld;
