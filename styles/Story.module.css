@@ -1,0 +1,235 @@
+/* @keyframes rotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(180deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+} */
+
+/* */
+
+.row {
+  display: flex;
+}
+
+/* */
+
+.storyUI {
+  display: flex;
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 300px;
+  min-height: 100vh;
+  flex-direction: column;
+  background-image: linear-gradient(to right, transparent, #000);
+  font-size: 13px;
+  z-index: 1;
+}
+
+/* */
+
+.storyUI .conversation {
+  display: flex;
+  flex-direction: column;
+  /* flex: 1; */
+  height: 100vh;
+  overflow-y: scroll;
+}
+
+/* */
+
+.storyUI .conversation .character,
+.storyUI .conversation .setting
+{
+  display: flex;
+  flex-direction: column;
+  /* background-color: #EEE; */
+  margin-bottom: 5px;
+  padding: 5px;
+}
+
+/* */
+
+.storyUI .conversation .inputBar,
+.storyUI .conversation .inputBarPlaceholder {
+  height: 100px;
+}
+.storyUI .conversation .inputBar.hasFiles,
+.storyUI .conversation .inputBarPlaceholder.hasFiles {
+  height: 230px;
+}
+
+.storyUI .conversation .inputBar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: #000;
+}
+
+.storyUI .conversation .inputBar .button {
+  color: #FFF;
+}
+.storyUI .conversation .inputBar .button:hover {
+  color: #000;
+  border-color: #FFF;
+  background-color: #FFF;
+}
+
+
+/* */
+
+.storyUI .messages {
+  display: flex;
+  flex-direction: column;
+  /* flex: 1; */
+}
+.storyUI .messages .message {
+  display: flex;
+  flex-direction: column;
+}
+.storyUI .messages .message:not(.hero) .wrap {
+  display: flex;
+}
+.storyUI .messages .message .name {
+  font-weight: 600;
+  margin-right: 5px;
+}
+
+/* */
+
+.storyUI .messages .message.text img {
+  display: inline-flex;
+  width: var(--image-size);
+  height: var(--image-size);
+}
+
+/* */
+
+.storyUI .messages .message.setting img {
+  height: var(--image-size);
+  width: 100%;
+  object-fit: cover;
+}
+
+/* */
+
+.storyUI .messages .message.character img {
+  height: var(--image-size);
+  width: var(--image-size);
+  margin: auto;
+  object-fit: cover;
+  border-radius: 1000px;
+}
+
+.storyUI .input {
+  /* min-width: 100%; */
+  min-width: 0;
+  margin-right: 5px;
+  flex: 1;
+  font-size: inherit;
+}
+
+/* */
+
+.storyUI .messageInput {
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+  background-color: #111;
+  border-radius: 5px;
+  user-select: none;
+}
+
+.storyUI .messageInput .input {
+  margin-bottom: 10px;
+}
+
+.storyUI .messageInput .attachments {
+  display: inline-flex;
+}
+
+.storyUI .messageInput .attachments .attachment {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  padding: 5px;
+  margin-right: 5px;
+  margin-bottom: 5px;
+  background: #222;
+  border-radius: 5px;
+}
+
+.storyUI .messageInput .attachments .attachment .img {
+  width: var(--image-size);
+  height: var(--image-size);
+}
+.storyUI .messageInput .attachments .attachment .img.placeholder:not(.small) {
+  padding: 15px;
+}
+.storyUI .messageInput .attachments .attachment .img.placeholder.small {
+  width: 15px;
+  height: 15px;
+}
+
+.storyUI .messageInput .attachments .attachment .name {
+  max-width: var(--image-size);
+  height: 15px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #FFF;
+}
+
+.storyUI .messageInput .attachments .attachment .remove {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background-color: #222;
+  cursor: pointer;
+}
+.storyUI .messageInput .attachments .attachment .remove:hover {
+  background-color: #e53935;
+}
+.storyUI .messageInput .attachments .attachment .remove:active {
+  background-color: #c62828;
+}
+
+.storyUI .messageInput .attachments .attachment .remove .img {
+  width: 20px;
+  height: 20px;
+  padding: 2px;
+  filter: invert(1);
+}
+
+.storyUI .messageInput .smallButton {
+  display: flex;
+  flex-direction: column;
+  background-color: #000;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.storyUI .messageInput .smallButton:not(:last-child) {
+  margin-right: 5px;
+}
+.storyUI .messageInput .smallButton:hover {
+  background-color: #1e88e5;
+}
+.storyUI .messageInput .smallButton:active {
+  background-color: #1565c0;
+}
+
+.storyUI .messageInput .smallButton .img {
+  width: 50px;
+  height: 30px;
+  padding: 5px;
+  filter: invert(1);
+}
