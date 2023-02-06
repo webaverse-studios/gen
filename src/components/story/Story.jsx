@@ -240,16 +240,13 @@ class Attachment extends EventTarget {
 export const Conversation = ({
   conversation: _conversation,
   onClose,
+  inputRef,
 }) => {
   const [conversation, setConversation] = useState(_conversation);
   const [message, setMessage] = useState('');
   const [attachments, setAttachments] = useState([]);
   const [epoch, setEpoch] = useState(0);
   const conversationRef = useRef();
-
-  // console.log('got conversation', {
-  //   messages: conversation.messages,
-  // });
 
   useEffect(() => {
     const conversationEl = conversationRef.current;
@@ -275,6 +272,9 @@ export const Conversation = ({
           }
           case 'me': {
             console.log('generate me');
+            const messages = await conversation.nextAsync({
+              continueLabel: 'you:',
+            });
             break;
           }
           case 'you': {
@@ -407,52 +407,8 @@ export const Conversation = ({
             if (e.key === 'Enter') {
               send();
             }
-          }} placeholder='press enter to chat' />
-          {/* <div className={styles.smallButton} alt='Generate image' onClick={e => {
-            generateImage();
-          }}>
-            <img src='/images/paint-box.svg' className={styles.img} />
-          </div>
-          <div className={styles.smallButton} alt='Send' onClick={e => {
-            send();
-          }}>
-            <img src='/images/send.svg' className={styles.img} />
-          </div> */}
+          }} placeholder='press enter to chat' ref={inputRef} />
         </div>
-        {/* <div className={classnames(
-          styles.row,
-          styles.fill,
-        )}>
-          <div className={styles.smallButton} onClick={async e => {
-            console.log('save 21');
-            const exportObject = await conversation.exportAsync();
-            console.log('save 2', exportObject);
-            // XXX finish this
-          }}>
-            <img src='/images/save.svg' className={styles.img} />
-          </div>
-          <div className={styles.smallButton} onClick={e => {
-            console.log('remove 1', conversation);
-            // XXX finish this
-          }}>
-            <img src='/images/trash.svg' className={styles.img} />
-          </div>
-          <div className={styles.smallButton} onClick={async e => {
-            console.log('brain 1', conversation, conversation.messages.slice());
-            // XXX finish this
-            const messages = await conversation.nextAsync({
-              continueLabel: 'you:',
-            });
-            console.log('brain 2', messages);
-          }}>
-            <img src='/images/brain.svg' className={styles.img} />
-          </div>
-          <div className={styles.smallButton} onClick={e => {
-            onClose();
-          }}>
-            <img src='/images/close.svg' className={styles.img} />
-          </div>
-        </div> */}
       </div>
       <DropTarget
         className={classnames(
@@ -471,9 +427,10 @@ export const StoryUI = ({
   lore,
 }) => {
   const [conversation, setConversation] = useState(null);
+  const [mouseState, setMouseState] = useState(null);
+  const inputRef = useRef(null);
 
-  // console.log('render story ui', lore);
-
+  // load story from lore
   useEffect(() => {
     if (lore) {
       let live = true;
@@ -488,15 +445,9 @@ export const StoryUI = ({
         const storyManager = new StoryManager({
           generators,
         });
-        // const conversation = await storyManager.createFakeConversationAsync();
-        // console.log('create conversation from lore', lore);
-        // const {
-        //   Description,
-        // } = lore;
         const conversation = storyManager.createConversation({
           setting: lore,
         });
-        // if (!live) return;
         
         setConversation(conversation);
       })();
@@ -507,13 +458,55 @@ export const StoryUI = ({
     }
   }, [lore]);
 
-  return (conversation ? <div className={classnames(
-    styles.storyUI,
-  )}>
-    <Conversation
-      conversation={conversation}
-      onClose={e => {
-      setConversation(null);
-    }} />
-  </div> : null);
+  // focus input on mount
+  useEffect(() => {
+    if (conversation) {
+      const inputEl = inputRef.current;
+      // if (inputEl) {
+        // setTimeout(() => {
+          document.exitPointerLock();
+          
+          // setTimeout(() => {
+            inputEl.focus(); 
+          // });
+        // });
+      // }
+    }
+  }, [conversation]);
+
+  return (conversation ?
+    <div
+      className={classnames(
+        styles.storyUI,
+      )}
+      onMouseDown={e => {
+        const {
+          clientX,
+          clientY,
+        } = e;
+        setMouseState([clientX, clientY]);
+      }}
+      onMouseUp={e => {
+        const {
+          clientX,
+          clientY,
+        } = e;
+        const [startX, startY] = mouseState;
+        if (clientX === startX && clientY === startY) {
+          const inputEl = inputRef.current;
+          if (inputEl) {
+            inputEl.focus();
+          }
+        }
+      }}
+    >
+      <Conversation
+        conversation={conversation}
+        onClose={e => {
+          setConversation(null);
+        }}
+        inputRef={inputRef}
+      />
+    </div>
+  : null);
 };
