@@ -40,7 +40,9 @@ const createImageBlob = async (prompt) => {
     }),
   });
   const responseData = await res.json();
-  // console.log('got response', res.ok, res.status, responseData);
+  if (!res.ok) {
+    console.log('got error response', res.ok, res.status, responseData);
+  }
   const image_url = responseData.data[0].url;
 
   const res2 = await fetch(image_url);
