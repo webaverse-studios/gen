@@ -8,6 +8,7 @@ import {
   layer0Specs,
   layer1Specs,
   layer2Specs,
+  layerSpecs,
 } from '../zine/zine-data-specs.js';
 import {
   blob2img,
@@ -157,6 +158,16 @@ export class Panel extends EventTarget {
   getLayer(index) {
     return this.zp.getLayer(index);
   }
+  getOrCreateLayer(index) {
+    for (let i = 0; i <= index; i++) {
+      const layer = this.zp.getLayer(i);
+      if (!layer) {
+        this.zp.addLayer();
+      }
+    }
+    const layer = this.zp.getLayer(index);
+    return layer;
+  }
 
   isEmpty() {
     // return !this.hasData(mainImageKey);
@@ -229,7 +240,6 @@ export class Panel extends EventTarget {
         const depthArrayBuffer = await depthRes.arrayBuffer();
         const depthFloat32Array = new Float32Array(depthArrayBuffer);
 
-
         const headers = new Headers();
         headers.set('scale', scale[0]);
         const depthMapArrayBuffer = depthFloat32Array.buffer;
@@ -257,14 +267,23 @@ export class Panel extends EventTarget {
     await this.task(async ({signal}) => {
       const layer = this.zp.getLayer(0);
       const imageArrayBuffer = layer.getData(mainImageKey);
-      const compileResult = await compileVirtualScene(
+      const prompt = layer.getData(promptKey);
+      const compileResultLayers = await compileVirtualScene({
         imageArrayBuffer,
-      );
+        prompt,
+      });
 
-      const layer1 = this.zp.addLayer();
-      for (const name of layer1Specs) {
-        const v = compileResult[name];
-        layer1.setData(name, v);
+      for (let i = 0; i < compileResultLayers.length && i < layerSpecs.length; i++) {
+        const layerData = compileResultLayers[i];
+        const layerSpec = layerSpecs[i];
+
+        const layer = this.getOrCreateLayer(i);
+        for (const name of layerSpec) {
+          if (name in layerData) {
+            const v = layerData[name];
+            layer.setData(name, v);
+          }
+        }
       }
     }, 'compiling');
   }

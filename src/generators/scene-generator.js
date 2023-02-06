@@ -139,6 +139,9 @@ import {
   ImageAiClient,
 } from '../clients/image-client.js';
 import {
+  AiClient,
+} from '../../clients/ai/ai-client.js';
+import {
   getDepthField,
   // getPointCloud,
   clipGeometryZ,
@@ -155,6 +158,13 @@ import {
   PathMesh,
 } from '../zine-aux/meshes/path-mesh.js';
 // import '../../lore-test.js';
+
+import {
+  getDatasetSpecs,
+} from '../dataset-engine/dataset-specs.js';
+import {
+  DatasetGenerator,
+} from '../dataset-engine/dataset-generator.js';
 
 //
 
@@ -203,6 +213,10 @@ const backwardVector = new THREE.Vector3(0, 0, 1);
 const rightVector = new THREE.Vector3(1, 0, 0);
 
 const gltfLoader = makeGltfLoader();
+
+//
+
+const aiClient = new AiClient();
 
 const imageAiClient = new ImageAiClient();
 const abortError = new Error();
@@ -4445,7 +4459,14 @@ const getSkyCutCanvas = (width, height, segmentMask) => {
   return skyCutCanvas;
 }
 
-export async function compileVirtualScene(imageArrayBuffer) {
+export async function compileVirtualScene({
+  imageArrayBuffer,
+  prompt = '',
+}) {
+  if (!imageArrayBuffer) {
+    throw new Error('no imageArrayBuffer');
+  }
+
   // color
   const blob = new Blob([imageArrayBuffer], {
     type: 'image/png',
@@ -4469,6 +4490,50 @@ export async function compileVirtualScene(imageArrayBuffer) {
   const position = [0, 0, 0];
   const quaternion = [0, 0, 0, 1];
   const scale = [1, 1, 1];
+
+  // prompt
+  if (!prompt) {
+    console.log('get prompt 1');
+    prompt = await vqaClient.getImageCaption(blob);
+    console.log('get prompt 2', prompt);
+  }
+
+  // lore
+  let lore;
+  {
+    const datasetSpecs = await getDatasetSpecs();
+    const datasetGenerator = new DatasetGenerator({
+      datasetSpecs,
+      aiClient,
+      // fillRatio: 0.5,
+    });
+    lore = await datasetGenerator.generateItem('setting', {
+      // Name: 'Death Mountain',
+      // Description: panelSpec.description,
+      Description: prompt,
+    }, {
+      // keys: ['Image'],
+    });
+    console.log('got setting spec', lore);
+    // const {
+    //   Biome,
+    //   Description,
+    //   Image,
+    //   'Image Gallery': ImageGallery,
+    //   Items,
+    //   Mobs,
+    //   Name,
+    //   Ores,
+    // } = settingSpec;
+    // setBiome(Biome);
+    // setDescription(Description);
+    // setImage(Image);
+    // setImageGallery((ImageGallery ?? '').split(/\n+/));
+    // setItems((Items ?? '').split(/\n+/));
+    // setMobs((Mobs ?? '').split(/\n+/));
+    // setName(Name);
+    // setOres((Ores ?? '').split(/\n+/));
+  }
 
   // image segmentation
   console.time('imageSegmentation');
@@ -5317,43 +5382,49 @@ export async function compileVirtualScene(imageArrayBuffer) {
   }
 
   // return result
-  return {
-    resolution,
-    position,
-    quaternion,
-    scale,
-    cameraJson,
-    boundingBox,
-    floorBoundingBox,
-    outlineJson,
-    depthFieldHeaders,
-    depthField: depthFieldArrayBuffer,
-    sphericalHarmonics,
-    planesJson,
-    portalJson,
-    segmentLabels,
-    segmentLabelIndices,
-    planeLabels,
-    planeLabelIndices,
-    portalLabels,
-    // segmentSpecs,
-    // planeSpecs,
-    // portalSpecs,
-    firstFloorPlaneIndex,
-    floorPlaneJson,
-    floorResolution,
-    floorNetDepths,
-    floorNetCameraJson,
-    floorPlaneLocation,
-    cameraEntranceLocation,
-    entranceExitLocations,
-    portalLocations,
-    candidateLocations,
-    predictedHeight,
-    edgeDepths,
-    wallPlanes,
-    paths,
-  };
+  return [
+    {
+      prompt,
+    },
+    {
+      lore,
+      resolution,
+      position,
+      quaternion,
+      scale,
+      cameraJson,
+      boundingBox,
+      floorBoundingBox,
+      outlineJson,
+      depthFieldHeaders,
+      depthField: depthFieldArrayBuffer,
+      sphericalHarmonics,
+      planesJson,
+      portalJson,
+      segmentLabels,
+      segmentLabelIndices,
+      planeLabels,
+      planeLabelIndices,
+      portalLabels,
+      // segmentSpecs,
+      // planeSpecs,
+      // portalSpecs,
+      firstFloorPlaneIndex,
+      floorPlaneJson,
+      floorResolution,
+      floorNetDepths,
+      floorNetCameraJson,
+      floorPlaneLocation,
+      cameraEntranceLocation,
+      entranceExitLocations,
+      portalLocations,
+      candidateLocations,
+      predictedHeight,
+      edgeDepths,
+      wallPlanes,
+      paths,
+    },
+  ];
 }
 
 export async function compileVirtualSceneExport(imageArrayBuffer) {
@@ -5363,13 +5434,9 @@ export async function compileVirtualSceneExport(imageArrayBuffer) {
   const layer0 = panel0.addLayer();
   layer0.setData(mainImageKey, imageArrayBuffer);
 
-  // use vqa to set the prompt
-  const blob = new Blob([imageArrayBuffer]);
-  const prompt = await vqaClient.getImageCaption(blob);
-  console.log('computed prompt: ' + JSON.stringify(prompt));
-  layer0.setData(promptKey, prompt);
-
-  const compileResult = await compileVirtualScene(imageArrayBuffer);
+  const compileResult = await compileVirtualScene({
+    imageArrayBuffer,
+  });
 
   const layer1 = panel0.addLayer();
   for (const name of layer1Specs) {
