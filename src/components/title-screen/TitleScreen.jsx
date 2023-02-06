@@ -116,6 +116,9 @@ import {
     Quest,
 } from './Quest.jsx';
 import {
+    DoomClock,
+} from './DoomClock.jsx';
+import {
   StoryUI,
 } from '../story/Story.jsx';
 
@@ -1195,6 +1198,7 @@ const MainScreen = ({
     
     const [storyOpen, setStoryOpen] = useState(false);
     const [lore, setLore] = useState(null);
+    const [doomClock, setDoomClock] = useState(false);
 
     const [speechBubbleManager, setSpeechBubbleManager] = useState(null);
     const speechBubblesRef = useRef();
@@ -1224,7 +1228,6 @@ const MainScreen = ({
                 {
                     if (!storyOpen) {
                         flushSync(() => {
-                            console.log('set open');
                             setStoryOpen(true);
                         });
                     }
@@ -1326,68 +1329,72 @@ const MainScreen = ({
         document.addEventListener('pointerlockchange', pointerlockchange);
 
         const keydown = e => {
-            switch (e.key) {
-                case ' ': {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    
-                    _togglePointerLock();
-                    break;
-                }
-                case 'p': {
-                    e.preventDefault();
-                    e.stopPropagation();
+            // check for focused input element
+            const focusedEl = document.activeElement;
+            if (focusedEl?.nodeName !== 'INPUT') {
+                switch (e.key) {
+                    case 'u': {
+                        e.preventDefault();
+                        e.stopPropagation();
 
-                    titleScreenRenderer.togglePortal();
-                    break;
-                }
-                case 'n': {
-                    e.preventDefault();
-                    e.stopPropagation();
-            
-                    if (titleScreenRenderer && speechBubbleManager) {
-                        const startTime = performance.now();
-                        const duration = 8000;
-                        const startPosition = new THREE.Vector3(
-                            Math.random() - 0.5,
-                            Math.random() - 0.5,
-                            -1
-                        );
-                        const direction = new THREE.Vector3(
-                            Math.random() - 0.5,
-                            Math.random() - 0.5,
-                            0
-                        ).normalize();
-                        const speechBubbleObject = speechBubbleManager.createSpeechBubble({
-                            text: `I'm going places.`,
-                            updateFn(timestamp) {
-                                const timeDiff = timestamp - startTime;
-                                const f = timeDiff / duration;
-                                
-                                const f2 = Math.min(Math.max(f * 4, 0), 1);
-                                const charN = Math.floor(f2 * this.text.length);
-                                this.textIndex = charN;
-
-                                this.position.copy(startPosition)
-                                    .add(
-                                        direction.clone()
-                                            .multiplyScalar(Math.sin(f * Math.PI * 2))
-                                    );
-                                this.updateMatrixWorld();
-
-                                return f;
-                            },
-                        });
-
-                        const cubeMesh = new CubeMesh();
-                        speechBubbleObject.add(cubeMesh);
-                        cubeMesh.updateMatrixWorld();
-
-                        titleScreenRenderer.scene.add(speechBubbleObject);
-                        speechBubbleObject.updateMatrixWorld();
+                        setDoomClock(true);
+                        break;
                     }
-                    
-                    break;
+                    case 'p': {
+                        e.preventDefault();
+                        e.stopPropagation();
+
+                        titleScreenRenderer.togglePortal();
+                        break;
+                    }
+                    case 'n': {
+                        e.preventDefault();
+                        e.stopPropagation();
+                
+                        if (titleScreenRenderer && speechBubbleManager) {
+                            const startTime = performance.now();
+                            const duration = 8000;
+                            const startPosition = new THREE.Vector3(
+                                Math.random() - 0.5,
+                                Math.random() - 0.5,
+                                -1
+                            );
+                            const direction = new THREE.Vector3(
+                                Math.random() - 0.5,
+                                Math.random() - 0.5,
+                                0
+                            ).normalize();
+                            const speechBubbleObject = speechBubbleManager.createSpeechBubble({
+                                text: `I'm going places.`,
+                                updateFn(timestamp) {
+                                    const timeDiff = timestamp - startTime;
+                                    const f = timeDiff / duration;
+                                    
+                                    const f2 = Math.min(Math.max(f * 4, 0), 1);
+                                    const charN = Math.floor(f2 * this.text.length);
+                                    this.textIndex = charN;
+
+                                    this.position.copy(startPosition)
+                                        .add(
+                                            direction.clone()
+                                                .multiplyScalar(Math.sin(f * Math.PI * 2))
+                                        );
+                                    this.updateMatrixWorld();
+
+                                    return f;
+                                },
+                            });
+
+                            const cubeMesh = new CubeMesh();
+                            speechBubbleObject.add(cubeMesh);
+                            cubeMesh.updateMatrixWorld();
+
+                            titleScreenRenderer.scene.add(speechBubbleObject);
+                            speechBubbleObject.updateMatrixWorld();
+                        }
+                        
+                        break;
+                    }
                 }
             }
         };
@@ -1406,6 +1413,7 @@ const MainScreen = ({
             focused ? styles.focused : null,
             storyOpen ? styles.storyOpen : null,
         )}>
+            {doomClock ? <DoomClock /> : null}
             <div
                 className={styles.speechBubbles}
                 ref={speechBubblesRef}
@@ -1525,158 +1533,177 @@ const TitleScreen = () => {
 
     useEffect(() => {
         const keydown = async e => {
-            switch (e.key) {
-                case 'w':
-                case 'W':
-                {
-                    titleScreenRenderer.keys.up = true;
-                    break;
-                }
-                case 's':
-                case 'S':
-                {
-                    if (e.ctrlKey) {
-                        e.preventDefault();
-                        e.stopPropagation();
-
-                        console.log('save', titleScreenRenderer);
-
-                        if (titleScreenRenderer) {
-                            await _saveFile(titleScreenZineFileName, titleScreenRenderer.uint8Array);
-                        }
-                    } else {
-                        titleScreenRenderer.keys.down = true;
+            const focusedEl = document.activeElement;
+            if (focusedEl?.nodeName !== 'INPUT') {
+                switch (e.key) {
+                    case 'w':
+                    case 'W':
+                    {
+                        titleScreenRenderer.keys.up = true;
+                        break;
                     }
-                    break;
-                }
-                case 'a':
-                case 'A':
-                {
-                    titleScreenRenderer.keys.left = true;
-                    break;
-                }
-                case 'd':
-                case 'D':
-                {
-                    titleScreenRenderer.keys.right = true;
-                    break;
-                }
-                case 'j':
-                case 'J':
-                {
-                    const newHup = {
-                        id: makeId(8),
-                    };
-                    const newHups = hups.slice();
-                    newHups.push(newHup);
-                    flushSync(() => {
-                        setHups(newHups);
-                    });
-                    break;
-                }
-                case 'q':
-                case 'Q':
-                {
-                    if (!live) {
-                        // setLoreEnabled(true);
+                    case 's':
+                    case 'S':
+                    {
+                        if (e.ctrlKey) {
+                            e.preventDefault();
+                            e.stopPropagation();
 
-                        flushSync(() => {
-                          setLive(true);
-                        });
+                            console.log('save', titleScreenRenderer);
 
-                        const datasetSpecs = await getDatasetSpecs();
-                        const datasetGenerator = new DatasetGenerator({
-                            datasetSpecs,
-                            aiClient,
-                            // fillRatio: 0.5,
-                        });
-                        const questSpec = await datasetGenerator.generateItem('quest', {
-                            // Name: 'Death Mountain',
-                            // Description: 'A mountain in the middle of a desert.',
-                        }, {
-                            // keys: ['Image'],
-                        });
-                        console.log('got quest spec', questSpec);
-                        flushSync(() => {
-                            const {
-                                Name,
-                                Description,
-                                Image,
-                                Objectives,
-                                Reward,
-                            } = questSpec;
-                            setName(Name);
-                            setDescription(Description);
-                            setImage(Image);
-                            setObjectives(Objectives.split(/\n+/));
-                            setReward(Reward);
-                        });
-                    } else {
-                        console.log('clear quest spec');
-                        flushSync(() => {
-                            setLive(false);
-                        });
-                    }
-                    
-                    break;
-                }
-                case 'o':
-                {
-                    if (e.ctrlKey) {
-                        e.preventDefault();
-                        e.stopPropagation();
-
-                        // console.log('open', titleScreenRenderer);
-
-                        titleScreenRenderer && titleScreenRenderer.destroy();
-                        setTitleScreenRenderer(null);
-
-                        const canvas = canvasRef.current;
-                        if (canvas) {
-                            const uint8Array = await _loadFile(titleScreenZineFileName);
-
-                            const newTitleScreenRenderer = new TitleScreenRenderer({
-                                canvas,
-                                uint8Array,
-                            });
-                            setTitleScreenRenderer(newTitleScreenRenderer);
-                            setLoaded(true);
-
-                            // console.log('done loading', newTitleScreenRenderer);
+                            if (titleScreenRenderer) {
+                                await _saveFile(titleScreenZineFileName, titleScreenRenderer.uint8Array);
+                            }
                         } else {
-                            throw new Error('no canvas');
+                            titleScreenRenderer.keys.down = true;
                         }
+                        break;
                     }
-                    break;
+                    case 'a':
+                    case 'A':
+                    {
+                        titleScreenRenderer.keys.left = true;
+                        break;
+                    }
+                    case 'd':
+                    case 'D':
+                    {
+                        titleScreenRenderer.keys.right = true;
+                        break;
+                    }
+                    case 'j':
+                    case 'J':
+                    {
+                        const newHup = {
+                            id: makeId(8),
+                        };
+                        const newHups = hups.slice();
+                        newHups.push(newHup);
+                        flushSync(() => {
+                            setHups(newHups);
+                        });
+                        break;
+                    }
+                    case 'j':
+                    case 'J':
+                    {
+                        const newHup = {
+                            id: makeId(8),
+                        };
+                        const newHups = hups.slice();
+                        newHups.push(newHup);
+                        flushSync(() => {
+                            setHups(newHups);
+                        });
+                        break;
+                    }
+                    case 'q':
+                    case 'Q':
+                    {
+                        if (!live) {
+                            // setLoreEnabled(true);
+
+                            flushSync(() => {
+                            setLive(true);
+                            });
+
+                            const datasetSpecs = await getDatasetSpecs();
+                            const datasetGenerator = new DatasetGenerator({
+                                datasetSpecs,
+                                aiClient,
+                                // fillRatio: 0.5,
+                            });
+                            const questSpec = await datasetGenerator.generateItem('quest', {
+                                // Name: 'Death Mountain',
+                                // Description: 'A mountain in the middle of a desert.',
+                            }, {
+                                // keys: ['Image'],
+                            });
+                            console.log('got quest spec', questSpec);
+                            flushSync(() => {
+                                const {
+                                    Name,
+                                    Description,
+                                    Image,
+                                    Objectives,
+                                    Reward,
+                                } = questSpec;
+                                setName(Name);
+                                setDescription(Description);
+                                setImage(Image);
+                                setObjectives(Objectives.split(/\n+/));
+                                setReward(Reward);
+                            });
+                        } else {
+                            console.log('clear quest spec');
+                            flushSync(() => {
+                                setLive(false);
+                            });
+                        }
+                        
+                        break;
+                    }
+                    case 'o':
+                    {
+                        if (e.ctrlKey) {
+                            e.preventDefault();
+                            e.stopPropagation();
+
+                            // console.log('open', titleScreenRenderer);
+
+                            titleScreenRenderer && titleScreenRenderer.destroy();
+                            setTitleScreenRenderer(null);
+
+                            const canvas = canvasRef.current;
+                            if (canvas) {
+                                const uint8Array = await _loadFile(titleScreenZineFileName);
+
+                                const newTitleScreenRenderer = new TitleScreenRenderer({
+                                    canvas,
+                                    uint8Array,
+                                });
+                                setTitleScreenRenderer(newTitleScreenRenderer);
+                                setLoaded(true);
+
+                                // console.log('done loading', newTitleScreenRenderer);
+                            } else {
+                                throw new Error('no canvas');
+                            }
+                        }
+                        break;
+                    }
                 }
             }
         };
         document.addEventListener('keydown', keydown);
         const keyup = e => {
-            switch (e.key) {
-                case 'w':
-                case 'W':
-                {
-                    titleScreenRenderer.keys.up = false;
-                    break;
-                }
-                case 's':
-                case 'S':
-                {
-                    titleScreenRenderer.keys.down = false;
-                    break;
-                }
-                case 'a':
-                case 'A':
-                {
-                    titleScreenRenderer.keys.left = false;
-                    break;
-                }
-                case 'd':
-                case 'D':
-                {
-                    titleScreenRenderer.keys.right = false;
-                    break;
+            const focusedEl = document.activeElement;
+            if (focusedEl?.nodeName !== 'INPUT') {
+                switch (e.key) {
+                    case 'w':
+                    case 'W':
+                    {
+                        titleScreenRenderer.keys.up = false;
+                        break;
+                    }
+                    case 's':
+                    case 'S':
+                    {
+                        titleScreenRenderer.keys.down = false;
+                        break;
+                    }
+                    case 'a':
+                    case 'A':
+                    {
+                        titleScreenRenderer.keys.left = false;
+                        break;
+                    }
+                    case 'd':
+                    case 'D':
+                    {
+                        titleScreenRenderer.keys.right = false;
+                        break;
+                    }
                 }
             }
         };
