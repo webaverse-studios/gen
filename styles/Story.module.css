@@ -27,9 +27,12 @@
   min-height: 100vh;
   flex-direction: column;
   background-image: linear-gradient(to right, transparent 0%, #000000AA 50%, #000 100%);
+  font-family: 'Anime Ace';
   font-size: 13px;
   color: #FFF;
   z-index: 1;
+
+  --image-size: 100px;
 }
 
 /* */
@@ -70,7 +73,7 @@
   bottom: 0;
   left: 0;
   right: 0;
-  background-color: #000;
+  /* background-color: #000; */
 }
 
 .storyUI .conversation .inputBar .button {
@@ -88,7 +91,6 @@
 .storyUI .messages {
   display: flex;
   flex-direction: column;
-  /* flex: 1; */
 }
 .storyUI .messages .message {
   display: flex;
@@ -128,21 +130,30 @@
   border-radius: 1000px;
 }
 
+.storyUI .inputPrefix {
+  white-space: pre;
+}
 .storyUI .input {
-  /* min-width: 100%; */
   min-width: 0;
   margin-right: 5px;
   flex: 1;
+  font-family: inherit;
   font-size: inherit;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  outline: none;
 }
+/* .storyUI .input::before {
+  content: '> ';
+} */
 
 /* */
 
 .storyUI .messageInput {
   display: flex;
   flex-direction: column;
-  padding: 10px;
-  background-color: #111;
+  padding: 10px 0;
   border-radius: 5px;
   user-select: none;
 }
