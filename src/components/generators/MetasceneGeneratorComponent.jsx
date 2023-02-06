@@ -2315,6 +2315,7 @@ class MetazineLoader {
       const depthFieldArrayBuffer = layer1.getData('depthField');
       const entranceExitLocations = layer1.getData('entranceExitLocations');
       const floorPlaneLocation = layer1.getData('floorPlaneLocation');
+      const lore = layer1.getData('lore');
 
       // mesh
       const panelSpec = new THREE.Object3D();
@@ -2336,6 +2337,7 @@ class MetazineLoader {
       panelSpec.outlineJson = outlineJson;
       panelSpec.entranceExitLocations = entranceExitLocations;
       panelSpec.floorPlaneLocation = floorPlaneLocation;
+      panelSpec.lore = lore;
       panelSpec.position2D = new THREE.Vector3();
       panelSpec.resetToFloorTransform = () => {
         panelSpec.position.set(0, 0, 0);
