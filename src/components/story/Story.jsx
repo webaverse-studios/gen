@@ -271,7 +271,6 @@ export const Conversation = ({
             break;
           }
           case 'me': {
-            console.log('generate me');
             const messages = await conversation.nextAsync({
               continueLabel: 'you:',
             });
@@ -311,6 +310,8 @@ export const Conversation = ({
       setMessage('');
       setAttachments([]);
       setEpoch(epoch + 1);
+    } else {
+      onClose();
     }
   };
   const generateImage = async () => {
@@ -425,6 +426,7 @@ export const Conversation = ({
 
 export const StoryUI = ({
   lore,
+  onClose,
 }) => {
   const [conversation, setConversation] = useState(null);
   const [mouseState, setMouseState] = useState(null);
@@ -502,9 +504,7 @@ export const StoryUI = ({
     >
       <Conversation
         conversation={conversation}
-        onClose={e => {
-          setConversation(null);
-        }}
+        onClose={onClose}
         inputRef={inputRef}
       />
     </div>

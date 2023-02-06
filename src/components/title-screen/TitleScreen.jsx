@@ -1183,7 +1183,6 @@ const MainScreen = ({
     titleScreenRenderer,
     focused,
     onFocus,
-    storyOpen,
     canvasRef,
 }) => {
     const [resolution, setResolution] = useState(() => {
@@ -1194,6 +1193,7 @@ const MainScreen = ({
         return resolution;
     });
     
+    const [storyOpen, setStoryOpen] = useState(false);
     const [lore, setLore] = useState(null);
 
     const [speechBubbleManager, setSpeechBubbleManager] = useState(null);
@@ -1215,6 +1215,31 @@ const MainScreen = ({
             await canvas.requestPointerLock();
         }
     };
+
+    // keydown
+    useEffect(() => {
+        const keydown = async e => {
+            switch (e.key) {
+                case 'Enter':
+                {
+                    if (!storyOpen) {
+                        flushSync(() => {
+                            console.log('set open');
+                            setStoryOpen(true);
+                        });
+                    }
+                    break;
+                }
+            }
+        };
+        document.addEventListener('keydown', keydown);
+
+        return () => {
+            document.removeEventListener('keydown', keydown);
+        };
+    }, [
+        storyOpen,
+    ]);
 
     // initialize lore
     useEffect(() => {
@@ -1300,14 +1325,6 @@ const MainScreen = ({
         };
         document.addEventListener('pointerlockchange', pointerlockchange);
 
-        // const wheel = e => {
-        //     e.preventDefault();
-        //     e.stopPropagation();
-        // };
-        // document.addEventListener('wheel', wheel, {
-        //     passive: false,
-        // });
-
         const keydown = e => {
             switch (e.key) {
                 case ' ': {
@@ -1378,15 +1395,9 @@ const MainScreen = ({
 
         return () => {
             document.removeEventListener('pointerlockchange', pointerlockchange);
-            // document.removeEventListener('wheel', wheel);
             document.removeEventListener('keydown', keydown);
         };
     }, [canvasRef.current, titleScreenRenderer, speechBubbleManager, onFocus]);
-
-    // console.log('try render story ui', {
-    //     storyOpen,
-    //     lore,
-    // });
 
     return (
         <div className={classnames(
@@ -1411,6 +1422,11 @@ const MainScreen = ({
             {(storyOpen && lore) ?
                 <StoryUI
                     lore={lore}
+                    onClose={e => {
+                        flushSync(() => {
+                            setStoryOpen(false);
+                        });
+                    }}
                 />
             : null}
             <footer className={styles.footer}>
@@ -1451,7 +1467,6 @@ const TitleScreen = () => {
     const [titleScreenRenderer, setTitleScreenRenderer] = useState(null);
     
     const [hups, setHups] = useState([]);
-    const [storyOpen, setStoryOpen] = useState(false);
 
     const [live, setLive] = useState(false);
     const [Name, setName] = useState('');
@@ -1556,14 +1571,6 @@ const TitleScreen = () => {
                     newHups.push(newHup);
                     flushSync(() => {
                         setHups(newHups);
-                    });
-                    break;
-                }
-                case 'l':
-                case 'L':
-                {
-                    flushSync(() => {
-                        setStoryOpen(!storyOpen);
                     });
                     break;
                 }
@@ -1683,7 +1690,6 @@ const TitleScreen = () => {
         canvasRef.current,
         titleScreenRenderer,
         Name,
-        storyOpen,
     ]);
 
     const onZombie = () => {
@@ -1700,7 +1706,6 @@ const TitleScreen = () => {
         <div
             className={classnames(
                 styles.titleScreen,
-                // storyOpen ? styles.storyOpen : null,
             )}
         >
             {Name ? <Quest
@@ -1718,7 +1723,6 @@ const TitleScreen = () => {
                 onFocus={newFocused => {
                     setFocused(newFocused);
                 }}
-                storyOpen={storyOpen}
                 canvasRef={canvasRef}
             />
             {hups.map(hup => (
