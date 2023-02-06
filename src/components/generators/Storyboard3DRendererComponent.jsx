@@ -112,10 +112,6 @@ export const Storyboard3DRendererComponent = ({
             panel.setData(promptKey, e.target.value);
           }} />
         </div>
-        {/* <div className={styles.text}>Status: Compiled</div> */}
-        {/* <button className={styles.button} onClick={async e => {
-          await panel.compile();
-        }}>Recompile</button> */}
         <div className={styles.row}>
           <button className={styles.button} onClick={async e => {
             const blob = await getZineFileBlob();

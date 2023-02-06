@@ -1,5 +1,4 @@
 import {useState, useEffect} from 'react';
-// import {BlobRenderer} from '../renderers/BlobRenderer.jsx';
 import {ArrayBufferRenderer} from '../renderers/ArrayBufferRenderer.jsx';
 
 import styles from '../../../styles/Storyboard2DRenderer.module.css';
@@ -14,7 +13,6 @@ import {
 //
 
 export const Storyboard2DRendererComponent = ({
-  storyboard,
   panel,
 }) => {
   const _getImage = () => {
@@ -27,8 +25,8 @@ export const Storyboard2DRendererComponent = ({
     const prompt = layer?.getData(promptKey);
     return prompt ?? '';
   };
-  const [prompt, setPrompt] = useState(_getPrompt);
   const [image, setImage] = useState(_getImage);
+  const [prompt, setPrompt] = useState(_getPrompt);
 
   useEffect(() => {
     const onupdate = e => {
