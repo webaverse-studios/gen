@@ -39,10 +39,27 @@
   src:  url('/fonts/Plaza Regular.ttf');
 } */
 
-/* @font-face {
+@font-face {
   font-family: 'WinchesterCaps';
   src:  url('/fonts/WinchesterCaps.ttf');
+}
+
+/* @font-face {
+  font-family: 'Orbitron';
+  src:  url('/fonts/Orbitron-Regular.ttf');
 } */
+
+/* @font-face {
+  font-family: 'Fira Code';
+  src:  url('/fonts/FiraCode-Regular.ttf');
+} */
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  src:  url('/fonts/JetBrainsMono-Regular.ttf');
+}
+
+/* */
 
 html,
 body {
