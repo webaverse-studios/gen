@@ -261,28 +261,56 @@ export const Conversation = ({
   const send = async () => {
     if (message || attachments.length > 0) {
       let text = message;
-      if (attachments.length > 0) {
-        text = attachments.map(attachment => {
-          return `![attached file|${attachment.name}]()`;
-        }).join(' ') + ' ' + text;
+
+      let match;
+      if (text === '?') {
+        console.log('print help'); // XXX
+      } else if (match = text.match(/^\/(\S*)(?:\s+(.*))?$/)) {
+        const command = match[1] ?? '';
+        const args = match[2] ?? '';
+        switch (command) {
+          case 'img': {
+            generateImage(args);
+            break;
+          }
+          case 'me': {
+            console.log('generate me');
+            break;
+          }
+          case 'you': {
+            console.log('generate you');
+            break;
+          }
+          default: {
+            console.warn('invalid command');
+            break;
+          }
+        }
+      } else {
+        if (attachments.length > 0) {
+          text = attachments.map(attachment => {
+            return `![attached file|${attachment.name}]()`;
+          }).join(' ') + ' ' + text;
+        }
+        // inject images
+        await Promise.all(attachments.map(async attachment => {
+          await conversation.injectImageToCache(attachment.name, attachment.url);
+        }))
+        // create new message
+        const m = conversation.createTextMessage({
+          name: 'you',
+          text,
+        });
+        // const newMessages = messages.concat([m]);
+        // setMessages(newMessages);
+  
+        // XXX handle the message here
+        console.log('post message', m);
       }
-      // inject images
-      await Promise.all(attachments.map(async attachment => {
-        await conversation.injectImageToCache(attachment.name, attachment.url);
-      }))
-      // create new message
-      const m = conversation.createTextMessage({
-        name: 'you',
-        text,
-      });
-      // const newMessages = messages.concat([m]);
-      // setMessages(newMessages);
+
       setMessage('');
       setAttachments([]);
       setEpoch(epoch + 1);
-
-      // XXX handle the message here
-      console.log('handle new message', m);
     }
   };
   const generateImage = async () => {
@@ -370,6 +398,9 @@ export const Conversation = ({
           }}
         />
         <div className={styles.row}>
+          <span className={classnames(
+            styles.inputPrefix,
+          )}>&gt; </span>
           <input type='text' className={styles.input} value={message} onChange={e => {
             setMessage(e.target.value);
           }} onKeyDown={e => {
@@ -377,7 +408,7 @@ export const Conversation = ({
               send();
             }
           }} placeholder='press enter to chat' />
-          <div className={styles.smallButton} alt='Generate image' onClick={e => {
+          {/* <div className={styles.smallButton} alt='Generate image' onClick={e => {
             generateImage();
           }}>
             <img src='/images/paint-box.svg' className={styles.img} />
@@ -386,9 +417,9 @@ export const Conversation = ({
             send();
           }}>
             <img src='/images/send.svg' className={styles.img} />
-          </div>
+          </div> */}
         </div>
-        <div className={classnames(
+        {/* <div className={classnames(
           styles.row,
           styles.fill,
         )}>
@@ -421,7 +452,7 @@ export const Conversation = ({
           }}>
             <img src='/images/close.svg' className={styles.img} />
           </div>
-        </div>
+        </div> */}
       </div>
       <DropTarget
         className={classnames(

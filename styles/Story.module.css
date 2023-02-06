@@ -26,8 +26,9 @@
   width: 300px;
   min-height: 100vh;
   flex-direction: column;
-  background-image: linear-gradient(to right, transparent, #000);
+  background-image: linear-gradient(to right, transparent 0%, #000000AA 50%, #000 100%);
   font-size: 13px;
+  color: #FFF;
   z-index: 1;
 }
 
@@ -57,11 +58,11 @@
 
 .storyUI .conversation .inputBar,
 .storyUI .conversation .inputBarPlaceholder {
-  height: 100px;
+  /* height: 100px; */
 }
 .storyUI .conversation .inputBar.hasFiles,
 .storyUI .conversation .inputBarPlaceholder.hasFiles {
-  height: 230px;
+  /* height: 230px; */
 }
 
 .storyUI .conversation .inputBar {
