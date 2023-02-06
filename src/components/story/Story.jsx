@@ -406,6 +406,9 @@ export const Conversation = ({
             setMessage(e.target.value);
           }} onKeyDown={e => {
             if (e.key === 'Enter') {
+              e.preventDefault();
+              e.stopPropagation();
+
               send();
             }
           }} placeholder='press enter to chat' ref={inputRef} />
@@ -464,15 +467,8 @@ export const StoryUI = ({
   useEffect(() => {
     if (conversation) {
       const inputEl = inputRef.current;
-      // if (inputEl) {
-        // setTimeout(() => {
-          document.exitPointerLock();
-          
-          // setTimeout(() => {
-            inputEl.focus(); 
-          // });
-        // });
-      // }
+      document.exitPointerLock();
+      inputEl.focus();
     }
   }, [conversation]);
 
