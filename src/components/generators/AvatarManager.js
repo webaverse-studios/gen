@@ -375,7 +375,9 @@ export class AvatarManager extends EventTarget {
 
     const keydown = async e => {
       switch (e.key) {
-        case 'l': {
+        case 'k':
+        case 'K':
+        {
           const voiceEndpoint = makeVoiceEndpoint('1jLX0Py6j8uY93Fjf2l0HOZQYXiShfWUO');
           
           const audioContext = new AudioContext();
