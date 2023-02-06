@@ -4495,19 +4495,9 @@ const SideScene = ({
             onClick={async e => {
               setLoreEnabled(true);
 
-              const datasetSpecs = await getDatasetSpecs();
-              const datasetGenerator = new DatasetGenerator({
-                datasetSpecs,
-                aiClient,
-                // fillRatio: 0.5,
-              });
-              const settingSpec = await datasetGenerator.generateItem('setting', {
-                // Name: 'Death Mountain',
-                Description: panelSpec.description,
-              }, {
-                // keys: ['Image'],
-              });
-              console.log('got setting spec', settingSpec);
+              const {
+                lore,
+              } = panelSpec;
               const {
                 Biome,
                 Description,
@@ -4517,7 +4507,7 @@ const SideScene = ({
                 Mobs,
                 Name,
                 Ores,
-              } = settingSpec;
+              } = lore;
               setBiome(Biome);
               setDescription(Description);
               setImage(Image);
@@ -4527,7 +4517,7 @@ const SideScene = ({
               setName(Name);
               setOres((Ores ?? '').split(/\n+/));
             }}
-          >Enable Scene Lore</div>
+          >View Scene Lore</div>
         ) : <div className={styles.lore}>
           {name && <div className={styles.name}>{name}</div>}
           {description && <div className={styles.description}>{description}</div>}
