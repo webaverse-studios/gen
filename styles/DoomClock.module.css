@@ -1,0 +1,63 @@
+.doomClock {
+  position: fixed;
+  display: flex;
+  top: 0;
+  left: calc(50% - 200px / 2);
+  width: 250px;
+  height: 80px;
+  padding: 30px;
+  background-color: #000;
+  
+  color: #CCC;
+  font-family: 'JetBrains Mono';
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  transform: skew(-10deg);
+  user-select: none;
+  z-index: 1;
+}
+.doomClock .block.left,
+.doomClock .block.right,
+.doomClock .block.bottom,
+.doomClock .block.notch
+{
+  position: absolute;
+  /* background-image: linear-gradient(45deg, red, orange, yellow, green, blue, indigo, violet, red); */
+  background-image: linear-gradient(to right, #F33, #800);
+}
+.doomClock .block.left,
+.doomClock .block.right {
+  width: 3px;
+  height: 100%;
+}
+.doomClock .block.left {
+  top: 0;
+  left: 0;
+}
+.doomClock .block.bottom {
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+}
+.doomClock .block.notch {
+  top: 77px;
+  left: 100%;
+  width: 4px;
+  height: 8px;
+  background-color: #800;
+  background-image: none;
+}
+/* .doomClock .block.bottom {
+  position: absolute;
+  top: 0;
+  width: 100%;
+  height: 3px;
+} */
+.doomClock .content {
+}
+.doomClock .footer {
+  font-size: 12px;
+  text-transform: uppercase;
+}
