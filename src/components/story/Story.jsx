@@ -325,7 +325,11 @@ export const Conversation = ({
     }
   };
 
-  return (<div className={styles.conversation} ref={conversationRef}>
+  return (<div className={classnames(
+    styles.conversation,
+    styles.scrollbar,
+    styles['style-1'],
+  )} ref={conversationRef}>
     <div className={classnames(
       styles.messages,
       // styles.row,
@@ -454,7 +458,7 @@ export const StoryUI = ({
           generators,
         });
         // const conversation = await storyManager.createFakeConversationAsync();
-        console.log('create conversation from lore', lore);
+        // console.log('create conversation from lore', lore);
         // const {
         //   Description,
         // } = lore;
@@ -471,8 +475,6 @@ export const StoryUI = ({
       };
     }
   }, [lore]);
-
-  console.log('render conversation', conversation);
 
   return (conversation ? <div className={classnames(
     styles.storyUI,
