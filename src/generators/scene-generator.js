@@ -3289,8 +3289,8 @@ export class PanelRenderer extends EventTarget {
     this.portalNetMesh.enabled = this.tool === 'portal';
     this.portalNetMesh.updateVisibility();
 
-    this.entranceExitMesh.enabled = ['portal'].includes(this.tool);
-    this.entranceExitMesh.updateVisibility();
+    this.entranceExitMesh.visible = ['portal'].includes(this.tool);
+    // this.entranceExitMesh.updateVisibility();
 
     this.pathMesh.visible = this.tool === 'portal';
 
