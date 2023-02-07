@@ -1796,6 +1796,16 @@ const TitleScreen = () => {
         titleScreenRenderer?.keys.down,
     ]);
 
+    useEffect(() => {
+        const destroyTitleScreenRenderer = () => {
+            titleScreenRenderer && titleScreenRenderer.destroy();
+        }
+        window.addEventListener('beforeunload', destroyTitleScreenRenderer);
+        return () => {
+            window.removeEventListener('beforeunload', destroyTitleScreenRenderer);
+        };
+    }, [titleScreenRenderer]);
+
     return (
         <div
             className={styles.titleScreen}
