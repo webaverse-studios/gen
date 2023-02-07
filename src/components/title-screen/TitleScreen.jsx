@@ -872,6 +872,12 @@ class TitleScreenRenderer extends EventTarget {
                 virtualPlayers.removeEventListener('leave', onVirtualPlayersLeave);
             });
         };
+        /*
+        (async () => {
+            multiplayerConnect();
+        })();
+        */
+        
         const keydown = e => {
             switch (e.key) {
                 case 'm': {
