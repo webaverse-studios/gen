@@ -35,6 +35,12 @@ export default defineConfig(({command, mode, ssrBuild}) => {
       },
       host: '0.0.0.0',
       port: 9999,
+      watch: {
+        /* For Windows-hosted files. */
+        usePolling: true,
+        interval: 5000,
+        binaryInterval: 15000,
+      },
     },
   };
 })
