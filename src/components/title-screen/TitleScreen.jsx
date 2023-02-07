@@ -872,6 +872,12 @@ class TitleScreenRenderer extends EventTarget {
                 virtualPlayers.removeEventListener('leave', onVirtualPlayersLeave);
             });
         };
+        /*
+        (async () => {
+            multiplayerConnect();
+        })();
+        */
+        
         const keydown = e => {
             switch (e.key) {
                 case 'm': {
@@ -1084,7 +1090,7 @@ class TitleScreenRenderer extends EventTarget {
             const onConnect = async position => {
                 // Initialize network realms player.
                 this.realms.localPlayer.initializePlayer({
-                  position,
+                    position,
                 }, {});
                 this.localPlayer.setRealmsPlayer(this.realms.localPlayer);
             };
@@ -1152,13 +1158,13 @@ class TitleScreenRenderer extends EventTarget {
                 camera: this.camera,
                 keys: this.keys,
             });
-        for (const player of this.remotePlayers.values()) {
-            player.update({
-                timestamp,
-                timeDiff,
-                camera: this.camera,
-            });
-        }
+            for (const player of this.remotePlayers.values()) {
+                player.update({
+                    timestamp,
+                    timeDiff,
+                    camera: this.camera,
+                });
+            }
         }
     }
     destroy() {
@@ -1655,8 +1661,8 @@ const TitleScreen = () => {
             console.warn('got invalid file', {firstBytes, firstBytesString});
           }
         }
-      };
-      useEffect(() => {
+    };
+    useEffect(() => {
         const router = useRouter();
         if (!seenRouters.has(router)) {
             seenRouters.set(router, true);
@@ -1670,10 +1676,10 @@ const TitleScreen = () => {
             };
             router.addEventListener('srcchange', srcchange);
             return () => {
-              router.removeEventListener('srcchange', srcchange);
+                router.removeEventListener('srcchange', srcchange);
             };
         }
-      }, []);
+    }, []);
 
     useEffect(() => {
         const keydown = async e => {
@@ -1795,6 +1801,16 @@ const TitleScreen = () => {
         titleScreenRenderer?.keys.up,
         titleScreenRenderer?.keys.down,
     ]);
+
+    useEffect(() => {
+        const destroyTitleScreenRenderer = () => {
+            titleScreenRenderer && titleScreenRenderer.destroy();
+        }
+        window.addEventListener('beforeunload', destroyTitleScreenRenderer);
+        return () => {
+            window.removeEventListener('beforeunload', destroyTitleScreenRenderer);
+        };
+    }, [titleScreenRenderer]);
 
     return (
         <div
