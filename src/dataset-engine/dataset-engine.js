@@ -80,7 +80,7 @@ export class DatasetEngine {
       ];
     }
 
-    const maxRetries = 5;
+    const maxRetries = 10;
     for (let i = 0; i < maxRetries; i++) {
       const completion = await this.aiClient.generate(prompt, stops);
       // console.log('try completion', {
