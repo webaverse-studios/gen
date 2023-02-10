@@ -16,7 +16,7 @@ import {
   canvasSize,
   numFramesPerRow,
   numFrames,
-  
+
   arrowUpBrightUrl,
   arrowUpDimUrl,
   arrowsUpUrl,
@@ -327,7 +327,7 @@ const getSemanticSpecs = ({
     labels: segmentLabels,
     labelIndices: segmentLabelIndices,
   } = getMaskSpecsByConnectivity(geometry, segmentMask, width, height);
-  
+
   const {
     labels: planeLabels,
     labelIndices: planeLabelIndices,
@@ -396,7 +396,7 @@ const getMaskSpecsByConnectivity = (geometry, mask, width, height) => {
 
                   if (ax >= 0 && ax < width && ay >= 0 && ay < height) {
                     const aIndex = ay * width + ax;
-                    
+
                     if (!seenIndices.has(aIndex)) {
                       queue.push(aIndex);
                       seenIndices.add(aIndex);
@@ -494,7 +494,7 @@ const getMaskSpecsByValue = (geometry, mask, width, height) => {
 
                   if (ax >= 0 && ax < width && ay >= 0 && ay < height) {
                     const aIndex = ay * width + ax;
-                    
+
                     if (!seenIndices.has(aIndex)) {
                       queue.push(aIndex);
                       seenIndices.add(aIndex);
@@ -530,7 +530,7 @@ const zipPlanesSegmentsJson = (planeLabels, planesJson) => {
       planeLabels,
       planesJson,
     });
-    debugger;
+    //er;
   }
 
   for (let i = 0; i < planeLabels.length; i++) {
@@ -607,7 +607,7 @@ const getFloorPlaneLocation = (() => {
   }) => {
     const quaternion = normalToQuaternion(floorPlaneNormal, localQuaternion, backwardVector)
       .multiply(localQuaternion2.setFromAxisAngle(rightVector, -Math.PI/2))
-    
+
     return {
       position: floorPlaneCenter.toArray(),
       quaternion: quaternion.toArray(),
@@ -711,7 +711,7 @@ const getRangeHit = (() => {
     );
     // if (targetPosition2 === null) {
     //   console.warn('no floor hit 3', targetPosition2);
-    //   debugger;
+    //   //er;
     // }
     return targetPosition2;
   };
@@ -815,7 +815,7 @@ const getRaycastedPortalLocations = (() => {
   const localQuaternion = new THREE.Quaternion();
   const localQuaternion2 = new THREE.Quaternion();
   const localQuaternion3 = new THREE.Quaternion();
-  
+
   return (portalLabels, depthFloats, depthFloatsRaw, floorPlaneLocation, floorPlaneJson) => {
     const portalLocations = [];
     for (let i = 0; i < portalLabels.length; i++) {
@@ -866,7 +866,7 @@ const getRaycastedPortalLocations = (() => {
             new THREE.Vector3(0, 0, -portalExtrusion)
               .applyQuaternion(portalQuaternion)
           );
-        
+
         // ensure there is space for the player to stand
         const targetPosition = getRangeHit(
           portalCenter,
@@ -976,7 +976,7 @@ const entranceExitIntersects = (() => {
       box2Quaternion,
       scale
     ));
-    
+
     return obb1.intersectsOBB(obb2);
   };
 })();
@@ -1018,7 +1018,7 @@ const sortLocations = (() => {
     let candidateLocations = [];
     candidateLocations.push(...portalLocations);
     const allCandidateLocations = candidateLocations.slice();
-    
+
     // do not scribble over original data
     cameraEntranceLocation = structuredClone(cameraEntranceLocation);
     candidateLocations = structuredClone(candidateLocations);
@@ -1236,7 +1236,7 @@ const sortLocations = (() => {
       for (let i = 0; i < candidateLocations.length; i++) {
         const candidateLocation = candidateLocations[i];
         // const candidatePosition = localVector.fromArray(candidateLocation.position);
-        
+
         const lookCandidateLocations = allCandidateLocations.filter(lookCandidateLocation => {
           return lookCandidateLocation !== candidateLocation;
         });
@@ -1263,7 +1263,7 @@ const sortLocations = (() => {
           localEuler.x = 0;
           localEuler.z = 0;
           targetQuaternion.setFromEuler(localEuler);
-    
+
           const floorNormal = new THREE.Vector3().fromArray(floorPlaneLocation.normal);
           const floorQuaternion = new THREE.Quaternion();
           normalToQuaternion(floorNormal, floorQuaternion, backwardVector)
@@ -1349,7 +1349,7 @@ const _mergeMask = (geometry, depthFloatImageData, distanceNearestPositions) => 
     localVector.fromArray(distanceNearestPositions, srcIndex * 3)
       .toArray(newPositions, dstIndex * 3);
   };
-  
+
   // copy over only the triangles that are not completely masked
   const newIndices = new geometry.index.array.constructor(geometry.index.array.length);
   let numIndices = 0;
@@ -1365,7 +1365,7 @@ const _mergeMask = (geometry, depthFloatImageData, distanceNearestPositions) => 
       newIndices[numIndices + 1] = b;
       newIndices[numIndices + 2] = c;
       numIndices += 3;
-      
+
       // if at least one of them is masked, we have a boundary point, so snap it
       if (aMasked || bMasked || cMasked) {
         !aMasked && _snapPoint(a);
@@ -1401,7 +1401,7 @@ const getSemanticPlanes = async (img, fov, newDepthFloatImageData, segmentMask) 
       if (!hadValue) { // if the mask was empty, use the original data
         newDepthFloatImageData1 = newDepthFloatImageData;
       }
-      
+
       const {width, height} = img;
       const planesSpec = await getPlanesRgbd(
         width,
@@ -1490,7 +1490,7 @@ class Selector {
 
     this.sceneMeshes = [];
     this.indexMeshes = [];
-    
+
     const lensRenderTarget = new THREE.WebGLRenderTarget(selectorSize, selectorSize, {
       minFilter: THREE.NearestFilter,
       magFilter: THREE.NearestFilter,
@@ -1504,7 +1504,7 @@ class Selector {
       selectorSize,
     });
     this.lensMaterial = lensMaterial;
-    
+
     const lensScene = new THREE.Scene();
     lensScene.autoUpdate = false;
     lensScene.overrideMaterial = lensMaterial;
@@ -1551,7 +1551,7 @@ class Selector {
     })();
     this.lensOutputMesh = lensOutputMesh;
 
-    // index full screen pass 
+    // index full screen pass
     const indicesRenderTarget = new THREE.WebGLRenderTarget((panelSize - 1) * 2, panelSize - 1, {
       minFilter: THREE.NearestFilter,
       magFilter: THREE.NearestFilter,
@@ -1821,22 +1821,22 @@ class Selector {
       /* const triangles = new Float32Array(9 * planeGeometry.attributes.position.array.length * width * height);
       if (triangles.length !== sceneMeshGeometry.attributes.position.array * 9) {
         console.warn('triangle count mismatch 1', triangles.length, sceneMeshGeometry.attributes.position.array * 9);
-        debugger;
+        //er;
       }
       if (triangles.length !== positions.length * 3) {
         console.warn('triangle count mismatch 2', positions.length, triangles.length * 3);
-        debugger;
+        //er;
       } */
       // if (width * height * 9 !== sceneMeshGeometry.attributes.position.array.length) {
       //   console.warn('invalid width/height', width, height, sceneMeshGeometry.attributes.position.array.length);
-      //   debugger;
+      //   //er;
       // }
       const pt1 = new Float32Array(planeGeometry.attributes.position.array.length * width * height);
       const pt2 = new Float32Array(planeGeometry.attributes.position.array.length * width * height);
       const pt3 = new Float32Array(planeGeometry.attributes.position.array.length * width * height);
       // if (pt1.length !== sceneMeshGeometry.attributes.position.array.length * 3) {
       //   console.warn('triangle count mismatch 1', pt1.length, sceneMeshGeometry.attributes.position.array.length * 3);
-      //   debugger;
+      //   //er;
       // }
       const indices = new Uint32Array(planeGeometry.index.array.length * width * height);
       let positionOffset = 0;
@@ -1988,19 +1988,19 @@ class Selector {
         const a = lensFloat32Data[3];
         if (a > 0) {
           const index = Math.floor(lensFloat32Data[0] * 65536 + lensFloat32Data[1] * 256 + lensFloat32Data[2]);
-          
+
           // look up the position index in the scene mesh indexed geometry
           if (this.sceneMeshes.length === 1) {
             // nothing
           } else {
             console.warn('only implemented for one scene mesh');
-            debugger;
+            // //er;
           }
           const firstSceneMesh = this.sceneMeshes[0]; // note: using first scene mesh only
           const index2 = firstSceneMesh.indexedGeometry.index.array[index] * 3;
           if (index2 === undefined) {
             console.warn('index2 is undefined');
-            debugger;
+            // //er;
           }
 
           if (index2 >= 0 && index2 < (this.renderer.domElement.width * this.renderer.domElement.height)) {
@@ -2027,7 +2027,7 @@ class Selector {
       for (const sceneMesh of this.sceneMeshes) {
         // if (!this.selector) {
         //   console.warn('no selector', this);
-        //   debugger;
+        //   //er;
         // }
         sceneMesh.update(this);
       }
@@ -2050,7 +2050,7 @@ class Selector {
           // nothing
         } else {
           console.warn('only implemented for one scene mesh');
-          debugger;
+          // //er;
         }
         const firstSceneMesh = this.sceneMeshes[0]; // note: using first scene mesh only
 
@@ -2110,7 +2110,7 @@ class Overlay {
   addMesh(sceneMesh) {
     // if (!sceneMesh) {
     //   console.warn('no sceneMesh', sceneMesh);
-    //   debugger;
+    //   //er;
     // }
 
     const geometry = sceneMesh.geometry.clone();
@@ -2245,7 +2245,7 @@ class Overlay {
         tex.image = img;
         tex.needsUpdate = true;
       })();
-      
+
       const material = new THREE.MeshBasicMaterial({
         // color: 0x000000,
         map: tex,
@@ -2427,7 +2427,7 @@ class Overlay {
               selectorIndex = segmentIndex;
             } else {
               console.warn('no segment index', this, segmentArray, pickerIndex);
-              debugger;
+              // //er;
             }
           } else {
             selectorIndex = -1;
@@ -2486,7 +2486,7 @@ class Overlay {
         );
         const center = boundingBox.getCenter(localVector);
         const size = boundingBox.getSize(localVector2);
-        
+
         {
           const textMesh = new Text();
           textMesh.position.copy(center);
@@ -2901,7 +2901,7 @@ class OutmeshToolMesh extends THREE.Object3D {
     imageMesh.visible = false;
 
     //
-    
+
     const outmeshMesh = this;
     outmeshMesh.visible = false;
 
@@ -2941,7 +2941,7 @@ class OutmeshToolMesh extends THREE.Object3D {
         outmeshMesh.quaternion.copy(camera.quaternion);
         outmeshMesh.updateMatrixWorld();
       }
-      
+
       // update meshes
       for (const mesh of meshes) {
         // update uTime
@@ -3024,7 +3024,7 @@ export class PanelRenderer extends EventTarget {
     const scene = new THREE.Scene();
     scene.autoUpdate = false;
     this.scene = scene;
-    
+
     const camera = makeDefaultCamera();
     this.camera = camera;
 
@@ -3056,14 +3056,14 @@ export class PanelRenderer extends EventTarget {
     avatar.visible = false;
     (async () => {
       const modelUrl = './models/scillia.glb';
-      
+
       const p = makePromise();
       gltfLoader.load(modelUrl, gltf => {
         p.resolve(gltf);
       }, function onProgress(xhr) {
         // console.log('progress', xhr.loaded / xhr.total);
       }, p.reject);
-  
+
       const model = await p;
       avatar.add(model.scene);
       model.scene.updateMatrixWorld();
@@ -3103,7 +3103,7 @@ export class PanelRenderer extends EventTarget {
         }, function onProgress(xhr) {
           // console.log('progress', xhr.loaded / xhr.total);
         }, p.reject);
-  
+
         const model = await p;
         mobs.add(model.scene);
         model.scene.updateMatrixWorld();
@@ -3120,7 +3120,7 @@ export class PanelRenderer extends EventTarget {
     const {
       sceneMesh,
       scenePhysicsMesh,
-      lightMesh,
+      // lightMesh,
       floorNetMesh,
       edgeDepthMesh,
       wallPlaneMeshes,
@@ -3129,7 +3129,7 @@ export class PanelRenderer extends EventTarget {
     this.camera.copy(this.zineRenderer.camera);
     this.sceneMesh = sceneMesh;
     this.scenePhysicsMesh = scenePhysicsMesh;
-    this.lightMesh = lightMesh;
+    // this.lightMesh = lightMesh;
     this.floorNetMesh = floorNetMesh;
     this.wallPlaneMeshes = wallPlaneMeshes;
     this.edgeDepthMesh = edgeDepthMesh;
@@ -3201,7 +3201,7 @@ export class PanelRenderer extends EventTarget {
     }
 
     // light mesh
-    lightMesh.visible = true;
+    // lightMesh.visible = true;
 
     // selector
     {
@@ -3217,14 +3217,14 @@ export class PanelRenderer extends EventTarget {
       selector.lensOutputMesh.updateMatrixWorld();
       this.zineRenderer.transformScene.add(selector.lensOutputMesh);
       selector.lensOutputMesh.updateMatrixWorld();
-      
+
       selector.indicesOutputMesh.position.x = -10;
       selector.indicesOutputMesh.position.z = -10;
       selector.indicesOutputMesh.quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
       selector.indicesOutputMesh.updateMatrixWorld();
       this.zineRenderer.transformScene.add(selector.indicesOutputMesh);
       selector.indicesOutputMesh.updateMatrixWorld();
-      
+
       sceneMesh.material.uniforms.selectedIndicesMap.value = selector.indicesRenderTarget.texture;
       sceneMesh.material.uniforms.selectedIndicesMap.needsUpdate = true;
       sceneMesh.material.uniforms.iSelectedIndicesMapResolution.value.set(selector.indicesRenderTarget.width, selector.indicesRenderTarget.height);
@@ -3268,7 +3268,7 @@ export class PanelRenderer extends EventTarget {
       this.avatar.updateMatrixWorld();
       this.avatar.visible = true;
     }
-    
+
     // place avatars
     const [
       avatarsTransform,
@@ -3364,13 +3364,13 @@ export class PanelRenderer extends EventTarget {
 
             if (this.tool === 'outmesh') {
               defaultCameraMatrix.copy(this.camera.matrixWorld);
-              
+
               (async () => {
                 this.outmeshMesh.setState('running');
 
                 try {
                   const outmeshImageResult = await this.renderOutmeshImage();
-                  
+
                   (async () => {
                     const {
                       editedImgBlob,
@@ -3390,7 +3390,7 @@ export class PanelRenderer extends EventTarget {
                     const value = outmeshImageResult[name] ?? outmeshMeshResult[name];
                     if (!value) {
                       console.warn('missing value', name);
-                      debugger;
+                      //er;
                     }
                     layer.setData(name, value);
                   }
@@ -3421,7 +3421,7 @@ export class PanelRenderer extends EventTarget {
             this.camera.matrixWorld.copy(defaultCameraMatrix);
             this.camera.matrix.copy(this.camera.matrixWorld)
               .decompose(this.camera.position, this.camera.quaternion, this.camera.scale);
-            
+
             // set the orbitControls target in front of us
             this.controls.target.copy(this.camera.position)
               .add(this.camera.getWorldDirection(localVector).multiplyScalar(3));
@@ -3702,11 +3702,11 @@ export class PanelRenderer extends EventTarget {
         `;
         document.body.appendChild(segmentsCanvasColor);
         const ctx = segmentsCanvasColor.getContext('2d');
-  
+
         const segmentImageData = ctx.createImageData(width, height);
         for (let i = 0; i < segmentMask.length; i++) {
           const segmentIndex = segmentMask[i];
-  
+
           const c = localColor.setHex(colors[segmentIndex % colors.length]);
           segmentImageData.data[i * 4 + 0] = c.r * 255;
           segmentImageData.data[i * 4 + 1] = c.g * 255;
@@ -3714,7 +3714,7 @@ export class PanelRenderer extends EventTarget {
           segmentImageData.data[i * 4 + 3] = 255;
         }
         ctx.putImageData(segmentImageData, 0, 0);
-  
+
         drawLabels(ctx, boundingBoxLayers);
       }
     }
@@ -3933,7 +3933,7 @@ export class PanelRenderer extends EventTarget {
   clip() {
     const {geometry, indexedGeometry} = this.sceneMesh;
     const depthFloats32Array = getDepthFloatsFromIndexedGeometry(indexedGeometry);
-    
+
     const layer1 = this.panel.getLayer(1);
     const resolution = layer1.getData('resolution');
     const [
@@ -4007,7 +4007,7 @@ export class PanelRenderer extends EventTarget {
         j++;
       }
       depthPreviewReconstructedMesh.geometry.setAttribute('color', new THREE.InstancedBufferAttribute(colors, 3));
-      
+
       // layerScene.add(depthPreviewReconstructedMesh);
     }
     // globalThis.reconstructedDepthFloats = reconstructedDepthFloats;
@@ -4033,7 +4033,7 @@ export class PanelRenderer extends EventTarget {
         j++;
       }
       depthPreviewNewMesh.geometry.setAttribute('color', new THREE.InstancedBufferAttribute(colors, 3));
-      
+
       // layerScene.add(depthPreviewNewMesh);
     }
     console.timeEnd('depthPreviewNew'); */
@@ -4136,7 +4136,7 @@ export class PanelRenderer extends EventTarget {
       layerScene.add(backgroundMesh);
     }
     console.timeEnd('backgroundMesh');
-    
+
     this.floorNetMesh.setGeometry({
       floorNetDepths,
       floorNetCamera,
@@ -4165,7 +4165,7 @@ export class PanelRenderer extends EventTarget {
       backgroundMesh2.matrix.copy(this.camera.matrix);
       backgroundMesh2.matrixWorld.copy(this.camera.matrixWorld);
       backgroundMesh2.frustumCulled = false;
-      
+
       layerScene.add(backgroundMesh2);
     }
     console.timeEnd('backgroundMesh2'); */
@@ -4246,7 +4246,7 @@ const getPlanesRgbd = async (width, height, focalLength, depthFloats32Array, min
   if (res.ok) {
     const planesArrayBuffer = await res.arrayBuffer();
     const dataView = new DataView(planesArrayBuffer);
-    
+
     // parse number of planes
     let index = 0;
     const numPlanes = dataView.getUint32(index, true);
@@ -4254,9 +4254,9 @@ const getPlanesRgbd = async (width, height, focalLength, depthFloats32Array, min
 
     /* if (numPlanes > 512) {
       console.warn('too many planes', numPlanes);
-      debugger;
+      //er;
     } */
-    
+
     // parse the planes
     const planesJson = [];
     for (let i = 0; i < numPlanes; i++) {
@@ -4268,7 +4268,7 @@ const getPlanesRgbd = async (width, height, focalLength, depthFloats32Array, min
       index += Uint32Array.BYTES_PER_ELEMENT;
       const distanceSquaredF = new Float32Array(planesArrayBuffer, index, 1);
       index += Float32Array.BYTES_PER_ELEMENT;
-      
+
       const planeJson = {
         normal,
         center,
@@ -4329,7 +4329,7 @@ const _getImageSegments = async (
     const ctx = canvas.getContext('2d');
     ctx.imageSmoothingEnabled = false;
     ctx.drawImage(segmentsImageBitmap, 0, 0, targetWidth, targetHeight);
-    
+
     // get the segement mask, which is the u8 red channel of the image
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const segmentMask = new Uint8Array(imageData.data.length / 4);
@@ -4384,7 +4384,7 @@ const bumpFloorNetDepthsByBoxes = (
 
       const box = new THREE.Box3()
         .setFromCenterAndSize(new THREE.Vector3(0, 0, 0), size);
-      
+
       // undo the box rotation transform so that we can perform a world space intersection test
       const rotatedRay = ray.clone();
       const m = new THREE.Matrix4()
@@ -4598,54 +4598,54 @@ export async function compileVirtualScene(imageArrayBuffer) {
   }
   console.timeEnd('camera');
 
-  console.time('sphericalHarmonics');
-  let sphericalHarmonics;
-
-  const skyCutCanvas = getSkyCutCanvas(width, height, segmentMask);
-  skyCutCanvas.classList.add('skyCut');
-  document.body.appendChild(skyCutCanvas);
-
-  const maskBlob = await new Promise((accept, reject) => {
-    skyCutCanvas.toBlob(accept);
-  });
-
-  const formData = new FormData();
-  formData.append('img', blob);
-  formData.append('mask', maskBlob);
-  {
-    const res = await fetch(`https://inverse-render-net.webaverse.com/lighting`, {
-      method: 'POST',
-      body: formData,
-    });
-    const arrayBuffer = await res.arrayBuffer();
-    sphericalHarmonics = new Float32Array(arrayBuffer);
-    // console.log('got spherical harmonics', sphericalHarmonics);
-  }
-  console.timeEnd('sphericalHarmonics');
-
-  console.time('inverseRender');
-  {
-    const pathNames = [
-      'albedo',
-      'shading',
-      'shadow',
-      'normal',
-    ];
-    for (const pathName of pathNames) {
-      // console.log('inverse render 1', {pathName});
-      const res = await fetch(`https://inverse-render-net.webaverse.com/${pathName}`, {
-        method: 'POST',
-        body: formData,
-      });
-      const arrayBuffer = await res.arrayBuffer();
-      // console.log('inverse render 2', {pathName, arrayBuffer});
-      const resultBlob = new Blob([arrayBuffer]);
-      const img = await blob2img(resultBlob);
-      img.classList.add(pathName);
-      document.body.appendChild(img);
-    }
-  }
-  console.timeEnd('inverseRender');
+  // console.time('sphericalHarmonics');
+  // let sphericalHarmonics;
+  //
+  // const skyCutCanvas = getSkyCutCanvas(width, height, segmentMask);
+  // skyCutCanvas.classList.add('skyCut');
+  // document.body.appendChild(skyCutCanvas);
+  //
+  // const maskBlob = await new Promise((accept, reject) => {
+  //   skyCutCanvas.toBlob(accept);
+  // });
+  //
+  // const formData = new FormData();
+  // formData.append('img', blob);
+  // formData.append('mask', maskBlob);
+  // {
+  //   const res = await fetch(`https://inverse-render-net.webaverse.com/lighting`, {
+  //     method: 'POST',
+  //     body: formData,
+  //   });
+  //   const arrayBuffer = await res.arrayBuffer();
+  //   sphericalHarmonics = new Float32Array(arrayBuffer);
+  //   // console.log('got spherical harmonics', sphericalHarmonics);
+  // }
+  // console.timeEnd('sphericalHarmonics');
+  //
+  // console.time('inverseRender');
+  // {
+  //   const pathNames = [
+  //     'albedo',
+  //     'shading',
+  //     'shadow',
+  //     'normal',
+  //   ];
+  //   for (const pathName of pathNames) {
+  //     // console.log('inverse render 1', {pathName});
+  //     const res = await fetch(`https://inverse-render-net.webaverse.com/${pathName}`, {
+  //       method: 'POST',
+  //       body: formData,
+  //     });
+  //     const arrayBuffer = await res.arrayBuffer();
+  //     // console.log('inverse render 2', {pathName, arrayBuffer});
+  //     const resultBlob = new Blob([arrayBuffer]);
+  //     const img = await blob2img(resultBlob);
+  //     img.classList.add(pathName);
+  //     document.body.appendChild(img);
+  //   }
+  // }
+  // console.timeEnd('inverseRender');
 
   const geometry = pointCloudArrayBufferToGeometry(pointCloudArrayBuffer, width, height);
   const semanticSpecs = getSemanticSpecs({
@@ -4797,14 +4797,14 @@ export async function compileVirtualScene(imageArrayBuffer) {
       let i = 0;
       while (queue.length > 0) {
         const [x, y] = queue.shift();
-        
+
         // XXX debug check
         {
           const index = getIndex(x, y, width);
           const r = depthFloat32Array[index];
           if (r !== 0) {
             console.warn('found filled pixel in queue', i, x, y);
-            debugger;
+            // //er;
           }
         }
 
@@ -4822,7 +4822,7 @@ export async function compileVirtualScene(imageArrayBuffer) {
                 const z = camera.position.y - outlineDepth;
                 // if (isNaN(z)) {
                 //   console.warn('illegal z 1', {z, outlineDepth, x, y});
-                //   debugger;
+                //   //er;
                 // }
 
                 const d = Math.sqrt(dx*dx + dy*dy);
@@ -4843,7 +4843,7 @@ export async function compileVirtualScene(imageArrayBuffer) {
           const z = zSum / weightSum;
           // if (isNaN(z)) {
           //   console.warn('illegal z 2', {z, zSum, weightSum, x, y});
-          //   debugger;
+          //   //er;
           // }
           const outlinePoint = [x, y, z];
           // outlinePoint[zSymbol] = z;
@@ -4857,7 +4857,7 @@ export async function compileVirtualScene(imageArrayBuffer) {
     const getOutlineJson = panelSpec => {
       // camera
       const chunkEdgeCamera = makeFloorNetCamera();
-    
+
       // compute camera spec
       const box3 = new THREE.Box3(
         new THREE.Vector3().fromArray(floorBoundingBox.min),
@@ -4865,7 +4865,7 @@ export async function compileVirtualScene(imageArrayBuffer) {
       );
       const center = box3.getCenter(new THREE.Vector3());
       const size = box3.getSize(new THREE.Vector3());
-    
+
       // back left
       const centerBackLeft = center.clone()
         .add(new THREE.Vector3(-size.x / 2, 0, -size.z / 2))
@@ -4873,7 +4873,7 @@ export async function compileVirtualScene(imageArrayBuffer) {
       // snap to grid
       centerBackLeft.x = Math.floor(centerBackLeft.x / floorNetResolution) * floorNetResolution;
       centerBackLeft.z = Math.floor(centerBackLeft.z / floorNetResolution) * floorNetResolution;
-      
+
       // front right
       const centerFrontRight = center.clone()
         .add(new THREE.Vector3(size.x / 2, 0, size.z / 2))
@@ -4881,7 +4881,7 @@ export async function compileVirtualScene(imageArrayBuffer) {
       // snap to grid
       centerFrontRight.x = Math.ceil(centerFrontRight.x / floorNetResolution) * floorNetResolution;
       centerFrontRight.z = Math.ceil(centerFrontRight.z / floorNetResolution) * floorNetResolution;
-      
+
       // compute the new center
       center.copy(centerBackLeft)
         .add(centerFrontRight)
@@ -4889,7 +4889,7 @@ export async function compileVirtualScene(imageArrayBuffer) {
       // compute the new size
       size.copy(centerFrontRight)
         .sub(centerBackLeft);
-    
+
       // set the orthographic camera
       chunkEdgeCamera.position.copy(center);
       chunkEdgeCamera.position.y -= floorNetWorldDepth / 2;
@@ -4899,11 +4899,11 @@ export async function compileVirtualScene(imageArrayBuffer) {
       chunkEdgeCamera.top = centerFrontRight.z - center.z;
       chunkEdgeCamera.bottom = centerBackLeft.z - center.z;
       chunkEdgeCamera.updateProjectionMatrix();
-    
+
       // compute the pixel resolution to use
       const targetWidth = Math.ceil(size.x / floorNetResolution); // padding
       const targetHeight = Math.ceil(size.z / floorNetResolution); // padding
-    
+
       // render the coverage map
       const meshSpecs = [
         {
@@ -4916,17 +4916,17 @@ export async function compileVirtualScene(imageArrayBuffer) {
       ];
       const meshes = getDepthRenderSpecsMeshes(meshSpecs, chunkEdgeCamera);
       const depthFloat32Array = renderMeshesDepth(meshes, targetWidth, targetHeight, chunkEdgeCamera);
-      
-      // for debugging
+
+      // for //ing
       // const coverageCanvas = depthFloats2Canvas(depthFloat32Array, width, height, chunkEdgeCamera);
       // coverageCanvas.style.cssText = `\
       //   background: blue;
       // `;
       // document.body.appendChild(coverageCanvas);
-    
+
       // get outline points
       const outlinePoints = getOutlinePoints(depthFloat32Array, targetWidth, targetHeight, chunkEdgeCamera);
-    
+
       // detect edges
       let edges = concaveman(outlinePoints, 5);
       // edges = edges.map(edge => {
@@ -5257,7 +5257,7 @@ export async function compileVirtualScene(imageArrayBuffer) {
               floorUpVector
             )
           );
-          
+
           wallQuaternion.multiply(planeGeometryNormalizeQuaternion);
           return {
             position: wallPosition,
@@ -5316,7 +5316,7 @@ export async function compileVirtualScene(imageArrayBuffer) {
         // const normal = localVector.fromArray(labelSpec.normal);
         // const center = localVector2.fromArray(labelSpec.center);
         const center = points[i];
-        
+
         // portal center in world space, 1m in front of the center
         const portalCenter = localVector3.copy(center)
           // .add(localVector4.copy(normal).multiplyScalar(-1));
@@ -5370,7 +5370,7 @@ export async function compileVirtualScene(imageArrayBuffer) {
     outlineJson,
     depthFieldHeaders,
     depthField: depthFieldArrayBuffer,
-    sphericalHarmonics,
+    // sphericalHarmonics,
     planesJson,
     portalJson,
     segmentLabels,

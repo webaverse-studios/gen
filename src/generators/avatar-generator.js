@@ -498,10 +498,6 @@ function padTexture({texture, mask}) {
 const Avatar3DCanvas = ({
                             renderer, model, camera, bg_color = 0xffffff
                         }) => {
-    // const canvas = document.createElement('canvas');
-    // canvas.width = 512;
-    // canvas.height = 512;
-    // const renderer = makeRenderer(canvas);
     renderer.setClearColor(bg_color, 1);
     const scene = new THREE.Scene();
     scene.autoUpdate = false;
