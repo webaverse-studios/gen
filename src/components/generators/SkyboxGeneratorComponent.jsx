@@ -82,6 +82,11 @@ import {
 } from '../drop-target/DropTarget.jsx';
 
 import styles from '../../../styles/MetasceneGenerator.module.css';
+
+import {
+  mod,
+} from '../../utils/memory-utils.js';
+
 import {
   blob2img,
 } from '../../utils/convert-utils.js';
@@ -120,6 +125,10 @@ import {
 } from '../../dataset-engine/dataset-specs.js';
 
 import {
+  getDepthField,
+} from '../../clients/reconstruction-client.js';
+
+import {
   DatasetGenerator,
   // CachedDatasetGenerator,
 } from '../../dataset-engine/dataset-generator.js';
@@ -156,6 +165,7 @@ const localPlane = new THREE.Plane();
 const localRaycaster = new THREE.Raycaster();
 const localBox2D = new THREE.Box2();
 const localColor = new THREE.Color();
+const localSpherical = new THREE.Spherical();
 const localObb = new OBB();
 
 const zeroVector = new THREE.Vector3(0, 0, 0);
@@ -164,36 +174,205 @@ const upVector = new THREE.Vector3(0, 1, 0);
 const y180Quaternion = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI);
 const y180Matrix = new THREE.Matrix4().makeRotationY(Math.PI);
 
+//
+
 const size = 756;
-
-// const fakeMaterial = new THREE.MeshBasicMaterial({
-//   color: 0xFF0000,
-// });
-
-// const aiClient = new AiClient();
-// const imageAiClient = new ImageAiClient();
-// const gltfLoader = new GLTFLoader();
+const panoramaRadius = 3;
+const panoramaWidthSegments = 256;
+const panoramaHeightSegments = 64;
 
 //
 
-// const defaultMaxWorkers = globalThis?.navigator?.hardwareConcurrency ?? 4;
-// const panelSpecGeometrySize = 256;
-// const panelSpecTextureSize = 256;
-// const metazineAtlasTextureSize = 4096;
-// const metazineAtlasTextureRowSize = Math.floor(metazineAtlasTextureSize / panelSpecTextureSize);
-// const orbitControlsDistance = 40;
-// const maxRenderPanels = 64;
-// const maxRenderEntranceExits = maxRenderPanels * 8;
-// const matrixWorldTextureWidthInPixels = maxRenderPanels * 16 / 4;
-// const labelHeightOffset = 20;
-// const labelFloatOffset = 0.1;
+// values is a float32 array of w * h
+const bilinearSample = (values, w, h, x, y) => {
+  const x0 = Math.floor(x);
+  const x1 = Math.min(x0 + 1, w - 1);
+  const y0 = Math.floor(y);
+  const y1 = Math.min(y0 + 1, h - 1);
+  const v00 = values[y0 * w + x0];
+  const v01 = values[y0 * w + x1];
+  const v10 = values[y1 * w + x0];
+  const v11 = values[y1 * w + x1];
+  const u = x - x0;
+  const v = y - y0;
+  const v0 = (1 - u) * v00 + u * v01;
+  const v1 = (1 - u) * v10 + u * v11;
+  const v2 = (1 - v) * v0 + v * v1;
+  return v2;
+};
+const setSphereGeometryPanoramaDepth = (geometry, depthTiles, widthSegments, heightSegments) => {
+  const numTiles = depthTiles.length;
+  const uvXIncrement = 1 / numTiles;
+
+  const thetaStart = 0;
+  const thetaEnd = Math.PI * 2;
+
+  const positionsAttribute = geometry.attributes.position;
+  const positions = positionsAttribute.array;
+
+  for ( let iy = 0; iy <= heightSegments; iy ++ ) {
+
+    const verticesRow = [];
+
+    const v = iy / heightSegments;
+
+    // special case for the poles
+
+    let uOffset = 0;
+
+    if ( iy == 0 && thetaStart == 0 ) {
+
+      uOffset = 0.5 / widthSegments;
+
+    } else if ( iy == heightSegments && thetaEnd == Math.PI ) {
+
+      uOffset = - 0.5 / widthSegments;
+
+    }
+
+    for ( let ix = 0; ix <= widthSegments; ix ++ ) {
+      const vertexIndex = ix + iy * ( widthSegments + 1 );
+      const vertexOffet = vertexIndex * 3;
+
+      localVector.fromArray(positions, vertexOffet);
+
+      const u = ix / widthSegments;
+
+      const u2 = mod(u + uOffset, 1);
+      // const v2 = 1 - v;
+      // const u2 = u;
+      const v2 = v;
+
+      // get the list of tiles contributing to this pixel
+      let candidateTiles = depthTiles.filter(tile => {
+        const leftUvX = tile.index * uvXIncrement;
+        const centerUvX = leftUvX + uvXIncrement;
+        const rightUvX = centerUvX + uvXIncrement;
+
+        return (
+          u2 >= leftUvX &&
+          u2 <= rightUvX
+        );
+      });
+      // candidateTiles = candidateTiles.slice(0, 1);
+      if (candidateTiles.length === 0) {
+        console.warn('no candidate tiles', depthTiles, u2, v2);
+        debugger;
+      }
+      // get the candidate depths values via bilinear sample
+      let value = 0;
+      let totalWeight = 0;
+      for (let i = 0; i < candidateTiles.length; i++) {
+        const tile = candidateTiles[i];
+
+        const leftUvX = tile.index * uvXIncrement;
+        const centerUvX = leftUvX + uvXIncrement;
+        const rightUvX = centerUvX + uvXIncrement;
+
+        // remap global uv 0..1 to local tile uv 0..1
+        const u3 = (u2 - leftUvX) / (rightUvX - leftUvX);
+        const v3 = v2;
+
+        const tileValue = bilinearSample(tile, size, size, u3 * size, v3 * size);
+        const distanceToCenterUvX = Math.abs(centerUvX - u2);
+
+        // weight the value by how close it is to the center of the tile
+        // const weight = 1 - ((distanceToCenterUvX / uvXIncrement) ** 2);
+        const weight = 1 - (distanceToCenterUvX / uvXIncrement) ** 2;
+        value += tileValue * weight;
+        totalWeight += weight;
+      }
+      value /= totalWeight;
+      value *= 0.001;
+      localVector.multiplyScalar(value);
+
+      localVector.toArray(positions, vertexOffet);
+
+      // // vertex
+
+      // vertex.x = - radius * Math.cos( phiStart + u * phiLength ) * Math.sin( thetaStart + v * thetaLength );
+      // vertex.y = radius * Math.cos( thetaStart + v * thetaLength );
+      // vertex.z = radius * Math.sin( phiStart + u * phiLength ) * Math.sin( thetaStart + v * thetaLength );
+
+      // vertices.push( vertex.x, vertex.y, vertex.z );
+
+      // // normal
+
+      // normal.copy( vertex ).normalize();
+      // normals.push( normal.x, normal.y, normal.z );
+
+      // // uv
+
+      // uvs.push( u + uOffset, 1 - v );
+
+      // verticesRow.push( index ++ );
+
+    }
+
+  }
+
+  positionsAttribute.needsUpdate = true;
+};
 
 //
 
-// const blockEvent = e => {
-//   e.preventDefault();
-//   e.stopPropagation();
-// };
+class TileMesh extends THREE.Mesh {
+  constructor({
+    map,
+  }) {
+    const geometry = new THREE.PlaneBufferGeometry(2, 2);
+    const material = new THREE.ShaderMaterial({
+      uniforms: {
+        map: {
+          value: map,
+          needsUpdate: true,
+        },
+        uvOffset: {
+          value: new THREE.Vector2(),
+          needsUpdate: true,
+        },
+        uvWidth: {
+          value: 1,
+          needsUpdate: true,
+        },
+      },
+      vertexShader: `\
+        varying vec2 vUv;
+
+        void main() {
+          vUv = uv;
+          // full screen texture
+          gl_Position = vec4(position, 1.0);
+          // vec2 position = position.xy * 0.5 + 0.5;
+          // gl_Position = vec4(position, 0.0, 1.0);
+        }
+      `,
+      fragmentShader: `\
+        uniform sampler2D map;
+        uniform vec2 uvOffset;
+        uniform float uvWidth;
+        
+        varying vec2 vUv;
+        
+        void main() {
+          vec2 uv = vUv;
+          // uv.x = (uv.x - 0.5) * uvWidth;
+          uv.x *= uvWidth;
+          uv += uvOffset;
+          gl_FragColor = texture2D(map, uv);
+        }
+      `,
+    });
+    super(geometry, material);
+  }
+  setUvOffset(uvOffset, uvWidth) {
+    this.material.uniforms.uvOffset.value.copy(uvOffset);
+    this.material.uniforms.uvOffset.needsUpdate = true;
+
+    this.material.uniforms.uvWidth.value = uvWidth;
+    this.material.uniforms.uvWidth.needsUpdate = true;
+  }
+}
 
 //
 
@@ -208,133 +387,292 @@ const SkyboxGeneratorComponent = () => {
       if (!loaded) {
         loaded = true;
 
-        const renderer = new THREE.WebGLRenderer({
-          canvas,
-          antialias: true,
-        });
+        (async () => {
+          // renderer
+          const renderer = new THREE.WebGLRenderer({
+            canvas,
+            antialias: true,
+          });
 
-        // scene
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0xEEEEEE);
-        scene.autoUpdate = false;
+          // scene
+          const scene = new THREE.Scene();
+          scene.background = new THREE.Color(0xEEEEEE);
+          scene.autoUpdate = false;
 
-        // camera
-        const camera = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
-        camera.position.y = 1;
-        camera.updateMatrixWorld();
+          // camera
+          const camera = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
+          camera.position.y = 1;
+          camera.updateMatrixWorld();
 
-        // cube render target
-        const cubeSize = 1024;
-        const cubeRenderTarget = new THREE.WebGLCubeRenderTarget(cubeSize, {
-          format: THREE.RGBAFormat,
-          generateMipmaps: true,
-          minFilter: THREE.LinearMipmapLinearFilter,
-        });
-        const cubeCamera = new THREE.CubeCamera(0.1, 1000, cubeRenderTarget);
-        cubeCamera.position.copy(camera.position);
-        cubeCamera.updateMatrixWorld();
+          // texture loader
+          const textureLoader = new THREE.TextureLoader();
 
-        // or create an unmanaged CubemapToEquirectangular
-        const equiUnmanaged = new CubemapToEquirectangular(renderer, false);
-        equiUnmanaged.setSize(cubeSize, cubeSize);
+          // cube render target
+          const cubeSize = 1024;
+          const cubeRenderTarget = new THREE.WebGLCubeRenderTarget(cubeSize, {
+            format: THREE.RGBAFormat,
+            generateMipmaps: true,
+            minFilter: THREE.LinearMipmapLinearFilter,
+          });
+          const cubeCamera = new THREE.CubeCamera(0.1, 1000, cubeRenderTarget);
+          cubeCamera.position.copy(camera.position);
+          cubeCamera.updateMatrixWorld();
 
-        // floor plane
-        const floorPlane = new THREE.Mesh(
-          new THREE.PlaneGeometry(100, 100).rotateX(-Math.PI / 2),
-          new THREE.MeshPhongMaterial({
-            color: 0x333333,
-            side: THREE.DoubleSide,
-          })
-        );
-        scene.add(floorPlane);
-        floorPlane.updateMatrixWorld();
+          // or create an unmanaged CubemapToEquirectangular
+          const equiUnmanaged = new CubemapToEquirectangular(renderer, false);
+          equiUnmanaged.setSize(cubeSize, cubeSize);
 
-        // display texture mesh
-        const displayTextureMesh = new THREE.Mesh(
-          new THREE.PlaneGeometry(2, 2),
-          new THREE.MeshBasicMaterial({
-            // color: 0xFFFFFF,
-            // map: cubeRenderTarget.texture,
-            // map: cubeCopyTexture,
+          // floor plane
+          const floorPlane = new THREE.Mesh(
+            new THREE.PlaneGeometry(100, 100).rotateX(-Math.PI / 2),
+            new THREE.MeshPhongMaterial({
+              color: 0x333333,
+              side: THREE.DoubleSide,
+            })
+          );
+          scene.add(floorPlane);
+          floorPlane.updateMatrixWorld();
+
+          // display texture mesh
+          const displayTextureMesh = new THREE.Mesh(
+            new THREE.PlaneGeometry(2, 2),
+            new THREE.MeshBasicMaterial({
+              map: equiUnmanaged.output.texture,
+              side: THREE.DoubleSide,
+            })
+          );
+          displayTextureMesh.position.set(0, 1, -2);
+          scene.add(displayTextureMesh);
+          displayTextureMesh.updateMatrixWorld();
+
+          // lights
+          const ambientLight = new THREE.AmbientLight(0x404040);
+          scene.add(ambientLight);
+          const directionalLight = new THREE.DirectionalLight(0xFFFFFF, 2);
+          directionalLight.position.set(0, 1, 0);
+          scene.add(directionalLight);
+          directionalLight.updateMatrixWorld();
+
+          // orbit controls
+          const orbitControls = new OrbitControls(camera, canvas);
+          orbitControls.target.set(0, 1, -1);
+          
+          // cube render target copy (for sphere)
+          // const cubeRenderTargetCopy = new THREE.WebGLCubeRenderTarget(cubeSize, {
+          //   format: THREE.RGBAFormat,
+          //   // generateMipmaps: true,
+          //   // minFilter: THREE.LinearMipmapLinearFilter,
+          // });
+
+          // display sphere mesh
+          const sphereGeometry = new THREE.SphereGeometry(1, 32, 32);
+          const sphereMaterial = new THREE.MeshBasicMaterial({
             map: equiUnmanaged.output.texture,
             side: THREE.DoubleSide,
-          })
-        );
-        displayTextureMesh.position.set(0, 1, -2);
-        // displayTextureMesh.scale.set(1, 1, 1);
-        scene.add(displayTextureMesh);
-        displayTextureMesh.updateMatrixWorld();
+          });
+          const sphereMesh = new THREE.Mesh(sphereGeometry, sphereMaterial);
+          sphereMesh.position.set(0, 1, 0);
+          scene.add(sphereMesh);
+          sphereMesh.updateMatrixWorld();
 
-        // lights
-        const ambientLight = new THREE.AmbientLight(0x404040);
-        scene.add(ambientLight);
-        const directionalLight = new THREE.DirectionalLight(0xFFFFFF, 2);
-        directionalLight.position.set(0, 1, 0);
-        scene.add(directionalLight);
-        directionalLight.updateMatrixWorld();
+          // default cube
+          const cubeMesh = new THREE.Mesh(
+            new THREE.BoxGeometry(1, 1, 1),
+            new THREE.MeshPhongMaterial({
+              color: 0x800000,
+              // side: THREE.DoubleSide,
+            })
+          );
+          cubeMesh.position.set(0, 3, -3);
+          scene.add(cubeMesh);
+          cubeMesh.updateMatrixWorld();
 
-        // orbit controls
-        const orbitControls = new OrbitControls(camera, canvas);
-        // orbitControls.enableDamping = true;
-        orbitControls.target.set(0, 1, -1);
-        
-        // cube render target copy (for sphere)
-        const cubeRenderTargetCopy = new THREE.WebGLCubeRenderTarget(cubeSize, {
-          format: THREE.RGBAFormat,
-          generateMipmaps: true,
-          minFilter: THREE.LinearMipmapLinearFilter,
-        });
+          // jungle sphere mesh
+          const jungleSphereGeometry = new THREE.SphereGeometry(
+            panoramaRadius,
+            panoramaWidthSegments,
+            panoramaHeightSegments,
+          );
+          // flip inside out
+          for (let i = 0; i < jungleSphereGeometry.index.array.length; i += 3) {
+            const a = jungleSphereGeometry.index.array[i + 0];
+            const b = jungleSphereGeometry.index.array[i + 1];
+            const c = jungleSphereGeometry.index.array[i + 2];
+            jungleSphereGeometry.index.array[i + 0] = c;
+            jungleSphereGeometry.index.array[i + 1] = b;
+            jungleSphereGeometry.index.array[i + 2] = a;
+          }
+          // const jungleSphereMaterial = new THREE.MeshPhongMaterial({
+          //   map: textureLoader.load('imagine/jungle.png'),
+          // });
+          const panoramaTexture = await new Promise((accept, reject) => {
+            textureLoader.load('images/jungle.png', accept, undefined, reject);
+          });
+          panoramaTexture.wrapS = THREE.RepeatWrapping;
+          panoramaTexture.wrapT = THREE.RepeatWrapping;
+          panoramaTexture.needsUpdate = true;
+          const panoramaTextureImage = panoramaTexture.image;
+          document.body.appendChild(panoramaTextureImage);
 
-        // display sphere mesh
-        const sphereGeometry = new THREE.SphereGeometry(1, 32, 32);
-        // flip uvs
-        // for (let i = 0; i < sphereGeometry.attributes.uv.count; i++) {
-        //   sphereGeometry.attributes.uv.setY(i, 1 - sphereGeometry.attributes.uv.getY(i));
-        // }
-        const sphereMaterial = new THREE.MeshBasicMaterial({
-          // color: 0xFFFFFF,
-          // map: cubeRenderTarget.texture,
-          map: cubeRenderTargetCopy.texture,
-          side: THREE.DoubleSide,
-        });
-        const sphereMesh = new THREE.Mesh(sphereGeometry, sphereMaterial);
-        sphereMesh.position.set(0, 1, 0);
-        scene.add(sphereMesh);
-        sphereMesh.updateMatrixWorld();
+          const jungleSphereMaterial = new THREE.ShaderMaterial({
+            uniforms: {
+              map: {
+                value: panoramaTexture,
+              }
+            },
+            vertexShader: `\
+              varying vec2 vUv;
 
-        // default cube
-        const cubeMesh = new THREE.Mesh(
-          new THREE.BoxGeometry(1, 1, 1),
-          new THREE.MeshPhongMaterial({
-            color: 0x800000,
-            // side: THREE.DoubleSide,
-          })
-        );
-        cubeMesh.position.set(0, 3, -3);
-        scene.add(cubeMesh);
-        cubeMesh.updateMatrixWorld();
+              void main() {
+                vUv = uv;
+                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+              }
+            `,
+            fragmentShader: `\
+              uniform sampler2D map;
+              varying vec2 vUv;
 
-        const _recurse = () => {
-          frame = requestAnimationFrame(_recurse);
+              void main() {
+                vec4 c = texture2D(map, vUv);
 
-          // update
-          orbitControls.update();
+                gl_FragColor = vec4(vUv * 0.1, 0.0, 1.0);
+                gl_FragColor.rgb += c.rgb;
+              }
+            `,
+          });
+          const jungleSphereMesh = new THREE.Mesh(jungleSphereGeometry, jungleSphereMaterial);
+          jungleSphereMesh.position.set(0, 20, 0);
+          scene.add(jungleSphereMesh);
+          jungleSphereMesh.updateMatrixWorld();
 
-          // render cube camera
-          displayTextureMesh.visible = false;
-          sphereMesh.visible = false;
-          
-          cubeCamera.update(renderer, scene);
-          equiUnmanaged.convert(cubeCamera);
-          cubeRenderTargetCopy.fromEquirectangularTexture(renderer, equiUnmanaged.output.texture);
-          
-          displayTextureMesh.visible = true;
-          sphereMesh.visible = true;
+          //
 
-          // render main camera
-          renderer.render(scene, camera);
-        };
-        let frame = requestAnimationFrame(_recurse);
+          // tile scene
+          const tileScene = new THREE.Scene();
+          tileScene.autoUpdate = false;
+
+          // tile mesh
+          const tileMesh = new TileMesh({
+            map: panoramaTexture,
+          });
+          tileMesh.position.set(0, 1, 0);
+          tileScene.add(tileMesh);
+          tileMesh.updateMatrixWorld();
+
+          //
+
+          // render panorama
+          globalThis.addEventListener('keydown', e => {
+            const {key} = e;
+            switch (key) {
+              case 'p': {
+                (async () => {
+                  const aspect = panoramaTextureImage.width / panoramaTextureImage.height;
+                  console.log('snapshotting', aspect);
+
+                  const numTiles = Math.ceil(aspect * 2);
+                  const tiles = [];
+                  globalThis.tiles = tiles;
+                  // we overlap tiles by 50% to avoid seams
+                  const uvXIncrement = 1 / numTiles;
+                  for (let i = 0; i < numTiles; i++) {
+                    const tileCanvas = document.createElement('canvas');
+                    tileCanvas.width = size;
+                    tileCanvas.height = size;
+                    const tileCanvasCtx = tileCanvas.getContext('2d');
+
+                    tileMesh.setUvOffset(
+                      new THREE.Vector2(
+                        uvXIncrement * i,
+                        0,
+                      ),
+                      uvXIncrement * 2
+                    );
+
+                    renderer.render(tileScene, camera);
+                    tileCanvasCtx.drawImage(renderer.domElement, 0, 0);
+
+                    document.body.appendChild(tileCanvas);
+                    tiles.push(tileCanvas);
+                  }
+                  const depths = [];
+                  globalThis.depths = depths;
+                  const depthCanvases = [];
+                  globalThis.depthCanvases = depthCanvases;
+
+                  for (let i = 0; i < tiles.length; i++) {
+                    const tile = tiles[i];
+                    const blob = await new Promise((accept, reject) => {
+                      tile.toBlob(accept, 'image/png');
+                    });
+                    const df = await getDepthField(blob);
+                    console.log('got depth field', df);
+
+                    const depthFieldHeaders = df.headers;
+                    const depthFieldArrayBuffer = df.arrayBuffer;
+                    const float32Array = new Float32Array(depthFieldArrayBuffer);
+                    float32Array.index = i;
+                    depths.push(float32Array);
+
+                    const depthCanvas = document.createElement('canvas');
+                    depthCanvas.width = size;
+                    depthCanvas.height = size;
+                    const depthCtx = depthCanvas.getContext('2d');
+                    const imageData = depthCtx.createImageData(size, size);
+                    for (let i = 0; i < size * size; i++) {
+                      const depth = float32Array[i] / 1000 / 10;
+                      const depthByte = Math.floor(depth * 255);
+                      const j = i * 4;
+                      imageData.data[j + 0] = depthByte;
+                      imageData.data[j + 1] = depthByte;
+                      imageData.data[j + 2] = depthByte;
+                      imageData.data[j + 3] = 255;
+                    }
+                    depthCtx.putImageData(imageData, 0, 0);
+
+                    document.body.appendChild(depthCanvas);
+                    depthCanvases.push(depthCanvas);
+                  }
+
+                  console.log('got depths', depths);
+
+                  setSphereGeometryPanoramaDepth(
+                    jungleSphereGeometry,
+                    depths,
+                    panoramaWidthSegments,
+                    panoramaHeightSegments,
+                  );
+                })();
+
+                break;
+              }
+            }
+          });
+
+          const _recurse = () => {
+            frame = requestAnimationFrame(_recurse);
+
+            // update
+            orbitControls.update();
+
+            // render cube camera
+            displayTextureMesh.visible = false;
+            sphereMesh.visible = false;
+            jungleSphereMesh.visible = false;
+            
+            cubeCamera.update(renderer, scene);
+            equiUnmanaged.convert(cubeCamera);
+            // cubeRenderTargetCopy.fromEquirectangularTexture(renderer, equiUnmanaged.output.texture);
+            
+            displayTextureMesh.visible = true;
+            sphereMesh.visible = true;
+            jungleSphereMesh.visible = true;
+
+            // render main camera
+            renderer.render(scene, camera);
+          };
+          let frame = requestAnimationFrame(_recurse);
+        })();
       }
     }
   }, [canvasRef.current]);
