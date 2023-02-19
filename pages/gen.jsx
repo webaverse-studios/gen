@@ -2,7 +2,7 @@ import {useState, useEffect} from 'react';
 import classnames from 'classnames';
 
 import SceneGeneratorComponent from '../src/components/generators/SceneGeneratorComponent.jsx';
-import MetasceneGeneratorComponent from '../src/components/generators/MetasceneGeneratorComponent.jsx';
+import SkyboxGeneratorComponent from '../src/components/generators/SkyboxGeneratorComponent.jsx';
 import AvatarGeneratorComponent from '../src/components/generators/AvatarGeneratorComponent.jsx';
 import MobGeneratorComponent from '../src/components/generators/MobGeneratorComponent.jsx';
 // import CharacterGeneratorComponent from '../src/components/generators/CharacterGeneratorComponent.jsx';
@@ -26,6 +26,10 @@ const tabs = [
   {
     tab: 'sceneGenerator',
     label: 'Scene',
+  },
+  {
+    tab: 'skyboxGenerator',
+    label: 'Skybox',
   },
   {
     tab: 'metasceneGenerator',
@@ -125,6 +129,9 @@ export const Gen = () => {
           switch (tab) {
             case 'sceneGenerator': {
               return <SceneGeneratorComponent />
+            }
+            case 'skyboxGenerator': {
+              return <SkyboxGeneratorComponent />
             }
             case 'metasceneGenerator': {
               return <MetasceneGeneratorComponent />
