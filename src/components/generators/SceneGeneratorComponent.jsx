@@ -29,13 +29,6 @@ const SceneGeneratorComponent = () => {
   const [panel, setPanel] = useState(null);
   const [panels, setPanels] = useState([]);
 
-  // load physx
-  // useEffect(() => {
-  //   (async () => {
-  //     await physx.waitForLoad();
-  //   })();
-  // }, []);
-
   useEffect(() => {
     const paneladd = e => {
       // console.log('panel add', storyboard.panels.slice());
