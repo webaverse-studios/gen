@@ -233,8 +233,8 @@ const bilinearSamplePlane = (() => {
     return target;
   };
 })();
-const setSphereGeometryPanoramaDepth = (geometry, geometries, widthSegments, heightSegments) => {
-  const numTiles = geometries.length;
+const setSphereGeometryPanoramaDepth = (geometry, depthTiles, widthSegments, heightSegments) => {
+  const numTiles = depthTiles.length;
   const uvXIncrement = 1 / numTiles;
 
   const thetaStart = 0;
@@ -242,6 +242,9 @@ const setSphereGeometryPanoramaDepth = (geometry, geometries, widthSegments, hei
 
   const positionsAttribute = geometry.attributes.position;
   const positions = positionsAttribute.array;
+
+  globalThis.minU3 = Infinity;
+  globalThis.maxU3 = -Infinity;
 
   for ( let iy = 0; iy <= heightSegments; iy ++ ) {
     // const verticesRow = [];
@@ -281,7 +284,7 @@ const setSphereGeometryPanoramaDepth = (geometry, geometries, widthSegments, hei
 
       // get the list of tiles contributing to this pixel
       // console.log('start check');
-      let candidateGeometries = geometries.filter(tile => {
+      let candidateTiles = depthTiles.filter(tile => {
         const leftUvX = tile.i * uvXIncrement;
         const centerUvX = mod(leftUvX + uvXIncrement, 1);
         const rightUvX = mod(centerUvX + uvXIncrement, 1);
@@ -310,48 +313,60 @@ const setSphereGeometryPanoramaDepth = (geometry, geometries, widthSegments, hei
 
         return d < uvXIncrement;
       });
-      // candidateGeometries = candidateGeometries.slice(0, 1);
-      if (candidateGeometries.length === 0) {
+      // candidateTiles = candidateTiles.slice(0, 1);
+      if (candidateTiles.length === 0) {
         console.warn('no candidate geometries', geometries, u2, v2);
         debugger;
       }
 
       // get the candidate depths values via bilinear sample
-      const value = new THREE.Vector3();
+      // const value = new THREE.Vector3();
+      let value = 0;
       let totalWeight = 0;
-      for (let i = 0; i < candidateGeometries.length; i++) {
-        const geometry = candidateGeometries[i];
+      for (let i = 0; i < candidateTiles.length; i++) {
+        const depthTile = candidateTiles[i];
 
-        const leftUvX = geometry.i * uvXIncrement;
+        const leftUvX = depthTile.i * uvXIncrement;
         const centerUvX = mod(leftUvX + uvXIncrement, 1);
         const rightUvX = mod(centerUvX + uvXIncrement, 1);
 
         // remap global uv 0..1 to local tile uv 0..1
-        const u3 = (u2 - leftUvX) / (rightUvX - leftUvX);
+        // IMPORTANT NOTE: account for the modulo wrapping; we can't just do u2 - leftUvX
+        const u3 = mod(u2 - leftUvX, 1) / mod(rightUvX - leftUvX, 1);
         const v3 = v2;
 
-        // let tileValue = bilinearSample(tile, size, size, u3 * size, v3 * size);
-        // let tileValue = bilinearSample(tile, size, size, u3 * size, v3 * size);
-        // tileValue *= -1; // since depth is negative
-        const position = bilinearSamplePlane(geometry, size, size, u3 * size, v3 * size, localVector2);
+        // globalThis.minU3 = Math.min(globalThis.minU3, u3);
+        // globalThis.maxU3 = Math.max(globalThis.maxU3, u3);
+
+        let tileValue = bilinearSample(depthTile, size, size, u3 * size, v3 * size);
+        tileValue *= -1; // since depth is negative
 
         // rotate the position from tile space to sphere space
-        const rotY = (geometry.i / numTiles) * Math.PI * 2;
-        localQuaternion.setFromAxisAngle(upVector, -rotY);
+        // const rotY = (depthTile.i / numTiles) * Math.PI * 2;
+        // localQuaternion.setFromAxisAngle(upVector, -rotY);
         // position.applyQuaternion(localQuaternion);
         // position.x *= -1;
         // position.z *= -1;
         // position.y *= -1;
 
         // weight the value by how close it is to the center of the tile
-        const distanceToCenterUvX = Math.abs(centerUvX - u2);
-        const weight = 1 - (distanceToCenterUvX / uvXIncrement);
-        value.add(position.multiplyScalar(weight));
+        const distanceToCenterUvX = Math.abs(u3 - 0.5) * 2;
+        const weight = 1 - distanceToCenterUvX;
+        // value.add(position.multiplyScalar(weight));
+        value += tileValue * weight;
         totalWeight += weight;
       }
-      value.divideScalar(totalWeight);
+      value /= totalWeight;
 
-      localVector.copy(value);
+      const direction2D = localVector2D.set(
+        localVector.x,
+        localVector.z
+      );
+      direction2D.normalize();
+      direction2D.multiplyScalar(value);
+      // localVector.multiplyScalar(value);
+      localVector.x = direction2D.x;
+      localVector.z = direction2D.y;
       localVector.toArray(positions, vertexOffet);
     }
   }
@@ -597,128 +612,120 @@ const SkyboxGeneratorComponent = () => {
           //
 
           // render panorama
-          globalThis.addEventListener('keydown', e => {
-            const {key} = e;
-            switch (key) {
-              case 'p': {
-                (async () => {
-                  const aspect = panoramaTextureImage.width / panoramaTextureImage.height;
-                  console.log('snapshotting', aspect);
+          const renderPanorama = async () => {
+            const aspect = panoramaTextureImage.width / panoramaTextureImage.height;
+            // console.log('snapshotting', aspect);
 
-                  const numTiles = Math.ceil(aspect * 2);
-                  const tiles = [];
-                  globalThis.tiles = tiles;
-                  // we overlap tiles by 50% to avoid seams
-                  const uvXIncrement = 1 / numTiles;
-                  for (let i = 0; i < numTiles; i++) {
-                    const tileCanvas = document.createElement('canvas');
-                    tileCanvas.width = size;
-                    tileCanvas.height = size;
-                    const tileCanvasCtx = tileCanvas.getContext('2d');
+            const numTiles = Math.ceil(aspect * 2);
+            const tiles = [];
+            globalThis.tiles = tiles;
+            // we overlap tiles by 50% to avoid seams
+            const uvXIncrement = 1 / numTiles;
+            for (let i = 0; i < numTiles; i++) {
+              const tileCanvas = document.createElement('canvas');
+              tileCanvas.width = size;
+              tileCanvas.height = size;
+              const tileCanvasCtx = tileCanvas.getContext('2d');
 
-                    tileMesh.setUvOffset(
-                      new THREE.Vector2(
-                        uvXIncrement * i,
-                        0,
-                      ),
-                      uvXIncrement * 2
-                    );
+              tileMesh.setUvOffset(
+                new THREE.Vector2(
+                  uvXIncrement * i,
+                  0,
+                ),
+                uvXIncrement * 2
+              );
 
-                    renderer.render(tileScene, camera);
-                    tileCanvasCtx.drawImage(renderer.domElement, 0, 0);
+              renderer.render(tileScene, camera);
+              tileCanvasCtx.drawImage(renderer.domElement, 0, 0);
 
-                    document.body.appendChild(tileCanvas);
-                    tiles.push(tileCanvas);
-                  }
-                  const depths = [];
-                  globalThis.depths = depths;
-                  const depthCanvases = [];
-                  globalThis.depthCanvases = depthCanvases;
-                  const geometries = [];
-                  globalThis.geometries = geometries;
-
-                  for (let i = 0; i < tiles.length; i++) {
-                    const tile = tiles[i];
-                    
-                    // image
-                    const blob = await new Promise((accept, reject) => {
-                      tile.toBlob(accept, 'image/png');
-                    });
-
-                    // depth field
-                    const df = await getDepthField(blob);
-                    const depthFieldHeaders = df.headers;
-                    const depthFieldArrayBuffer = df.arrayBuffer;
-
-                    if (tile.width !== size || tile.height !== size) {
-                      console.warn('tile size mismatch', tile.width, tile.height, size, size);
-                      debugger;
-                    }
-
-                    const fov = parseFloat(depthFieldHeaders['x-fov']);
-                    // const float32Array = new Float32Array(depthFieldArrayBuffer);
-                    // float32Array.index = i;
-                    // depths.push(float32Array);
-
-                    // point cloud
-                    const pointCloudFloat32Array = reconstructPointCloudFromDepthField(
-                      depthFieldArrayBuffer,
-                      tile.width,
-                      tile.height,
-                      fov,
-                    );
-                    const pointCloudArrayBuffer = pointCloudFloat32Array.buffer;
-
-                    // depth floats
-                    const float32Array = getDepthFloatsFromPointCloud(
-                      pointCloudArrayBuffer,
-                      tile.width,
-                      tile.height
-                    );
-                    float32Array.i = i;
-                    depths.push(float32Array);
-
-                    const geometry = pointCloudArrayBufferToGeometry(
-                      pointCloudArrayBuffer,
-                      tile.width,
-                      tile.height
-                    );
-                    geometry.i = i;
-                    geometries.push(geometry);
-
-                    const depthCanvas = document.createElement('canvas');
-                    depthCanvas.width = size;
-                    depthCanvas.height = size;
-                    const depthCtx = depthCanvas.getContext('2d');
-                    const imageData = depthCtx.createImageData(size, size);
-                    for (let i = 0; i < size * size; i++) {
-                      const depth = float32Array[i] / 1000 / 10;
-                      const depthByte = Math.floor(depth * 255);
-                      const j = i * 4;
-                      imageData.data[j + 0] = depthByte;
-                      imageData.data[j + 1] = depthByte;
-                      imageData.data[j + 2] = depthByte;
-                      imageData.data[j + 3] = 255;
-                    }
-                    depthCtx.putImageData(imageData, 0, 0);
-
-                    document.body.appendChild(depthCanvas);
-                    depthCanvases.push(depthCanvas);
-                  }
-
-                  setSphereGeometryPanoramaDepth(
-                    jungleSphereGeometry,
-                    // depths,
-                    geometries,
-                    panoramaWidthSegments,
-                    panoramaHeightSegments,
-                  );
-                })();
-
-                break;
-              }
+              document.body.appendChild(tileCanvas);
+              tiles.push(tileCanvas);
             }
-          });
+            const depths = [];
+            globalThis.depths = depths;
+            const depthCanvases = [];
+            globalThis.depthCanvases = depthCanvases;
+            const geometries = [];
+            globalThis.geometries = geometries;
+
+            for (let i = 0; i < tiles.length; i++) {
+              const tile = tiles[i];
+              
+              // image
+              const blob = await new Promise((accept, reject) => {
+                tile.toBlob(accept, 'image/png');
+              });
+
+              // depth field
+              const df = await getDepthField(blob);
+              const depthFieldHeaders = df.headers;
+              const depthFieldArrayBuffer = df.arrayBuffer;
+
+              if (tile.width !== size || tile.height !== size) {
+                console.warn('tile size mismatch', tile.width, tile.height, size, size);
+                debugger;
+              }
+
+              const fov = parseFloat(depthFieldHeaders['x-fov']);
+              // const float32Array = new Float32Array(depthFieldArrayBuffer);
+              // float32Array.index = i;
+              // depths.push(float32Array);
+
+              // point cloud
+              const pointCloudFloat32Array = reconstructPointCloudFromDepthField(
+                depthFieldArrayBuffer,
+                tile.width,
+                tile.height,
+                fov,
+              );
+              const pointCloudArrayBuffer = pointCloudFloat32Array.buffer;
+
+              // depth floats
+              const float32Array = getDepthFloatsFromPointCloud(
+                pointCloudArrayBuffer,
+                tile.width,
+                tile.height
+              );
+              float32Array.i = i;
+              depths.push(float32Array);
+
+              const geometry = pointCloudArrayBufferToGeometry(
+                pointCloudArrayBuffer,
+                tile.width,
+                tile.height
+              );
+              geometry.i = i;
+              geometries.push(geometry);
+
+              const depthCanvas = document.createElement('canvas');
+              depthCanvas.width = size;
+              depthCanvas.height = size;
+              const depthCtx = depthCanvas.getContext('2d');
+              const imageData = depthCtx.createImageData(size, size);
+              for (let i = 0; i < size * size; i++) {
+                const depth = float32Array[i] / 1000 / 10;
+                const depthByte = Math.floor(depth * 255);
+                const j = i * 4;
+                imageData.data[j + 0] = depthByte;
+                imageData.data[j + 1] = depthByte;
+                imageData.data[j + 2] = depthByte;
+                imageData.data[j + 3] = 255;
+              }
+              depthCtx.putImageData(imageData, 0, 0);
+
+              document.body.appendChild(depthCanvas);
+              depthCanvases.push(depthCanvas);
+            }
+
+            setSphereGeometryPanoramaDepth(
+              jungleSphereGeometry,
+              depths,
+              // geometries,
+              panoramaWidthSegments,
+              panoramaHeightSegments,
+            );
+          };
+          renderPanorama();
 
           const _recurse = () => {
             frame = requestAnimationFrame(_recurse);
