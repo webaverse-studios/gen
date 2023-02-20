@@ -81,7 +81,7 @@ import {
   DropTarget,
 } from '../drop-target/DropTarget.jsx';
 
-import styles from '../../../styles/MetasceneGenerator.module.css';
+import styles from '../../../styles/SkyboxGenerator.module.css';
 
 import {
   mod,
@@ -181,6 +181,10 @@ const panoramaRadius = 3;
 const panoramaWidthSegments = 256;
 const panoramaHeightSegments = 64;
 
+const cameraY = 5;
+
+const cubeSize = 1024;
+
 //
 
 // values is a float32 array of w * h
@@ -222,10 +226,6 @@ const bilinearSamplePlane = (() => {
     const v11 = localVector4.fromArray(positions, (y1 * w + x1) * 3);
     const u = x - x0;
     const v = y - y0;
-    // const v0 = (1 - u) * v00 + u * v01;
-    // const v1 = (1 - u) * v10 + u * v11;
-    // const v2 = (1 - v) * v0 + v * v1;
-    // return v2;
     const v0 = localVector5.copy(v00).lerp(v01, u);
     const v1 = localVector6.copy(v10).lerp(v11, u);
     const v2 = localVector7.copy(v0).lerp(v1, v);
@@ -233,7 +233,12 @@ const bilinearSamplePlane = (() => {
     return target;
   };
 })();
-const setSphereGeometryPanoramaDepth = (geometry, depthTiles, widthSegments, heightSegments) => {
+const setSphereGeometryPanoramaDepth = (
+  geometry,
+  depthTiles,
+  widthSegments,
+  heightSegments
+) => {
   const numTiles = depthTiles.length;
   const uvXIncrement = 1 / numTiles;
 
@@ -436,14 +441,309 @@ class TileMesh extends THREE.Mesh {
 
 //
 
+const _makeTestScene = ({
+  renderer,
+  camera,
+}) => {
+  // scene
+  const scene = new THREE.Scene();
+  scene.autoUpdate = false;
+
+  // cube render target
+  const cubeRenderTarget = new THREE.WebGLCubeRenderTarget(cubeSize, {
+    format: THREE.RGBAFormat,
+    generateMipmaps: true,
+    minFilter: THREE.LinearMipmapLinearFilter,
+  });
+  const cubeCamera = new THREE.CubeCamera(0.1, 1000, cubeRenderTarget);
+  cubeCamera.position.copy(camera.position);
+  cubeCamera.updateMatrixWorld();
+  scene.cubeCamera = cubeCamera;
+
+  // or create an unmanaged CubemapToEquirectangular
+  const equiUnmanaged = new CubemapToEquirectangular(renderer, false);
+  equiUnmanaged.setSize(cubeSize, cubeSize);
+  scene.equiUnmanaged = equiUnmanaged;
+
+  // floor plane
+  // const floorPlane = new THREE.Mesh(
+  //   new THREE.PlaneGeometry(100, 100).rotateX(-Math.PI / 2),
+  //   new THREE.MeshPhongMaterial({
+  //     color: 0x333333,
+  //     side: THREE.DoubleSide,
+  //   })
+  // );
+  // scene.add(floorPlane);
+  // floorPlane.updateMatrixWorld();
+
+  // display texture mesh
+  const displayTextureMesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(2, 2),
+    new THREE.MeshBasicMaterial({
+      map: equiUnmanaged.output.texture,
+      side: THREE.DoubleSide,
+    })
+  );
+  displayTextureMesh.position.set(0, cameraY, -2);
+  scene.add(displayTextureMesh);
+  displayTextureMesh.updateMatrixWorld();
+  scene.displayTextureMesh = displayTextureMesh;
+
+  // display sphere mesh
+  const displaySphereGeometry = new THREE.SphereGeometry(1, 32, 32);
+  const displaySphereMaterial = new THREE.MeshBasicMaterial({
+    map: equiUnmanaged.output.texture,
+    side: THREE.DoubleSide,
+  });
+  const displaySphereMesh = new THREE.Mesh(displaySphereGeometry, displaySphereMaterial);
+  displaySphereMesh.position.set(0, cameraY, 0);
+  scene.add(displaySphereMesh);
+  displaySphereMesh.updateMatrixWorld();
+  scene.displaySphereMesh = displaySphereMesh;
+
+  // default cube
+  const cubeMesh = new THREE.Mesh(
+    new THREE.BoxGeometry(1, 1, 1),
+    new THREE.MeshPhongMaterial({
+      color: 0x800000,
+      // side: THREE.DoubleSide,
+    })
+  );
+  cubeMesh.position.set(0, 3, -3);
+  scene.add(cubeMesh);
+  cubeMesh.updateMatrixWorld();
+
+  return scene;
+};
+const _genPanoramaScene = async ({
+  renderer,
+  camera,
+  file,
+}) => {
+  const scene = new THREE.Scene();
+  scene.autoUpdate = false;
+
+  // texture loader
+  const textureLoader = new THREE.TextureLoader();
+
+  // panorama texture
+  const panoramaTexture = await new Promise((accept, reject) => {
+    const u = URL.createObjectURL(file);
+    const cleanup = () => {
+      URL.revokeObjectURL(u);
+    };
+    textureLoader.load(u, (tex) => {
+      accept(tex);
+      cleanup();
+    }, undefined, err => {
+      reject(err);
+      cleanup();
+    });
+  });
+  panoramaTexture.wrapS = THREE.RepeatWrapping;
+  panoramaTexture.wrapT = THREE.RepeatWrapping;
+  panoramaTexture.needsUpdate = true;
+  const panoramaTextureImage = panoramaTexture.image;
+  document.body.appendChild(panoramaTextureImage);
+
+  // tile scene
+  const tileScene = new THREE.Scene();
+  tileScene.autoUpdate = false;
+
+  // tile mesh
+  const tileMesh = new TileMesh({
+    map: panoramaTexture,
+  });
+  tileMesh.position.set(0, cameraY, 0);
+  tileScene.add(tileMesh);
+  tileMesh.updateMatrixWorld();
+
+  // sphere mesh
+  const _makeSphereMesh = () => {
+    const sphereGeometry = new THREE.SphereGeometry(
+      panoramaRadius,
+      panoramaWidthSegments,
+      panoramaHeightSegments,
+    );
+    // flip inside out
+    for (let i = 0; i < sphereGeometry.index.array.length; i += 3) {
+      const a = sphereGeometry.index.array[i + 0];
+      const b = sphereGeometry.index.array[i + 1];
+      const c = sphereGeometry.index.array[i + 2];
+      sphereGeometry.index.array[i + 0] = c;
+      sphereGeometry.index.array[i + 1] = b;
+      sphereGeometry.index.array[i + 2] = a;
+    }
+
+    const sphereMaterial = new THREE.ShaderMaterial({
+      uniforms: {
+        map: {
+          value: panoramaTexture,
+        }
+      },
+      vertexShader: `\
+        varying vec2 vUv;
+
+        void main() {
+          vUv = uv;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `\
+        uniform sampler2D map;
+        varying vec2 vUv;
+
+        void main() {
+          vec4 c = texture2D(map, vUv);
+
+          gl_FragColor = vec4(vUv * 0.1, 0.0, 1.0);
+          gl_FragColor.rgb += c.rgb;
+        }
+      `,
+    });
+    const sphereMesh = new THREE.Mesh(sphereGeometry, sphereMaterial);
+    return sphereMesh;
+  };
+  const sphereMesh = _makeSphereMesh();
+  // sphereMesh.position.set(0, 20, 0);
+  sphereMesh.position.set(0, cameraY, 0);
+  scene.add(sphereMesh);
+  sphereMesh.updateMatrixWorld();
+  scene.sphereMesh = sphereMesh;
+
+  // render panorama
+  const renderPanorama = async () => {
+    const aspect = panoramaTextureImage.width / panoramaTextureImage.height;
+    // console.log('snapshotting', aspect);
+
+    const numTiles = Math.ceil(aspect * 2);
+    const tiles = [];
+    // globalThis.tiles = tiles;
+
+    // we overlap tiles by 50% to avoid seams
+    const uvXIncrement = 1 / numTiles;
+    for (let i = 0; i < numTiles; i++) {
+      const tileCanvas = document.createElement('canvas');
+      tileCanvas.width = size;
+      tileCanvas.height = size;
+      const tileCanvasCtx = tileCanvas.getContext('2d');
+
+      tileMesh.setUvOffset(
+        new THREE.Vector2(
+          uvXIncrement * i,
+          0,
+        ),
+        uvXIncrement * 2
+      );
+
+      renderer.render(tileScene, camera);
+      tileCanvasCtx.drawImage(renderer.domElement, 0, 0);
+
+      document.body.appendChild(tileCanvas);
+      tiles.push(tileCanvas);
+    }
+    renderer.clear();
+
+    const depths = [];
+    // globalThis.depths = depths;
+    const depthCanvases = [];
+    // globalThis.depthCanvases = depthCanvases;
+    const geometries = [];
+    // globalThis.geometries = geometries;
+
+    for (let i = 0; i < tiles.length; i++) {
+      const tile = tiles[i];
+      
+      // image
+      const blob = await new Promise((accept, reject) => {
+        tile.toBlob(accept, 'image/png');
+      });
+
+      // depth field
+      const df = await getDepthField(blob);
+      const depthFieldHeaders = df.headers;
+      const depthFieldArrayBuffer = df.arrayBuffer;
+
+      // if (tile.width !== size || tile.height !== size) {
+      //   console.warn('tile size mismatch', tile.width, tile.height, size, size);
+      //   debugger;
+      // }
+
+      const fov = parseFloat(depthFieldHeaders['x-fov']);
+      // const float32Array = new Float32Array(depthFieldArrayBuffer);
+      // float32Array.index = i;
+      // depths.push(float32Array);
+
+      // point cloud
+      const pointCloudFloat32Array = reconstructPointCloudFromDepthField(
+        depthFieldArrayBuffer,
+        tile.width,
+        tile.height,
+        fov,
+      );
+      const pointCloudArrayBuffer = pointCloudFloat32Array.buffer;
+
+      // depth floats
+      const float32Array = getDepthFloatsFromPointCloud(
+        pointCloudArrayBuffer,
+        tile.width,
+        tile.height
+      );
+      float32Array.i = i;
+      depths.push(float32Array);
+
+      const geometry = pointCloudArrayBufferToGeometry(
+        pointCloudArrayBuffer,
+        tile.width,
+        tile.height
+      );
+      geometry.i = i;
+      geometries.push(geometry);
+
+      const depthCanvas = document.createElement('canvas');
+      depthCanvas.width = size;
+      depthCanvas.height = size;
+      const depthCtx = depthCanvas.getContext('2d');
+      const imageData = depthCtx.createImageData(size, size);
+      for (let i = 0; i < size * size; i++) {
+        const depth = float32Array[i] / 1000 / 10;
+        const depthByte = Math.floor(depth * 255);
+        const j = i * 4;
+        imageData.data[j + 0] = depthByte;
+        imageData.data[j + 1] = depthByte;
+        imageData.data[j + 2] = depthByte;
+        imageData.data[j + 3] = 255;
+      }
+      depthCtx.putImageData(imageData, 0, 0);
+
+      document.body.appendChild(depthCanvas);
+      depthCanvases.push(depthCanvas);
+    }
+
+    setSphereGeometryPanoramaDepth(
+      sphereMesh.geometry,
+      depths,
+      panoramaWidthSegments,
+      panoramaHeightSegments,
+    );
+  };
+  await renderPanorama();
+
+  return scene;
+};
+
+//
+
 let loaded = false;
-const SkyboxGeneratorComponent = () => {
+const SkyboxCanvasComponent = ({
+  file,
+}) => {
   const [renderer, setRenderer] = useState(null);
   const canvasRef = useRef();
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (canvas) {
+    if (canvas && file) {
       if (!loaded) {
         loaded = true;
 
@@ -460,272 +760,45 @@ const SkyboxGeneratorComponent = () => {
           scene.autoUpdate = false;
 
           // camera
-          const camera = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
-          camera.position.y = 1;
+          const camera = new THREE.PerspectiveCamera(
+            75,
+            1,
+            0.1,
+            1000
+          );
+          camera.position.y = cameraY;
           camera.updateMatrixWorld();
-
-          // texture loader
-          const textureLoader = new THREE.TextureLoader();
-
-          // cube render target
-          const cubeSize = 1024;
-          const cubeRenderTarget = new THREE.WebGLCubeRenderTarget(cubeSize, {
-            format: THREE.RGBAFormat,
-            generateMipmaps: true,
-            minFilter: THREE.LinearMipmapLinearFilter,
-          });
-          const cubeCamera = new THREE.CubeCamera(0.1, 1000, cubeRenderTarget);
-          cubeCamera.position.copy(camera.position);
-          cubeCamera.updateMatrixWorld();
-
-          // or create an unmanaged CubemapToEquirectangular
-          const equiUnmanaged = new CubemapToEquirectangular(renderer, false);
-          equiUnmanaged.setSize(cubeSize, cubeSize);
-
-          // floor plane
-          const floorPlane = new THREE.Mesh(
-            new THREE.PlaneGeometry(100, 100).rotateX(-Math.PI / 2),
-            new THREE.MeshPhongMaterial({
-              color: 0x333333,
-              side: THREE.DoubleSide,
-            })
-          );
-          scene.add(floorPlane);
-          floorPlane.updateMatrixWorld();
-
-          // display texture mesh
-          const displayTextureMesh = new THREE.Mesh(
-            new THREE.PlaneGeometry(2, 2),
-            new THREE.MeshBasicMaterial({
-              map: equiUnmanaged.output.texture,
-              side: THREE.DoubleSide,
-            })
-          );
-          displayTextureMesh.position.set(0, 1, -2);
-          scene.add(displayTextureMesh);
-          displayTextureMesh.updateMatrixWorld();
 
           // lights
           const ambientLight = new THREE.AmbientLight(0x404040);
           scene.add(ambientLight);
           const directionalLight = new THREE.DirectionalLight(0xFFFFFF, 2);
-          directionalLight.position.set(0, 1, 0);
+          directionalLight.position.set(0, cameraY, 0);
           scene.add(directionalLight);
           directionalLight.updateMatrixWorld();
 
           // orbit controls
-          const orbitControls = new OrbitControls(camera, canvas);
-          orbitControls.target.set(0, 1, -1);
+          const orbitControls = new OrbitControls(camera, renderer.domElement);
+          orbitControls.target.set(0, cameraY, -1);
 
-          // display sphere mesh
-          const sphereGeometry = new THREE.SphereGeometry(1, 32, 32);
-          const sphereMaterial = new THREE.MeshBasicMaterial({
-            map: equiUnmanaged.output.texture,
-            side: THREE.DoubleSide,
+          // scenes
+          // test scene
+          const testScene = _makeTestScene({
+            renderer,
+            camera,
           });
-          const sphereMesh = new THREE.Mesh(sphereGeometry, sphereMaterial);
-          sphereMesh.position.set(0, 1, 0);
-          scene.add(sphereMesh);
-          sphereMesh.updateMatrixWorld();
+          testScene.position.set(20, 0, 0);
+          scene.add(testScene);
+          testScene.updateMatrixWorld();
 
-          // default cube
-          const cubeMesh = new THREE.Mesh(
-            new THREE.BoxGeometry(1, 1, 1),
-            new THREE.MeshPhongMaterial({
-              color: 0x800000,
-              // side: THREE.DoubleSide,
-            })
-          );
-          cubeMesh.position.set(0, 3, -3);
-          scene.add(cubeMesh);
-          cubeMesh.updateMatrixWorld();
-
-          // jungle sphere mesh
-          const jungleSphereGeometry = new THREE.SphereGeometry(
-            panoramaRadius,
-            panoramaWidthSegments,
-            panoramaHeightSegments,
-          );
-          // flip inside out
-          for (let i = 0; i < jungleSphereGeometry.index.array.length; i += 3) {
-            const a = jungleSphereGeometry.index.array[i + 0];
-            const b = jungleSphereGeometry.index.array[i + 1];
-            const c = jungleSphereGeometry.index.array[i + 2];
-            jungleSphereGeometry.index.array[i + 0] = c;
-            jungleSphereGeometry.index.array[i + 1] = b;
-            jungleSphereGeometry.index.array[i + 2] = a;
-          }
-          const panoramaTexture = await new Promise((accept, reject) => {
-            textureLoader.load('images/jungle.png', accept, undefined, reject);
+          // panorama scene
+          const panoramaScene = await _genPanoramaScene({
+            renderer,
+            camera,
+            file,
           });
-          panoramaTexture.wrapS = THREE.RepeatWrapping;
-          panoramaTexture.wrapT = THREE.RepeatWrapping;
-          panoramaTexture.needsUpdate = true;
-          const panoramaTextureImage = panoramaTexture.image;
-          document.body.appendChild(panoramaTextureImage);
-
-          const jungleSphereMaterial = new THREE.ShaderMaterial({
-            uniforms: {
-              map: {
-                value: panoramaTexture,
-              }
-            },
-            vertexShader: `\
-              varying vec2 vUv;
-
-              void main() {
-                vUv = uv;
-                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-              }
-            `,
-            fragmentShader: `\
-              uniform sampler2D map;
-              varying vec2 vUv;
-
-              void main() {
-                vec4 c = texture2D(map, vUv);
-
-                gl_FragColor = vec4(vUv * 0.1, 0.0, 1.0);
-                gl_FragColor.rgb += c.rgb;
-              }
-            `,
-          });
-          const jungleSphereMesh = new THREE.Mesh(jungleSphereGeometry, jungleSphereMaterial);
-          jungleSphereMesh.position.set(0, 20, 0);
-          scene.add(jungleSphereMesh);
-          jungleSphereMesh.updateMatrixWorld();
-
-          //
-
-          // tile scene
-          const tileScene = new THREE.Scene();
-          tileScene.autoUpdate = false;
-
-          // tile mesh
-          const tileMesh = new TileMesh({
-            map: panoramaTexture,
-          });
-          tileMesh.position.set(0, 1, 0);
-          tileScene.add(tileMesh);
-          tileMesh.updateMatrixWorld();
-
-          //
-
-          // render panorama
-          const renderPanorama = async () => {
-            const aspect = panoramaTextureImage.width / panoramaTextureImage.height;
-            // console.log('snapshotting', aspect);
-
-            const numTiles = Math.ceil(aspect * 2);
-            const tiles = [];
-            globalThis.tiles = tiles;
-            // we overlap tiles by 50% to avoid seams
-            const uvXIncrement = 1 / numTiles;
-            for (let i = 0; i < numTiles; i++) {
-              const tileCanvas = document.createElement('canvas');
-              tileCanvas.width = size;
-              tileCanvas.height = size;
-              const tileCanvasCtx = tileCanvas.getContext('2d');
-
-              tileMesh.setUvOffset(
-                new THREE.Vector2(
-                  uvXIncrement * i,
-                  0,
-                ),
-                uvXIncrement * 2
-              );
-
-              renderer.render(tileScene, camera);
-              tileCanvasCtx.drawImage(renderer.domElement, 0, 0);
-
-              document.body.appendChild(tileCanvas);
-              tiles.push(tileCanvas);
-            }
-            const depths = [];
-            globalThis.depths = depths;
-            const depthCanvases = [];
-            globalThis.depthCanvases = depthCanvases;
-            const geometries = [];
-            globalThis.geometries = geometries;
-
-            for (let i = 0; i < tiles.length; i++) {
-              const tile = tiles[i];
-              
-              // image
-              const blob = await new Promise((accept, reject) => {
-                tile.toBlob(accept, 'image/png');
-              });
-
-              // depth field
-              const df = await getDepthField(blob);
-              const depthFieldHeaders = df.headers;
-              const depthFieldArrayBuffer = df.arrayBuffer;
-
-              if (tile.width !== size || tile.height !== size) {
-                console.warn('tile size mismatch', tile.width, tile.height, size, size);
-                debugger;
-              }
-
-              const fov = parseFloat(depthFieldHeaders['x-fov']);
-              // const float32Array = new Float32Array(depthFieldArrayBuffer);
-              // float32Array.index = i;
-              // depths.push(float32Array);
-
-              // point cloud
-              const pointCloudFloat32Array = reconstructPointCloudFromDepthField(
-                depthFieldArrayBuffer,
-                tile.width,
-                tile.height,
-                fov,
-              );
-              const pointCloudArrayBuffer = pointCloudFloat32Array.buffer;
-
-              // depth floats
-              const float32Array = getDepthFloatsFromPointCloud(
-                pointCloudArrayBuffer,
-                tile.width,
-                tile.height
-              );
-              float32Array.i = i;
-              depths.push(float32Array);
-
-              const geometry = pointCloudArrayBufferToGeometry(
-                pointCloudArrayBuffer,
-                tile.width,
-                tile.height
-              );
-              geometry.i = i;
-              geometries.push(geometry);
-
-              const depthCanvas = document.createElement('canvas');
-              depthCanvas.width = size;
-              depthCanvas.height = size;
-              const depthCtx = depthCanvas.getContext('2d');
-              const imageData = depthCtx.createImageData(size, size);
-              for (let i = 0; i < size * size; i++) {
-                const depth = float32Array[i] / 1000 / 10;
-                const depthByte = Math.floor(depth * 255);
-                const j = i * 4;
-                imageData.data[j + 0] = depthByte;
-                imageData.data[j + 1] = depthByte;
-                imageData.data[j + 2] = depthByte;
-                imageData.data[j + 3] = 255;
-              }
-              depthCtx.putImageData(imageData, 0, 0);
-
-              document.body.appendChild(depthCanvas);
-              depthCanvases.push(depthCanvas);
-            }
-
-            setSphereGeometryPanoramaDepth(
-              jungleSphereGeometry,
-              depths,
-              // geometries,
-              panoramaWidthSegments,
-              panoramaHeightSegments,
-            );
-          };
-          renderPanorama();
+          scene.add(panoramaScene);
+          panoramaScene.updateMatrixWorld();
 
           const _recurse = () => {
             frame = requestAnimationFrame(_recurse);
@@ -734,16 +807,16 @@ const SkyboxGeneratorComponent = () => {
             orbitControls.update();
 
             // render cube camera
-            displayTextureMesh.visible = false;
-            sphereMesh.visible = false;
-            jungleSphereMesh.visible = false;
+            testScene.displayTextureMesh.visible = false;
+            testScene.displaySphereMesh.visible = false;
+            panoramaScene.sphereMesh.visible = false;
             
-            cubeCamera.update(renderer, scene);
-            equiUnmanaged.convert(cubeCamera);
+            testScene.cubeCamera.update(renderer, scene);
+            testScene.equiUnmanaged.convert(testScene.cubeCamera);
             
-            displayTextureMesh.visible = true;
-            sphereMesh.visible = true;
-            jungleSphereMesh.visible = true;
+            testScene.displayTextureMesh.visible = true;
+            testScene.displaySphereMesh.visible = true;
+            panoramaScene.sphereMesh.visible = true;
 
             // render main camera
             renderer.render(scene, camera);
@@ -752,11 +825,76 @@ const SkyboxGeneratorComponent = () => {
         })();
       }
     }
-  }, [canvasRef.current]);
+  }, [canvasRef.current, file]);
+  
+  return (
+    <div className={styles.skyboxCanvas}>
+      <canvas width={size} height={size} className={styles.canvas} ref={canvasRef} />
+    </div>
+  );
+}
+
+//
+
+const SkyboxPlaceholderComponent = ({
+  onFileChange,
+}) => {
+  const dragover = e => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+  const drop = async e => {
+    e.preventDefault();
+    e.stopPropagation();
+    const files = e.dataTransfer.files;
+    const file = files[0];
+    onFileChange(file);
+  };
+  
+  return (
+    <div
+      className={styles.skyboxPlaceholder}
+      onDragOver={dragover}
+      onDrop={drop}
+    >
+      {/* <input type="text" className={styles.input} value={prompt} onChange={e => {
+        setPrompt(e.target.value);
+      }} placeholder={prompts.character} />
+      <div className={styles.button} onClick={async () => {
+        await panel.setFromPrompt(prompt);
+      }}>Generate</div> */}
+      <div><a className={styles.fileUpload}><input type="file" onChange={e => {
+        const file = e.target.files[0];
+        if (file) {
+          onFileChange(file);
+        }
+        e.target.value = null;
+      }} />Upload File</a></div>
+      <div>or, <i>Drag and Drop</i></div>
+    </div>
+  );
+};
+
+//
+
+const SkyboxGeneratorComponent = () => {
+  const [file, setFile] = useState(null);
 
   return (
     <div className={styles.skyboxGenerator}>
-      <canvas width={size} height={size} className={styles.canvas} ref={canvasRef} />
+      <div className={styles.skyboxRenderer}>
+        {!file ?
+          <SkyboxPlaceholderComponent
+            onFileChange={file => {
+              setFile(file);
+            }}
+          />
+        :
+          <SkyboxCanvasComponent
+            file={file}
+          />
+        }
+      </div>
     </div>
   );
 };
