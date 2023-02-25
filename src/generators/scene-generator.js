@@ -73,6 +73,7 @@ import {
 //   getFloorNetPhysicsMesh,
 // } from '../zine/zine-mesh-utils.js';
 import {
+  zineMagicBytes,
   ZineStoryboard,
 } from '../zine/zine-format.js';
 import {
@@ -94,6 +95,7 @@ import {
 import {
   mainImageKey,
   promptKey,
+  layer0Specs,
   layer1Specs,
   layer2Specs,
 } from '../zine/zine-data-specs.js';
@@ -5437,13 +5439,49 @@ export async function compileVirtualSceneExport(imageArrayBuffer) {
   const compileResult = await compileVirtualScene({
     imageArrayBuffer,
   });
+  compileResult[0][mainImageKey] = imageArrayBuffer;
+  compileResult[0].isRoot = true;
+  compileResult[0].compressed = false;
 
   const layer1 = panel0.addLayer();
-  for (const name of layer1Specs) {
-    const v = compileResult[name];
-    layer1.setData(name, v);
+  const layers = [
+    layer0,
+    layer1,
+  ];
+  const layerSpecs = [
+    layer0Specs,
+    layer1Specs,
+  ];
+  for (let i = 0; i < layers.length; i++) {
+    const layer = layers[i];
+    const layerSpec = layerSpecs[i];
+    const compileResultLayer = compileResult[i];
+    for (const name of layerSpec) {
+      const v = compileResultLayer[name];
+      // console.log('set data', name, v);
+      layer.setData(name, v);
+    }
   }
+  // for (const name of layer1Specs) {
+  //   const v = compileResult[name];
+  //   console.log('set data', name, v);
+  //   layer1.setData(name, v);
+  // }
 
-  const uint8Array = await storyboard.exportAsync();
+  const getZineFileBlob = async () => {
+    const uint8Array = await storyboard.exportAsync();
+    const file = new File([
+      zineMagicBytes,
+      uint8Array,
+    ], 'storyboard.zine', {
+      type: 'application/octet-stream',
+    });
+    return file;
+  };
+
+  // const uint8Array = await storyboard.exportAsync();
+  const file = await getZineFileBlob();
+  const arrayBuffer = await file.arrayBuffer();
+  const uint8Array = new Uint8Array(arrayBuffer);
   return uint8Array;
 }
