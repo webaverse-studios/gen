@@ -35,6 +35,9 @@ offscreenEngineApi(async (funcName, args, opts) => {
     throw new Error('unknown function: ' + funcName);
   }
 });
+globalThis.parent.postMessage({
+  method: 'engineReady',
+}, '*');
 
 //
 
