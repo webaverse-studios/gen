@@ -32,7 +32,7 @@ const youtubeServer = new YoutubeServer();
 
 //
 
-class DatabaseServer {
+/* class DatabaseServer {
   constructor() {
     const cp = child_process.spawn(path.join(
       'target',
@@ -58,11 +58,11 @@ class DatabaseServer {
 const databaseServer = new DatabaseServer();
 process.on('exit', () => {
   databaseServer.destroy();
-});
+}); */
 
 //
 
-class MultiplayerServer {
+/* class MultiplayerServer {
   //  You can load the multiplayer-do example app to check that the server is running: http://127.0.0.1:2222/
   constructor() {
     const dirname = path.dirname(import.meta.url.replace(/^file:\/\//, ''));
@@ -95,7 +95,7 @@ class MultiplayerServer {
 const multiplayerServer = new MultiplayerServer();
 process.on('exit', () => {
   multiplayerServer.destroy();
-});
+}); */
 
 //
 
