@@ -9,9 +9,9 @@
     "start": "vite start"
   },
   "dependencies": {
-    "@pixiv/three-vrm-core": "./packages/three-vrm/three-vrm-core",
-    "@pixiv/three-vrm-materials-mtoon": "./packages/three-vrm/three-vrm-materials-mtoon",
-    "@pixiv/three-vrm-springbone": "./packages/three-vrm/three-vrm-springbone",
+    "@pixiv/three-vrm-core": "file:./packages/three-vrm/three-vrm-core",
+    "@pixiv/three-vrm-materials-mtoon": "file:./packages/three-vrm/three-vrm-materials-mtoon",
+    "@pixiv/three-vrm-springbone": "file:./packages/three-vrm/three-vrm-springbone",
     "@shaderfrog/glsl-parser": "^1.1.0",
     "@vitejs/plugin-react": "^3.0.0",
     "@vitejs/plugin-react-swc": "^3.0.1",
@@ -39,7 +39,7 @@
     "vite": "^4.0.0",
     "webm-writer": "^1.0.0",
     "youtube-dl-exec": "^2.1.11",
-    "zjs": "./packages/zjs"
+    "zjs": "file:./packages/zjs"
   },
   "devDependencies": {
     "eslint": "8.24.0"
