@@ -1584,19 +1584,19 @@ const TitleScreen = () => {
                         });
                         break;
                     }
-                    case 'j':
-                    case 'J':
-                    {
-                        const newHup = {
-                            id: makeId(8),
-                        };
-                        const newHups = hups.slice();
-                        newHups.push(newHup);
-                        flushSync(() => {
-                            setHups(newHups);
-                        });
-                        break;
-                    }
+                    // case 'j':
+                    // case 'J':
+                    // {
+                    //     const newHup = {
+                    //         id: makeId(8),
+                    //     };
+                    //     const newHups = hups.slice();
+                    //     newHups.push(newHup);
+                    //     flushSync(() => {
+                    //         setHups(newHups);
+                    //     });
+                    //     break;
+                    // }
                     case 'q':
                     case 'Q':
                     {
