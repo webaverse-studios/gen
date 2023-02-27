@@ -626,7 +626,8 @@ class TitleScreenRenderer extends EventTarget {
                     portalScene.autoUpdate = false;
                     {
                         const gltfLoader = new GLTFLoader();
-                        gltfLoader.load('/models/skybox.glb', gltf => {
+                        const u = `https://cdn.jsdelivr.net/gh/webaverse/content@master/models/skybox.glb`;
+                        gltfLoader.load(u, gltf => {
                             const skyboxMesh = gltf.scene;
                             portalScene.add(skyboxMesh);  
                             skyboxMesh.updateMatrixWorld();
