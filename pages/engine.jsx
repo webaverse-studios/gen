@@ -1,4 +1,4 @@
-import offscreenEngineApi from 'offscreen-engine/offscreen-engine-api.js';
+import offscreenEngineApi from '../packages/offscreen-engine/offscreen-engine-api.js';
 import {
   // compileVirtualScene,
   compileVirtualSceneExport,
