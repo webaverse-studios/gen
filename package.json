@@ -29,6 +29,7 @@
     "murmurhash": "^2.0.1",
     "murmurhash-js": "^1.0.0",
     "next": "^13.1.5",
+    "offscreen-engine": "file:./packages/offscreen-engine",
     "raw-loader": "^4.0.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
