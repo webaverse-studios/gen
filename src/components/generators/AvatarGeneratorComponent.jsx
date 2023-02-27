@@ -8,8 +8,8 @@ import {AvatarRendererComponent} from "./AvatarRenderComponent.jsx";
 import {getMeshes} from "../../utils/mesh-utils.js";
 
 const avatarUrls = [
-  `/models/Avatar_Bases/Hacker Class/HackerClassMaster_v2.1_Guilty.vrm`,
-  `/models/Avatar_Bases/Drophunter Class/DropHunter_Master_v2_Guilty.vrm`,
+  `https://raw.githack.com/webaverse/content/main/avatars/Drophunter%20Class/DropHunter_Master_v2_Guilty.vrm`,
+  `https://raw.githack.com/webaverse/content/main/avatars/Hacker%20Class/HackerClassMaster_v2.1_Guilty.vrm`,
 ];
 
 const seed = 'lol';

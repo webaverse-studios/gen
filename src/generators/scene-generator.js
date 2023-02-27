@@ -3047,7 +3047,8 @@ export class PanelRenderer extends EventTarget {
     const avatars = new THREE.Object3D();
     avatars.visible = false;
     (async () => {
-      const u = './models/Avatar_Bases/Drophunter Class/DropHunter_Master_v1_Guilty.vrm';
+      // const u = 'https://cdn.jsdelivr.net/gh/webaverse/content@master/avatars/Drophunter Class/DropHunter_Master_v1_Guilty.vrm';
+      const u = `https://raw.githack.com/webaverse/content/main/avatars/Drophunter%20Class/DropHunter_Master_v3_Guilty.vrm`;
       const p = makePromise();
       gltfLoader.load(u, vrm => {
         p.resolve(vrm);

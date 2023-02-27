@@ -10,11 +10,7 @@ import {
   loadGltf,
 } from "../../utils/mesh-utils.js";
 
-// const avatarUrls = [
-//   `/models/Avatar_Bases/Hacker Class/HackerClassMaster_v2.1_Guilty.vrm`,
-//   `/models/Avatar_Bases/Drophunter Class/DropHunter_Master_v2_Guilty.vrm`,
-// ];
-const avatarUrl = `/avatars/Scillia_Drophunter_V19.vrm`;
+const avatarUrl = `https://raw.githack.com/webaverse/content/main/avatars/Scillia_Drophunter_V19.vrm`;
 
 const seed = 'lol';
 const rng = alea(seed);
