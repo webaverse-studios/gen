@@ -19,9 +19,6 @@
 [submodule "src/avatars"]
 	path = src/avatars
 	url = https://github.com/webaverse/avatars
-[submodule "src/avatars-wasm"]
-	path = src/avatars-wasm
-	url = https://github.com/webaverse/avatars-wasm
 [submodule "src/voice-engine"]
 	path = src/voice-engine
 	url = https://github.com/webaverse/voice-engine.git
