@@ -170,6 +170,8 @@ import {
 
 //
 
+const AI_HOST = `llama-server.webaverse.com`;
+
 const vqaClient = new VQAClient();
 const inverseRender = false; // XXX
 
@@ -4212,7 +4214,8 @@ const getPlanesRgbd = async (width, height, focalLength, depthFloats32Array, min
     type: 'application/octet-stream',
   });
 
-  const res = await fetch(`https://depth.webaverse.com/planeDetection?minSupport=${minSupport}`, {
+  
+  const res = await fetch(`https://local.webaverse.com/api/depth/planeDetection?minSupport=${minSupport}`, {
     method: 'POST',
     body: requestBlob,
   });
@@ -4279,7 +4282,7 @@ const _getImageSegments = async (
   targetWidth,
   targetHeight,
 ) => {
-  const u = new URL(`https://mask2former.webaverse.com/predict`);
+  const u = new URL(`https://local.webaverse.com/api/mask2former/predict`);
   u.searchParams.set('classes', imageSegmentationClasses.join(','));
   u.searchParams.set('boosts', Array(imageSegmentationClasses).fill(1).join(','));
   u.searchParams.set('threshold', 0.5);
@@ -4325,7 +4328,8 @@ const _getImageSegments = async (
       boundingBoxLayers,
     };
   } else {
-    throw new Error('failed to detect image segments');
+    console.warn('invalid image segments response', res.status);
+    throw new Error('invalid image segments response');
   }
 };
 
@@ -4422,7 +4426,7 @@ export async function getDepth(imageArrayBuffer) {
   });
 
   // fetch depth map of imageArrayBuffer
-  const res = await fetch(`https://depth.webaverse.com/predictDepth`, {
+  const res = await fetch(`https://local.webaverse.com/api/depth/predictDepth`, {
     method: 'POST',
     body: blob,
     headers: {
@@ -4510,32 +4514,18 @@ export async function compileVirtualScene({
       aiClient,
       // fillRatio: 0.5,
     });
-    lore = await datasetGenerator.generateItem('setting', {
+    /* lore = await datasetGenerator.generateItem('setting', {
       // Name: 'Death Mountain',
       // Description: panelSpec.description,
       Description: prompt,
     }, {
       // keys: ['Image'],
-    });
+    }); */
+    lore = {
+      Name: 'Death Mountain',
+      Description: 'A mountain with a volcano on it.',
+    };
     console.log('got setting spec', lore);
-    // const {
-    //   Biome,
-    //   Description,
-    //   Image,
-    //   'Image Gallery': ImageGallery,
-    //   Items,
-    //   Mobs,
-    //   Name,
-    //   Ores,
-    // } = settingSpec;
-    // setBiome(Biome);
-    // setDescription(Description);
-    // setImage(Image);
-    // setImageGallery((ImageGallery ?? '').split(/\n+/));
-    // setItems((Items ?? '').split(/\n+/));
-    // setMobs((Mobs ?? '').split(/\n+/));
-    // setName(Name);
-    // setOres((Ores ?? '').split(/\n+/));
   }
 
   // image segmentation
@@ -4637,7 +4627,7 @@ export async function compileVirtualScene({
   formData.append('img', blob);
   formData.append('mask', maskBlob);
   {
-    const res = await fetch(`https://inverse-render-net.webaverse.com/lighting`, {
+    const res = await fetch(`https://local.webaverse.com/api/irn/lighting`, {
       method: 'POST',
       body: formData,
     });
@@ -4658,7 +4648,7 @@ export async function compileVirtualScene({
       ];
       for (const pathName of pathNames) {
         // console.log('inverse render type', pathName);
-        const res = await fetch(`https://inverse-render-net.webaverse.com/${pathName}`, {
+        const res = await fetch(`https://local.webaverse.com/api/irn/${pathName}`, {
           method: 'POST',
           body: formData,
         });
