@@ -554,7 +554,7 @@ export async function getPointCloud(blob, {
 export async function getDepthField(blob, {
   forceFov,
 } = {}) {
-  const u = new URL('https://depth.webaverse.com/depthfield');
+  const u = new URL('https://local.webaverse.com/api/depth/depthfield');
   if (forceFov !== undefined) {
     u.searchParams.set('forceFov', forceFov);
   }
