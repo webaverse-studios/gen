@@ -1,4 +1,4 @@
-import {NetworkRealms} from 'multiplayer-do/public/network-realms.mjs'
+// import {NetworkRealms} from 'multiplayer-do/public/network-realms.mjs'
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader.js';
 import {useState, useRef, useEffect} from 'react';
@@ -64,7 +64,7 @@ import {
 } from '../hups/Hups.jsx';
 
 // import {
-//     getDoubleSidedGeometry,
+//     getDoubleSidedGeomtery,
 // } from '../../zine/zine-geometry-utils.js';
 import avatarsWasmManager from '../../avatars/avatars-wasm-manager.js';
 
