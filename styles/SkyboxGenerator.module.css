@@ -1,0 +1,99 @@
+.skyboxGenerator {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.skyboxGenerator .skyboxPlaceholder {
+  display: flex;
+  width: inherit;
+  height: inherit;
+  /* padding: 50px; */
+  /* repeat */
+  background-repeat: repeat;
+  /* center */
+  background-size: 16px;
+  background-position: center;
+  flex-direction: column;
+}
+.skyboxGenerator .skyboxPlaceholder {
+  margin-bottom: 30px;
+}
+.skyboxGenerator .skyboxPlaceholder.hidden {
+  display: none;
+  /* visibility: hidden; */
+}
+
+.skyboxGenerator .skyboxRenderer
+{
+  position: relative;
+  width: 1024px;
+  height: 1024px;
+}
+
+.skyboxGenerator .header {
+  display: flex;
+  width: 1024px;
+}
+.skyboxGenerator .header.hidden {
+  visibility: hidden;
+}
+.skyboxGenerator .header .spacer {
+  flex: 1;
+}
+
+/* */
+
+.skyboxGenerator .button {
+  display: inline-block;
+  font-size: 30px;
+  padding: 10px;
+  border: 3px solid currentColor;
+}
+.skyboxGenerator .button:not(:disabled):hover {
+  color: #FFF;
+  background-color: #000;
+  border-color: #000;
+  cursor: pointer;
+}
+
+.skyboxGenerator .numberInput {
+  width: 50px;
+}
+
+/* */
+
+.skyboxGenerator .sidebar {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 235px;
+  padding: 10px;
+  background-color: #000;
+  color: #FFF;
+  /* border-left: 1px solid #000; */
+  /* overflow-y: auto; */
+}
+
+/* */
+
+.skyboxGenerator .files {
+  display: flex;
+  flex-direction: column;
+  max-width: 640px;
+}
+.skyboxGenerator .files .file {
+  display: flex;
+}
+.skyboxGenerator .files .file .fileName {
+  flex: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.skyboxGenerator .files .file .closeX {
+  display: flex;
+  width: 30px;
+  justify-content: center;
+}
