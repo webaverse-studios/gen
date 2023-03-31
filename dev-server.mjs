@@ -213,7 +213,7 @@ const _proxyTmp = (req, res) => {
     httpServer.on('error', reject);
   });
   // console.log('pid', process.pid);
-  console.log(`  > Local: http${isHttps ? 's' : ''}://${SERVER_NAME}:${SERVER_PORT}/`);
+  console.log(`  > Local ready: http${isHttps ? 's' : ''}://${SERVER_NAME}:${SERVER_PORT}/`);
 })();
 
 process.on('disconnect', function() {
