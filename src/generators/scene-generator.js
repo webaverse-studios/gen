@@ -4421,13 +4421,13 @@ const bumpFloorNetDepthsByBoxes = (
 //
 // function that given an image extracts depth maps and sends both + scale to `https://dataset.webaverse.com/store`
 export async function getDepth(imageArrayBuffer) {
-
   const blob = new Blob([imageArrayBuffer], {
     type: 'image/png',
   });
 
   // fetch depth map of imageArrayBuffer
-  const res = await fetch(`https://local.webaverse.com/api/depth/predictDepth`, {
+  const u = `${location.protocol}//${location.host}/api/depth/predictDepth`;
+  const res = await fetch(u, {
     method: 'POST',
     body: blob,
     headers: {
