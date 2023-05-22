@@ -4501,9 +4501,10 @@ export async function compileVirtualScene({
 
   // prompt
   if (!prompt) {
-    console.log('get prompt 1');
-    prompt = await vqaClient.getImageCaption(blob);
-    console.log('get prompt 2', prompt);
+    // console.log('get prompt 1');
+    // prompt = await vqaClient.getImageCaption(blob);
+    // console.log('get prompt 2', prompt);
+    prompt = 'A mysterious place.';
   }
 
   // lore
