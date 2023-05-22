@@ -107,9 +107,14 @@ const _tryReadFile = p => {
     return null;
   }
 };
+// use import.meta to get the base directory
+let baseDir = path.join(decodeURI(import.meta.url).replace('file://', ''), '..');
+baseDir = path.normalize(baseDir);
 const certs = {
-  key: _tryReadFile('./certs/privkey.pem') || _tryReadFile('./certs-local/privkey.pem'),
-  cert: _tryReadFile('./certs/fullchain.pem') || _tryReadFile('./certs-local/fullchain.pem'),
+  key: _tryReadFile(path.join(baseDir, './certs/privkey.pem')) ||
+    _tryReadFile(path.join(baseDir, './certs-local/privkey.pem')),
+  cert: _tryReadFile(path.join(baseDir, './certs/fullchain.pem')) ||
+    _tryReadFile(path.join(baseDir, './certs-local/fullchain.pem')),
 };
 const tmpDir = `/tmp/webaverse-dev-server`;
 fs.mkdirSync(tmpDir, {
