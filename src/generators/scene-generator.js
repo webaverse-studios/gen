@@ -82,13 +82,13 @@ import {
   resizeImage,
 } from '../utils/convert-utils.js';
 import {classes, categories, categoryClassIndices} from '../../constants/classes.js';
-import {heightfieldScale} from '../../constants/physics-constants.js';
+// import {heightfieldScale} from '../../constants/physics-constants.js';
 import {colors, rainbowColors, detectronColors} from '../constants/detectron-colors.js';
 import {mobUrls} from '../constants/urls.js';
-import {
-  targetScale,
-  targetScaleInv,
-} from '../constants/generator-constants.js';
+// import {
+//   targetScale,
+//   targetScaleInv,
+// } from '../constants/generator-constants.js';
 import {
   VQAClient,
 } from '../clients/vqa-client.js';
@@ -173,6 +173,7 @@ import {
 const AI_HOST = `llama-server.webaverse.com`;
 
 const vqaClient = new VQAClient();
+const sphericalHarmonic = false;
 const inverseRender = false; // XXX
 
 //
@@ -4214,8 +4215,8 @@ const getPlanesRgbd = async (width, height, focalLength, depthFloats32Array, min
     type: 'application/octet-stream',
   });
 
-  
-  const res = await fetch(`https://local.webaverse.com/api/depth/planeDetection?minSupport=${minSupport}`, {
+  const u = new URL(`${location.protocol}//${location.host}/api/depth/planeDetection?minSupport=${minSupport}`);
+  const res = await fetch(u, {
     method: 'POST',
     body: requestBlob,
   });
@@ -4282,7 +4283,7 @@ const _getImageSegments = async (
   targetWidth,
   targetHeight,
 ) => {
-  const u = new URL(`https://local.webaverse.com/api/mask2former/predict`);
+  const u = new URL(`${location.protocol}//${location.host}/api/mask2former/predict`);
   u.searchParams.set('classes', imageSegmentationClasses.join(','));
   u.searchParams.set('boosts', Array(imageSegmentationClasses).fill(1).join(','));
   u.searchParams.set('threshold', 0.5);
@@ -4612,30 +4613,33 @@ export async function compileVirtualScene({
   }
   console.timeEnd('camera');
 
-  console.time('sphericalHarmonics');
   let sphericalHarmonics;
+  if (sphericalHarmonic) {
+    console.time('sphericalHarmonics');
 
-  const skyCutCanvas = getSkyCutCanvas(width, height, segmentMask);
-  skyCutCanvas.classList.add('skyCut');
-  document.body.appendChild(skyCutCanvas);
+    const skyCutCanvas = getSkyCutCanvas(width, height, segmentMask);
+    skyCutCanvas.classList.add('skyCut');
+    document.body.appendChild(skyCutCanvas);
 
-  const maskBlob = await new Promise((accept, reject) => {
-    skyCutCanvas.toBlob(accept);
-  });
-
-  const formData = new FormData();
-  formData.append('img', blob);
-  formData.append('mask', maskBlob);
-  {
-    const res = await fetch(`https://local.webaverse.com/api/irn/lighting`, {
-      method: 'POST',
-      body: formData,
+    const maskBlob = await new Promise((accept, reject) => {
+      skyCutCanvas.toBlob(accept);
     });
-    const arrayBuffer = await res.arrayBuffer();
-    sphericalHarmonics = new Float32Array(arrayBuffer);
-    // console.log('got spherical harmonics', sphericalHarmonics);
+
+    const formData = new FormData();
+    formData.append('img', blob);
+    formData.append('mask', maskBlob);
+    {
+      const u = new URL(`${location.protocol}//${location.host}/api/irn/lighting`);
+      const res = await fetch(u, {
+        method: 'POST',
+        body: formData,
+      });
+      const arrayBuffer = await res.arrayBuffer();
+      sphericalHarmonics = new Float32Array(arrayBuffer);
+      // console.log('got spherical harmonics', sphericalHarmonics);
+    }
+    console.timeEnd('sphericalHarmonics');
   }
-  console.timeEnd('sphericalHarmonics');
 
   if (inverseRender) {
     console.time('inverseRender');
@@ -4648,7 +4652,8 @@ export async function compileVirtualScene({
       ];
       for (const pathName of pathNames) {
         // console.log('inverse render type', pathName);
-        const res = await fetch(`https://local.webaverse.com/api/irn/${pathName}`, {
+        const u = new URL(`${location.protocol}//${location.host}/api/irn/${pathName}`);
+        const res = await fetch(u, {
           method: 'POST',
           body: formData,
         });

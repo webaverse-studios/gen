@@ -526,7 +526,8 @@ export function applySkybox(float32Array) { // // result in float32Array
 export async function getPointCloud(blob, {
   forceFov,
 } = {}) {
-  const u = new URL('https://depth.webaverse.com/pointcloud');
+  // const u = new URL('https://depth.webaverse.com/pointcloud');
+  const u = new URL(`${location.protocol}//${location.host}/api/depth/pointcloud`);
   if (forceFov !== undefined) {
     u.searchParams.set('fov', forceFov);
   }
@@ -554,7 +555,7 @@ export async function getPointCloud(blob, {
 export async function getDepthField(blob, {
   forceFov,
 } = {}) {
-  const u = new URL('https://local.webaverse.com/api/depth/depthfield');
+  const u = new URL(`${location.protocol}//${location.host}/api/depth/depthfield`);
   if (forceFov !== undefined) {
     u.searchParams.set('forceFov', forceFov);
   }
